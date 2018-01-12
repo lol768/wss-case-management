@@ -1,0 +1,14 @@
+@import services.Navigation
+
+@(
+  parent: Navigation,
+  path: String
+)
+
+<nav class="navbar navbar-tertiary" role="navigation">
+  <ul class="nav navbar-nav">
+    @for(nav <- parent.children) {
+      <li @if(nav.isActive(path)){class="active"}><a href="@nav.route.url">@nav.label</a></li>
+    }
+  </ul>
+</nav>

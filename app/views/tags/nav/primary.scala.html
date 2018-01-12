@@ -1,0 +1,25 @@
+@import services.Navigation
+
+@(
+  navigation: Seq[Navigation],
+  path: String
+)
+
+<nav class="navbar navbar-primary @if(navigation.exists(_.isActive(path))) {hidden-xs}" role="navigation">
+  <ul class="nav navbar-nav">
+  @for(nav <- navigation) {
+    @if(nav.dropdown && nav.children.nonEmpty) {
+      <li class="dropdown @if(nav.isActive(path)){active} @if(nav.children.exists(_.isActive(path))){next-secondary}">
+        <a href="@nav.route.url" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">@nav.label <span class="caret"></span></a>
+        <ul class="dropdown-menu">
+        @for(child <- nav.children) {
+          <li @if(child.isActive(path)){class="active"}><a href="@child.route.url">@child.label</a></li>
+        }
+        </ul>
+      </li>
+    } else {
+      <li @if(nav.isActive(path)){class="active @if(nav.children.exists(_.isActive(path))) {next-secondary}"}><a href="@nav.route.url">@nav.label</a></li>
+    }
+  }
+  </ul>
+</nav>

@@ -1,0 +1,24 @@
+@import helpers.ServiceResults.ServiceError
+
+@(errors: Seq[_ <: ServiceError])(implicit context: RequestContext)
+
+@main("Error") {
+  <p>Sorry, there's been a problem and we weren't able to complete your request.</p>
+
+  <ul>
+  @for(error <- errors) {
+    <li>@error.message</li>
+  }
+  </ul>
+
+  <p>If the problem persists, please contact the <a href="mailto:webteam@@warwick.ac.uk">ITS Web Team</a>.</p>
+
+  <p><button type="button" class="btn btn-danger" data-toggle="collapse" data-target="#dev">
+    Show technical details about this error
+  </button></p>
+
+  <pre id="dev" class="collapse" style="overflow-x: scroll;">@for(error <- errors.filter(_.cause.nonEmpty)) {
+@error.message
+@error.cause.map { e =>@views.html.errors.stacktrace(e) }}</pre>
+
+}

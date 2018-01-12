@@ -1,0 +1,13 @@
+@import play.api.Mode.Mode
+@import play.api.Mode
+@(e: Throwable, appMode: Mode)(implicit context: RequestContext)
+
+@main("Error") {
+
+  <p>Sorry, there's been a problem and we weren't able to complete your request.</p>
+
+  @if(appMode == Mode.Dev) {
+    <pre style="overflow-x: scroll;">@views.html.errors.stacktrace(e)</pre>
+  }
+
+}

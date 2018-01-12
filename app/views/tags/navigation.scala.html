@@ -1,0 +1,15 @@
+@import controllers.RequestContext
+@(context: RequestContext)
+
+@views.html.tags.nav.primary(context.navigation, context.path)
+
+@context.navigation.filter(_.isActive(context.path)).map { section =>
+  @views.html.tags.nav.secondary(section, context.path)
+}
+
+@context.navigation.filter(_.isActive(context.path)).flatMap(_.deepestActive(context.path)).map { section =>
+  @views.html.tags.nav.tertiary(
+    section.children.find(_.isActive(context.path)).getOrElse(section),
+    context.path
+  )
+}

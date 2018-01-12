@@ -1,0 +1,3 @@
+@(e: Throwable)@e.getClass.getName: @e.getMessage @for(trace <- e.getStackTrace) {
+  at @trace }@if(e.getCause != null) {
+Caused by @views.html.errors.stacktrace(e.getCause)}

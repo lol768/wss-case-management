@@ -1,0 +1,17 @@
+@import services.Navigation
+
+@(
+  section: Navigation,
+  path: String
+)
+
+<nav class="navbar navbar-secondary" role="navigation">
+  <ul class="nav navbar-nav">
+    <li class="nav-breadcrumb first @if(!section.children.exists(_.isActive(path))) {last active}">
+      <a href="@section.route.url">@section.label</a>
+    </li>
+    @section.children.find(_.isActive(path)).map { nav =>
+      @tags.nav.breadcrumb(nav, path, "second")
+    }
+  </ul>
+</nav>

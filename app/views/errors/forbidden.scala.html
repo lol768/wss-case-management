@@ -1,0 +1,14 @@
+@(identity: Option[String])(implicit context: RequestContext)
+
+@main("Permission Denied") {
+
+  <p>
+    @identity.map { name =>
+      Sorry @name, you don't have permission to see that.
+    }.getOrElse {
+      Sorry, you don't have permission to see that.
+    }
+  </p>
+
+}
+

@@ -1,0 +1,18 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+->          /sso                                    sso.Routes
+
+# Map static resources from the /public folder to the /assets URL path
+GET         /assets/*file                           @controllers.Assets.versioned(path="/public", file: Asset)
+
+# Service health check
+GET         /service/gtg                            @controllers.ServiceCheckController.gtg
+GET         /service/healthcheck                    @controllers.ServiceCheckController.healthcheck
+
+GET         /                                       @controllers.IndexController.home
+
+# Handle trailing slashes in URLs
+GET         /*path/                                 @controllers.IndexController.redirectToPath(path: String)
+

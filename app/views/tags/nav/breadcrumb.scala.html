@@ -1,0 +1,20 @@
+@import services.Navigation
+
+@(
+  breadcrumb: Navigation,
+  path: String,
+  extraClasses: String = ""
+)
+
+@if(breadcrumb.children.exists(_.isActive(path))) {
+  <li class="nav-breadcrumb @extraClasses">
+    <a href="@breadcrumb.route.url">@breadcrumb.label</a>
+  </li>
+  @breadcrumb.children.find(_.isActive(path)).map { nav =>
+    @tags.nav.breadcrumb(nav, path)
+  }
+} else {
+  <li class="nav-breadcrumb @extraClasses last active @if(breadcrumb.children.nonEmpty) {next-tertiary}">
+    <a href="@breadcrumb.route.url">@breadcrumb.label</a>
+  </li>
+}

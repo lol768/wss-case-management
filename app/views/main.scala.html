@@ -1,0 +1,155 @@
+@(
+  title: String = ""
+)(content: Html)(implicit context: RequestContext)
+
+<!DOCTYPE html>
+<html lang="en-GB" class="no-js"> <!-- class="id7-non-branded" to remove Warwick branding -->
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="@routes.Assets.versioned("images/apple-touch-icon.png")">
+    <link rel="icon" type="image/png" href="@routes.Assets.versioned("mages/favicon-32x32.png")" sizes="32x32">
+    <link rel="icon" type="image/png" href="@routes.Assets.versioned("images/favicon-16x16.png")" sizes="16x16">
+    <link rel="manifest" href="@routes.Assets.versioned("images/manifest.json")">
+    <link rel="shortcut icon" href="@routes.Assets.versioned("images/favicon.ico")">
+    <meta name="msapplication-config" content="@routes.Assets.versioned("images/browserconfig.xml")">
+    <meta name="theme-color" content="#204f79">
+
+    <title>APP NAME @if(!title.isEmpty) { - @title}</title>
+
+    <!-- Lato web font -->
+    <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+    <!-- ID7 -->
+    <link rel='stylesheet' href='@routes.Assets.versioned("css/main.css")'>
+
+    <script type='text/javascript' src='@routes.Assets.versioned("lib/id7/js/id7-bundle.min.js")'></script>
+    <script type='text/javascript' src='@routes.Assets.versioned("js/bundle.js")'></script>
+  </head>
+  <body>
+    <div class="id7-left-border"></div>
+    <div class="id7-fixed-width-container">
+      <a class="sr-only sr-only-focusable" href="#main">Skip to main content</a>
+
+      <header class="id7-page-header">
+        <div class="id7-utility-masthead">
+          <nav class="id7-utility-bar">
+            <ul>
+              @if(context.user.exists(_.isFound)) {
+                <li>
+                  <a href="http://warwick.ac.uk/myaccount"
+                    data-toggle="id7:account-popover"
+                    data-request.context.usercode="@context.user.map(_.universityId)"
+                    data-name="@context.user.map(_.name.full)"
+                    data-loginlink="@context.loginUrl"
+                    data-logoutlink="@context.logoutUrl"
+                  >
+                    @context.user.map(_.name.full)
+                    <span class="caret"></span>
+                  </a>
+                </li>
+              } else {
+                <li>
+                  <a href="@context.loginUrl">Sign in</a>
+                </li>
+              }
+            </ul>
+          </nav>
+
+          <div class="id7-masthead">
+            <div class="id7-masthead-contents">
+              <div class="clearfix">
+                <div class="id7-logo-column">
+                  <div class="id7-logo-row">
+                    <div class="id7-logo">
+                      <a href="http://warwick.ac.uk" title="Warwick homepage">
+                        <img src="@routes.Assets.versioned("lib/id7/images/shim.gif")" alt="Warwick">
+                      </a>
+                    </div>
+                    <nav class="id7-site-links">
+                      <ul>
+                        <li><a href="http://warwick.ac.uk/study">Study</a></li>
+                        <li><a href="http://warwick.ac.uk/research">Research</a></li>
+                        <li><a href="http://warwick.ac.uk/business">Business</a></li>
+                        <li><a href="http://warwick.ac.uk/alumni">Alumni</a></li>
+                        <li><a href="http://warwick.ac.uk/news">News</a></li>
+                        <li><a href="http://warwick.ac.uk/about">About</a></li>
+                      </ul>
+                    </nav>
+                  </div>
+                </div>
+                <div class="id7-search-column">
+                  <div class="id7-search">
+                    <form action="//search.warwick.ac.uk/website" role="search">
+                      <input type="hidden" name="source" value="https://warwick.ac.uk/"> <!-- Replace with the current page URL -->
+                      <div class="form-group">
+                        <label class="sr-only" for="id7-search-box">Search</label>
+                        <div class="id7-search-box-container">
+                          <input type="search" class="form-control input-lg" id="id7-search-box" name="q" placeholder="Search Warwick" data-suggest="go">
+                          <i class="fa fa-search fa-2x"></i>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <div class="id7-header-text clearfix">
+                <h1>
+                  <span class="id7-current-site-link"><a href="@controllers.routes.IndexController.home()">APP NAME</a></span>
+                </h1>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="id7-navigation">
+          @tags.navigation(context)
+        </div>
+      </header>
+
+      <main class="id7-main-content-area" id="main">
+        <header class="id7-main-content-header">
+          <div class="id7-horizontal-divider">
+            <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" version="1.1" width="1130" height="40" viewBox="0, 0, 1130, 41">
+              <path d="m 0,0.5 1030.48, 0 22.8,40 16.96,-31.4 16.96,31.4 22.8,-40 20,0" class="divider" stroke="#383838" fill="none" />
+            </svg>
+          </div>
+          @if(!title.isEmpty) {
+            <div class="id7-page-title">
+              <h1>@title</h1>
+            </div>
+          }
+        </header>
+
+        <div class="id7-main-content">
+          @content
+        </div>
+      </main>
+
+      <footer class="id7-page-footer id7-footer-divider">
+        <div class="id7-app-footer">
+          <div class="id7-horizontal-divider">
+            <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" version="1.1" width="1130" height="40" viewBox="0, 0, 1130, 40">
+              <path d="m 0,0 1030.48, 0 22.8,40 16.96,-31.4 16.96,31.4 22.8,-40 20,0" class="divider" stroke="#383838" fill="none" />
+            </svg>
+          </div>
+
+          <div class="id7-footer-utility">
+            <ul>
+              <li>Powered by APP_NAME</li>
+              <li><a href="http://warwick.ac.uk/copyright">© @helpers.romanYear()</a></li>
+              <li><a href="http://warwick.ac.uk/terms">Terms</a></li>
+              <li><a href="http://warwick.ac.uk/privacy">Privacy</a></li>
+              <li><a href="http://warwick.ac.uk/cookies">Cookies</a></li>
+              <li><a href="http://warwick.ac.uk/accessibility">Accessibility</a></li>
+            </ul>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <div class="id7-right-border"></div>
+  </body>
+</html>

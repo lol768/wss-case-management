@@ -1,0 +1,5 @@
+@(status: Int, message: String)(implicit context: RequestContext)
+
+@main(s"Error: $status") {
+  @message
+}
