@@ -1,15 +1,30 @@
 import warwick.Gulp
 import warwick.Testing._
 
+organization := "uk.ac.warwick"
 name := """play-app-template"""
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := Common.scalaVersion
+scalaVersion := "2.12.5"
 
-// ULTRAVIOLENCE
-scalacOptions ++= Seq("-language:implicitConversions", "-unchecked", "-deprecation", "-feature", "-Xfatal-warnings")
-scalacOptions ++= Seq("-feature")
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
+
+scalacOptions ++= Seq(
+  "-encoding", "UTF-8", // yes, this is 2 args
+  "-target:jvm-1.8",
+  "-deprecation",
+  "-feature",
+  "-unchecked",
+  "-Yno-adapted-args",
+  "-Ywarn-numeric-widen",
+  "-Xfatal-warnings",
+  "-Xsource:2.13"
+)
+scalacOptions in Test ++= Seq("-Yrangepos")
+scalacOptions in (Compile, doc) ++= Seq("-no-link-warnings")
+
+autoAPIMappings := true
 
 // Avoid some of the constant SBT "Updating"
 updateOptions := updateOptions.value.withCachedResolution(true)
@@ -28,13 +43,13 @@ val appDeps = Seq(
   filters,
 
   // v3.0.0 is Play 2.6.x and Slick 3.1.x
-  "com.typesafe.play" %% "play-slick" % "3.0.0",
-  "com.typesafe.play" %% "play-slick-evolutions" % "3.0.0",
+  "com.typesafe.play" %% "play-slick" % "3.0.3",
+  "com.typesafe.play" %% "play-slick-evolutions" % "3.0.3",
 
-  "com.typesafe.slick" %% "slick" % "3.2.0",
+  "com.typesafe.slick" %% "slick" % "3.2.3",
 
-  "com.typesafe.akka" %% "akka-cluster" % "2.5.3",
-  "com.typesafe.akka" %% "akka-cluster-tools" % "2.5.3",
+  "com.typesafe.akka" %% "akka-cluster" % "2.5.11",
+  "com.typesafe.akka" %% "akka-cluster-tools" % "2.5.11",
 
   "com.oracle" % "ojdbc7" % "12.1.0.2.0",
   "com.h2database" % "h2" % "1.4.196", // For testing only

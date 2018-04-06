@@ -4,7 +4,7 @@ credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 addSbtPlugin("uk.ac.warwick" % "play-warwick" % "0.6")
 
 // The Play plugin
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.6.11")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.6.12")
 
 // .tgz generator
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.2.0")
