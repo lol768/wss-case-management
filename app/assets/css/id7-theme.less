@@ -1,0 +1,9 @@
+.apply-brand(#204f79);
+.apply-site-imagery(@basedir: './images'; @masthead-image: 'masthead-image.png'; @border-image-left: 'border-image-left.png'; @border-image-right: 'border-image-right.png');
+
+// Override the app footer to be white
+.id7-page-footer .id7-app-footer {
+  background: white;
+  color: @text-color;
+  .link-colour(@text-color);
+}

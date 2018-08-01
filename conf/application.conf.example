@@ -1,4 +1,9 @@
-include "defaults.conf"
+include "defaults"
+
+app {
+  name.uppercase = "APP_NAME"
+  name.id = "app-name"
+}
 
 domain = "changeme.warwick.ac.uk"
 

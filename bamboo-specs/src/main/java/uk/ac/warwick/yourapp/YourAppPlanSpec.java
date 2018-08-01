@@ -42,7 +42,7 @@ public class YourAppPlanSpec extends AbstractWarwickBuildSpec {
       build(PROJECT, "APP", "YOUR_APP")
         .linkedRepository(LINKED_REPOSITORY)
         .description("Build application")
-        .activatorWithAssets("bin/activator")
+        .activatorWithAssets("sbt")
         .slackNotifications(SLACK_CHANNEL, false)
         .build()
     );
