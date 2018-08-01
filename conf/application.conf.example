@@ -1,17 +1,7 @@
 include "defaults"
-
-app {
-  name.uppercase = "APP_NAME"
-  name.id = "app-name"
-}
+include "local-dev"
 
 domain = "changeme.warwick.ac.uk"
-
-play.http.secret.key="changeme"
-
-play.evolutions.enabled=true
-play.evolutions.db.default.autoApply=true
-play.evolutions.db.default.autoApplyDowns=true
 
 # For testing only!
 #slick.dbs.default {
@@ -23,12 +13,12 @@ play.evolutions.db.default.autoApplyDowns=true
 #}
 
 slick.dbs.default {
-  profile = "slick.jdbc.OracleProfile$"
+  profile = "slick.jdbc.PostgresProfile$"
   db {
-    driver = "oracle.jdbc.driver.OracleDriver"
-    url = "jdbc:oracle:thin:@//racd1.warwick.ac.uk:1521/racd1.warwick.ac.uk"
-    user = "..."
-    password = "..."
+    driver = "org.postgresql.Driver"
+    url = "jdbc:postgresql://localhost:5432/casemanagement"
+    user = "casemanagement"
+    password = you should generate your own password and put it here
     numThreads = 10
   }
 }
