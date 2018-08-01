@@ -23,6 +23,7 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
       .key("CASE")
       .name("Case Management");
 
+  // Matches by name as found in Bamboo
   private static final String LINKED_REPOSITORY = "Case Management";
 
   private static final String SLACK_CHANNEL = "#case-management";
