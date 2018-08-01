@@ -3,7 +3,7 @@ import warwick.Gulp
 import warwick.Testing._
 
 organization := "uk.ac.warwick"
-name := """play-app-template"""
+name := """case-management"""
 
 version := "1.0-SNAPSHOT"
 
@@ -51,8 +51,7 @@ val appDeps = Seq(
   "com.typesafe.akka" %% "akka-cluster" % "2.5.11",
   "com.typesafe.akka" %% "akka-cluster-tools" % "2.5.11",
 
-  "com.oracle" % "ojdbc7" % "12.1.0.2.0",
-  "com.h2database" % "h2" % "1.4.196", // For testing only
+  "org.postgresql" % "postgresql" % "42.2.4",
 
   "com.google.inject.extensions" % "guice-multibindings" % "4.1.0",
   "com.adrianhurt" %% "play-bootstrap" % "1.2-P26-B3",

@@ -1,8 +1,8 @@
 include "defaults"
 
 app {
-  name.uppercase = "APP_NAME"
-  name.id = "app-name"
+  name.uppercase = "CaseManagement"
+  name.id = "case-management"
 }
 
 domain = "changeme.warwick.ac.uk"
