@@ -52,6 +52,7 @@ val appDeps = Seq(
   "com.typesafe.akka" %% "akka-cluster-tools" % "2.5.11",
 
   "org.postgresql" % "postgresql" % "42.2.4",
+  // "com.h2database" % "h2" % "1.4.196", // For testing only
 
   "com.google.inject.extensions" % "guice-multibindings" % "4.1.0",
   "com.adrianhurt" %% "play-bootstrap" % "1.2-P26-B3",
