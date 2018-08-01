@@ -10,14 +10,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="apple-touch-icon" sizes="180x180" href="@routes.Assets.versioned("images/apple-touch-icon.png")">
-    <link rel="icon" type="image/png" href="@routes.Assets.versioned("mages/favicon-32x32.png")" sizes="32x32">
-    <link rel="icon" type="image/png" href="@routes.Assets.versioned("images/favicon-16x16.png")" sizes="16x16">
-    <link rel="manifest" href="@routes.Assets.versioned("images/manifest.json")">
+    <link rel="icon" type="image/png" sizes="32x32" href="@routes.Assets.versioned("images/favicon-32x32.png")">
+    <link rel="icon" type="image/png" sizes="16x16" href="@routes.Assets.versioned("images/favicon-16x16.png")">
+    <link rel="manifest" href="@routes.Assets.versioned("images/site.webmanifest")">
+    <link rel="mask-icon" href="@routes.Assets.versioned("images/safari-pinned-tab.svg")" color="#a14418">
     <link rel="shortcut icon" href="@routes.Assets.versioned("images/favicon.ico")">
+    <meta name="msapplication-TileColor" content="#a14418">
     <meta name="msapplication-config" content="@routes.Assets.versioned("images/browserconfig.xml")">
-    <meta name="theme-color" content="#204f79">
+    <meta name="theme-color" content="#a14418">
 
-    <title>APP NAME @if(!title.isEmpty) { - @title}</title>
+    <title>Wellbeing at Warwick Case Management@if(!title.isEmpty) { - @title}</title>
 
     <!-- Lato web font -->
     <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css">
@@ -39,7 +41,7 @@
             <ul>
               @if(context.user.exists(_.isFound)) {
                 <li>
-                  <a href="http://warwick.ac.uk/myaccount"
+                  <a href="https://warwick.ac.uk/myaccount"
                     data-toggle="id7:account-popover"
                     data-request.context.usercode="@context.user.map(_.universityId)"
                     data-name="@context.user.map(_.name.full)"
@@ -64,18 +66,18 @@
                 <div class="id7-logo-column">
                   <div class="id7-logo-row">
                     <div class="id7-logo">
-                      <a href="http://warwick.ac.uk" title="Warwick homepage">
+                      <a href="https://warwick.ac.uk" title="Warwick homepage">
                         <img src="@routes.Assets.versioned("lib/id7/images/shim.gif")" alt="Warwick">
                       </a>
                     </div>
                     <nav class="id7-site-links">
                       <ul>
-                        <li><a href="http://warwick.ac.uk/study">Study</a></li>
-                        <li><a href="http://warwick.ac.uk/research">Research</a></li>
-                        <li><a href="http://warwick.ac.uk/business">Business</a></li>
-                        <li><a href="http://warwick.ac.uk/alumni">Alumni</a></li>
-                        <li><a href="http://warwick.ac.uk/news">News</a></li>
-                        <li><a href="http://warwick.ac.uk/about">About</a></li>
+                        <li><a href="https://warwick.ac.uk/study">Study</a></li>
+                        <li><a href="https://warwick.ac.uk/research">Research</a></li>
+                        <li><a href="https://warwick.ac.uk/business">Business</a></li>
+                        <li><a href="https://warwick.ac.uk/alumni">Alumni</a></li>
+                        <li><a href="https://warwick.ac.uk/news">News</a></li>
+                        <li><a href="https://warwick.ac.uk/about">About</a></li>
                       </ul>
                     </nav>
                   </div>
@@ -98,7 +100,8 @@
 
               <div class="id7-header-text clearfix">
                 <h1>
-                  <span class="id7-current-site-link"><a href="@controllers.routes.IndexController.home()">APP NAME</a></span>
+                  <span class="id7-parent-site-link" data-short-title="Wellbeing"><a href="https://warwick.ac.uk/wellbeing" title="Wellbeing at Warwick homepage">Wellbeing at Warwick</a></span>
+                  <span class="id7-current-site-link"><a href="@controllers.routes.IndexController.home()">Case Management</a></span>
                 </h1>
               </div>
             </div>
@@ -113,7 +116,7 @@
       <main class="id7-main-content-area" id="main">
         <header class="id7-main-content-header">
           <div class="id7-horizontal-divider">
-            <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" version="1.1" width="1130" height="40" viewBox="0, 0, 1130, 41">
+            <svg xmlns="https://www.w3.org/2000/svg" x="0" y="0" version="1.1" width="1130" height="40" viewBox="0, 0, 1130, 41">
               <path d="m 0,0.5 1030.48, 0 22.8,40 16.96,-31.4 16.96,31.4 22.8,-40 20,0" class="divider" stroke="#383838" fill="none" />
             </svg>
           </div>
@@ -132,19 +135,19 @@
       <footer class="id7-page-footer id7-footer-divider">
         <div class="id7-app-footer">
           <div class="id7-horizontal-divider">
-            <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" version="1.1" width="1130" height="40" viewBox="0, 0, 1130, 40">
+            <svg xmlns="https://www.w3.org/2000/svg" x="0" y="0" version="1.1" width="1130" height="40" viewBox="0, 0, 1130, 40">
               <path d="m 0,0 1030.48, 0 22.8,40 16.96,-31.4 16.96,31.4 22.8,-40 20,0" class="divider" stroke="#383838" fill="none" />
             </svg>
           </div>
 
           <div class="id7-footer-utility">
             <ul>
-              <li>Powered by APP_NAME</li>
-              <li><a href="http://warwick.ac.uk/copyright">© @helpers.romanYear()</a></li>
-              <li><a href="http://warwick.ac.uk/terms">Terms</a></li>
-              <li><a href="http://warwick.ac.uk/privacy">Privacy</a></li>
-              <li><a href="http://warwick.ac.uk/cookies">Cookies</a></li>
-              <li><a href="http://warwick.ac.uk/accessibility">Accessibility</a></li>
+              <li>Powered by Wellbeing at Warwick Case Management</li>
+              <li><a href="https://warwick.ac.uk/copyright">© @helpers.romanYear()</a></li>
+              <li><a href="https://warwick.ac.uk/terms">Terms</a></li>
+              <li><a href="https://warwick.ac.uk/privacy">Privacy</a></li>
+              <li><a href="https://warwick.ac.uk/cookies">Cookies</a></li>
+              <li><a href="https://warwick.ac.uk/accessibility">Accessibility</a></li>
             </ul>
           </div>
         </div>

@@ -1,5 +1,7 @@
 # Wellbeing app
 
+wellbeing.warwick.ac.uk
+
 ## Setup for devs
 
 * Create a PostgreSQL database and user
