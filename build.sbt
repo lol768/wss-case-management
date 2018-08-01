@@ -3,7 +3,7 @@ import warwick.Gulp
 import warwick.Testing._
 
 organization := "uk.ac.warwick"
-name := """play-app-template"""
+name := """case-management"""
 
 version := "1.0-SNAPSHOT"
 

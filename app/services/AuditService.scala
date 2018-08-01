@@ -32,7 +32,7 @@ class AuditServiceImpl @Inject()(
   dao: AuditDao
 )(implicit ec: ExecutionContext) extends AuditService {
 
-  lazy val AUDIT_LOGGER: AuditLogger = AuditLogger.getAuditLogger("APP_NAME")
+  lazy val AUDIT_LOGGER: AuditLogger = AuditLogger.getAuditLogger("casemanagement")
 
   override def audit[A](operation: String, targetId: String, targetType: String, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]] =
     f.flatMap { result =>
