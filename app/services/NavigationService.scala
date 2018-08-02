@@ -1,9 +1,9 @@
 package services
 
-import javax.inject.Singleton
-
 import com.google.inject.ImplementedBy
+import javax.inject.Singleton
 import play.api.mvc.Call
+import system.Roles._
 import warwick.sso.LoginContext
 
 sealed trait Navigation {
@@ -48,5 +48,17 @@ trait NavigationService {
 
 @Singleton
 class NavigationServiceImpl extends NavigationService {
-  override def getNavigation(loginContext: LoginContext): Seq[Navigation] = Nil
+  private def adminLinks(loginContext: LoginContext): Seq[Navigation] =
+    if (loginContext.actualUserHasRole(Sysadmin) || loginContext.actualUserHasRole(Masquerader)) {
+      Seq(
+        NavigationDropdown("Admin", controllers.routes.MasqueradeController.masquerade(), Seq(
+          NavigationPage("Masquerade", controllers.routes.MasqueradeController.masquerade())
+        ))
+      )
+    } else {
+      Nil
+    }
+
+  override def getNavigation(loginContext: LoginContext): Seq[Navigation] =
+    adminLinks(loginContext)
 }

@@ -13,6 +13,7 @@ trait SecurityService {
   type AuthActionBuilder = ActionBuilder[AuthenticatedRequest, AnyContent]
 
   def SigninAwareAction: AuthActionBuilder
+  def SigninRequiredAction: AuthActionBuilder
   def RequiredRoleAction(role: RoleName): AuthActionBuilder
   def RequiredActualUserRoleAction(role: RoleName): AuthActionBuilder
 
@@ -21,13 +22,14 @@ trait SecurityService {
 
 @Singleton
 class SecurityServiceImpl @Inject()(
-                                     val sso: SSOClient,
-                                     parse: PlayBodyParsers
-                                   ) extends SecurityService with Results with Rendering with AcceptExtractors with ImplicitRequestContext {
+  val sso: SSOClient,
+  parse: PlayBodyParsers
+) extends SecurityService with Results with Rendering with AcceptExtractors with ImplicitRequestContext {
 
   private def defaultParser = parse.default
 
   override def SigninAwareAction: AuthActionBuilder = sso.Lenient(defaultParser)
+  override def SigninRequiredAction: AuthActionBuilder = sso.Strict(defaultParser)
   override def RequiredRoleAction(role: RoleName): AuthActionBuilder = sso.RequireRole(role, forbidden)(defaultParser)
   override def RequiredActualUserRoleAction(role: RoleName): AuthActionBuilder = sso.RequireActualUserRole(role, forbidden)(defaultParser)
 

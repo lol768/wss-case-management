@@ -1,10 +1,15 @@
 package controllers
 
-import javax.inject.Singleton
+import javax.inject.{Inject, Singleton}
+import services.SecurityService
 
 @Singleton
-class IndexController extends BaseController {
-  def home = Action { implicit request =>
+class IndexController @Inject()(
+  securityService: SecurityService
+) extends BaseController {
+  import securityService._
+
+  def home = SigninRequiredAction { implicit request =>
     Ok(views.html.home())
   }
 
