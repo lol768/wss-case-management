@@ -34,3 +34,5 @@ sso-client {
     privatekey = "..."
   }
 }
+
+memcached.1.host: "localhost:11211"
