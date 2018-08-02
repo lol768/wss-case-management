@@ -1,0 +1,49 @@
+@import controllers.RequestContext
+@import play.api.data.Form
+@import play.api.data.Forms._
+@import play.api.mvc._
+@import warwick.sso.Usercode
+
+@()(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@import b3.inline.fieldConstructor
+
+@main("Masquerade") {
+  @if(context.isMasquerading) {
+    <p>
+      You're currently masquerading as
+      @context.user.get.name.full.get
+      (@context.user.get.usercode.string).
+    </p>
+
+    @b3.formCSRF(warwick.sso.routes.MasqueradeController.unmask()) {
+      <p>
+        <button type="submit" class="btn btn-default">Unmask</button>
+      </p>
+    }
+
+    <hr>
+  }
+
+  @context.flash.get(warwick.sso.MasqueradeController.ErrorFlashKey).map { masqueradeError =>
+    <div class="alert alert-danger">@masqueradeError</div>
+  }
+
+  <p>Masquerading allows you to see the site exactly as another user would see it.</p>
+
+  @defining(Form(single("usercode" -> nonEmptyText).transform(s => Usercode(s), (u: Usercode) => u.string))) { form: Form[Usercode] =>
+    @b3.formCSRF(warwick.sso.routes.MasqueradeController.masquerade()) {
+      @b3.inputWrapped("text", form("usercode"), 'placeholder -> "Type a usercode") { input =>
+        <div class="input-group" style="max-width: 300px">
+          @input
+          <div class="input-group-btn">
+            <button type="submit" class="btn btn-default">
+              <i class="fa fa-fw fa-user-secret"></i>
+              Mask
+            </button>
+          </div>
+        </div>
+      }
+    }
+  }
+}

@@ -36,6 +36,12 @@
       <a class="sr-only sr-only-focusable" href="#main">Skip to main content</a>
 
       <header class="id7-page-header">
+        @if(context.isMasquerading) {
+          <div id="masquerade-notice" class="sysadmin-only-content">
+            Masquerading as <strong>@context.user.map(_.name.full)</strong> (@context.user.map(_.usercode.string), @context.user.map(_.universityId.map(_.string))). <a href="@controllers.routes.MasqueradeController.masquerade()">Change</a>
+          </div>
+        }
+
         <div class="id7-utility-masthead">
           <nav class="id7-utility-bar">
             <ul>
@@ -43,7 +49,6 @@
                 <li>
                   <a href="https://warwick.ac.uk/myaccount"
                     data-toggle="id7:account-popover"
-                    data-request.context.usercode="@context.user.map(_.universityId)"
                     data-name="@context.user.map(_.name.full)"
                     data-loginlink="@context.loginUrl"
                     data-logoutlink="@context.logoutUrl"
