@@ -7,7 +7,7 @@
   <p>Sorry, there's been a problem and we weren't able to complete your request.</p>
 
   @if(appMode == Mode.Dev) {
-    <pre style="overflow-x: scroll;">@views.html.errors.stacktrace(e)</pre>
+    <pre class="error-stack-trace">@views.html.errors.stacktrace(e)</pre>
   }
 
 }

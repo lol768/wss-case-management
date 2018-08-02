@@ -17,7 +17,7 @@
     Show technical details about this error
   </button></p>
 
-  <pre id="dev" class="collapse" style="overflow-x: scroll;">@for(error <- errors.filter(_.cause.nonEmpty)) {
+  <pre id="dev" class="collapse error-stack-trace" style="overflow-x: scroll;">@for(error <- errors.filter(_.cause.nonEmpty)) {
 @error.message
 @error.cause.map { e =>@views.html.errors.stacktrace(e) }}</pre>
 
