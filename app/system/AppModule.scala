@@ -4,9 +4,11 @@ import com.google.inject.multibindings.Multibinder
 import com.google.inject.{AbstractModule, TypeLiteral}
 import org.quartz.Scheduler
 import play.api.libs.concurrent.AkkaGuiceSupport
+import com.google.inject.AbstractModule
+import net.codingwell.scalaguice.{ScalaModule, ScalaMultibinder}
 import services.healthcheck._
 
-class AppModule extends AbstractModule with AkkaGuiceSupport {
+class AppModule extends ScalaModule {
   override def configure(): Unit = {
     // Enables Scheduler for injection. Scheduler.start() happens separately, in SchedulerConfigModule
     bind(classOf[Scheduler]).toProvider(classOf[SchedulerProvider])
@@ -15,7 +17,8 @@ class AppModule extends AbstractModule with AkkaGuiceSupport {
   }
 
   def bindHealthChecks(): Unit = {
-    val multibinder = Multibinder.newSetBinder(binder(), new TypeLiteral[HealthCheck[_]] {})
-    multibinder.addBinding().to(classOf[UptimeHealthCheck])
+    val healthchecks = ScalaMultibinder.newSetBinder[HealthCheck](binder)
+    healthchecks.addBinding.to[UptimeHealthCheck]
+    healthchecks.addBinding.to[EncryptedObjectStorageHealthCheck]
   }
 }

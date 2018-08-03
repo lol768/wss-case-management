@@ -1,7 +1,7 @@
 package system
 
-import com.google.inject.Inject
 import controllers.RequestContext
+import javax.inject.Inject
 import play.api.mvc.Request
 import services.{AuditLogContext, NavigationService}
 import warwick.sso.{AuthenticatedRequest, SSOClient}
@@ -9,10 +9,10 @@ import warwick.sso.{AuthenticatedRequest, SSOClient}
 trait ImplicitRequestContext {
 
   @Inject
-  private[this] val navigationService: NavigationService = null
+  private[this] var navigationService: NavigationService = null
 
   @Inject
-  private[this] val ssoClient: SSOClient = null
+  private[this] var ssoClient: SSOClient = null
 
   implicit def requestContext(implicit request: Request[_]): RequestContext = request match {
     case req: AuthenticatedRequest[_] =>
