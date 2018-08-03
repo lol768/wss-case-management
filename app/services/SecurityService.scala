@@ -22,7 +22,7 @@ trait SecurityService {
 
 @Singleton
 class SecurityServiceImpl @Inject()(
-  val sso: SSOClient,
+  sso: SSOClient,
   parse: PlayBodyParsers
 ) extends SecurityService with Results with Rendering with AcceptExtractors with ImplicitRequestContext {
 

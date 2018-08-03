@@ -1,4 +1,3 @@
-import sbt.{Credentials, Path}
 import warwick.Gulp
 import warwick.Testing._
 
@@ -30,7 +29,7 @@ autoAPIMappings := true
 // Avoid some of the constant SBT "Updating"
 updateOptions := updateOptions.value.withCachedResolution(true)
 
-lazy val main = Project("main", file("."))
+lazy val main = (project in file("."))
   .enablePlugins(WarwickProject, PlayScala)
   .settings(
     packageZipTarball in Universal := (packageZipTarball in Universal).dependsOn(webpack).value
@@ -52,12 +51,16 @@ val appDeps = Seq(
   "com.typesafe.akka" %% "akka-cluster-tools" % "2.5.11",
 
   "org.postgresql" % "postgresql" % "42.2.4",
-  // "com.h2database" % "h2" % "1.4.196", // For testing only
 
+  "net.codingwell" %% "scala-guice" % "4.1.0",
   "com.google.inject.extensions" % "guice-multibindings" % "4.1.0",
   "com.adrianhurt" %% "play-bootstrap" % "1.2-P26-B3",
+
   "uk.ac.warwick.sso" %% "sso-client-play" % "2.47",
-  "uk.ac.warwick.play-utils" %% "accesslog" % "1.8",
+
+  "uk.ac.warwick.play-utils" %% "accesslog" % "1.15",
+  "uk.ac.warwick.play-utils" %% "objectstore" % "1.15",
+  "uk.ac.warwick.play-utils" %% "slick" % "1.15",
 
   "com.github.mumoshu" %% "play2-memcached-play26" % "0.9.3-warwick"
 )
@@ -72,7 +75,9 @@ val testDeps = Seq(
 ).map(_ % Test)
 
 libraryDependencies ++= (appDeps ++ testDeps).map(_.excludeAll(
-  ExclusionRule(organization = "commons-logging")
+  ExclusionRule(organization = "commons-logging"),
+  // ehcache renamed ehcache-core, don't load in the old version
+  ExclusionRule(organization = "net.sf.ehcache", name = "ehcache")
 ))
 
 libraryDependencies += specs2 % Test
@@ -83,6 +88,15 @@ routesGenerator := InjectedRoutesGenerator
 
 // https://bugs.elab.warwick.ac.uk/browse/SSO-1653
 dependencyOverrides += "xml-apis" % "xml-apis" % "1.4.01"
+
+// Because jclouds is terrible
+dependencyOverrides += "com.google.guava" % "guava" % "20.0"
+
+// Because jclouds is terrible
+dependencyOverrides += "com.google.code.gson" % "gson" % "2.4"
+
+// Fix a dependency warning
+dependencyOverrides += "org.json" % "json" % "20171018"
 
 // Make built output available as Play assets.
 unmanagedResourceDirectories in Assets += baseDirectory.value / "target/assets"

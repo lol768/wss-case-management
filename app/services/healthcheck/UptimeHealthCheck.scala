@@ -3,11 +3,12 @@ package services.healthcheck
 import java.time.LocalDateTime
 
 import akka.actor.ActorSystem
-import com.google.inject.Inject
+import javax.inject.{Inject, Singleton}
 
+@Singleton
 class UptimeHealthCheck @Inject()(
   system: ActorSystem
-) extends HealthCheck[Long] {
+) extends NumericHealthCheck[Long] {
 
   override def name = "uptime"
   override def value = system.uptime

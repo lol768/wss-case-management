@@ -13,7 +13,7 @@ import scala.concurrent.Future
 @Singleton
 class ServiceCheckController @Inject()(
   life: ApplicationLifecycle,
-  healthChecks: java.util.Set[HealthCheck[_]]
+  healthChecks: java.util.Set[HealthCheck]
 ) extends InjectedController {
 
   var stopping = false
