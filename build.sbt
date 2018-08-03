@@ -54,6 +54,8 @@ val appDeps = Seq(
   "org.postgresql" % "postgresql" % "42.2.4",
   // "com.h2database" % "h2" % "1.4.196", // For testing only
 
+  "org.quartz-scheduler" % "quartz" % "2.3.0",
+
   "com.google.inject.extensions" % "guice-multibindings" % "4.1.0",
   "com.adrianhurt" %% "play-bootstrap" % "1.2-P26-B3",
   "uk.ac.warwick.sso" %% "sso-client-play" % "2.47",
