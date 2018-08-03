@@ -1,10 +1,10 @@
 package system
 
-import com.google.inject.AbstractModule
+import net.codingwell.scalaguice.ScalaModule
 
-class SchedulerConfigModule extends AbstractModule {
+class SchedulerConfigModule extends ScalaModule {
 
   override def configure(): Unit =
-    bind(classOf[SchedulerConfiguration]).asEagerSingleton()
+    bind[SchedulerConfiguration].asEagerSingleton()
 
 }

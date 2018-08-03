@@ -52,6 +52,8 @@ val appDeps = Seq(
 
   "org.postgresql" % "postgresql" % "42.2.4",
 
+  // in-memory JNDI context used by Play to pass DataSource to Quartz
+  "tyrex" % "tyrex" % "1.0.1",
   "org.quartz-scheduler" % "quartz" % "2.3.0",
 
   "net.codingwell" %% "scala-guice" % "4.1.0",
