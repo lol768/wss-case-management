@@ -1,11 +1,14 @@
 package system
 
-import com.google.inject.AbstractModule
 import net.codingwell.scalaguice.{ScalaModule, ScalaMultibinder}
+import org.quartz.Scheduler
 import services.healthcheck._
 
-class AppModule extends AbstractModule with ScalaModule {
+class AppModule extends ScalaModule {
   override def configure(): Unit = {
+    // Enables Scheduler for injection. Scheduler.start() happens separately, in SchedulerConfigModule
+    bind[Scheduler].toProvider[SchedulerProvider]
+
     bindHealthChecks()
   }
 

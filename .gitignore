@@ -2,6 +2,7 @@
 /conf/functional-test.conf
 /conf/ehcache.properties
 /conf/*secret*
+/conf/worker.conf
 /logs
 /classes
 /.idea_modules
