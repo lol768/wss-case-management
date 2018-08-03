@@ -1,7 +1,7 @@
 package system
 
-import com.google.inject.Inject
 import controllers.RequestContext
+import javax.inject.Inject
 import play.api.mvc.Request
 import services.{AuditLogContext, NavigationService}
 import warwick.sso.{AuthenticatedRequest, SSOClient}
