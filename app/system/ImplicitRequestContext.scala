@@ -9,10 +9,10 @@ import warwick.sso.{AuthenticatedRequest, SSOClient}
 trait ImplicitRequestContext {
 
   @Inject
-  private[this] val navigationService: NavigationService = null
+  private[this] var navigationService: NavigationService = null
 
   @Inject
-  private[this] val ssoClient: SSOClient = null
+  private[this] var ssoClient: SSOClient = null
 
   implicit def requestContext(implicit request: Request[_]): RequestContext = request match {
     case req: AuthenticatedRequest[_] =>
