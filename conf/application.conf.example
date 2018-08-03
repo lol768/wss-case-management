@@ -25,15 +25,20 @@ slick.dbs.default {
 
 blobStore {
   default {
-    provider = "swift"
     container = "uk.ac.warwick.wellbeing.dev"
     encryption_key = "secret" // Generate using https://repo.elab.warwick.ac.uk/projects/SHARED/repos/play-utils/pull-requests/12/overview?commentId=16732
 
+    provider = "swift"
     swift {
       endpoint = "https://objectstorage.warwick.ac.uk/auth/v2.0"
       username = "example"
       password = "secret"
     }
+
+    # Or you can use your local file system
+
+    provider = "fileSystem"
+    fileSystem.baseDir = "/www/casemanagement/encryptedobjectstore"
   }
 }
 

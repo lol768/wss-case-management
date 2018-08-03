@@ -1,12 +1,15 @@
 package services
 
 import com.google.inject.ImplementedBy
+import controllers.RequestContext
 import helpers.Json.JsonClientError
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc._
 import system.ImplicitRequestContext
 import warwick.sso._
+
+import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[SecurityServiceImpl])
 trait SecurityService {
@@ -24,16 +27,27 @@ trait SecurityService {
 class SecurityServiceImpl @Inject()(
   sso: SSOClient,
   parse: PlayBodyParsers
-) extends SecurityService with Results with Rendering with AcceptExtractors with ImplicitRequestContext {
+)(implicit executionContext: ExecutionContext) extends SecurityService with Results with Rendering with AcceptExtractors with ImplicitRequestContext {
 
   private def defaultParser = parse.default
 
   override def SigninAwareAction: AuthActionBuilder = sso.Lenient(defaultParser)
-  override def SigninRequiredAction: AuthActionBuilder = sso.Strict(defaultParser)
+  override def SigninRequiredAction: AuthActionBuilder = sso.Strict(defaultParser) andThen requireCondition(_.context.user.get.universityId.nonEmpty, noUniversityIdResponse)
   override def RequiredRoleAction(role: RoleName): AuthActionBuilder = sso.RequireRole(role, forbidden)(defaultParser)
   override def RequiredActualUserRoleAction(role: RoleName): AuthActionBuilder = sso.RequireActualUserRole(role, forbidden)(defaultParser)
 
   val RequireSysadmin: AuthActionBuilder = RequiredActualUserRoleAction(RoleName("sysadmin"))
+
+  class RequireConditionActionFilter(block: AuthenticatedRequest[_] => Boolean, otherwise: AuthenticatedRequest[_] => Result)(implicit val executionContext: ExecutionContext) extends ActionFilter[AuthenticatedRequest] {
+    override protected def filter[A](request: AuthenticatedRequest[A]): Future[Option[Result]] =
+      Future.successful {
+        if (block(request)) None
+        else Some(otherwise(request))
+      }
+  }
+
+  private def requireCondition(block: AuthenticatedRequest[_] => Boolean, otherwise: AuthenticatedRequest[_] => Result) =
+    new RequireConditionActionFilter(block, otherwise)
 
   private def forbidden(request: AuthenticatedRequest[_]) = {
     render {
@@ -66,4 +80,6 @@ class SecurityServiceImpl @Inject()(
 
   private val unauthorizedResponse =
     Unauthorized(Json.toJson(JsonClientError(status = "unauthorized", errors = Seq("You are not signed in.  You may authenticate through Web Sign-On."))))
+
+  private def noUniversityIdResponse(request: AuthenticatedRequest[_]) = PreconditionFailed(views.html.errors.noUniversityId()(RequestContext.authenticated(sso, request, Seq())))
 }

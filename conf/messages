@@ -1,0 +1,5 @@
+error.path.missing=A value is required for the property ''{0}''
+error.disability.unknown=Unknown disability
+error.medication.unknown=Unknown medication
+error.registrationreferral.unknown=Unknown referral type
+error.required.list=Please choose at least one option
