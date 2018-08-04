@@ -75,6 +75,8 @@ val testDeps = Seq(
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.0",
   "com.typesafe.akka" %% "akka-testkit" % "2.4.19",
   "uk.ac.warwick.sso" %% "sso-client-play-testing" % "2.47",
+  "org.seleniumhq.selenium" % "selenium-java" % "3.14.0",
+  "org.seleniumhq.selenium" % "selenium-chrome-driver" % "3.14.0",
   "com.h2database" % "h2" % "1.4.196"
 ).map(_ % Test)
 
@@ -134,6 +136,10 @@ def runWebpack(file: File): Int = Process("npm run build", file).!
 webpack := {
   if (runWebpack(baseDirectory.value) != 0) throw new Exception("Something went wrong when running webpack.")
 }
+
+// Generate a new AES key for object store encryption
+lazy val newEncryptionKey = taskKey[Unit]("Generate and print a new encryption key")
+newEncryptionKey := println(EncryptionKey.generate())
 
 runner := runner.dependsOn(webpack).value
 dist := dist.dependsOn(webpack).value
