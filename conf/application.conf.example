@@ -26,7 +26,7 @@ slick.dbs.default {
 blobStore {
   default {
     container = "uk.ac.warwick.wellbeing.dev"
-    encryption_key = "secret" // Generate using https://repo.elab.warwick.ac.uk/projects/SHARED/repos/play-utils/pull-requests/12/overview?commentId=16732
+    encryption_key = "secret" // Generate using ./sbt newEncryptionKey
 
     provider = "swift"
     swift {
