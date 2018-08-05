@@ -60,7 +60,7 @@ val appDeps = Seq(
   "com.google.inject.extensions" % "guice-multibindings" % "4.1.0",
   "com.adrianhurt" %% "play-bootstrap" % "1.2-P26-B3",
 
-  "uk.ac.warwick.sso" %% "sso-client-play" % "2.47",
+  "uk.ac.warwick.sso" %% "sso-client-play" % "2.48",
 
   "uk.ac.warwick.play-utils" %% "accesslog" % "1.15",
   "uk.ac.warwick.play-utils" %% "objectstore" % "1.15",
@@ -74,7 +74,7 @@ val testDeps = Seq(
   "org.scalatest" %% "scalatest" % "3.0.3",
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.0",
   "com.typesafe.akka" %% "akka-testkit" % "2.4.19",
-  "uk.ac.warwick.sso" %% "sso-client-play-testing" % "2.47",
+  "uk.ac.warwick.sso" %% "sso-client-play-testing" % "2.48",
   "com.h2database" % "h2" % "1.4.196"
 ).map(_ % Test)
 
@@ -105,7 +105,7 @@ dependencyOverrides += "org.json" % "json" % "20171018"
 // Make built output available as Play assets.
 unmanagedResourceDirectories in Assets += baseDirectory.value / "target/assets"
 
-resolvers += ("Local Maven Repository" at "file:///" + Path.userHome.absolutePath + "/.m2/repository")
+resolvers += Resolver.mavenLocal
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 resolvers += "oauth" at "http://oauth.googlecode.com/svn/code/maven"
 resolvers += "softprops-maven" at "http://dl.bintray.com/content/softprops/maven"

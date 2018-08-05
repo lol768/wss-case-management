@@ -38,20 +38,12 @@ object TestApplications extends MockitoSugar {
     * mock external services only, and an in-memory database. Used for
     * DAO tests and integration tests.
     */
-  def full(currentUser: Option[User] = None, additionalConfiguration: Map[String, Any] = Map.empty) =
+  def full(defaultUser: Option[User] = None, additionalConfiguration: Map[String, Any] = Map.empty) =
     GuiceApplicationBuilder(loadConfiguration = testConfig)
       .in(Environment.simple())
       .configure(additionalConfiguration)
       .bindings(
-        bind[LoginContext].toInstance(new LoginContext {
-          override val user: Option[User] = currentUser
-          override val actualUser: Option[User] = currentUser
-
-          override def loginUrl(target: Option[String]): String = "https://example.com/login"
-
-          override def userHasRole(role: RoleName) = currentUser.nonEmpty
-          override def actualUserHasRole(role: RoleName) = currentUser.nonEmpty
-        })
+        bind[LoginContext].toInstance(new MockLoginContext(defaultUser))
       )
       .disable[PlayLogbackAccessModule]
       .overrides(

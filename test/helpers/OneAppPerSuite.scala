@@ -9,8 +9,7 @@ import scala.reflect.ClassTag
 trait OneAppPerSuite extends Suite with org.scalatestplus.play.guice.GuiceOneAppPerSuite {
   self: TestSuite =>
 
-  val currentUser = Users.create(Usercode("user"), staff = true)
-  implicit override lazy val app: Application = TestApplications.full(currentUser = Some(currentUser))
+  implicit override lazy val app: Application = TestApplications.full(defaultUser = None)
 
   def get[T : ClassTag]: T = app.injector.instanceOf[T]
 
