@@ -11,7 +11,6 @@ import play.api.libs.json.{JsValue, Json}
 import play.db.NamedDatabase
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
-import warwick.slick.jdbctypes.CustomJdbcTypesPostgres._
 import warwick.sso.UniversityID
 
 import scala.concurrent.{ExecutionContext, Future}
