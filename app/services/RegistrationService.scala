@@ -11,7 +11,7 @@ import scala.concurrent.Future
 @ImplementedBy(classOf[RegistrationServiceImpl])
 trait RegistrationService {
 
-  def save(studentSupportRegistration: Registrations.StudentSupport): Future[Int]
+  def save(studentSupportRegistration: Registrations.StudentSupport): Future[String]
 
   def getStudentSupport(universityID: UniversityID): Future[Option[Registrations.StudentSupport]]
 
@@ -21,7 +21,7 @@ class RegistrationServiceImpl @Inject()(
   dao: RegistrationDao
 ) extends RegistrationService {
 
-  override def save(studentSupportRegistration: Registrations.StudentSupport): Future[Int] =
+  override def save(studentSupportRegistration: Registrations.StudentSupport): Future[String] =
     dao.save(studentSupportRegistration)
 
   override def getStudentSupport(universityID: UniversityID): Future[Option[Registrations.StudentSupport]] =

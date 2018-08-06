@@ -35,6 +35,8 @@ lazy val main = (project in file("."))
     packageZipTarball in Universal := (packageZipTarball in Universal).dependsOn(webpack).value
   )
 
+val enumeratumVersion = "1.5.13"
+
 val appDeps = Seq(
   guice,
   ws,
@@ -66,7 +68,11 @@ val appDeps = Seq(
   "uk.ac.warwick.play-utils" %% "objectstore" % "1.15",
   "uk.ac.warwick.play-utils" %% "slick" % "1.15",
 
-  "com.github.mumoshu" %% "play2-memcached-play26" % "0.9.3-warwick"
+  "com.github.mumoshu" %% "play2-memcached-play26" % "0.9.3-warwick",
+
+  "com.beachape" %% "enumeratum" % enumeratumVersion,
+  "com.beachape" %% "enumeratum-play" % enumeratumVersion,
+  "com.beachape" %% "enumeratum-play-json" % enumeratumVersion
 )
 
 val testDeps = Seq(

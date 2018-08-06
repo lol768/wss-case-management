@@ -1,19 +1,22 @@
 package domain
 
+import enumeratum.{Enum, EnumEntry}
 import play.api.data.FormError
 import play.api.data.format.Formatter
 import play.api.libs.json.{Format, JsPath, JsString}
 
+import scala.collection.immutable
+
 object Medication {
   implicit val medicationFormatter: Format[Medication] = Format(
-    JsPath.read[String].map[Medication](id => Medications.all.find(_.id == id).getOrElse(throw new IllegalArgumentException(s"Unknown medication id $id"))),
+    JsPath.read[String].map[Medication](id => Medications.values.find(_.id == id).getOrElse(throw new IllegalArgumentException(s"Unknown medication id $id"))),
     (o: Medication) => JsString(o.id)
   )
 }
 
-sealed abstract class Medication(val id: String, val description: String)
+sealed abstract class Medication(val id: String, val description: String) extends EnumEntry
 
-object Medications {
+object Medications extends Enum[Medication] {
   case object Antidepressant extends Medication("Antidepressant", "Antidepressant")
   case object Antipsychotic extends Medication("Antipsychotic", "Antipsychotic")
   case object Anxiolytic extends Medication("Anxiolytic", "Anxiolytic")
@@ -24,12 +27,12 @@ object Medications {
   case object Stimulant extends Medication("Stimulant", "Stimulant")
   case object Other extends Medication("Other", "Other")
 
-  def all = Seq(Antidepressant, Antipsychotic, Anxiolytic, Benzodiazepine, BetaBlocker, Hypnotic, MoodStabiliser, Stimulant, Other)
+  val values: immutable.IndexedSeq[Medication] = findValues
 
   object Formatter extends Formatter[Medication] {
     override def bind(key: String, data: Map[String, String]): Either[Seq[FormError], Medication] = {
       data.get(key).map(id =>
-        all.find(_.id == id).map(Right.apply)
+        values.find(_.id == id).map(Right.apply)
           .getOrElse(Left(Seq(FormError(key, "error.medication.unknown"))))
       ).getOrElse(Left(Seq(FormError(key, "missing"))))
     }

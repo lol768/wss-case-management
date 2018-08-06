@@ -28,7 +28,7 @@
     )
 
     @b3.free('_label -> "If you have a disability, please select from the options below") {
-      @Disabilities.all.map { disability =>
+      @Disabilities.values.map { disability =>
         @b3.checkbox(form("disabilities[]"),
           'id -> s"disability-${disability.id}",
           'value -> disability.id,
@@ -39,7 +39,7 @@
     }
 
     @b3.free('_label -> "Are you currently taking any medication?") {
-      @Medications.all.map { medication =>
+      @Medications.values.map { medication =>
         @b3.checkbox(form("medications[]"),
           'id -> s"medication-${medication.id}",
           'value -> medication.id,
@@ -57,7 +57,7 @@
     @b3.free('_label -> "Who referred you to Student Support?",
       '_class -> form("referrals").error.map(_ => "has-error").getOrElse("")
     ) {
-      @RegistrationReferrals.all.map { referral =>
+      @RegistrationReferrals.values.map { referral =>
         @b3.checkbox(form("referrals[]"),
           'id -> s"referral-${referral.id}",
           'value -> referral.id,

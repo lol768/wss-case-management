@@ -1,6 +1,7 @@
 package domain.dao
 
 import java.time.ZonedDateTime
+import java.util.UUID
 
 import com.google.inject.{ImplementedBy, Inject}
 import domain.CustomJdbcTypes._
@@ -18,6 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object RegistrationDao {
 
   case class Registration(
+    id: String,
     universityId: UniversityID,
     updatedDate: ZonedDateTime,
     team: Team,
@@ -25,12 +27,13 @@ object RegistrationDao {
   )
 
   class Registrations(tag: Tag) extends Table[Registration](tag, "user_registration") {
+    def id = column[String]("id")
     def universityId = column[UniversityID]("university_id")
     def updatedDate = column[ZonedDateTime]("updated_date")
     def team = column[Team]("team_id")
     def data = column[JsValue]("data")
 
-    def * = (universityId, updatedDate, team, data) <> (Registration.tupled, Registration.unapply)
+    def * = (id, universityId, updatedDate, team, data) <> (Registration.tupled, Registration.unapply)
   }
 
   val registrations = TableQuery[Registrations]
@@ -40,7 +43,7 @@ object RegistrationDao {
 @ImplementedBy(classOf[RegistrationDaoImpl])
 trait RegistrationDao {
 
-  def save(studentSupportRegistration: Registrations.StudentSupport): Future[Int]
+  def save(studentSupportRegistration: Registrations.StudentSupport): Future[String]
 
   def getStudentSupport(universityID: UniversityID): Future[Option[Registrations.StudentSupport]]
 
@@ -53,13 +56,15 @@ class RegistrationDaoImpl @Inject()(
   import RegistrationDao._
   import dbConfig.profile.api._
 
-  override def save(studentSupportRegistration: Registrations.StudentSupport): Future[Int] = {
+  override def save(studentSupportRegistration: Registrations.StudentSupport): Future[String] = {
+    val id = UUID.randomUUID().toString
     dbConfig.db.run[Int]((registrations += Registration(
+      id,
       studentSupportRegistration.universityID,
       studentSupportRegistration.updatedDate,
       Teams.StudentSupport,
       Json.toJson(studentSupportRegistration.data)(Registrations.StudentSupportData.formatter)
-    )).transactionally)
+    )).transactionally).map(_ => id)
   }
 
   override def getStudentSupport(universityID: UniversityID): Future[Option[Registrations.StudentSupport]] = {

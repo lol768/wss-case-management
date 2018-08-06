@@ -14,7 +14,7 @@ import scala.util.Try
 class TeamSpecificActionRefiner @Inject()(
   config: Configuration,
   securityService: SecurityService
-) extends ImplicitRequestContext {
+)(implicit ec: ExecutionContext) extends ImplicitRequestContext {
 
   private def WithTeam(teamId: String) = new ActionRefiner[AuthenticatedRequest, TeamSpecificRequest] {
 
@@ -26,7 +26,7 @@ class TeamSpecificActionRefiner @Inject()(
       }
     }
 
-    override protected def executionContext: ExecutionContext = ExecutionContext.global
+    override protected def executionContext: ExecutionContext = ec
   }
 
   def TeamSpecificAction(teamId: String): ActionBuilder[TeamSpecificRequest, AnyContent] =
