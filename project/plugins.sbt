@@ -11,3 +11,6 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.6")
 
 // Code coverage
 addSbtPlugin("com.github.sbt" % "sbt-jacoco" % "3.1.0")
+
+// OWASP dependency scanner https://github.com/albuch/sbt-dependency-check
+addSbtPlugin("net.vonbuchholtz" % "sbt-dependency-check" % "0.2.7")
