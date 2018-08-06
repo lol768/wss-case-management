@@ -20,6 +20,7 @@ sealed abstract class Disability(
 ) extends EnumEntry
 
 object Disabilities extends Enum[Disability] {
+  case object None extends Disability("none", "No disability")
   case object Social extends Disability("social", "Social/communication impairment such as Asperger's syndrome/other autistic spectrum disorder")
   case object Blind extends Disability("blind", "Blind or have a serious visual impairment uncorrected by glasses")
   case object Deaf extends Disability("deaf", "Deaf or have serious hearing impairment")
@@ -28,6 +29,7 @@ object Disabilities extends Enum[Disability] {
   case object Learning extends Disability("learning", "Specific learning difficulty such as dyslexia, dyspraxia or AD(H)D")
   case object Physical extends Disability("physical", "Physical impairment or mobility issues, such as difficulty using arms or using wheelchair or crutches")
   case object Other extends Disability("other", "Disability, impairment or medical condition that is not listed above")
+  case object Two extends Disability("two", "Two or more impairments and/or disabling medical conditions")
 
   val values: immutable.IndexedSeq[Disability] = findValues
 

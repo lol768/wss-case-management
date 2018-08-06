@@ -17,6 +17,8 @@ object Medication {
 sealed abstract class Medication(val id: String, val description: String) extends EnumEntry
 
 object Medications extends Enum[Medication] {
+  case object NA extends Medication("Not appropriate", "Not appropriate")
+  case object None extends Medication("None", "None")
   case object Antidepressant extends Medication("Antidepressant", "Antidepressant")
   case object Antipsychotic extends Medication("Antipsychotic", "Antipsychotic")
   case object Anxiolytic extends Medication("Anxiolytic", "Anxiolytic")

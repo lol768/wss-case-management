@@ -20,8 +20,10 @@ object RegistrationController {
       "summary" -> nonEmptyText,
       "gp" -> nonEmptyText,
       "tutor" -> nonEmptyText,
-      "disabilities" -> set(of[Disability](Disabilities.Formatter)),
-      "medications" -> set(of[Medication](Medications.Formatter)),
+      "disabilities" -> set(of[Disability](Disabilities.Formatter))
+        .verifying(FormHelpers.nonEmpty("error.required.list")),
+      "medications" -> set(of[Medication](Medications.Formatter))
+        .verifying(FormHelpers.nonEmpty("error.required.list")),
       "appointment-adjustments" -> text,
       "referrals" -> set(of[RegistrationReferral](RegistrationReferrals.Formatter))
         .verifying(FormHelpers.nonEmpty("error.required.list")),
