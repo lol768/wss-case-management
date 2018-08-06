@@ -19,14 +19,14 @@ case class AuditEvent(
 )
 
 object AuditEvent {
-  class AuditEvents(tag: Tag) extends Table[AuditEvent](tag, "AUDIT_EVENT") {
-    def id = column[UUID]("ID", O.PrimaryKey)
-    def date = column[LocalDateTime]("EVENT_DATE")
-    def operation = column[String]("OPERATION")
-    def usercode = column[Usercode]("USERCODE")
-    def data = column[JsValue]("DATA")
-    def targetId = column[String]("TARGET_ID")
-    def targetType = column[String]("TARGET_TYPE")
+  class AuditEvents(tag: Tag) extends Table[AuditEvent](tag, "audit_event") {
+    def id = column[UUID]("id", O.PrimaryKey)
+    def date = column[LocalDateTime]("event_date")
+    def operation = column[String]("operation")
+    def usercode = column[Usercode]("usercode")
+    def data = column[JsValue]("data")
+    def targetId = column[String]("target_id")
+    def targetType = column[String]("target_type")
 
     def * = (id.?, date, operation, usercode.?, data, targetId, targetType) <> ((AuditEvent.apply _).tupled, AuditEvent.unapply)
   }

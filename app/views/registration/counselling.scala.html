@@ -1,10 +1,8 @@
-@import domain.Disabilities
-@import domain.Medications
-@import domain.RegistrationReferrals
-@import domain.Registrations.StudentSupportData
-@(form: Form[StudentSupportData])(implicit context: RequestContext, request: TeamSpecificRequest[_], messagesProvider: MessagesProvider)
+@import domain._
+@import domain.Registrations._
+@(form: Form[CounsellingData])(implicit context: RequestContext, request: TeamSpecificRequest[_], messagesProvider: MessagesProvider)
 
-@main("Register for Student Support") {
+@main("Register for Counselling") {
 
   @b3.vertical.formCSRF(controllers.registration.routes.RegisterController.submit(request.team.id)) { implicit ifc =>
 
@@ -14,9 +12,12 @@
       </div>
     }
 
-    @b3.textarea(form("summary"),
-      '_label -> "Please give a summary of your current concerns and why you wish to see a member of the Student Support Team",
-      'rows -> 3
+    @b3.checkboxGroup(
+      label = "What type of Counselling would you like?",
+      items = CounsellingTypes.values,
+      form = form,
+      field = "counselling-types",
+      idPrefix = "counsellingType"
     )
 
     @b3.text(form("gp"),
@@ -43,13 +44,25 @@
       idPrefix = "medication"
     )
 
+    @b3.checkboxGroup(
+      label = "Do you have any Previous Counselling experience?",
+      items = PreviousCounsellings.values,
+      form = form,
+      field = "previous-counsellings",
+      idPrefix = "previous-counselling"
+    )
+
+    @b3.radio(form("appointment-availability"), AppointmentAvailabilities.values.map(a => a.id -> a.description),
+      '_label -> "Please indicate your availability for an appointment?"
+    )
+
     @b3.textarea(form("appointment-adjustments"),
       '_label -> "Please give details of any reasonable adjustments required for an appointment (please leave blank if not relevant)",
       'rows -> 3
     )
 
     @b3.checkboxGroup(
-      label = "Who referred you to Student Support?",
+      label = "Who referred you to Counselling Services?",
       items = RegistrationReferrals.values,
       form = form,
       field = "referrals",
