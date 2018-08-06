@@ -128,7 +128,7 @@ class VersioningSpec extends PlaySpec with ScalaFutures with OneAppPerSuite {
       sqlu"""CREATE TABLE ACCOUNT(
         USERCODE varchar(255) NOT NULL,
         WEBGROUP varchar(255) NOT NULL,
-        VERSION timestamp NOT NULL,
+        VERSION timestamp(3) NOT NULL,
         CONSTRAINT PK_ACCOUNT PRIMARY KEY (USERCODE)
       )""",
       sqlu"""CREATE INDEX IDX_ACCOUNT ON ACCOUNT (USERCODE, VERSION)""",
@@ -136,9 +136,9 @@ class VersioningSpec extends PlaySpec with ScalaFutures with OneAppPerSuite {
       sqlu"""CREATE TABLE ACCOUNT_VERSION(
         USERCODE varchar(255) NOT NULL,
         WEBGROUP varchar(255),
-        VERSION timestamp NOT NULL,
+        VERSION timestamp(3) NOT NULL,
         VERSION_OPERATION char(6) NOT NULL,
-        VERSION_TIMESTAMP timestamp NOT NULL,
+        VERSION_TIMESTAMP timestamp(3) NOT NULL,
         CONSTRAINT PK_ACCOUNT_VERSION PRIMARY KEY (USERCODE, VERSION_TIMESTAMP)
       )""",
       sqlu"""CREATE INDEX IDX_ACCOUNT_VERSION ON ACCOUNT_VERSION (USERCODE, VERSION)"""
@@ -162,8 +162,7 @@ class VersioningSpec extends PlaySpec with ScalaFutures with OneAppPerSuite {
     }
 
     "insert a row into the versions table on update" in new EmptyDatabaseFixture {
-      val account = Account(Usercode("cuscav"), GroupName("in-webdev"))
-      accountDao.insert(account).futureValue
+      val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
 
       // Just the I
       db.run(accounts.versionsTable.result).futureValue.length mustBe 1
@@ -185,8 +184,7 @@ class VersioningSpec extends PlaySpec with ScalaFutures with OneAppPerSuite {
     }
 
     "fail optimistic locking if trying to update a row with the wrong version" in new EmptyDatabaseFixture {
-      val account = Account(Usercode("cuscav"), GroupName("in-webdev"))
-      accountDao.insert(account).futureValue
+      val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
       accountDao.update(account.copy(webgroup = GroupName("in-elab"))).futureValue
 
       db.run(accounts.versionsTable.result).futureValue.length mustBe 2 // I, U
@@ -198,8 +196,7 @@ class VersioningSpec extends PlaySpec with ScalaFutures with OneAppPerSuite {
     }
 
     "insert a row into the versions table on delete" in new EmptyDatabaseFixture {
-      val account = Account(Usercode("cuscav"), GroupName("in-webdev"))
-      accountDao.insert(account).futureValue
+      val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
 
       // Just the I
       db.run(accounts.versionsTable.result).futureValue.length mustBe 1
@@ -213,8 +210,7 @@ class VersioningSpec extends PlaySpec with ScalaFutures with OneAppPerSuite {
     }
 
     "fail optimistic locking if trying to delete a row with the wrong version" in new EmptyDatabaseFixture {
-      val account = Account(Usercode("cuscav"), GroupName("in-webdev"))
-      accountDao.insert(account).futureValue
+      val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
       accountDao.update(account.copy(webgroup = GroupName("in-elab"))).futureValue
 
       db.run(accounts.versionsTable.result).futureValue.length mustBe 2 // I, U
