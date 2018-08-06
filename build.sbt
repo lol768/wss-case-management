@@ -64,9 +64,9 @@ val appDeps = Seq(
 
   "uk.ac.warwick.sso" %% "sso-client-play" % "2.48",
 
-  "uk.ac.warwick.play-utils" %% "accesslog" % "1.16-SNAPSHOT",
-  "uk.ac.warwick.play-utils" %% "objectstore" % "1.16-SNAPSHOT",
-  "uk.ac.warwick.play-utils" %% "slick" % "1.16-SNAPSHOT",
+  "uk.ac.warwick.play-utils" %% "accesslog" % "1.16",
+  "uk.ac.warwick.play-utils" %% "objectstore" % "1.16",
+  "uk.ac.warwick.play-utils" %% "slick" % "1.16",
 
   "com.github.mumoshu" %% "play2-memcached-play26" % "0.9.3-warwick",
 
