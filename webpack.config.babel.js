@@ -92,6 +92,7 @@ const productionConfig = merge([
 const developmentConfig = merge([
   {
     mode: 'development',
+    devtool: 'inline-cheap-source-map',
     plugins: [
       new WebpackNotifierPlugin(),
       new WatchEventsPlugin({ emitter: new EventEmitter() }),
