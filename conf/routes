@@ -13,6 +13,9 @@ GET         /service/healthcheck                    @controllers.ServiceCheckCon
 
 GET         /                                       @controllers.IndexController.home
 
+GET         /:teamId/register                       @controllers.registration.RegisterController.form(teamId: String)
+POST        /:teamId/register                       @controllers.registration.RegisterController.submit(teamId: String)
+
 GET         /admin/masquerade                       @controllers.MasqueradeController.masquerade
 
 # Handle trailing slashes in URLs

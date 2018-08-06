@@ -1,0 +1,78 @@
+@import domain.Disabilities
+@import domain.Medications
+@import domain.RegistrationReferrals
+@import domain.Registrations.StudentSupportData
+@(form: Form[StudentSupportData])(implicit context: RequestContext, request: TeamSpecificRequest[_], messagesProvider: MessagesProvider)
+
+@main("Register for Student Support") {
+
+  @b3.vertical.formCSRF(controllers.registration.routes.RegisterController.submit(request.team.id)) { implicit ifc =>
+
+    @if(form.hasErrors) {
+      <div class="alert alert-danger">
+        There were errors in your registration. Please correct them and submit again.
+      </div>
+    }
+
+    @b3.textarea(form("summary"),
+      '_label -> "Please give a summary of your current concerns and why you wish to see a member of the Student Support Team",
+      'rows -> 3
+    )
+
+    @b3.text(form("gp"),
+      '_label -> "Confirm the name of your GP/Doctor"
+    )
+
+    @b3.text(form("tutor"),
+      '_label -> "Confirm the name of your Personal Tutor/Supervisor"
+    )
+
+    @b3.free('_label -> "If you have a disability, please select from the options below") {
+      @Disabilities.values.map { disability =>
+        @b3.checkbox(form("disabilities[]"),
+          'id -> s"disability-${disability.id}",
+          'value -> disability.id,
+          '_text -> disability.description,
+          'checked -> form("disabilities").indexes.exists(i => form(s"disabilities[$i]").value.contains(disability.id))
+        )
+      }
+    }
+
+    @b3.free('_label -> "Are you currently taking any medication?") {
+      @Medications.values.map { medication =>
+        @b3.checkbox(form("medications[]"),
+          'id -> s"medication-${medication.id}",
+          'value -> medication.id,
+          '_text -> medication.description,
+          'checked -> form("medications").indexes.exists(i => form(s"medications[$i]").value.contains(medication.id))
+        )
+      }
+    }
+
+    @b3.textarea(form("appointment-adjustments"),
+      '_label -> "Please give details of any reasonable adjustments required for an appointment (please leave blank if not relevant)",
+      'rows -> 3
+    )
+
+    @b3.free('_label -> "Who referred you to Student Support?",
+      '_class -> form("referrals").error.map(_ => "has-error").getOrElse("")
+    ) {
+      @RegistrationReferrals.values.map { referral =>
+        @b3.checkbox(form("referrals[]"),
+          'id -> s"referral-${referral.id}",
+          'value -> referral.id,
+          '_text -> referral.description,
+          'checked -> form("referrals").indexes.exists(i => form(s"referrals[$i]").value.contains(referral.id))
+        )
+      }
+
+      @form("referrals").error.map { error =>
+        <span class="help-block">@error.format</span>
+      }
+    }
+
+    @tags.submitOrCancel("Submit", controllers.routes.IndexController.home())
+
+  }
+
+}
