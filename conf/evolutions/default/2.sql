@@ -1,7 +1,7 @@
 # --- !Ups
 CREATE TABLE AUDIT_EVENT (
 	ID varchar(32) NOT NULL,
-  EVENT_DATE timestamp NOT NULL,
+  EVENT_DATE_UTC timestamp NOT NULL,
   OPERATION varchar(255) NOT NULL,
   USERCODE varchar(255),
   DATA text,
