@@ -14,7 +14,10 @@ object RegistrationReferral {
   )
 }
 
-sealed abstract class RegistrationReferral(val id: String, val description: String) extends EnumEntry
+sealed abstract class RegistrationReferral(
+  val id: String,
+  val description: String
+) extends IdAndDescription with EnumEntry
 
 object RegistrationReferrals extends Enum[RegistrationReferral] {
   case object Myself extends RegistrationReferral("Myself", "Myself")

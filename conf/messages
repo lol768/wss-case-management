@@ -3,3 +3,7 @@ error.disability.unknown=Unknown disability
 error.medication.unknown=Unknown medication
 error.registrationreferral.unknown=Unknown referral type
 error.required.list=Please choose at least one option
+error.counsellingType.unknown=Unknown counselling type
+error.previousCounselling.unknown=Unknown previous counselling type
+error.appointmentAvailability.unknown=Unknown appointment availability type
+error.appointmentAvailability.missing=Please select an availability

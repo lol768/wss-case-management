@@ -17,7 +17,7 @@ object Disability {
 sealed abstract class Disability(
   val id: String,
   val description: String
-) extends EnumEntry
+) extends IdAndDescription with EnumEntry
 
 object Disabilities extends Enum[Disability] {
   case object None extends Disability("none", "No disability")

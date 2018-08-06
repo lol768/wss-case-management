@@ -42,6 +42,10 @@ object RegistrationDao {
 @ImplementedBy(classOf[RegistrationDaoImpl])
 trait RegistrationDao {
 
+  def save(counsellingRegistration: Registrations.Counselling): Future[String]
+
+  def getCounselling(universityID: UniversityID): Future[Option[Registrations.Counselling]]
+
   def save(studentSupportRegistration: Registrations.StudentSupport): Future[String]
 
   def getStudentSupport(universityID: UniversityID): Future[Option[Registrations.StudentSupport]]
@@ -54,6 +58,30 @@ class RegistrationDaoImpl @Inject()(
 
   import RegistrationDao._
   import dbConfig.profile.api._
+
+  override def save(counsellingRegistration: Registrations.Counselling): Future[String] = {
+    val id = UUID.randomUUID().toString
+    dbConfig.db.run[Int]((registrations += Registration(
+      id,
+      counsellingRegistration.universityID,
+      counsellingRegistration.updatedDate,
+      Teams.Counselling,
+      Json.toJson(counsellingRegistration.data)(Registrations.CounsellingData.formatter)
+    )).transactionally).map(_ => id)
+  }
+
+  override def getCounselling(universityID: UniversityID): Future[Option[Registrations.Counselling]] = {
+    dbConfig.db.run[Option[Registration]](
+      registrations.filter(_.team === (Teams.Counselling:Team))
+        .sortBy(_.updatedDate.desc)
+        .result
+        .headOption
+    ).map(_.map(r => Registrations.Counselling(
+      r.universityId,
+      r.updatedDate,
+      r.data.validate[Registrations.CounsellingData](Registrations.CounsellingData.formatter).get
+    )))
+  }
 
   override def save(studentSupportRegistration: Registrations.StudentSupport): Future[String] = {
     val id = UUID.randomUUID().toString

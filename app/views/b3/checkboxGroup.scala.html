@@ -1,0 +1,24 @@
+@import domain.IdAndDescription
+@(
+    label: String,
+    items: IndexedSeq[_ <: IdAndDescription],
+    form: Form[_],
+    field: String,
+    idPrefix: String
+)(implicit fc: views.html.b3.B3FieldConstructor, messagesProvider: MessagesProvider)
+@b3.free('_label -> label,
+  '_class -> form(field).error.map(_ => "has-error").getOrElse("")
+) {
+  @items.map { item =>
+    @b3.checkbox(form(s"$field[]"),
+      'id -> s"$idPrefix-${item.id}",
+      'value -> item.id,
+      '_text -> item.description,
+      'checked -> form(field).indexes.exists(i => form(s"$field[$i]").value.contains(item.id))
+    )
+  }
+
+  @form(field).error.map { error =>
+    <span class="help-block">@error.format</span>
+  }
+}
