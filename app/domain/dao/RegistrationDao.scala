@@ -28,7 +28,7 @@ object RegistrationDao {
   class Registrations(tag: Tag) extends Table[Registration](tag, "user_registration") {
     def id = column[String]("id")
     def universityId = column[UniversityID]("university_id")
-    def updatedDate = column[ZonedDateTime]("updated_date")
+    def updatedDate = column[ZonedDateTime]("updated_date_utc")
     def team = column[Team]("team_id")
     def data = column[JsValue]("data")
 
