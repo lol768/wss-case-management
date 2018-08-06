@@ -3,13 +3,13 @@ package domain.dao
 import java.time.ZonedDateTime
 
 import domain._
-import helpers.OneAppPerSuite
+import helpers.{MorePatience, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import warwick.sso.UniversityID
 
-class RegistrationDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures {
+class RegistrationDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures with MorePatience {
 
   private val dao = get[RegistrationDao]
 
