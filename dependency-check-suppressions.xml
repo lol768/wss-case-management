@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.1.xsd">
+  <suppress>
+    <notes><![CDATA[
+      False positives due to matching Jetty as part of ehcache jar
+    ]]></notes>
+    <gav regex="true">^org\.eclipse\.jetty:jetty-.*:.*$</gav>
+    <cpe>cpe:/a:eclipse:jetty</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      False positives due to matching jackson-databind as part of ehcache jar
+    ]]></notes>
+    <gav regex="true">^com\.fasterxml\.jackson\.core:jackson-databind:.*$</gav>
+    <cpe>cpe:/a:fasterxml:jackson-databind</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      False match of xfire version in opensaml JAR
+    ]]></notes>
+    <gav regex="true">^xfire:opensaml:.*$</gav>
+    <cpe>cpe:/a:xfire:xfire</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      False match of play-logback-access to logback itself
+    ]]></notes>
+    <gav regex="true">^org\.databrary:play-logback-access_2\.12:.*$</gav>
+    <cpe>cpe:/a:logback:logback</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      Suppress transitive dependencies from SSO-Client SSO-2206
+    ]]></notes>
+    <gav regex="true">^commons-collections:commons-collections:.*$</gav>
+    <cpe>cpe:/a:apache:commons_collections</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      Suppress transitive dependencies from SSO-Client SSO-2206
+    ]]></notes>
+    <gav regex="true">^commons-beanutils:commons-beanutils-core:.*$</gav>
+    <cpe>cpe:/a:apache:commons_beanutils</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      Suppress transitive dependencies from SSO-Client SSO-2206
+    ]]></notes>
+    <gav regex="true">^commons-beanutils:commons-beanutils-bean-collections:.*$</gav>
+    <cpe>cpe:/a:apache:commons_beanutils</cpe>
+    <cpe>cpe:/a:apache:commons_collections</cpe>
+    <cpe>cpe:/a:bean_project:bean</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      Suppress transitive dependencies from SSO-Client SSO-2206
+    ]]></notes>
+    <gav regex="true">^xfire:opensaml:.*$</gav>
+    <cpe>cpe:/a:shibboleth:opensaml</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      Suppress transitive dependencies from SSO-Client SSO-2206
+    ]]></notes>
+    <gav regex="true">^xalan:xalan:.*$</gav>
+    <cpe>cpe:/a:apache:xalan-java</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      Suppress transitive dependencies from SSO-Client SSO-2206
+    ]]></notes>
+    <gav regex="true">^commons-beanutils:commons-beanutils:.*$</gav>
+    <cpe>cpe:/a:apache:commons_beanutils</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      False positives due to mistakenly treating JClouds dependencies as the actual OpenStack JARs
+    ]]></notes>
+    <gav regex="true">^org\.apache\.jclouds\.api:openstack-.*:.*$</gav>
+    <cpe>cpe:/a:openstack:keystone</cpe>
+    <cpe>cpe:/a:openstack:swift</cpe>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      False match on play2-memcached to memcached itself
+    ]]></notes>
+    <gav regex="true">^com\.github\.mumoshu:play2-memcached-play26_2\.12:.*$</gav>
+    <cpe>cpe:/a:memcached:memcached</cpe>
+  </suppress>
+</suppressions>
