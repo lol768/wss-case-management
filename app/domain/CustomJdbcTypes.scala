@@ -3,12 +3,15 @@ package domain
 import java.sql.Timestamp
 import java.time.{LocalDateTime, ZoneId}
 
+import enumeratum.SlickEnumSupport
 import play.api.libs.json.{JsValue, Json}
-import slick.jdbc.JdbcType
 import slick.jdbc.PostgresProfile.api._
-import warwick.sso.{UniversityID, Usercode}
+import slick.jdbc.{JdbcProfile, JdbcType, PostgresProfile}
+import warwick.sso.{GroupName, UniversityID, Usercode}
 
-object CustomJdbcTypes {
+object CustomJdbcTypes extends warwick.slick.jdbctypes.CustomJdbcTypes(PostgresProfile) with SlickEnumSupport {
+  override val profile: JdbcProfile = PostgresProfile
+
   implicit val usercodeTypeMapper: JdbcType[Usercode] = MappedColumnType.base[Usercode, String](
     u => u.string,
     s => Usercode(s)
@@ -17,6 +20,11 @@ object CustomJdbcTypes {
   implicit val universityIdTypeMapper: JdbcType[UniversityID] = MappedColumnType.base[UniversityID, String](
     u => u.string,
     s => UniversityID(s)
+  )
+
+  implicit val groupNameTypeMapper: JdbcType[GroupName] = MappedColumnType.base[GroupName, String](
+    g => g.string,
+    s => GroupName(s)
   )
 
   implicit val teamTypeMapper: JdbcType[Team] = MappedColumnType.base[Team, String](
@@ -30,4 +38,7 @@ object CustomJdbcTypes {
   )
 
   implicit val jsonTypeMapper: JdbcType[JsValue] = MappedColumnType.base[JsValue, String](Json.stringify, Json.parse)
+
+  // Enum[] mappings
+  implicit lazy val databaseOperationTypeMapper: JdbcType[DatabaseOperation] = mappedColumnTypeForEnum(DatabaseOperation)
 }
