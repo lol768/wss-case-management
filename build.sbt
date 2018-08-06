@@ -64,9 +64,9 @@ val appDeps = Seq(
 
   "uk.ac.warwick.sso" %% "sso-client-play" % "2.48",
 
-  "uk.ac.warwick.play-utils" %% "accesslog" % "1.15",
-  "uk.ac.warwick.play-utils" %% "objectstore" % "1.15",
-  "uk.ac.warwick.play-utils" %% "slick" % "1.15",
+  "uk.ac.warwick.play-utils" %% "accesslog" % "1.16",
+  "uk.ac.warwick.play-utils" %% "objectstore" % "1.16",
+  "uk.ac.warwick.play-utils" %% "slick" % "1.16",
 
   "com.github.mumoshu" %% "play2-memcached-play26" % "0.9.3-warwick",
 
@@ -105,7 +105,7 @@ dependencyOverrides += "xml-apis" % "xml-apis" % "1.4.01"
 dependencyOverrides += "com.google.guava" % "guava" % "20.0"
 
 // Because jclouds is terrible
-dependencyOverrides += "com.google.code.gson" % "gson" % "2.4"
+dependencyOverrides += "com.google.code.gson" % "gson" % "2.5"
 
 // Fix a dependency warning
 dependencyOverrides += "org.json" % "json" % "20171018"
@@ -128,8 +128,11 @@ lazy val bambooTest = taskKey[Unit]("Run tests for CI")
 
 bambooTest := {
   // Capture the test result
-  val testResult = (test in Test).result.value
+  val testResult = (test in Test).result.dependsOn(dependencyCheck).value
 }
+
+dependencyCheckFailBuildOnCVSS := 5
+dependencyCheckSuppressionFiles := Seq(baseDirectory.value / "dependency-check-suppressions.xml")
 
 // Webpack task
 
@@ -137,9 +140,11 @@ import scala.sys.process.Process
 
 lazy val webpack = taskKey[Unit]("Run webpack when packaging the application")
 
+def runAudit(file: File): Int = Process("npm audit", file).!
 def runWebpack(file: File): Int = Process("npm run build", file).!
 
 webpack := {
+  if (runAudit(baseDirectory.value) != 0) throw new Exception("Some npm dependencies have problems that need fixing.")
   if (runWebpack(baseDirectory.value) != 0) throw new Exception("Something went wrong when running webpack.")
 }
 

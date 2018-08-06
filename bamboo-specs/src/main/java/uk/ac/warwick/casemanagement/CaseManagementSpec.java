@@ -80,7 +80,11 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
                     .name("tar.gz")
                     .copyPattern("app.tar.gz")
                     .location("target/universal")
-                    .shared(true)
+                    .shared(true),
+                  new Artifact()
+                    .name("Dependency check results")
+                    .copyPattern("dependency-check-report.html")
+                    .location("target/scala-2.12")
                 )
                 .requirements(
                   new Requirement("Linux").matchValue("true").matchType(Requirement.MatchType.EQUALS)
