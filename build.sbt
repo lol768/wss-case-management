@@ -76,7 +76,9 @@ val appDeps = Seq(
   "com.beachape" %% "enumeratum" % enumeratumVersion,
   "com.beachape" %% "enumeratum-play" % enumeratumVersion,
   "com.beachape" %% "enumeratum-play-json" % enumeratumVersion,
-  "com.beachape" %% "enumeratum-slick" % enumeratumSlickVersion
+  "com.beachape" %% "enumeratum-slick" % enumeratumSlickVersion,
+
+  "org.apache.jclouds.api" % "filesystem" % "2.1.0"
 )
 
 val testDeps = Seq(

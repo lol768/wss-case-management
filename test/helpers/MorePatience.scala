@@ -7,6 +7,6 @@ trait MorePatience {
 
   self: PatienceConfiguration =>
 
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(200, Millis)), scaled(Span(15, Millis)))
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(250, Millis)), scaled(Span(15, Millis)))
 
 }
