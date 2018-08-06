@@ -5,7 +5,7 @@ import java.util.UUID
 
 import domain.CustomJdbcTypes._
 import play.api.libs.json.JsValue
-import slick.jdbc.OracleProfile.api._
+import slick.jdbc.PostgresProfile.api._
 import warwick.sso.Usercode
 
 case class AuditEvent(

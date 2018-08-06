@@ -35,7 +35,10 @@ lazy val main = (project in file("."))
     packageZipTarball in Universal := (packageZipTarball in Universal).dependsOn(webpack).value
   )
 
+val playUtilsVersion = "1.16"
+val ssoClientVersion = "2.48"
 val enumeratumVersion = "1.5.13"
+val enumeratumSlickVersion = "1.5.15"
 
 val appDeps = Seq(
   guice,
@@ -62,17 +65,18 @@ val appDeps = Seq(
   "com.google.inject.extensions" % "guice-multibindings" % "4.1.0",
   "com.adrianhurt" %% "play-bootstrap" % "1.2-P26-B3",
 
-  "uk.ac.warwick.sso" %% "sso-client-play" % "2.48",
+  "uk.ac.warwick.sso" %% "sso-client-play" % ssoClientVersion,
 
-  "uk.ac.warwick.play-utils" %% "accesslog" % "1.16",
-  "uk.ac.warwick.play-utils" %% "objectstore" % "1.16",
-  "uk.ac.warwick.play-utils" %% "slick" % "1.16",
+  "uk.ac.warwick.play-utils" %% "accesslog" % playUtilsVersion,
+  "uk.ac.warwick.play-utils" %% "objectstore" % playUtilsVersion,
+  "uk.ac.warwick.play-utils" %% "slick" % playUtilsVersion,
 
   "com.github.mumoshu" %% "play2-memcached-play26" % "0.9.3-warwick",
 
   "com.beachape" %% "enumeratum" % enumeratumVersion,
   "com.beachape" %% "enumeratum-play" % enumeratumVersion,
-  "com.beachape" %% "enumeratum-play-json" % enumeratumVersion
+  "com.beachape" %% "enumeratum-play-json" % enumeratumVersion,
+  "com.beachape" %% "enumeratum-slick" % enumeratumSlickVersion
 )
 
 val testDeps = Seq(
@@ -80,7 +84,7 @@ val testDeps = Seq(
   "org.scalatest" %% "scalatest" % "3.0.3",
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.0",
   "com.typesafe.akka" %% "akka-testkit" % "2.4.19",
-  "uk.ac.warwick.sso" %% "sso-client-play-testing" % "2.48",
+  "uk.ac.warwick.sso" %% "sso-client-play-testing" % ssoClientVersion,
   "org.seleniumhq.selenium" % "selenium-java" % "3.14.0",
   "org.seleniumhq.selenium" % "selenium-chrome-driver" % "3.14.0",
   "com.h2database" % "h2" % "1.4.196"
