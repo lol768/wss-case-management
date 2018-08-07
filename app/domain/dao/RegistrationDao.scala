@@ -55,13 +55,14 @@ trait RegistrationDao {
 class RegistrationDaoImpl @Inject()(
   @NamedDatabase("default") protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit executionContext: ExecutionContext) extends RegistrationDao with HasDatabaseConfigProvider[JdbcProfile] {
-
   import RegistrationDao._
   import dbConfig.profile.api._
 
+  private[this] def db: Database = dbConfig.db
+
   override def save(counsellingRegistration: Registrations.Counselling): Future[String] = {
     val id = UUID.randomUUID().toString
-    dbConfig.db.run[Int]((registrations += Registration(
+    db.run[Int]((registrations += Registration(
       id,
       counsellingRegistration.universityID,
       counsellingRegistration.updatedDate,
@@ -71,7 +72,7 @@ class RegistrationDaoImpl @Inject()(
   }
 
   override def getCounselling(universityID: UniversityID): Future[Option[Registrations.Counselling]] = {
-    dbConfig.db.run[Option[Registration]](
+    db.run[Option[Registration]](
       registrations.filter(_.team === (Teams.Counselling:Team))
         .sortBy(_.updatedDate.desc)
         .result
@@ -85,7 +86,7 @@ class RegistrationDaoImpl @Inject()(
 
   override def save(studentSupportRegistration: Registrations.StudentSupport): Future[String] = {
     val id = UUID.randomUUID().toString
-    dbConfig.db.run[Int]((registrations += Registration(
+    db.run[Int]((registrations += Registration(
       id,
       studentSupportRegistration.universityID,
       studentSupportRegistration.updatedDate,
@@ -95,7 +96,7 @@ class RegistrationDaoImpl @Inject()(
   }
 
   override def getStudentSupport(universityID: UniversityID): Future[Option[Registrations.StudentSupport]] = {
-    dbConfig.db.run[Option[Registration]](
+    db.run[Option[Registration]](
       registrations.filter(_.team === (Teams.StudentSupport:Team))
         .sortBy(_.updatedDate.desc)
         .result
