@@ -1,14 +1,14 @@
 package domain.dao
 
 import domain._
-import helpers.OneAppPerSuite
+import helpers.{MorePatience, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import warwick.sso.Usercode
 
-class AuditDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures {
+class AuditDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures with MorePatience {
 
   private val dao = get[AuditDao]
 
