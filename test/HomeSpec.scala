@@ -20,7 +20,7 @@ class HomeSpec extends PlaySpec with MockitoSugar with OneAppPerSuite {
 
       status(home) mustEqual OK
       contentType(home).get mustEqual "text/html"
-      contentAsString(home) must include("Lorem ipsum")
+      contentAsString(home) must include("Enquiries")
     }
 
     "reject a user without a University ID" in {

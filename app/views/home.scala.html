@@ -1,5 +1,10 @@
-@()(implicit context: RequestContext)
+@(teams: Seq[domain.Team])(implicit context: RequestContext)
 
 @main("Home") {
-  <p>Lorem ipsum dolor sit amet</p>
+  <h2>Enquiries</h2>
+  <ul>
+    @teams.map { team =>
+      <li><a href="@controllers.enquiries.routes.EnquiryController.form(team.id)">@team.name</a></li>
+    }
+  </ul>
 }

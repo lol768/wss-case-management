@@ -9,7 +9,7 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import warwick.sso.UniversityID
 
-class RegistrationDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures with MorePatience {
+class RegistrationDaoTest extends AbstractDaoTest {
 
   private val dao = get[RegistrationDao]
 

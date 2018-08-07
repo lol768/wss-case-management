@@ -8,6 +8,8 @@ object Teams {
   case object MentalHealth extends Team("mentalhealth", "Mental Health and Wellbeing")
   case object StudentSupport extends Team("studentsupport", "Student Support")
 
+  val all: Seq[Team] = Seq(Counselling, Disability, MentalHealth, StudentSupport)
+
   def fromId(id: String): Team = id match {
     case Counselling.id => Counselling
     case Disability.id => Disability

@@ -8,7 +8,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import warwick.sso.Usercode
 
-class AuditDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures with MorePatience {
+class AuditDaoTest extends AbstractDaoTest {
 
   private val dao = get[AuditDao]
 

@@ -1,5 +1,6 @@
 package controllers
 
+import domain.Teams
 import javax.inject.{Inject, Singleton}
 import services.SecurityService
 
@@ -10,7 +11,7 @@ class IndexController @Inject()(
   import securityService._
 
   def home = SigninRequiredAction { implicit request =>
-    Ok(views.html.home())
+    Ok(views.html.home(Teams.all))
   }
 
   def redirectToPath(path: String, status: Int = MOVED_PERMANENTLY) = Action {
