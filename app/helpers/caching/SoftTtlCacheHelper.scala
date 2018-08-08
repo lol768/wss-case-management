@@ -37,7 +37,7 @@ class AsyncSoftTtlCacheHelper[A: ClassTag](
     else cache.get[CacheElement[A]](key).flatMap {
       case Some(element) =>
         if (element.isStale) {
-          // try an update sy
+          // try to get a fresh value but return the cached value if that fails
           doUpdate(key)(update).fallbackTo(Future.successful(element))
         } else if(element.isSlightlyStale) {
           doUpdate(key)(update) // update the cache in the background
