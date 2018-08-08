@@ -32,28 +32,34 @@ class AsyncSoftTtlCacheHelper[A: ClassTag](
   def getOrElseUpdate(key: String)(update: => Future[A]): Future[A] =
     getOrElseUpdateElement(key)(update)(CacheOptions.default).map(_.value)
 
-  def getOrElseUpdateElement(key: String)(update: => Future[A])(implicit cacheOptions: CacheOptions): Future[CacheElement[A]] =
+  def getOrElseUpdateElement(key: String)(update: => Future[A])(implicit cacheOptions: CacheOptions): Future[CacheElement[A]] = {
+
+    def validateCachedValueType(element: CacheElement[A]):Future[CacheElement[A]] = {
+      element.value match {
+        case _: A =>
+          Future.successful(element)
+        case _ =>
+          logger.info(s"Incorrect type from cache fetching $key; doing update")
+          doUpdate(key)(update)
+      }
+    }
+
     if (cacheOptions.noCache) doUpdate(key)(update)
     else cache.get[CacheElement[A]](key).flatMap {
       case Some(element) =>
         if (element.isStale) {
           // try to get a fresh value but return the cached value if that fails
-          doUpdate(key)(update).fallbackTo(Future.successful(element))
-        } else if(element.isSlightlyStale) {
+          doUpdate(key)(update).fallbackTo(validateCachedValueType(element))
+        } else if (element.isSlightlyStale) {
           doUpdate(key)(update) // update the cache in the background
-          Future.successful(element) // return the slightly stale value
+          validateCachedValueType(element) // return the slightly stale value
         } else {
-          element.value match {
-            case _: A =>
-              Future.successful(element)
-            case _ =>
-              logger.info(s"Incorrect type from cache fetching $key; doing update")
-              doUpdate(key)(update)
-          }
+          validateCachedValueType(element)
         }
       case None =>
         doUpdate(key)(update)
     }
+  }
 
   private def doUpdate(key: String)(update: => Future[A]): Future[CacheElement[A]] =
     update.flatMap { updateResult =>
