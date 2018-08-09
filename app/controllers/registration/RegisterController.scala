@@ -4,7 +4,7 @@ import java.time.ZonedDateTime
 
 import controllers.{BaseController, TeamSpecificActionRefiner, TeamSpecificRequest}
 import domain._
-import helpers.FormHelpers
+import helpers.{FormHelpers, JavaTime}
 import javax.inject.Inject
 import play.api.data.Form
 import play.api.data.Forms._
@@ -113,7 +113,7 @@ class RegisterController @Inject()(
         Future.successful(Ok(views.html.registration.studentsupport(formWithErrors)))
       },
       data => {
-        registrationService.save(Registrations.StudentSupport(request.context.user.get.universityId.get, ZonedDateTime.now, data)).map(_ =>
+        registrationService.save(Registrations.StudentSupport(request.context.user.get.universityId.get, JavaTime.zonedDateTime, data)).map(_ =>
           Redirect(controllers.routes.IndexController.home()).flashing("success" -> "Student Support registration complete")
         )
       }

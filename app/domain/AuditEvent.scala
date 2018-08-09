@@ -4,13 +4,14 @@ import java.time.ZonedDateTime
 import java.util.UUID
 
 import domain.CustomJdbcTypes._
+import helpers.JavaTime
 import play.api.libs.json.JsValue
 import slick.jdbc.PostgresProfile.api._
 import warwick.sso.Usercode
 
 case class AuditEvent(
   id: Option[UUID] = None,
-  date: ZonedDateTime = ZonedDateTime.now(),
+  date: ZonedDateTime = JavaTime.zonedDateTime,
   operation: String,
   usercode: Option[Usercode],
   data: JsValue,

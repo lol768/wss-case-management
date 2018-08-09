@@ -3,7 +3,7 @@ package domain.dao
 import java.time.ZonedDateTime
 
 import domain._
-import helpers.{MorePatience, OneAppPerSuite}
+import helpers.{JavaTime, MorePatience, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
@@ -19,7 +19,7 @@ class RegistrationDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite
 
       dao.getStudentSupport(UniversityID("1234567")).futureValue
 
-      val now = ZonedDateTime.now
+      val now = JavaTime.zonedDateTime
 
       val registration1 = Registrations.StudentSupport(
         UniversityID("1234567"),

@@ -4,6 +4,7 @@ import java.time.LocalDateTime
 
 import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
+import helpers.JavaTime
 import system.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -22,7 +23,7 @@ class HealthCheckService @Inject()(system: ActorSystem) extends Logging {
   var healthCheckLastRunAt: LocalDateTime = _
 
   def runNow(): Unit = {
-    healthCheckLastRunAt = LocalDateTime.now()
+    healthCheckLastRunAt = JavaTime.localDateTime
   }
 
   runNow()
