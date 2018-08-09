@@ -8,14 +8,14 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
-object SoftTtlCacheHelper {
-  def async[A: ClassTag](cache: AsyncCacheApi, logger: Logger, softTtl: FiniteDuration, mediumTtl: FiniteDuration, hardTtl: Duration)(implicit executor: ExecutionContext): AsyncSoftTtlCacheHelper[A] = {
+object VariableTtlCacheHelper {
+  def async[A: ClassTag](cache: AsyncCacheApi, logger: Logger, softTtl: FiniteDuration, mediumTtl: FiniteDuration, hardTtl: Duration)(implicit executor: ExecutionContext): AsyncVariableTtlCacheHelper[A] = {
     val ttl = Ttl(softTtl, mediumTtl, hardTtl)
-    new AsyncSoftTtlCacheHelper[A](cache, logger, _ => ttl)
+    new AsyncVariableTtlCacheHelper[A](cache, logger, _ => ttl)
   }
 
-  def async[A: ClassTag](cache: AsyncCacheApi, logger: Logger, ttl: A => Ttl)(implicit executor: ExecutionContext): AsyncSoftTtlCacheHelper[A] =
-    new AsyncSoftTtlCacheHelper[A](cache, logger, ttl)
+  def async[A: ClassTag](cache: AsyncCacheApi, logger: Logger, ttl: A => Ttl)(implicit executor: ExecutionContext): AsyncVariableTtlCacheHelper[A] =
+    new AsyncVariableTtlCacheHelper[A](cache, logger, ttl)
 }
 
 /**
@@ -23,7 +23,7 @@ object SoftTtlCacheHelper {
   * If an item is retrieved that is older than this soft TTL, we update its
   * value in the background but return the stale value immediately.
   */
-class AsyncSoftTtlCacheHelper[A: ClassTag](
+class AsyncVariableTtlCacheHelper[A: ClassTag](
   cache: AsyncCacheApi,
   logger: Logger,
   ttlStrategy: A => Ttl
@@ -51,8 +51,12 @@ class AsyncSoftTtlCacheHelper[A: ClassTag](
           // try to get a fresh value but return the cached value if that fails
           doUpdate(key)(update).fallbackTo(validateCachedValueType(element))
         } else if (element.isSlightlyStale) {
-          doUpdate(key)(update) // update the cache in the background
-          validateCachedValueType(element) // return the slightly stale value
+          // update the cache in the background
+          doUpdate(key)(update).failed.foreach(t =>
+            logger.error(s"Background cache update for $key failed. ${t.getMessage}")
+          )
+          // return the slightly stale value
+          validateCachedValueType(element)
         } else {
           validateCachedValueType(element)
         }
