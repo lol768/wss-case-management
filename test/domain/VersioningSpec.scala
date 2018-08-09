@@ -5,7 +5,7 @@ import java.time.ZonedDateTime
 import akka.Done
 import domain.CustomJdbcTypes._
 import domain.VersioningSpec._
-import helpers.OneAppPerSuite
+import helpers.{JavaTime, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.PlaySpec
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -22,7 +22,7 @@ object VersioningSpec {
   case class Account(
     usercode: Usercode,
     webgroup: GroupName,
-    version: ZonedDateTime = ZonedDateTime.now()
+    version: ZonedDateTime = JavaTime.zonedDateTime
   ) extends Versioned[Account] {
     override def atVersion(at: ZonedDateTime): Account = copy(version = at)
     override def storedVersion[B <: StoredVersion[Account]](operation: DatabaseOperation, timestamp: ZonedDateTime): B =

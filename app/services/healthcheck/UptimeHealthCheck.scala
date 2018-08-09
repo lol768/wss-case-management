@@ -4,6 +4,7 @@ import java.time.LocalDateTime
 
 import akka.actor.ActorSystem
 import javax.inject.{Inject, Singleton}
+import helpers.JavaTime
 
 @Singleton
 class UptimeHealthCheck @Inject()(
@@ -15,6 +16,6 @@ class UptimeHealthCheck @Inject()(
   override def warning = -1
   override def critical = -2
   override def message = s"System has been up for $value seconds"
-  override def testedAt = LocalDateTime.now
+  override def testedAt = JavaTime.localDateTime
 
 }

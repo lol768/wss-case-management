@@ -2,6 +2,7 @@ package services.healthcheck
 
 import java.time.LocalDateTime
 
+import helpers.JavaTime
 import play.api.libs.json.{JsObject, Json}
 import services.healthcheck.HealthCheckStatus.{Critical, Okay, Warning}
 
@@ -76,7 +77,7 @@ abstract class NumericHealthCheck[T](implicit num: Numeric[T]) extends HealthChe
         "name" -> name,
         "status" -> HealthCheckStatus.Unknown.string,
         "message" -> s"Error performing health check: ${t.getMessage}",
-        "testedAt" -> LocalDateTime.now
+        "testedAt" -> JavaTime.localDateTime
       )
     }
 

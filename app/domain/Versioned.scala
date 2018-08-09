@@ -4,6 +4,7 @@ import java.time.ZonedDateTime
 
 import akka.Done
 import domain.CustomJdbcTypes._
+import helpers.JavaTime
 import slick.dbio.Effect
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -49,7 +50,7 @@ trait Versioning {
 
     def insert(value: A)(implicit ec: ExecutionContext): DBIOAction[A, NoStream, Effect.Write] = {
       // We ignore the version passed through
-      val versionTimestamp = ZonedDateTime.now()
+      val versionTimestamp = JavaTime.zonedDateTime
       val versionedValue = value.atVersion(versionTimestamp)
       val storedVersion = versionedValue.storedVersion[B](DatabaseOperation.Insert, versionTimestamp)
 
@@ -68,7 +69,7 @@ trait Versioning {
 
     def update(value: A)(implicit ec: ExecutionContext): DBIOAction[A, NoStream, _] = {
       val originalVersion = value.version
-      val versionTimestamp = ZonedDateTime.now()
+      val versionTimestamp = JavaTime.zonedDateTime
       val versionedValue = value.atVersion(versionTimestamp)
       val storedVersion = versionedValue.storedVersion[B](DatabaseOperation.Update, versionTimestamp)
 
@@ -85,7 +86,7 @@ trait Versioning {
     }
 
     def delete(value: A)(implicit ec: ExecutionContext): DBIOAction[Done, NoStream, _] = {
-      val storedVersion = value.storedVersion[B](DatabaseOperation.Delete, ZonedDateTime.now())
+      val storedVersion = value.storedVersion[B](DatabaseOperation.Delete, JavaTime.zonedDateTime)
 
       val deleteAction =
         table.filter { a => a.matchesPrimaryKey(value) && a.version === value.version }.delete.flatMap {

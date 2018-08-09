@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
 
 import com.google.common.io.CharSource
+import helpers.JavaTime
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsObject, Json}
 import services.healthcheck.EncryptedObjectStorageHealthCheck._
@@ -45,7 +46,7 @@ class EncryptedObjectStorageHealthCheck @Inject()(
               "name" -> name,
               "status" -> HealthCheckStatus.Critical.string,
               "message" -> s"Couldn't find ${EncryptedObjectStorageService.metadataIVKey} in the metadata for object $objectKey - object not encrypted?",
-              "testedAt" -> LocalDateTime.now
+              "testedAt" -> JavaTime.localDateTime
             )
           } else {
             // Check the decrypted contents match the original
@@ -55,7 +56,7 @@ class EncryptedObjectStorageHealthCheck @Inject()(
                 "name" -> name,
                 "status" -> HealthCheckStatus.Critical.string,
                 "message" -> s"Encrypted contents $actualContents didn't match expected $contents",
-                "testedAt" -> LocalDateTime.now
+                "testedAt" -> JavaTime.localDateTime
               )
             } else {
               val endTime = System.currentTimeMillis()
@@ -66,7 +67,7 @@ class EncryptedObjectStorageHealthCheck @Inject()(
                 "status" -> HealthCheckStatus.Okay.string,
                 "message" -> s"Fetched and decrypted $objectKey in ${timeTakenMs}ms",
                 "perfData" -> Seq(PerfData("time_taken_ms", timeTakenMs)).map(_.formatted),
-                "testedAt" -> LocalDateTime.now
+                "testedAt" -> JavaTime.localDateTime
               )
             }
           }
@@ -76,7 +77,7 @@ class EncryptedObjectStorageHealthCheck @Inject()(
             "name" -> name,
             "status" -> HealthCheckStatus.Critical.string,
             "message" -> s"Couldn't find object with key $objectKey in the object store",
-            "testedAt" -> LocalDateTime.now
+            "testedAt" -> JavaTime.localDateTime
           )
         }
     }.recover { case t =>
@@ -84,7 +85,7 @@ class EncryptedObjectStorageHealthCheck @Inject()(
         "name" -> name,
         "status" -> HealthCheckStatus.Unknown.string,
         "message" -> s"Error performing health check: ${t.getMessage}",
-        "testedAt" -> LocalDateTime.now
+        "testedAt" -> JavaTime.localDateTime
       )
     }.get
   }

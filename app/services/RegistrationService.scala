@@ -4,7 +4,7 @@ import com.google.inject.ImplementedBy
 import domain.Registrations
 import domain.dao.RegistrationDao
 import helpers.ServiceResults.ServiceResult
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import warwick.sso.UniversityID
 
@@ -24,6 +24,7 @@ trait RegistrationService {
 
 }
 
+@Singleton
 class RegistrationServiceImpl @Inject()(
   dao: RegistrationDao,
   auditService: AuditService
