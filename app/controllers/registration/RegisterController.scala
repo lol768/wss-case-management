@@ -5,7 +5,7 @@ import java.time.ZonedDateTime
 import controllers.{BaseController, TeamSpecificActionRefiner, TeamSpecificRequest}
 import domain._
 import helpers.{FormHelpers, JavaTime}
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.I18nSupport
@@ -50,6 +50,7 @@ object RegistrationController {
   }
 }
 
+@Singleton
 class RegisterController @Inject()(
   registrationService: RegistrationService,
   teamSpecificActionRefiner: TeamSpecificActionRefiner

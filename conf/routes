@@ -16,6 +16,9 @@ GET         /                                       @controllers.IndexController
 GET         /:teamId/register                       @controllers.registration.RegisterController.form(teamId: String)
 POST        /:teamId/register                       @controllers.registration.RegisterController.submit(teamId: String)
 
+GET         /:teamId/enquiry                        @controllers.enquiries.EnquiryController.form(teamId: String)
+POST        /:teamId/enquiry                        @controllers.enquiries.EnquiryController.submit(teamId: String)
+
 GET         /admin/masquerade                       @controllers.MasqueradeController.masquerade
 
 # Handle trailing slashes in URLs

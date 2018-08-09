@@ -41,4 +41,6 @@ object CustomJdbcTypes extends warwick.slick.jdbctypes.CustomJdbcTypes(PostgresP
 
   // Enum[] mappings
   implicit lazy val databaseOperationTypeMapper: JdbcType[DatabaseOperation] = mappedColumnTypeForEnum(DatabaseOperation)
+  implicit lazy val messageOwnerMapper: JdbcType[MessageOwner] = mappedColumnTypeForEnum(MessageOwner)
+  implicit lazy val messageSenderMapper: JdbcType[MessageSender] = mappedColumnTypeForEnum(MessageSender)
 }

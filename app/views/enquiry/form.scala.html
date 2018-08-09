@@ -1,0 +1,14 @@
+@import domain.Team
+@import domain.Enquiry.FormData
+@(team: Team, form: Form[FormData])(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"${team.name} enquiry") {
+  @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryController.submit(team.id)) { implicit ifc =>
+    @b3.textarea(form("text"),
+      '_label -> "Provide as much detail as you need to about your enquiry.",
+      'rows -> 3
+    )
+
+    @tags.submitOrCancel("Submit", controllers.routes.IndexController.home())
+  }
+}
