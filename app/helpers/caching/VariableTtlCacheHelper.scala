@@ -49,11 +49,14 @@ class AsyncVariableTtlCacheHelper[A: ClassTag](
       case Some(element) =>
         if (element.isStale) {
           // try to get a fresh value but return the cached value if that fails
-          doUpdate(key)(update).fallbackTo(validateCachedValueType(element))
+          doUpdate(key)(update).recoverWith{ case t: Throwable =>
+            logger.error(s"Unable to fetch fresh value for $key failed. Returning stale value", t)
+            validateCachedValueType(element)
+          }
         } else if (element.isSlightlyStale) {
           // update the cache in the background
           doUpdate(key)(update).failed.foreach(t =>
-            logger.error(s"Background cache update for $key failed. ${t.getMessage}")
+            logger.error(s"Background cache update for $key failed.", t)
           )
           // return the slightly stale value
           validateCachedValueType(element)
