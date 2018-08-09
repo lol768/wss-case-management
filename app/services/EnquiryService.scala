@@ -5,7 +5,9 @@ import java.util.UUID
 import com.google.inject.ImplementedBy
 import domain.{Enquiry, Message, MessageData, MessageOwner}
 import domain.dao.{DaoRunner, EnquiryDao, MessageDao}
+import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
+import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
 import slick.jdbc.PostgresProfile.api._
@@ -15,31 +17,34 @@ trait EnquiryService {
   /**
     * Create initial Enquiry with provided text as a Message.
     */
-  def save(enquiry: Enquiry, message: MessageData): Future[Enquiry]
+  def save(enquiry: Enquiry, message: MessageData)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
   def getMessagesData(enquiry: UUID): Future[Seq[MessageData]]
 }
 
 @Singleton
 class EnquiryServiceImpl @Inject() (
-  audit: AuditService,
+  auditService: AuditService,
   enquiryDao: EnquiryDao,
   messageDao: MessageDao,
   daoRunner: DaoRunner
 )(
   implicit ec: ExecutionContext
 ) extends EnquiryService {
-  override def save(enquiry: Enquiry, message: MessageData): Future[Enquiry] = {
-    daoRunner.run((for {
-      e <- enquiryDao.insert(enquiry.copy(id = Some(UUID.randomUUID())))
-      m <- messageDao.insert(Message(
-        id = Some(UUID.randomUUID()),
-        text = message.text,
-        sender = message.sender,
-        ownerId = e.id.get,
-        ownerType = MessageOwner.Enquiry
-      ))
-    } yield e).transactionally)
+  override def save(enquiry: Enquiry, message: MessageData)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
+    val id = UUID.randomUUID()
+    auditService.audit("EnquirySave", id.toString, "Enquiry", Json.obj()) {
+      daoRunner.run((for {
+        e <- enquiryDao.insert(enquiry.copy(id = Some(id)))
+        m <- messageDao.insert(Message(
+          id = Some(UUID.randomUUID()),
+          text = message.text,
+          sender = message.sender,
+          ownerId = e.id.get,
+          ownerType = MessageOwner.Enquiry
+        ))
+      } yield e).transactionally).map(Right.apply)
+    }
   }
 
   def getMessagesData(enquiry: UUID): Future[Seq[MessageData]] = {

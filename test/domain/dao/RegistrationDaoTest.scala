@@ -3,7 +3,7 @@ package domain.dao
 import java.time.ZonedDateTime
 
 import domain._
-import helpers.{MorePatience, OneAppPerSuite}
+import helpers.{DaoPatience, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec

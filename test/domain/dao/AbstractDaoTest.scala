@@ -1,6 +1,6 @@
 package domain.dao
 
-import helpers.{MorePatience, OneAppPerSuite}
+import helpers.{DaoPatience, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
@@ -12,7 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class IntentionalRollbackException[R](successResult: R) extends Exception("Rolling back transaction")
 
-abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures with MorePatience {
+abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures with DaoPatience {
 
   implicit val ec = get[ExecutionContext]
 

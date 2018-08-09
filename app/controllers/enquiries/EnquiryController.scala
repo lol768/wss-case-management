@@ -21,7 +21,7 @@ class EnquiryController @Inject()(
 )(implicit executionContext: ExecutionContext) extends BaseController with I18nSupport {
 
   val baseForm = Form(mapping(
-    "text" -> nonEmptyText(maxLength = 2000)
+    "text" -> nonEmptyText
   )(Data.apply)(Data.unapply))
 
   import teamSpecificActionRefiner._
@@ -49,9 +49,13 @@ class EnquiryController @Inject()(
           ZonedDateTime.now()
         )
 
-        service.save(enquiry, message).map { enquiry =>
-          Redirect(controllers.routes.IndexController.home()).flashing("success" -> "Your enquiry has been received")
+        service.save(enquiry, message).map { result =>
+          result.fold(
+            showErrors,
+            e => Redirect(controllers.routes.IndexController.home()).flashing("success" -> "Your enquiry has been received")
+          )
         }
+
       }
     )
   }
