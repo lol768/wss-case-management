@@ -32,7 +32,7 @@ object RegistrationDao {
     def team = column[Team]("team_id")
     def data = column[JsValue]("data")
 
-    def * = (id, universityId, updatedDate, team, data) <> (Registration.tupled, Registration.unapply)
+    def * = (id, universityId, updatedDate, team, data).mapTo[Registration]
   }
 
   val registrations = TableQuery[Registrations]

@@ -47,7 +47,7 @@ object Enquiry extends Versioning {
 
     def id = column[UUID]("id", O.PrimaryKey)
 
-    def * = (id.?, universityId, team, version) <> (Enquiry.tupled, Enquiry.unapply)
+    def * = (id.?, universityId, team, version).mapTo[Enquiry]
   }
 
   class EnquiryVersions(tag: Tag) extends Table[EnquiryVersion](tag, "enquiry_version") with StoredVersionTable[Enquiry] with EnquiryProperties {
@@ -55,7 +55,7 @@ object Enquiry extends Versioning {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[ZonedDateTime]("version_timestamp")
 
-    def * = (id, universityId, team, version, operation, timestamp) <> (EnquiryVersion.tupled, EnquiryVersion.unapply)
+    def * = (id, universityId, team, version, operation, timestamp).mapTo[EnquiryVersion]
     def pk = primaryKey("pk_enquiryversions", (id, timestamp))
     def idx = index("idx_enquiryversions", (id, version))
   }

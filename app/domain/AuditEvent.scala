@@ -20,6 +20,8 @@ case class AuditEvent(
 )
 
 object AuditEvent {
+  def tupled = (apply _).tupled
+
   class AuditEvents(tag: Tag) extends Table[AuditEvent](tag, "audit_event") {
     def id = column[UUID]("id", O.PrimaryKey)
     def date = column[ZonedDateTime]("event_date_utc")
@@ -29,7 +31,7 @@ object AuditEvent {
     def targetId = column[String]("target_id")
     def targetType = column[String]("target_type")
 
-    def * = (id.?, date, operation, usercode.?, data, targetId, targetType) <> ((AuditEvent.apply _).tupled, AuditEvent.unapply)
+    def * = (id.?, date, operation, usercode.?, data, targetId, targetType).mapTo[AuditEvent]
   }
 
   val auditEvents = TableQuery[AuditEvents]

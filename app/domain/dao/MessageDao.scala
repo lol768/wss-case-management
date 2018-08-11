@@ -2,14 +2,13 @@ package domain.dao
 
 import java.util.UUID
 
-import domain.{Message, MessageOwner}
 import com.google.inject.ImplementedBy
+import domain.CustomJdbcTypes._
+import domain.{Message, MessageOwner}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
-import domain.CustomJdbcTypes._
-import slick.lifted.QueryBase
 
 import scala.concurrent.ExecutionContext
 

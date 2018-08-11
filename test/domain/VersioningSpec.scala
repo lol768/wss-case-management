@@ -38,6 +38,8 @@ object VersioningSpec {
   ) extends StoredVersion[Account]
 
   object AccountVersion {
+    def tupled = (apply _).tupled
+
     def versioned(account: Account, operation: DatabaseOperation, timestamp: ZonedDateTime): AccountVersion =
       AccountVersion(
         account.usercode,
@@ -49,6 +51,8 @@ object VersioningSpec {
   }
 
   object Account extends Versioning {
+    def tupled = (apply _).tupled
+
     sealed trait AccountProperties {
       self: Table[_] =>
 
@@ -61,7 +65,7 @@ object VersioningSpec {
 
       def usercode = column[Usercode]("USERCODE", O.PrimaryKey)
 
-      def * = (usercode, webgroup, version) <> ((Account.apply _).tupled, Account.unapply)
+      def * = (usercode, webgroup, version).mapTo[Account]
     }
 
     class AccountVersions(tag: Tag) extends Table[AccountVersion](tag, "ACCOUNT_VERSION") with StoredVersionTable[Account] with AccountProperties {
@@ -69,7 +73,7 @@ object VersioningSpec {
       def operation = column[DatabaseOperation]("VERSION_OPERATION")
       def timestamp = column[ZonedDateTime]("VERSION_TIMESTAMP")
 
-      def * = (usercode, webgroup, version, operation, timestamp) <> ((AccountVersion.apply _).tupled, AccountVersion.unapply)
+      def * = (usercode, webgroup, version, operation, timestamp).mapTo[AccountVersion]
       def pk = primaryKey("pk_accountversions", (usercode, timestamp))
       def idx = index("idx_accountversions", (usercode, version))
     }

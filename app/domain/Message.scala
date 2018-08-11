@@ -39,7 +39,7 @@ case class Message (
 
 object Message extends Versioning {
 
-  def tupled = (Message.apply _).tupled
+  def tupled = (apply _).tupled
 
   sealed trait MessageProperties {
     self: Table[_] =>
@@ -57,7 +57,7 @@ object Message extends Versioning {
 
     def id = column[UUID]("id", O.PrimaryKey)
 
-    def * = (id.?, text, sender, ownerId, ownerType, created, version) <> (Message.tupled, Message.unapply)
+    def * = (id.?, text, sender, ownerId, ownerType, created, version).mapTo[Message]
   }
 
   class MessageVersions(tag: Tag) extends Table[MessageVersion](tag, "message_version") with StoredVersionTable[Message] with MessageProperties {
@@ -65,7 +65,7 @@ object Message extends Versioning {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[ZonedDateTime]("version_timestamp")
 
-    def * = (id, text, sender, ownerId, ownerType, created, version, operation, timestamp) <> (MessageVersion.tupled, MessageVersion.unapply)
+    def * = (id, text, sender, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
     def pk = primaryKey("pk_messageversions", (id, timestamp))
     def idx = index("idx_messageversions", (id, version))
   }
