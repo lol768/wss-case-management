@@ -32,7 +32,8 @@ updateOptions := updateOptions.value.withCachedResolution(true)
 lazy val main = (project in file("."))
   .enablePlugins(WarwickProject, PlayScala)
   .settings(
-    packageZipTarball in Universal := (packageZipTarball in Universal).dependsOn(webpack).value
+    packageZipTarball in Universal := (packageZipTarball in Universal).dependsOn(webpack).value,
+    javaOptions in Test += "-Dlogger.resource=test-logging.xml"
   )
 
 val playUtilsVersion = "1.16"
