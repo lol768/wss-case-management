@@ -5,6 +5,7 @@ import java.time.{LocalDateTime, ZoneId}
 
 import enumeratum.SlickEnumSupport
 import play.api.libs.json.{JsValue, Json}
+import slick.ast.BaseTypedType
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.{JdbcProfile, JdbcType, PostgresProfile}
 import warwick.sso.{GroupName, UniversityID, Usercode}
@@ -43,4 +44,5 @@ object CustomJdbcTypes extends warwick.slick.jdbctypes.CustomJdbcTypes(PostgresP
   implicit lazy val databaseOperationTypeMapper: JdbcType[DatabaseOperation] = mappedColumnTypeForEnum(DatabaseOperation)
   implicit lazy val messageOwnerMapper: JdbcType[MessageOwner] = mappedColumnTypeForEnum(MessageOwner)
   implicit lazy val messageSenderMapper: JdbcType[MessageSender] = mappedColumnTypeForEnum(MessageSender)
+  implicit lazy val enquiryStateMapper: JdbcType[EnquiryState] = mappedColumnTypeForEnum(EnquiryState)
 }

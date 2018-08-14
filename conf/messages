@@ -7,3 +7,5 @@ error.counsellingType.unknown=Unknown counselling type
 error.previousCounselling.unknown=Unknown previous counselling type
 error.appointmentAvailability.unknown=Unknown appointment availability type
 error.appointmentAvailability.missing=Please select an availability
+
+flash.enquiry.received=Your enquiry has been received

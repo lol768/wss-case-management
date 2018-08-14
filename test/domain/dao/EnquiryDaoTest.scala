@@ -21,7 +21,7 @@ class EnquiryDaoTest extends AbstractDaoTest {
   "EnquiryDao" should {
     "fail if UUID missing" in {
       intercept[NoSuchElementException] {
-        runWithRollback(dao.insert(newEnquiry)).futureValue
+        exec(dao.insert(newEnquiry))
       }
     }
 
@@ -39,13 +39,13 @@ class EnquiryDaoTest extends AbstractDaoTest {
         })
       } yield inserted
 
-      runWithRollback(test).futureValue
+      exec(test)
     }
 
     // a test for the rollback function more than anything
     "not find objects leaked from other tests" in {
-      runWithRollback(Enquiry.enquiries.table.length.result).futureValue mustBe 0
-      runWithRollback(Enquiry.enquiries.versionsTable.length.result).futureValue mustBe 0
+      exec(Enquiry.enquiries.table.length.result) mustBe 0
+      exec(Enquiry.enquiries.versionsTable.length.result) mustBe 0
     }
 
   }

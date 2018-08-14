@@ -1,6 +1,9 @@
 package views
 
 import play.api.data.Form
+import play.twirl.api._
+
+import scala.xml.Text
 
 /**
   * Miscellaneous view functions, as you might imagine.
@@ -31,4 +34,8 @@ package object utils {
     form(fieldName).indexes.flatMap { i =>
       form(s"$fieldName[$i]").value
     }
+
+  def nl2br(text: String): Content = HtmlFormat.fill(text.split("\n").flatMap { line =>
+    Seq(HtmlFormat.escape(line), Html("<br />"))
+  }.toList)
 }

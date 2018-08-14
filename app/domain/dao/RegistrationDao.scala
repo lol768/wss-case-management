@@ -58,8 +58,6 @@ class RegistrationDaoImpl @Inject()(
   import RegistrationDao._
   import dbConfig.profile.api._
 
-  private[this] def db: Database = dbConfig.db
-
   override def save(counsellingRegistration: Registrations.Counselling): Future[String] = {
     val id = UUID.randomUUID().toString
     db.run[Int]((registrations += Registration(

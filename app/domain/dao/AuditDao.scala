@@ -23,8 +23,6 @@ class AuditDaoImpl @Inject()(
   import AuditEvent._
   import dbConfig.profile.api._
 
-  private[this] def db: Database = dbConfig.db
-
   override def insert(event: AuditEvent): Future[AuditEvent] = {
     val eventWithId = event.copy(id = Some(UUID.randomUUID()))
 

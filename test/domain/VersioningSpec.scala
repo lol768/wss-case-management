@@ -90,9 +90,6 @@ object VersioningSpec {
     protected val dbConfigProvider: DatabaseConfigProvider
   )(implicit ec: ExecutionContext) extends HasDatabaseConfigProvider[JdbcProfile] {
     import Account._
-    import dbConfig.profile.api._
-
-    private[this] def db: Database = dbConfig.db
 
     def list(): Future[Seq[Account]] = {
       db.run(accounts.result.transactionally)
@@ -120,7 +117,6 @@ class VersioningSpec extends PlaySpec with ScalaFutures with OneAppPerSuite {
   val accountDao = new SlickAccountDao(dbConfigProvider)
 
   import Account._
-  import dbConfig.profile.api._
 
   trait EmptyDatabaseFixture {
     def db: Database = dbConfig.db
@@ -129,23 +125,8 @@ class VersioningSpec extends PlaySpec with ScalaFutures with OneAppPerSuite {
       sqlu"""DROP TABLE IF EXISTS ACCOUNT""",
       sqlu"""DROP TABLE IF EXISTS ACCOUNT_VERSION""",
 
-      sqlu"""CREATE TABLE ACCOUNT(
-        USERCODE varchar(255) NOT NULL,
-        WEBGROUP varchar(255) NOT NULL,
-        VERSION timestamp(3) NOT NULL,
-        CONSTRAINT PK_ACCOUNT PRIMARY KEY (USERCODE)
-      )""",
-      sqlu"""CREATE INDEX IDX_ACCOUNT ON ACCOUNT (USERCODE, VERSION)""",
-
-      sqlu"""CREATE TABLE ACCOUNT_VERSION(
-        USERCODE varchar(255) NOT NULL,
-        WEBGROUP varchar(255),
-        VERSION timestamp(3) NOT NULL,
-        VERSION_OPERATION char(6) NOT NULL,
-        VERSION_TIMESTAMP timestamp(3) NOT NULL,
-        CONSTRAINT PK_ACCOUNT_VERSION PRIMARY KEY (USERCODE, VERSION_TIMESTAMP)
-      )""",
-      sqlu"""CREATE INDEX IDX_ACCOUNT_VERSION ON ACCOUNT_VERSION (USERCODE, VERSION)"""
+      accounts.table.schema.create,
+      accounts.versionsTable.schema.create
     ).transactionally).futureValue
   }
 

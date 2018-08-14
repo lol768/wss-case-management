@@ -7,6 +7,7 @@
   <p>Sorry, there's been a problem and we weren't able to complete your request.</p>
 
   @if(appMode == Mode.Dev) {
+    <div class="label label-info">Dev mode only</div>
     <pre class="error-stack-trace">@views.html.errors.stacktrace(e)</pre>
   }
 

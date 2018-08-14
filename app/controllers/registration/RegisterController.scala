@@ -64,7 +64,6 @@ class RegisterController @Inject()(
       case Teams.StudentSupport.id => studentSupportForm
       case _ => Future.successful(NotFound(views.html.errors.notFound()))
     }
-
   }
 
   def submit(teamId: String): Action[AnyContent] = TeamSpecificSignInRequiredAction(teamId).async { implicit request =>
