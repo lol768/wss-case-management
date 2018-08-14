@@ -1,5 +1,6 @@
 package services
 
+import java.time.ZonedDateTime
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
@@ -34,6 +35,9 @@ class EnquiryServiceImpl @Inject() (
 )(
   implicit ec: ExecutionContext
 ) extends EnquiryService {
+
+  import EnquiryService.sortByRecent
+
   override def save(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
     val id = UUID.randomUUID()
     val messageId = UUID.randomUUID()
@@ -54,25 +58,41 @@ class EnquiryServiceImpl @Inject() (
 
   override def findEnquiriesForClient(client: UniversityID): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]] = {
     val query = for {
-      (enquiry, message) <- enquiryDao.findByClient(client)
-          .joinLeft(messageDao.getByClient(client))
+      (enquiry, message) <- enquiryDao.findByClientQuery(client)
+          .joinLeft(messageDao.findByClientQuery(client))
           .on { (e, m) =>
             e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry:MessageOwner)
           }
     } yield (enquiry, message.map(_.messageData))
 
-    // Not sure if it's possible within Slick to take a one-to-many mapping
+    // Don't think it's possible within Slick to take a one-to-many mapping
     // and get a collection of (Enquiry, Seq[Message]), so this happens
     // in plain Scala after we've got our (Enquiry, Message) tuples back.
 
     // Newest first
-    implicit def dateOrdering = JavaTime.dateTimeOrdering.reverse
+    implicit def dateOrdering: Ordering[ZonedDateTime] = JavaTime.dateTimeOrdering.reverse
 
     daoRunner.run(query.result).map { pairs =>
-      Right(OneToMany.leftJoin(pairs).sortBy {
-        case (enquiry, _) => enquiry.version
-      })
+      Right(sortByRecent(OneToMany.leftJoin(pairs)))
     }
   }
 
+}
+
+object EnquiryService {
+  /**
+    * Sort by the most recently updated, either by newest message or when the enquiry was last
+    * updated (perhaps from its state changing)
+    */
+  def sortByRecent(data: Seq[(Enquiry, Seq[MessageData])]): Seq[(Enquiry, Seq[MessageData])] = {
+    implicit def dateOrdering: Ordering[ZonedDateTime] = JavaTime.dateTimeOrdering.reverse
+    data.sortBy(lastModified)
+  }
+
+  def lastModified(entry: (Enquiry, Seq[MessageData])): ZonedDateTime = {
+    import JavaTime.dateTimeOrdering
+    entry match {
+      case (enquiry, messages) => Stream.cons(enquiry.version, messages.toStream.map(_.created)).max
+    }
+  }
 }

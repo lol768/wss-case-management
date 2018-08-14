@@ -5,6 +5,7 @@ import java.time.ZonedDateTime
 import akka.Done
 import domain.CustomJdbcTypes._
 import domain.VersioningSpec._
+import domain.dao.AbstractDaoTest
 import helpers.{JavaTime, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.PlaySpec
@@ -91,6 +92,8 @@ object VersioningSpec {
   )(implicit ec: ExecutionContext) extends HasDatabaseConfigProvider[JdbcProfile] {
     import Account._
 
+    // TODO refactor as action/query generator
+
     def list(): Future[Seq[Account]] = {
       db.run(accounts.result.transactionally)
     }
@@ -108,11 +111,7 @@ object VersioningSpec {
   }
 }
 
-class VersioningSpec extends PlaySpec with ScalaFutures with OneAppPerSuite {
-
-  val dbConfigProvider: DatabaseConfigProvider = get[DatabaseConfigProvider]
-  val dbConfig: DatabaseConfig[JdbcProfile] = dbConfigProvider.get[JdbcProfile]
-  implicit val executionContext: ExecutionContext = get[ExecutionContext]
+class VersioningSpec extends AbstractDaoTest {
 
   val accountDao = new SlickAccountDao(dbConfigProvider)
 
@@ -121,12 +120,10 @@ class VersioningSpec extends PlaySpec with ScalaFutures with OneAppPerSuite {
   trait EmptyDatabaseFixture {
     def db: Database = dbConfig.db
 
-    db.run(DBIO.seq(
-      sqlu"""DROP TABLE IF EXISTS ACCOUNT""",
-      sqlu"""DROP TABLE IF EXISTS ACCOUNT_VERSION""",
-
-      accounts.table.schema.create,
-      accounts.versionsTable.schema.create
+    db.run((
+      sqlu"""DROP TABLE IF EXISTS ACCOUNT""" andThen
+      sqlu"""DROP TABLE IF EXISTS ACCOUNT_VERSION""" andThen
+      (accounts.table.schema ++ accounts.versionsTable.schema).create
     ).transactionally).futureValue
   }
 

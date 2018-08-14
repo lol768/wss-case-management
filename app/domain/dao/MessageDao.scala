@@ -4,13 +4,11 @@ import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
-import domain.{Message, MessageClient, MessageOwner}
+import domain.{Message, MessageClient}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import slick.dbio.Effect
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
-import slick.sql.FixedSqlAction
 import warwick.sso.UniversityID
 
 import scala.concurrent.ExecutionContext
@@ -19,11 +17,7 @@ import scala.concurrent.ExecutionContext
 trait MessageDao {
   def insert(message: Message, clients: Seq[UniversityID]): DBIO[Message]
 
-//  def addClients(message: UUID, clients: Seq[UniversityID]): DBIO[Option[Int]]
-
-  def getByClient(client: UniversityID): Query[Message.Messages, Message, Seq]
-
-  def byOwnerQuery(ownerId: Rep[UUID], ownerType: MessageOwner): Query[Message.Messages, Message, Seq]
+  def findByClientQuery(client: UniversityID): Query[Message.Messages, Message, Seq]
 }
 
 @Singleton
@@ -49,7 +43,7 @@ class MessageDaoImpl @Inject() (
       )
     }
 
-  def getByClient(client: UniversityID): Query[Message.Messages, Message, Seq] = {
+  def findByClientQuery(client: UniversityID): Query[Message.Messages, Message, Seq] = {
     val messages = for {
       clients <- Message.messageClients if clients.universityId === client
       message <- clients.message
@@ -57,10 +51,4 @@ class MessageDaoImpl @Inject() (
 
     messages.sortBy(_.created.reverse)
   }
-
-
-  override def byOwnerQuery(ownerId: Rep[UUID], ownerType: MessageOwner): Query[Message.Messages, Message, Seq] =
-    Message.messages.table
-      .filter(_.ownerId === ownerId)
-      .filter(_.ownerType === ownerType)
 }

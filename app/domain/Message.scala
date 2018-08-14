@@ -3,11 +3,9 @@ package domain
 import java.time.ZonedDateTime
 import java.util.UUID
 
+import domain.CustomJdbcTypes._
 import enumeratum._
 import slick.jdbc.PostgresProfile.api._
-import CustomJdbcTypes._
-import play.api.libs.json.{JsString, Writes}
-import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
 
 /**

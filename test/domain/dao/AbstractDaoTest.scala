@@ -4,8 +4,10 @@ import helpers.{DaoPatience, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
-import slick.dbio.DBIOAction
-import slick.jdbc.PostgresProfile.api._
+import play.api.db.slick.DatabaseConfigProvider
+import slick.basic.DatabaseConfig
+import slick.dbio.{DBIO, DBIOAction}
+import slick.jdbc.JdbcProfile
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -14,12 +16,16 @@ case class IntentionalRollbackException[R](successResult: R) extends Exception("
 
 abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures with DaoPatience {
 
+  implicit lazy val ec = get[ExecutionContext]
+
+  private lazy val runner = get[DaoRunner]
+
+  protected lazy val dbConfigProvider: DatabaseConfigProvider = get[DatabaseConfigProvider]
+  protected lazy val dbConfig: DatabaseConfig[JdbcProfile] = dbConfigProvider.get[JdbcProfile]
+  protected lazy val profile: JdbcProfile = dbConfig.profile
+
   // Some aliases to allow tests to be a bit tidier
-  val DBIO = slickProfile.api.DBIO
-
-  implicit val ec = get[ExecutionContext]
-
-  private val runner = get[DaoRunner]
+  lazy val DBIO = profile.api.DBIO
 
   /**
     * This is how to write DAO tests that roll back.
@@ -33,6 +39,7 @@ abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPer
     * to intercept all actions.
     */
   def runWithRollback[R](action: DBIO[R]): Future[R] = {
+    import profile.api._
     val block = action.flatMap(r => DBIOAction.failed(new IntentionalRollbackException(r)))
     runner.run(block.transactionally.withPinnedSession).failed.map {
       case e: IntentionalRollbackException[_] => e.successResult.asInstanceOf[R]

@@ -2,17 +2,15 @@ package domain.dao
 
 import java.util.UUID
 
-import domain.{Fixtures, Message}
+import domain.Fixtures
 import warwick.sso.UniversityID
-import slick.jdbc.PostgresProfile.api._
-
 import scala.concurrent.Future
 
 class MessageDaoTest extends AbstractDaoTest {
 
   val dao = get[MessageDao]
 
-  
+  import profile.api._
 
   "MessageDao" should {
     "save clients" in {
@@ -24,8 +22,8 @@ class MessageDaoTest extends AbstractDaoTest {
 
       exec(for {
         _ <- dao.insert(message, Seq(client1, client2))
-        client1Messages <- dao.getByClient(client1).result
-        client3Messages <- dao.getByClient(client3).result
+        client1Messages <- dao.findByClientQuery(client1).result
+        client3Messages <- dao.findByClientQuery(client3).result
         _ <- DBIO.from(Future {
           client1Messages.length mustBe 1
           client1Messages.head.id mustBe message.id
