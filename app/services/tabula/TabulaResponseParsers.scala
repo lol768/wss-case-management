@@ -5,7 +5,7 @@ import java.time.LocalDate
 
 import domain._
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsResult, JsValue, Json, Reads, _}
+import play.api.libs.json._
 import warwick.sso.UniversityID
 
 object TabulaResponseParsers {

@@ -3,6 +3,7 @@ package services.tabula
 import java.time.LocalDate
 
 import domain._
+import helpers.OneAppPerSuite
 import helpers.caching.NeverExpiringMemoryAsyncCacheApi
 import org.mockito.Matchers
 import org.mockito.Mockito.when
@@ -21,8 +22,11 @@ import uk.ac.warwick.sso.client.trusted.{CurrentApplication, EncryptedCertificat
 import warwick.sso.UniversityID
 import uk.ac.warwick.sso.client.trusted.TrustedApplication.HEADER_ERROR_CODE
 
-class ProfileServiceTest extends PlaySpec with MockitoSugar with ScalaFutures {
+import scala.concurrent.ExecutionContext
 
+class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar with ScalaFutures {
+
+  implicit val ec = get[ExecutionContext]
   override implicit val patienceConfig: PatienceConfig =
     PatienceConfig(scaled(Span(2000, Millis)), scaled(Span(15, Millis)))
   private val env = Environment.simple()
@@ -68,7 +72,7 @@ class ProfileServiceTest extends PlaySpec with MockitoSugar with ScalaFutures {
 
   "ProfileService" should {
     "fetch a student profile" in  withProfileService() { profileService =>
-      val studentProfile = profileService.getProfile(UniversityID("1234567")).futureValue.right.get
+      val studentProfile = profileService.getProfile(UniversityID("1234567")).futureValue.value.right.get
       studentProfile.universityID mustBe UniversityID("1234567")
       studentProfile.fullName mustBe "Reiher Gwenyn"
       studentProfile.dateOfBirth mustBe LocalDate.parse("1995-08-23")
@@ -96,7 +100,7 @@ class ProfileServiceTest extends PlaySpec with MockitoSugar with ScalaFutures {
     }
 
     "fetch an applicant profile" in  withProfileService() { profileService =>
-      val applicantProfile = profileService.getProfile(UniversityID("1812345")).futureValue.right.get
+      val applicantProfile = profileService.getProfile(UniversityID("1812345")).futureValue.value.right.get
       applicantProfile.universityID mustBe UniversityID("1812345")
       applicantProfile.fullName mustBe "Reynard Fox"
       applicantProfile.dateOfBirth mustBe LocalDate.parse("1996-02-08")
@@ -124,7 +128,7 @@ class ProfileServiceTest extends PlaySpec with MockitoSugar with ScalaFutures {
     }
 
     "fetch a staff profile" in withProfileService() { profileService =>
-      val applicantProfile = profileService.getProfile(UniversityID("1170836")).futureValue.right.get
+      val applicantProfile = profileService.getProfile(UniversityID("1170836")).futureValue.value.right.get
       applicantProfile.universityID mustBe UniversityID("1170836")
       applicantProfile.fullName mustBe "Ritchie Allen"
       applicantProfile.dateOfBirth mustBe LocalDate.parse("1986-08-23")
@@ -152,19 +156,19 @@ class ProfileServiceTest extends PlaySpec with MockitoSugar with ScalaFutures {
     }
 
     "handle missing profiles" in withProfileService() { profileService =>
-      val errors = profileService.getProfile(UniversityID("7654321")).futureValue.left.get
+      val errors = profileService.getProfile(UniversityID("7654321")).futureValue.value.left.get
       errors.head.message must include("Tabula API response not successful")
       errors.head.message must include("Item not found")
     }
 
     "handle permission errors with the API user" in withProfileService() { profileService =>
-      val errors = profileService.getProfile(UniversityID("1111111")).futureValue.left.get
+      val errors = profileService.getProfile(UniversityID("1111111")).futureValue.value.left.get
       errors.head.message must include("Tabula API response not successful")
       errors.head.message must include("unauthorized")
     }
 
     "handle integration errors" in withProfileService(trustedAppFail = true) { profileService =>
-      val errors = profileService.getProfile(UniversityID("1111111")).futureValue.left.get
+      val errors = profileService.getProfile(UniversityID("1111111")).futureValue.value.left.get
       errors.head.message must include("Trusted apps integration error")
     }
 

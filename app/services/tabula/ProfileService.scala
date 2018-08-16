@@ -14,17 +14,16 @@ import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplica
 import warwick.sso.UniversityID
 
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.JavaConverters._
 import system.Logging
-import helpers.caching.VariableTtlCacheHelper
+import helpers.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
 import play.api.cache.AsyncCacheApi
 
 
 @ImplementedBy(classOf[ProfileServiceImpl])
 trait ProfileService {
-  def getProfile(universityID: UniversityID): Future[ServiceResult[SitsProfile]]
+  def getProfile(universityID: UniversityID): Future[CacheElement[ServiceResult[SitsProfile]]]
 }
 
 class ProfileServiceImpl  @Inject()(
@@ -32,7 +31,7 @@ class ProfileServiceImpl  @Inject()(
   trustedApplicationsManager: TrustedApplicationsManager,
   configuration: Configuration,
   cache: AsyncCacheApi
-) extends ProfileService with Logging {
+)(implicit ec: ExecutionContext) extends ProfileService with Logging {
 
   case class ProfileServiceError(message: String) extends ServiceError
 
@@ -43,38 +42,42 @@ class ProfileServiceImpl  @Inject()(
   private val photosAppName = configuration.get[String]("wellbeing.photos.appname")
   private val photosKey = configuration.get[String]("wellbeing.photos.key")
 
-  private lazy val wrappedCache =
-    VariableTtlCacheHelper.async[ServiceResult[SitsProfile]](cache, logger, 1.hour, 1.day, 7.days)
+  private lazy val ttlStrategy : ServiceResult[SitsProfile] => Ttl = a => a.fold(
+    _ => Ttl(soft = 10.seconds, medium = 1.minute, hard = 1.hour),
+    _ => Ttl(soft = 1.hour, medium = 1.day, hard = 7.days)
+  )
+
+  private lazy val wrappedCache = VariableTtlCacheHelper.async[ServiceResult[SitsProfile]](cache, logger, ttlStrategy)
 
 
-  override def getProfile(universityID: UniversityID): Future[ServiceResult[SitsProfile]] = wrappedCache.getOrElseUpdate(universityID.string){
+  override def getProfile(universityID: UniversityID): Future[CacheElement[ServiceResult[SitsProfile]]] =
+    wrappedCache.getOrElseUpdateElement(s"tabulaprofile:${universityID.string}"){
+      val url = s"$tabulaProfileUrl/${universityID.string}"
+      val request = ws.url(url)
 
-    val url = s"$tabulaProfileUrl/${universityID.string}"
-    val request = ws.url(url)
+      val trustedHeaders = TrustedApplicationUtils.getRequestHeaders(
+        trustedApplicationsManager.getCurrentApplication,
+        tabulaUsercode,
+        WSRequestUriBuilder.buildUri(request).toString
+      ).asScala.map(h => h.getName -> h.getValue).toSeq
 
-    val trustedHeaders = TrustedApplicationUtils.getRequestHeaders(
-      trustedApplicationsManager.getCurrentApplication,
-      tabulaUsercode,
-      WSRequestUriBuilder.buildUri(request).toString
-    ).asScala.map(h => h.getName -> h.getValue).toSeq
+      val jsonResponse = request.addHttpHeaders(trustedHeaders: _*).get()
+        .map(r => ServiceResults.throwableToError(Some("Trusted apps integration error")) {
+          TrustedAppsHelper.validateResponse(url, r).json
+        })
 
-    val jsonResponse = request.addHttpHeaders(trustedHeaders: _*).get()
-      .map(r => ServiceResults.throwableToError(Some("Trusted apps integration error")) {
-        TrustedAppsHelper.validateResponse(url, r).json
+      jsonResponse.map(response => {
+        response.flatMap(json => {
+          TabulaResponseParsers.validateAPIResponse(json, TabulaResponseParsers.TabulaProfileData.memberReads).fold(
+            errors => handleValidationError(json, errors),
+            data => {
+              val tabulaProfile = data.toUserProfile
+              Right(tabulaProfile.copy(photo = Some(photoUrl(universityID))))
+            }
+          )
+        })
       })
-
-    jsonResponse.map(response => {
-      response.flatMap(json => {
-        TabulaResponseParsers.validateAPIResponse(json, TabulaResponseParsers.TabulaProfileData.memberReads).fold(
-          errors => handleValidationError(json, errors),
-          data => {
-            val tabulaProfile = data.toUserProfile
-            Right(tabulaProfile.copy(photo = Some(photoUrl(universityID))))
-          }
-        )
-      })
-    })
-  }
+    }(CacheOptions.default)
 
   private def handleValidationError(json: JsValue, errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[SitsProfile] = {
     val serviceErrors = errors.map { case (path, validationErrors) =>
