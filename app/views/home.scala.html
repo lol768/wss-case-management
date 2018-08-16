@@ -1,10 +1,28 @@
-@(teams: Seq[domain.Team])(implicit context: RequestContext)
+@import domain.MessageData
+@import domain.Enquiry
+@import domain.MessageSender
+@(teams: Seq[domain.Team], enquiries: Seq[(Enquiry, Seq[MessageData])])(implicit context: RequestContext)
 
 @main("Home") {
-  <h2>Enquiries</h2>
+  <h2>Make an enquiry</h2>
   <ul>
     @teams.map { team =>
       <li><a href="@controllers.enquiries.routes.EnquiryController.form(team.id)">@team.name</a></li>
     }
   </ul>
+
+  @if(enquiries.nonEmpty) {
+    <h2>Your enquiries</h2>
+
+    @enquiries.map { case (enquiry, messages) =>
+      <div class="enquiry panel panel-default">
+        <div class="panel-body">
+          @*<span class="badge pull-right">@helpers.JavaTime.Relative(enquiry.version)</span>*@
+          <strong>Enquiry with @enquiry.team.name</strong>
+          @tags.conversation(messages)
+        </div>
+      </div>
+    }
+
+  }
 }

@@ -1,10 +1,9 @@
 
-import Fixtures.users
+import domain.Fixtures.users
 import helpers.FakeRequestMethods._
 import helpers.OneAppPerSuite
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
-import play.api.http.HeaderNames
 import play.api.test.Helpers._
 import play.api.test._
 
@@ -20,7 +19,7 @@ class HomeSpec extends PlaySpec with MockitoSugar with OneAppPerSuite {
 
       status(home) mustEqual OK
       contentType(home).get mustEqual "text/html"
-      contentAsString(home) must include("Enquiries")
+      contentAsString(home) must include("Make an enquiry")
     }
 
     "reject a user without a University ID" in {

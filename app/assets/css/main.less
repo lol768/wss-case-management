@@ -13,3 +13,28 @@
 @import "id7-theme.less";
 @import "sysadmin-notices.less";
 @import "error-pages.less";
+
+.conversation {
+  margin-top: 1em;
+}
+
+.message {
+  .alert;
+
+  .date {
+    color: @id7-brand-gray;
+  }
+
+  &.message-team {
+    .alert-info;
+    margin-right: 1em;
+  }
+  &.message-client {
+    .alert-success;
+    margin-left: 1em;
+  }
+
+  &--author {
+    font-weight: bold;
+  }
+}

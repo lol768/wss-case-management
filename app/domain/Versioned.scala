@@ -48,7 +48,7 @@ trait Versioning {
   ) {
     def result: FixedSqlStreamingAction[Seq[A], A, Effect.Read] = table.result
 
-    def insert(value: A)(implicit ec: ExecutionContext): DBIOAction[A, NoStream, Effect.Write] = {
+    def insert(value: A)(implicit ec: ExecutionContext): DBIO[A] = {
       // We ignore the version passed through
       val versionTimestamp = JavaTime.zonedDateTime
       val versionedValue = value.atVersion(versionTimestamp)
@@ -59,15 +59,15 @@ trait Versioning {
         _ <- versionsTable += storedVersion
       } yield versionedValue
     }
-    def +=(value: A)(implicit ec: ExecutionContext): DBIOAction[A, NoStream, Effect.Write] = insert(value)
+    def +=(value: A)(implicit ec: ExecutionContext): DBIO[A] = insert(value)
 
-    private[this] def optimisticLockingException(value: A)(implicit ec: ExecutionContext): DBIOAction[Nothing, NoStream, Effect.Read] =
+    private[this] def optimisticLockingException(value: A)(implicit ec: ExecutionContext): DBIO[Nothing] =
       table.filter(_.matchesPrimaryKey(value)).result.flatMap {
         case Seq(current) => DBIO.failed(new Exception(s"Optimistic locking failed - tried to update version ${value.version} but current value is ${current.version}"))
         case _ => DBIO.failed(new Exception("Optimistic locking failed"))
       }
 
-    def update(value: A)(implicit ec: ExecutionContext): DBIOAction[A, NoStream, _] = {
+    def update(value: A)(implicit ec: ExecutionContext): DBIO[A] = {
       val originalVersion = value.version
       val versionTimestamp = JavaTime.zonedDateTime
       val versionedValue = value.atVersion(versionTimestamp)
@@ -85,7 +85,7 @@ trait Versioning {
       } yield updated
     }
 
-    def delete(value: A)(implicit ec: ExecutionContext): DBIOAction[Done, NoStream, _] = {
+    def delete(value: A)(implicit ec: ExecutionContext): DBIO[Done] = {
       val storedVersion = value.storedVersion[B](DatabaseOperation.Delete, JavaTime.zonedDateTime)
 
       val deleteAction =
@@ -99,6 +99,6 @@ trait Versioning {
         _ <- versionsTable += storedVersion
       } yield deleted
     }
-    def -=(value: A)(implicit ec: ExecutionContext): DBIOAction[Done, NoStream, _] = delete(value)
+    def -=(value: A)(implicit ec: ExecutionContext): DBIO[Done] = delete(value)
   }
 }

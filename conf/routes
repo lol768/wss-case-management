@@ -18,6 +18,7 @@ POST        /:teamId/register                       @controllers.registration.Re
 
 GET         /:teamId/enquiry                        @controllers.enquiries.EnquiryController.form(teamId: String)
 POST        /:teamId/enquiry                        @controllers.enquiries.EnquiryController.submit(teamId: String)
+GET         /api/enquiries                          @controllers.enquiries.EnquiryController.myEnquiriesJson
 
 GET         /admin/masquerade                       @controllers.MasqueradeController.masquerade
 

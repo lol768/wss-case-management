@@ -4,19 +4,28 @@ import helpers.{DaoPatience, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
-import slick.dbio.DBIOAction
+import play.api.db.slick.DatabaseConfigProvider
+import slick.basic.DatabaseConfig
+import slick.dbio.{DBIO, DBIOAction}
+import slick.jdbc.JdbcProfile
 
-import slick.jdbc.PostgresProfile.api._
-
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 case class IntentionalRollbackException[R](successResult: R) extends Exception("Rolling back transaction")
 
 abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures with DaoPatience {
 
-  implicit val ec = get[ExecutionContext]
+  implicit lazy val ec = get[ExecutionContext]
 
-  private val runner = get[DaoRunner]
+  private lazy val runner = get[DaoRunner]
+
+  protected lazy val dbConfigProvider: DatabaseConfigProvider = get[DatabaseConfigProvider]
+  protected lazy val dbConfig: DatabaseConfig[JdbcProfile] = dbConfigProvider.get[JdbcProfile]
+  protected lazy val profile: JdbcProfile = dbConfig.profile
+
+  // Some aliases to allow tests to be a bit tidier
+  lazy val DBIO = profile.api.DBIO
 
   /**
     * This is how to write DAO tests that roll back.
@@ -29,14 +38,18 @@ abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPer
     * in as a configuration option on `DaoRunner`, or even by wrapping the `Database` with something
     * to intercept all actions.
     */
-  def runWithRollback[R, S <: NoStream, E <: Effect](action: DBIOAction[R, S, E]): Future[R] = {
-    val block = action.flatMap(r => DBIOAction.failed(new IntentionalRollbackException(r)))
-    runner.run(block.transactionally.withPinnedSession).failed.map {
+  def runWithRollback[R](action: DBIO[R]): Future[R] = {
+    import profile.api._
+    val block = action.flatMap(r => DBIOAction.failed(IntentionalRollbackException(r)))
+    runner.run(block.transactionally).failed.map {
       case e: IntentionalRollbackException[_] => e.successResult.asInstanceOf[R]
       case t => throw t
     }
   }
 
-
+  /**
+    * Convenience synchronous version of [[runWithRollback()]]
+    */
+  def exec[R](action: DBIO[R]): R = Await.result(runWithRollback(action), 5.seconds)
 
 }
