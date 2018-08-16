@@ -26,7 +26,7 @@ class EnquiryController @Inject()(
 
   import teamSpecificActionRefiner._
 
-  private def render(team: Team, f: Form[Data])(implicit req: RequestHeader, ctx: RequestContext) =
+  private def render(team: Team, f: Form[Data])(implicit req: RequestHeader) =
     Ok(views.html.enquiry.form(team, f))
 
   def form(teamId: String): Action[AnyContent] = TeamSpecificSignInRequiredAction(teamId) { implicit request =>
@@ -49,11 +49,8 @@ class EnquiryController @Inject()(
           ZonedDateTime.now()
         )
 
-        service.save(enquiry, message).map { result =>
-          result.fold(
-            showErrors,
-            e => Redirect(controllers.routes.IndexController.home()).flashing("success" -> "Your enquiry has been received")
-          )
+        service.save(enquiry, message).successMap { _ =>
+          Redirect(controllers.routes.IndexController.home()).flashing("success" -> "Your enquiry has been received")
         }
 
       }
