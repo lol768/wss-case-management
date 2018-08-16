@@ -1,123 +1,85 @@
 package controllers.registration
 
-import java.time.ZonedDateTime
-
-import controllers.{BaseController, TeamSpecificActionRefiner, TeamSpecificRequest}
+import controllers.BaseController
 import domain._
-import helpers.{FormHelpers, JavaTime}
+import helpers.FormHelpers
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.i18n.I18nSupport
-import play.api.mvc.{Action, AnyContent}
-import services.RegistrationService
+import play.api.i18n.{I18nSupport, Messages}
+import play.api.mvc.{Action, AnyContent, Result}
+import services.{RegistrationService, SecurityService}
+import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object RegistrationController {
-  object Counselling {
-    val form = Form(mapping(
-      "counselling-types" -> set(of[CounsellingType](CounsellingTypes.Formatter))
-        .verifying(FormHelpers.nonEmpty("error.required.list")),
-      "gp" -> nonEmptyText,
-      "tutor" -> nonEmptyText,
-      "disabilities" -> set(of[Disability](Disabilities.Formatter))
-        .verifying(FormHelpers.nonEmpty("error.required.list")),
-      "medications" -> set(of[Medication](Medications.Formatter))
-        .verifying(FormHelpers.nonEmpty("error.required.list")),
-      "previous-counsellings" -> set(of[PreviousCounselling](PreviousCounsellings.Formatter))
-        .verifying(FormHelpers.nonEmpty("error.required.list")),
-      "appointment-availability" -> of[AppointmentAvailability](AppointmentAvailabilities.Formatter),
-      "appointment-adjustments" -> text,
-      "referrals" -> set(of[RegistrationReferral](RegistrationReferrals.Formatter))
-        .verifying(FormHelpers.nonEmpty("error.required.list"))
-    )(Registrations.CounsellingData.apply)(Registrations.CounsellingData.unapply))
-  }
-
-  object StudentSupport {
-    val form = Form(mapping(
-      "summary" -> nonEmptyText,
-      "gp" -> nonEmptyText,
-      "tutor" -> nonEmptyText,
-      "disabilities" -> set(of[Disability](Disabilities.Formatter))
-        .verifying(FormHelpers.nonEmpty("error.required.list")),
-      "medications" -> set(of[Medication](Medications.Formatter))
-        .verifying(FormHelpers.nonEmpty("error.required.list")),
-      "appointment-adjustments" -> text,
-      "referrals" -> set(of[RegistrationReferral](RegistrationReferrals.Formatter))
-        .verifying(FormHelpers.nonEmpty("error.required.list"))
-    )(Registrations.StudentSupportData.apply)(Registrations.StudentSupportData.unapply))
-  }
-}
-
 @Singleton
 class RegisterController @Inject()(
-  registrationService: RegistrationService,
-  teamSpecificActionRefiner: TeamSpecificActionRefiner
+  securityService: SecurityService,
+  registrationService: RegistrationService
 )(implicit executionContext: ExecutionContext) extends BaseController with I18nSupport {
 
-  import teamSpecificActionRefiner._
+  import securityService._
 
-  def form(teamId: String): Action[AnyContent] = TeamSpecificSignInRequiredAction(teamId).async { implicit request =>
-    request.team.id match {
-      case Teams.Counselling.id => counsellingForm
-      case Teams.StudentSupport.id => studentSupportForm
-      case _ => Future.successful(NotFound(views.html.errors.notFound()))
+  private val registerForm = Form(mapping(
+    "gp" -> nonEmptyText,
+    "tutor" -> nonEmptyText,
+    "disabilities" -> set(of[Disability](Disabilities.Formatter))
+      .verifying(FormHelpers.nonEmpty("error.required.list")),
+    "medications" -> set(of[Medication](Medications.Formatter))
+      .verifying(FormHelpers.nonEmpty("error.required.list")),
+    "appointment-adjustments" -> text,
+    "referrals" -> set(of[RegistrationReferral](RegistrationReferrals.Formatter))
+      .verifying(FormHelpers.nonEmpty("error.required.list"))
+  )(RegistrationData.apply)(RegistrationData.unapply))
+
+  def form: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
+    withOptionalRegistration {
+      case Some(registration) =>
+        Future.successful(Ok(views.html.registration(registerForm.fill(registration.data), Some(registration))))
+      case _ =>
+        Future.successful(Ok(views.html.registration(registerForm, None)))
     }
   }
 
-  def submit(teamId: String): Action[AnyContent] = TeamSpecificSignInRequiredAction(teamId).async { implicit request =>
-    request.team.id match {
-      case Teams.Counselling.id => counsellingSubmit
-      case Teams.StudentSupport.id => studentSupportSubmit
-      case _ => Future.successful(NotFound(views.html.errors.notFound()))
-    }
-  }
-
-  private def counsellingForm(implicit request: TeamSpecificRequest[AnyContent]) = {
-    registrationService.getCounselling(request.context.user.get.universityId.get).map(
-      _.map(registration =>
-        Ok(views.html.registration.counselling(RegistrationController.Counselling.form.fill(registration.data)))
-      ).getOrElse(
-        Ok(views.html.registration.counselling(RegistrationController.Counselling.form))
-      )
-    )
-  }
-
-  private def counsellingSubmit(implicit request: TeamSpecificRequest[AnyContent]) = {
-    RegistrationController.Counselling.form.bindFromRequest.fold(
+  def submit: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
+    registerForm.bindFromRequest.fold(
       formWithErrors => {
-        Future.successful(Ok(views.html.registration.counselling(formWithErrors)))
+        withOptionalRegistration { option =>
+          Future.successful(Ok(views.html.registration(formWithErrors, option)))
+        }
       },
       data => {
-        registrationService.save(Registrations.Counselling(request.context.user.get.universityId.get, ZonedDateTime.now, data)).map(_ =>
-          Redirect(controllers.routes.IndexController.home()).flashing("success" -> "Counselling registration complete")
-        )
+        withOptionalRegistration {
+          case Some(existing) =>
+            registrationService.update(request.context.user.get.universityId.get, data, existing.updatedDate).map { result =>
+              result.fold(
+                showErrors,
+                _ => {
+                  Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.registration.updated"))
+                }
+              )
+            }
+          case _ =>
+            registrationService.save(request.context.user.get.universityId.get, data).map { result =>
+              result.fold(
+                showErrors,
+                _ => {
+                  Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.registration.complete"))
+                }
+              )
+            }
+        }
       }
     )
   }
 
-  private def studentSupportForm(implicit request: TeamSpecificRequest[AnyContent]) = {
-    registrationService.getStudentSupport(request.context.user.get.universityId.get).map(
-      _.map(registration =>
-        Ok(views.html.registration.studentsupport(RegistrationController.StudentSupport.form.fill(registration.data)))
-      ).getOrElse(
-        Ok(views.html.registration.studentsupport(RegistrationController.StudentSupport.form))
-      )
-    )
-  }
-
-  private def studentSupportSubmit(implicit request: TeamSpecificRequest[AnyContent]) = {
-    RegistrationController.StudentSupport.form.bindFromRequest.fold(
-      formWithErrors => {
-        Future.successful(Ok(views.html.registration.studentsupport(formWithErrors)))
+  private def withOptionalRegistration(f: Option[Registration] => Future[Result])(implicit request: AuthenticatedRequest[AnyContent]): Future[Result] =
+    registrationService.get(request.context.user.get.universityId.get).flatMap(result => result.fold(
+      errors => {
+        Future.successful(showErrors(errors))
       },
-      data => {
-        registrationService.save(Registrations.StudentSupport(request.context.user.get.universityId.get, JavaTime.zonedDateTime, data)).map(_ =>
-          Redirect(controllers.routes.IndexController.home()).flashing("success" -> "Student Support registration complete")
-        )
-      }
-    )
-  }
+      f
+    ))
 
 }

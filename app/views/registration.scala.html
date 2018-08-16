@@ -1,24 +1,23 @@
-@import domain._
-@import domain.Registrations._
-@(form: Form[CounsellingData])(implicit context: RequestContext, request: TeamSpecificRequest[_], messagesProvider: MessagesProvider)
+@import domain.RegistrationData
+@import domain.Disabilities
+@import domain.Medications
+@import domain.RegistrationReferrals
+@import warwick.sso.AuthenticatedRequest
+@(form: Form[RegistrationData], existing: Option[domain.Registration])(implicit context: RequestContext, request: AuthenticatedRequest[_], messagesProvider: MessagesProvider)
 
-@main("Register for Counselling") {
+@main("Register for Wellbeing Support Services") {
 
-  @b3.vertical.formCSRF(controllers.registration.routes.RegisterController.submit(request.team.id)) { implicit ifc =>
+  @b3.vertical.formCSRF(controllers.registration.routes.RegisterController.submit()) { implicit ifc =>
 
     @if(form.hasErrors) {
       <div class="alert alert-danger">
         There were errors in your registration. Please correct them and submit again.
       </div>
+    } else if(existing.nonEmpty) {
+      <div class="alert alert-info">
+        You have already registered, but you can update your registration below
+      </div>
     }
-
-    @b3.checkboxGroup(
-      label = "What type of Counselling would you like?",
-      items = CounsellingTypes.values,
-      form = form,
-      field = "counselling-types",
-      idPrefix = "counsellingType"
-    )
 
     @b3.text(form("gp"),
       '_label -> "Confirm the name of your GP/Doctor"
@@ -44,18 +43,6 @@
       idPrefix = "medication"
     )
 
-    @b3.checkboxGroup(
-      label = "Do you have any Previous Counselling experience?",
-      items = PreviousCounsellings.values,
-      form = form,
-      field = "previous-counsellings",
-      idPrefix = "previous-counselling"
-    )
-
-    @b3.radio(form("appointment-availability"), AppointmentAvailabilities.values.map(a => a.id -> a.description),
-      '_label -> "Please indicate your availability for an appointment?"
-    )
-
     @b3.textarea(form("appointment-adjustments"),
       '_label -> "Please give details of any reasonable adjustments required for an appointment (please leave blank if not relevant)",
       'rows -> 3
@@ -69,7 +56,7 @@
       idPrefix = "referral"
     )
 
-    @tags.submitOrCancel("Submit", controllers.routes.IndexController.home())
+    @tags.submitOrCancel(existing.map(_ => "Update").getOrElse("Submit"), controllers.routes.IndexController.home())
 
   }
 

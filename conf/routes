@@ -13,8 +13,8 @@ GET         /service/healthcheck                    @controllers.ServiceCheckCon
 
 GET         /                                       @controllers.IndexController.home
 
-GET         /:teamId/register                       @controllers.registration.RegisterController.form(teamId: String)
-POST        /:teamId/register                       @controllers.registration.RegisterController.submit(teamId: String)
+GET         /register                               @controllers.registration.RegisterController.form
+POST        /register                               @controllers.registration.RegisterController.submit
 
 GET         /:teamId/enquiry                        @controllers.enquiries.EnquiryController.form(teamId: String)
 POST        /:teamId/enquiry                        @controllers.enquiries.EnquiryController.submit(teamId: String)

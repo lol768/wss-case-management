@@ -9,3 +9,5 @@ error.appointmentAvailability.unknown=Unknown appointment availability type
 error.appointmentAvailability.missing=Please select an availability
 
 flash.enquiry.received=Your enquiry has been received
+flash.registration.complete=Registration complete
+flash.registration.updated=Registration updated
