@@ -9,7 +9,7 @@ import warwick.sso.UniversityID
 import scala.collection.immutable
 import helpers.StringUtils._
 
-case class UserProfile(
+case class SitsProfile(
   universityID: UniversityID,
   fullName: String,
   dateOfBirth: LocalDate,

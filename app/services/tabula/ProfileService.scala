@@ -3,12 +3,12 @@ package services.tabula
 import java.security.MessageDigest
 
 import com.google.inject.ImplementedBy
-import domain.UserProfile
+import domain.SitsProfile
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
 import javax.inject.Inject
 import play.api.Configuration
-import play.api.libs.json.{JsPath, JsonValidationError}
+import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
 import warwick.sso.UniversityID
@@ -24,7 +24,7 @@ import play.api.cache.AsyncCacheApi
 
 @ImplementedBy(classOf[ProfileServiceImpl])
 trait ProfileService {
-  def getProfile(universityID: UniversityID): Future[ServiceResult[UserProfile]]
+  def getProfile(universityID: UniversityID): Future[ServiceResult[SitsProfile]]
 }
 
 class ProfileServiceImpl  @Inject()(
@@ -44,10 +44,10 @@ class ProfileServiceImpl  @Inject()(
   private val photosKey = configuration.get[String]("wellbeing.photos.key")
 
   private lazy val wrappedCache =
-    VariableTtlCacheHelper.async[ServiceResult[UserProfile]](cache, logger, 1.hour, 1.day, 7.days)
+    VariableTtlCacheHelper.async[ServiceResult[SitsProfile]](cache, logger, 1.hour, 1.day, 7.days)
 
 
-  override def getProfile(universityID: UniversityID): Future[ServiceResult[UserProfile]] = wrappedCache.getOrElseUpdate(universityID.string){
+  override def getProfile(universityID: UniversityID): Future[ServiceResult[SitsProfile]] = wrappedCache.getOrElseUpdate(universityID.string){
 
     val url = s"$tabulaProfileUrl/${universityID.string}"
     val request = ws.url(url)
@@ -66,7 +66,7 @@ class ProfileServiceImpl  @Inject()(
     jsonResponse.map(response => {
       response.flatMap(json => {
         TabulaResponseParsers.validateAPIResponse(json, TabulaResponseParsers.TabulaProfileData.memberReads).fold(
-          handleValidationError,
+          errors => handleValidationError(json, errors),
           data => {
             val tabulaProfile = data.toUserProfile
             Right(tabulaProfile.copy(photo = Some(photoUrl(universityID))))
@@ -76,13 +76,11 @@ class ProfileServiceImpl  @Inject()(
     })
   }
 
-  private def handleValidationError(errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[UserProfile] = {
-    logger.error(s"Could not parse JSON result from Tabula:")
+  private def handleValidationError(json: JsValue, errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[SitsProfile] = {
     val serviceErrors = errors.map { case (path, validationErrors) =>
-      val message = s"$path: ${validationErrors.map(_.message).mkString(", ")}"
-      logger.error(message)
-      ProfileServiceError(message)
+      ProfileServiceError(s"$path: ${validationErrors.map(_.message).mkString(", ")}")
     }
+    logger.error(s"Could not parse JSON result from Tabula:\n$json\n${serviceErrors.map(_.message).mkString("\n")}")
     Left(serviceErrors)
   }
 

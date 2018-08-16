@@ -69,13 +69,13 @@ object TabulaResponseParsers {
       studentCourseDetails: Option[Seq[StudentCourseDetails]],
       userType: String,
     ) {
-      def toUserProfile: UserProfile = {
+      def toUserProfile: SitsProfile = {
 
         val latestScd = studentCourseDetails.flatMap(scds => scds.find(_.mostSignificant))
         val latestScyd = latestScd.flatMap(_.studentCourseYearDetails.lastOption)
         val department = latestScyd.map(_.enrolmentDepartment).getOrElse(homeDepartment)
 
-        UserProfile(
+        SitsProfile(
           universityID = UniversityID(universityId),
           fullName = fullName,
           dateOfBirth = dateOfBirth,
