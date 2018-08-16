@@ -15,11 +15,8 @@ class IndexController @Inject()(
 
   def home = SigninRequiredAction.async { implicit request =>
     val client = request.context.user.get.universityId.get
-    enquiries.findEnquiriesForClient(client).map { result =>
-      result.fold(
-        showErrors,
-        enquiries => Ok(views.html.home(Teams.all, enquiries))
-      )
+    enquiries.findEnquiriesForClient(client).successMap { enquiries =>
+      Ok(views.html.home(Teams.all, enquiries))
     }
   }
 
