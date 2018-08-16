@@ -1,0 +1,38 @@
+{
+  "member": {
+    "affiliatedDepartments": [
+      {
+        "code": "sl",
+        "name": "Student Recruitment"
+      }
+    ],
+    "dateOfBirth": "1996-02-08",
+    "email": "reynard.fox@outlook.com",
+    "firstName": "Reynard",
+    "fullName": "Reynard Fox",
+    "gender": "Female",
+    "groupName": "Applicant",
+    "homeDepartment": {
+      "code": "sl",
+      "name": "Student Recruitment"
+    },
+    "homeEmail": "reynard.fox@outlook.com",
+    "inUseFlag": "Active",
+    "inactivationDate": "2118-08-13",
+    "jobTitle": "Applicant",
+    "lastName": "Fox",
+    "officialName": "Miss Reynard Fox",
+    "title": "Miss",
+    "touchedDepartments": [
+      {
+        "code": "sl",
+        "name": "Student Recruitment"
+      }
+    ],
+    "universityId": "1812345",
+    "userId": "1812345",
+    "userType": "Applicant"
+  },
+  "status": "ok",
+  "success": true
+}
