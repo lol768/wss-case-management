@@ -4,7 +4,7 @@ import java.time.LocalDate
 
 import enumeratum.{Enum, EnumEntry}
 import enumeratum.EnumEntry.CapitalWords
-import warwick.sso.UniversityID
+import warwick.sso.{Department, UniversityID}
 
 import scala.collection.immutable
 import helpers.StringUtils._
@@ -18,7 +18,7 @@ case class SitsProfile(
   alternateEmail: Option[String],
   address: Option[Address],
   residence: Option[Residence],
-  department: Department,
+  department: SitsDepartment,
   course: Option[Course],
   route: Option[Route],
   courseStatus: Option[CourseStatus],
@@ -46,7 +46,7 @@ case class Route (
   name: String
 )
 
-case class Department(
+case class SitsDepartment(
   code: String,
   name: String
 )

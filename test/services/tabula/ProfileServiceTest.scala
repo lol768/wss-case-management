@@ -81,7 +81,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       studentProfile.alternateEmail mustBe Some("Reiher.Gwenyn@warwick.ac.uk")
       studentProfile.address mustBe Some(Address(Some("HB666"), Some("Heronbank"), Some("University of Warwick"), Some("Coventry"), None, Some("CV4 7ES")))
       studentProfile.residence mustBe Some(Residence.Heronbank)
-      studentProfile.department mustBe Department("lf", "Life Sciences")
+      studentProfile.department mustBe SitsDepartment("lf", "Life Sciences")
       studentProfile.course mustBe Some(Course("RBSA-C1PH","RBSA-C1PH Ardea Herodias Studies"))
       studentProfile.route mustBe Some(Route("c1ph","C1PH Ardea Herodias Studies"))
       studentProfile.courseStatus mustBe Some(CourseStatus("C","Current Student"))
@@ -109,7 +109,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       applicantProfile.alternateEmail mustBe Some("reynard.fox@outlook.com")
       applicantProfile.address mustBe None
       applicantProfile.residence mustBe None
-      applicantProfile.department mustBe Department("sl", "Student Recruitment")
+      applicantProfile.department mustBe SitsDepartment("sl", "Student Recruitment")
       applicantProfile.course mustBe None
       applicantProfile.route mustBe None
       applicantProfile.courseStatus mustBe None
@@ -137,7 +137,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       applicantProfile.alternateEmail mustBe None
       applicantProfile.address mustBe None
       applicantProfile.residence mustBe None
-      applicantProfile.department mustBe Department("in", "IT Services")
+      applicantProfile.department mustBe SitsDepartment("in", "IT Services")
       applicantProfile.course mustBe None
       applicantProfile.route mustBe None
       applicantProfile.courseStatus mustBe None

@@ -18,7 +18,7 @@ object TabulaResponseParsers {
       studyLevel: String,
       modeOfAttendance: String,
       enrolmentStatus: EnrolmentStatus,
-      enrolmentDepartment: Department
+      enrolmentDepartment: SitsDepartment
     )
     val studentCourseYearDetailsReads: Reads[StudentCourseYearDetails] = (
       (__ \ "academicYear").read[String] and
@@ -26,7 +26,7 @@ object TabulaResponseParsers {
       (__ \ "studyLevel").read[String] and
       (__ \ "modeOfAttendance" \ "code").read[String] and
       (__ \ "enrolmentStatus").read[EnrolmentStatus](enrolmentStatusReads) and
-      (__ \ "enrolmentDepartment").read[Department](departmentReads)
+      (__ \ "enrolmentDepartment").read[SitsDepartment](departmentReads)
     )(StudentCourseYearDetails.apply _)
 
     case class StudentCourseDetails(
@@ -59,7 +59,7 @@ object TabulaResponseParsers {
       phoneNumber: Option[String],
       email: Option[String],
       homeEmail: Option[String],
-      homeDepartment: Department,
+      homeDepartment: SitsDepartment,
       tier4VisaRequirement: Option[Boolean],
       nationality: Option[String],
       secondNationality: Option[String],
@@ -84,7 +84,7 @@ object TabulaResponseParsers {
           alternateEmail = homeEmail,
           address = address,
           residence = residence.flatMap(Residence.withNameOption),
-          department = Department(department.code, department.name),
+          department = SitsDepartment(department.code, department.name),
           course = latestScd.map(_.course),
           route= latestScd.map(_.route),
           courseStatus = latestScd.map(_.courseStatus),
@@ -110,7 +110,7 @@ object TabulaResponseParsers {
       (__ \ "member" \ "mobileNumber").readNullable[String] and
       (__ \ "member" \ "email").readNullable[String] and
       (__ \ "member" \ "homeEmail").readNullable[String] and
-      (__ \ "member" \ "homeDepartment").read[Department](departmentReads) and
+      (__ \ "member" \ "homeDepartment").read[SitsDepartment](departmentReads) and
       (__ \ "member" \ "tier4VisaRequirement").readNullable[Boolean] and
       (__ \ "member" \ "nationality").readNullable[String] and
       (__ \ "member" \ "secondNationality").readNullable[String] and
@@ -124,7 +124,7 @@ object TabulaResponseParsers {
 
   private val codeAndNameBuilder = (__ \ "code").read[String] and (__ \ "name").read[String]
 
-  val departmentReads: Reads[Department] = codeAndNameBuilder(Department.apply _)
+  val departmentReads: Reads[SitsDepartment] = codeAndNameBuilder(SitsDepartment.apply _)
   val courseReads: Reads[Course] = codeAndNameBuilder((code, name) => Course.apply(code, s"${code.toUpperCase} $name"))
   val routeReads: Reads[Route] = codeAndNameBuilder((code, name) => Route.apply(code, s"${code.toUpperCase} $name"))
   val enrolmentStatusReads: Reads[EnrolmentStatus] = codeAndNameBuilder(EnrolmentStatus.apply _)
