@@ -1,8 +1,10 @@
 package services
 
+import java.time.ZonedDateTime
+
 import com.google.inject.ImplementedBy
-import domain.Registrations
-import domain.dao.RegistrationDao
+import domain.dao.{DaoRunner, RegistrationDao}
+import domain.{Registration, RegistrationData}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
@@ -13,51 +15,42 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[RegistrationServiceImpl])
 trait RegistrationService {
 
-  def save(counsellingRegistration: Registrations.Counselling)(implicit auditLogContext: AuditLogContext): Future[ServiceResult[String]]
+  def save(universityID: UniversityID, data: domain.RegistrationData)(implicit ac: AuditLogContext): Future[ServiceResult[domain.Registration]]
 
-  def getCounselling(universityID: UniversityID): Future[Option[Registrations.Counselling]]
+  def update(universityID: UniversityID, data: domain.RegistrationData, version: ZonedDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[domain.Registration]]
 
-  def save(studentSupportRegistration: Registrations.StudentSupport)(implicit auditLogContext: AuditLogContext): Future[ServiceResult[String]]
-
-  def getStudentSupport(universityID: UniversityID): Future[Option[Registrations.StudentSupport]]
-
+  def get(universityID: UniversityID): Future[ServiceResult[Option[domain.Registration]]]
 
 }
 
 @Singleton
 class RegistrationServiceImpl @Inject()(
+  auditService: AuditService,
   dao: RegistrationDao,
-  auditService: AuditService
+  daoRunner: DaoRunner
 )(implicit executionContext: ExecutionContext) extends RegistrationService {
 
-  override def save(counsellingRegistration: Registrations.Counselling)(implicit auditLogContext: AuditLogContext): Future[ServiceResult[String]] =
-    auditService.audit[String](
+  override def save(universityID: UniversityID, data: RegistrationData)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
+    auditService.audit(
       "SaveRegistration",
-      (id: String) => id,
-      "Registrations.Counselling",
-      Json.obj(
-        "universityId" -> counsellingRegistration.universityID.string
-      )
+      universityID.string,
+      "Registration",
+      Json.toJson(data)(RegistrationData.formatter)
     ) {
-      dao.save(counsellingRegistration).map(Right.apply)
+      daoRunner.run(dao.insert(universityID, data)).map(_.parsed).map(Right.apply)
     }
 
-  override def getCounselling(universityID: UniversityID): Future[Option[Registrations.Counselling]] =
-    dao.getCounselling(universityID)
-
-  override def save(studentSupportRegistration: Registrations.StudentSupport)(implicit auditLogContext: AuditLogContext): Future[ServiceResult[String]] =
-    auditService.audit[String](
-      "SaveRegistration",
-      (id: String) => id,
-      "Registrations.StudentSupport",
-      Json.obj(
-        "universityId" -> studentSupportRegistration.universityID.string
-      )
+  override def update(universityID: UniversityID, data: RegistrationData, version: ZonedDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
+    auditService.audit(
+      "UpdateRegistration",
+      universityID.string,
+      "Registration",
+      Json.toJson(data)(RegistrationData.formatter)
     ) {
-      dao.save(studentSupportRegistration).map(Right.apply)
+      daoRunner.run(dao.update(universityID, data, version)).map(_.parsed).map(Right.apply)
     }
 
-  override def getStudentSupport(universityID: UniversityID): Future[Option[Registrations.StudentSupport]] =
-    dao.getStudentSupport(universityID)
+  override def get(universityID: UniversityID): Future[ServiceResult[Option[domain.Registration]]] =
+    daoRunner.run(dao.get(universityID)).map(_.map(_.parsed)).map(Right.apply)
 
 }
