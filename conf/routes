@@ -20,7 +20,8 @@ GET         /:teamId/enquiry                        @controllers.enquiries.Enqui
 POST        /:teamId/enquiry                        @controllers.enquiries.EnquiryController.submit(teamId: String)
 GET         /api/enquiries                          @controllers.enquiries.EnquiryController.myEnquiriesJson
 
-GET         /admin/masquerade                       @controllers.MasqueradeController.masquerade
+GET         /admin/masquerade                       @controllers.admin.MasqueradeController.masquerade
+GET         /admin/team/:teamId                     @controllers.admin.AdminController.teamHome(teamId: String)
 
 # Handle trailing slashes in URLs
 GET         /*path/                                 @controllers.IndexController.redirectToPath(path: String)
