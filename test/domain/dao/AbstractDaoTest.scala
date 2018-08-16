@@ -40,13 +40,16 @@ abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPer
     */
   def runWithRollback[R](action: DBIO[R]): Future[R] = {
     import profile.api._
-    val block = action.flatMap(r => DBIOAction.failed(new IntentionalRollbackException(r)))
-    runner.run(block.transactionally.withPinnedSession).failed.map {
+    val block = action.flatMap(r => DBIOAction.failed(IntentionalRollbackException(r)))
+    runner.run(block.transactionally).failed.map {
       case e: IntentionalRollbackException[_] => e.successResult.asInstanceOf[R]
       case t => throw t
     }
   }
 
+  /**
+    * Convenience synchronous version of [[runWithRollback()]]
+    */
   def exec[R](action: DBIO[R]): R = Await.result(runWithRollback(action), 5.seconds)
 
 }

@@ -14,6 +14,10 @@ import scala.concurrent.Future
 @ImplementedBy(classOf[DaoRunnerImpl])
 trait DaoRunner {
   import slick.dbio._
+
+  /**
+    * Runs the given action in a transaction
+    */
   def run[R](a: DBIO[R]): Future[R]
 }
 
@@ -23,5 +27,5 @@ class DaoRunnerImpl @Inject() (
 ) extends DaoRunner with HasDatabaseConfigProvider[JdbcProfile] {
   import profile.api._
 
-  override def run[R](a: DBIO[R]): Future[R] = db.run(a.transactionally.withPinnedSession)
+  override def run[R](a: DBIO[R]): Future[R] = db.run(a.transactionally)
 }
