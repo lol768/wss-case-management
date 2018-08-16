@@ -6,11 +6,8 @@ import akka.Done
 import domain.CustomJdbcTypes._
 import domain.VersioningSpec._
 import domain.dao.AbstractDaoTest
-import helpers.{JavaTime, OneAppPerSuite}
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatestplus.play.PlaySpec
+import helpers.JavaTime
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
 import warwick.sso.{GroupName, Usercode}
