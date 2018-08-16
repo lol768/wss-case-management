@@ -2,19 +2,19 @@ package system
 
 import controllers.RequestContext
 import javax.inject.Inject
-import play.api.mvc.Request
+import play.api.mvc.RequestHeader
 import services.{AuditLogContext, NavigationService}
 import warwick.sso.{AuthenticatedRequest, SSOClient}
 
 trait ImplicitRequestContext {
 
   @Inject
-  private[this] var navigationService: NavigationService = null
+  private[this] var navigationService: NavigationService = _
 
   @Inject
-  private[this] var ssoClient: SSOClient = null
+  private[this] var ssoClient: SSOClient = _
 
-  implicit def requestContext(implicit request: Request[_]): RequestContext = request match {
+  implicit def requestContext(implicit request: RequestHeader): RequestContext = request match {
     case req: AuthenticatedRequest[_] =>
       RequestContext.authenticated(ssoClient, req, navigationService.getNavigation(req.context))
 

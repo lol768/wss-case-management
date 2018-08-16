@@ -29,7 +29,7 @@ class EnquiryController @Inject()(
   import teamSpecificActionRefiner._
   import securityService._
 
-  private def render(team: Team, f: Form[Data])(implicit req: RequestHeader, ctx: RequestContext) =
+  private def render(team: Team, f: Form[Data])(implicit req: RequestHeader) =
     Ok(views.html.enquiry.form(team, f))
 
   def form(teamId: String): Action[AnyContent] = TeamSpecificSignInRequiredAction(teamId) { implicit request =>
@@ -50,12 +50,8 @@ class EnquiryController @Inject()(
           text = formData.text
         )
 
-        service.save(enquiry, message).map { result =>
-          result.fold(
-            showErrors,
-            e => Redirect(controllers.routes.IndexController.home())
-                  .flashing("success" -> Messages("flash.enquiry.received"))
-          )
+        service.save(enquiry, message).successMap { _ =>
+          Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.enquiry.received"))
         }
 
       }
