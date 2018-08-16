@@ -12,5 +12,4 @@ object ServiceResults {
     case (Nil, results) => Right(results.collect { case Right(x) => x })
     case (errors, _) => Left(errors.collect { case Left(x) => x }.flatten)
   }
-
 }
