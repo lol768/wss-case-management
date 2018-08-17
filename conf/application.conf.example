@@ -57,10 +57,6 @@ sso-client {
 memcached.1.host: "localhost:11211"
 
 wellbeing {
-  tabula {
-    root = "https://tabula-test.warwick.ac.uk"
-  }
-
   photos {
     appname = "wellbeingsupportservices"
     key = "Somekey"
