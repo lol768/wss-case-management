@@ -17,12 +17,8 @@
     </div>
   }
 
-  <h2>Make an enquiry</h2>
-  <ul>
-    @teams.map { team =>
-      <li><a href="@controllers.enquiries.routes.EnquiryController.form(team.id)">@team.name</a></li>
-    }
-  </ul>
+  <p>If you have a question or would like to arrange to speak to somebody about an issue:</p>
+  <a class="btn btn-primary" href="@controllers.enquiries.routes.EnquiryController.form()">Make an enquiry</a>
 
   @if(enquiries.nonEmpty) {
     <h2>Your enquiries</h2>

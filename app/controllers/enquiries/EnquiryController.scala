@@ -13,37 +13,41 @@ import services.{EnquiryService, RegistrationService, SecurityService}
 
 import scala.concurrent.{ExecutionContext, Future}
 import domain.Enquiry.{FormData => Data}
+import play.api.Configuration
 import play.api.libs.json.Json
 
 @Singleton
 class EnquiryController @Inject()(
   teamSpecificActionRefiner: TeamSpecificActionRefiner,
   securityService: SecurityService,
-  service: EnquiryService
+  service: EnquiryService,
+  config: Configuration
 )(implicit executionContext: ExecutionContext) extends BaseController {
-
-  val baseForm = Form(mapping(
-    "text" -> nonEmptyText
-  )(Data.apply)(Data.unapply))
 
   import teamSpecificActionRefiner._
   import securityService._
 
-  private def render(team: Team, f: Form[Data])(implicit req: RequestHeader) =
-    Ok(views.html.enquiry.form(team, f))
+  private val baseForm = Form(mapping(
+    "text" -> nonEmptyText
+  )(Data.apply)(Data.unapply))
 
-  def form(teamId: String): Action[AnyContent] = TeamSpecificSignInRequiredAction(teamId) { implicit request =>
-    render(request.team, baseForm)
+  private val initialTeam: Team = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
+
+  private def render(f: Form[Data])(implicit req: RequestHeader) =
+    Ok(views.html.enquiry.form(f))
+
+  def form(): Action[AnyContent] = SigninRequiredAction { implicit request =>
+    render(baseForm)
   }
 
-  def submit(teamId: String): Action[AnyContent] = TeamSpecificSignInRequiredAction(teamId).async { implicit request =>
+  def submit(): Action[AnyContent] = SigninRequiredAction.async { implicit request =>
     baseForm.bindFromRequest().fold(
-      formWithErrors => Future.successful(render(request.team, formWithErrors)),
+      formWithErrors => Future.successful(render(formWithErrors)),
       formData => {
         val enquiry = Enquiry(
           id = None,
           universityID = request.context.user.get.universityId.get,
-          team = request.team
+          team = initialTeam
         )
 
         val message = domain.MessageSave(
