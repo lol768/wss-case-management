@@ -49,8 +49,11 @@ private[domain] case class MessageClient (
 )
 
 object Message extends Versioning {
-
   def tupled = (apply _).tupled
+
+  case class FormData(
+    text: String
+  )
 
   sealed trait CommonProperties { self: Table[_] =>
     def text = column [String]("text")
@@ -118,7 +121,9 @@ case class MessageVersion (
   * are derived from other objects passed in to the service method.
   */
 case class MessageSave (
-  text: String
+  text: String,
+  sender: MessageSender,
+  teamMember: Option[Usercode]
 )
 
 /**

@@ -1,19 +1,17 @@
 package controllers.enquiries
 
-import java.time.OffsetDateTime
-
-import controllers.{BaseController, RequestContext, TeamSpecificActionRefiner}
+import controllers.{BaseController, TeamSpecificActionRefiner}
+import domain.Enquiry.{FormData => Data}
 import domain._
 import javax.inject.{Inject, Singleton}
-import play.api.i18n.{I18nSupport, Messages}
-import play.api.mvc.{Action, AnyContent, RequestHeader}
 import play.api.data.Form
 import play.api.data.Forms._
-import services.{EnquiryService, RegistrationService, SecurityService}
+import play.api.i18n.Messages
+import play.api.libs.json.Json
+import play.api.mvc.{Action, AnyContent, RequestHeader}
+import services.{EnquiryService, SecurityService}
 
 import scala.concurrent.{ExecutionContext, Future}
-import domain.Enquiry.{FormData => Data}
-import play.api.libs.json.Json
 
 @Singleton
 class EnquiryController @Inject()(
@@ -26,8 +24,8 @@ class EnquiryController @Inject()(
     "text" -> nonEmptyText
   )(Data.apply)(Data.unapply))
 
-  import teamSpecificActionRefiner._
   import securityService._
+  import teamSpecificActionRefiner._
 
   private def render(team: Team, f: Form[Data])(implicit req: RequestHeader) =
     Ok(views.html.enquiry.form(team, f))
@@ -47,7 +45,9 @@ class EnquiryController @Inject()(
         )
 
         val message = domain.MessageSave(
-          text = formData.text
+          text = formData.text,
+          sender = MessageSender.Client,
+          teamMember = None
         )
 
         service.save(enquiry, message).successMap { _ =>
