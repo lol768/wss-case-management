@@ -38,6 +38,7 @@ lazy val main = (project in file("."))
 
 val playUtilsVersion = "1.16"
 val ssoClientVersion = "2.48"
+val warwickUtilsVersion = "20180518"
 val enumeratumVersion = "1.5.13"
 val enumeratumSlickVersion = "1.5.15"
 
@@ -50,6 +51,8 @@ val appDeps = Seq(
   // v3.0.0 is Play 2.6.x and Slick 3.1.x
   "com.typesafe.play" %% "play-slick" % "3.0.3",
   "com.typesafe.play" %% "play-slick-evolutions" % "3.0.3",
+  "com.typesafe.play" %% "play-mailer" % "6.0.1",
+  "com.typesafe.play" %% "play-mailer-guice" % "6.0.1",
 
   "com.typesafe.slick" %% "slick" % "3.2.3",
 
@@ -72,6 +75,8 @@ val appDeps = Seq(
   "uk.ac.warwick.play-utils" %% "objectstore" % playUtilsVersion,
   "uk.ac.warwick.play-utils" %% "slick" % playUtilsVersion,
 
+  "uk.ac.warwick.util" % "warwickutils-mywarwick" % warwickUtilsVersion exclude("uk.ac.warwick.sso", "sso-client"),
+
   "com.github.mumoshu" %% "play2-memcached-play26" % "0.9.3-warwick",
 
   "com.beachape" %% "enumeratum" % enumeratumVersion,
@@ -79,7 +84,9 @@ val appDeps = Seq(
   "com.beachape" %% "enumeratum-play-json" % enumeratumVersion,
   "com.beachape" %% "enumeratum-slick" % enumeratumSlickVersion,
 
-  "org.apache.jclouds.api" % "filesystem" % "2.1.0"
+  "org.apache.jclouds.api" % "filesystem" % "2.1.0",
+
+  "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0"
 )
 
 val testDeps = Seq(

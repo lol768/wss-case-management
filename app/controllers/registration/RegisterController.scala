@@ -8,7 +8,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.{I18nSupport, Messages}
 import play.api.mvc.{Action, AnyContent, Result}
-import services.{RegistrationService, SecurityService}
+import services.{NotificationService, RegistrationService, SecurityService}
 import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -16,7 +16,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class RegisterController @Inject()(
   securityService: SecurityService,
-  registrationService: RegistrationService
+  registrationService: RegistrationService,
+  notificationService: NotificationService
 )(implicit executionContext: ExecutionContext) extends BaseController with I18nSupport {
 
   import securityService._
@@ -43,6 +44,7 @@ class RegisterController @Inject()(
   }
 
   def submit: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
+    val universityID = request.context.user.get.universityId.get
     registerForm.bindFromRequest.fold(
       formWithErrors => {
         withOptionalRegistration { option =>
@@ -52,22 +54,14 @@ class RegisterController @Inject()(
       data => {
         withOptionalRegistration {
           case Some(existing) =>
-            registrationService.update(request.context.user.get.universityId.get, data, existing.updatedDate).map { result =>
-              result.fold(
-                showErrors,
-                _ => {
-                  Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.registration.updated"))
-                }
-              )
+            registrationService.update(universityID, data, existing.updatedDate).successMap { _ =>
+              Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.registration.updated"))
             }
           case _ =>
-            registrationService.save(request.context.user.get.universityId.get, data).map { result =>
-              result.fold(
-                showErrors,
-                _ => {
-                  Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.registration.complete"))
-                }
-              )
+            registrationService.save(universityID, data).successFlatMap { _ =>
+              notificationService.newRegistration(universityID).successMap { _ =>
+                Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.registration.complete"))
+              }
             }
         }
       }
@@ -75,11 +69,6 @@ class RegisterController @Inject()(
   }
 
   private def withOptionalRegistration(f: Option[Registration] => Future[Result])(implicit request: AuthenticatedRequest[AnyContent]): Future[Result] =
-    registrationService.get(request.context.user.get.universityId.get).flatMap(result => result.fold(
-      errors => {
-        Future.successful(showErrors(errors))
-      },
-      f
-    ))
+    registrationService.get(request.context.user.get.universityId.get).successFlatMap(f)
 
 }

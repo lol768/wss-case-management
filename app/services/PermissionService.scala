@@ -9,6 +9,7 @@ import warwick.sso.{GroupName, GroupService, Usercode}
 
 @ImplementedBy(classOf[PermissionServiceImpl])
 trait PermissionService {
+  def webgroupFor(team: Team): GroupName
   def inTeam(user: Usercode, team: Team): ServiceResult[Boolean]
 }
 
@@ -20,7 +21,7 @@ class PermissionServiceImpl @Inject() (
 
   private val webgroupPrefix = config.get[String]("app.webgroup.team.prefix")
 
-  private def webgroupFor(team: Team): GroupName =
+  override def webgroupFor(team: Team): GroupName =
     GroupName(s"$webgroupPrefix${team.id}")
 
   override def inTeam(user: Usercode, team: Team): ServiceResult[Boolean] =
