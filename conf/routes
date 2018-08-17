@@ -16,8 +16,8 @@ GET         /                                       @controllers.IndexController
 GET         /register                               @controllers.registration.RegisterController.form
 POST        /register                               @controllers.registration.RegisterController.submit
 
-GET         /:teamId/enquiry                        @controllers.enquiries.EnquiryController.form(teamId: String)
-POST        /:teamId/enquiry                        @controllers.enquiries.EnquiryController.submit(teamId: String)
+GET         /enquiry                                @controllers.enquiries.EnquiryController.form()
+POST        /enquiry                                @controllers.enquiries.EnquiryController.submit()
 GET         /api/enquiries                          @controllers.enquiries.EnquiryController.myEnquiriesJson
 
 GET         /admin/masquerade                       @controllers.MasqueradeController.masquerade
