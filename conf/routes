@@ -22,8 +22,8 @@ POST        /register                               @controllers.registration.Re
 
 ## Enquiries ##
 
-GET         /:teamId/enquiry                        @controllers.enquiries.EnquiryController.form(teamId: String)
-POST        /:teamId/enquiry                        @controllers.enquiries.EnquiryController.submit(teamId: String)
+GET         /enquiry                                @controllers.enquiries.EnquiryController.form()
+POST        /enquiry                                @controllers.enquiries.EnquiryController.submit()
 GET         /api/enquiries                          @controllers.enquiries.EnquiryController.myEnquiriesJson
 
 GET         /enquiry/:id                            @controllers.enquiries.EnquiryMessagesController.messages(id: java.util.UUID)

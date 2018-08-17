@@ -12,36 +12,42 @@ import play.api.mvc.{Action, AnyContent, RequestHeader}
 import services.{EnquiryService, SecurityService}
 
 import scala.concurrent.{ExecutionContext, Future}
+import domain.Enquiry.{FormData => Data}
+import play.api.Configuration
+import play.api.libs.json.Json
 
 @Singleton
 class EnquiryController @Inject()(
   teamSpecificActionRefiner: TeamSpecificActionRefiner,
   securityService: SecurityService,
-  service: EnquiryService
+  service: EnquiryService,
+  config: Configuration
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  val baseForm = Form(mapping(
+  import teamSpecificActionRefiner._
+  import securityService._
+
+  private val baseForm = Form(mapping(
     "text" -> nonEmptyText
   )(Data.apply)(Data.unapply))
 
-  import securityService._
-  import teamSpecificActionRefiner._
+  private val initialTeam: Team = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
 
-  private def render(team: Team, f: Form[Data])(implicit req: RequestHeader) =
-    Ok(views.html.enquiry.form(team, f))
+  private def render(f: Form[Data])(implicit req: RequestHeader) =
+    Ok(views.html.enquiry.form(f))
 
-  def form(teamId: String): Action[AnyContent] = TeamSpecificSignInRequiredAction(teamId) { implicit request =>
-    render(request.team, baseForm)
+  def form(): Action[AnyContent] = SigninRequiredAction { implicit request =>
+    render(baseForm)
   }
 
-  def submit(teamId: String): Action[AnyContent] = TeamSpecificSignInRequiredAction(teamId).async { implicit request =>
+  def submit(): Action[AnyContent] = SigninRequiredAction.async { implicit request =>
     baseForm.bindFromRequest().fold(
-      formWithErrors => Future.successful(render(request.team, formWithErrors)),
+      formWithErrors => Future.successful(render(formWithErrors)),
       formData => {
         val enquiry = Enquiry(
           id = None,
           universityID = request.context.user.get.universityId.get,
-          team = request.team
+          team = initialTeam
         )
 
         val message = domain.MessageSave(
