@@ -52,4 +52,6 @@ abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPer
     */
   def exec[R](action: DBIO[R]): R = Await.result(runWithRollback(action), 5.seconds)
 
+  def execWithCommit[R](action: DBIO[R]): R = Await.result(runner.run(action), 5.seconds)
+
 }

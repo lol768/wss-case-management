@@ -63,7 +63,12 @@ object CustomJdbcTypes extends warwick.slick.jdbctypes.CustomJdbcTypes(PostgresP
     def setValue(v: Timestamp, p: PreparedStatement, idx: Int): Unit = p.setTimestamp(idx, v, referenceCalendar)
     def getValue(r: ResultSet, idx: Int): Timestamp = r.getTimestamp(idx, referenceCalendar)
     def updateValue(v: Timestamp, r: ResultSet, idx: Int): Unit = r.updateTimestamp(idx, v)
-    override def valueToSQLLiteral(value: Timestamp): String = s"{ts '${value.toString}'}"
+
+    // Force use of bind parameter rather than literal in WHERE clauses.
+    override def hasLiteralForm = false
+
+    /** Bug: Literal string is in JVM local time - should be same zone as [[referenceCalendar]] */
+    // override def valueToSQLLiteral(value: Timestamp): String = s"{ts '${formatLiteral(value)}'}"
   }
 
   val utcTimestampColumnType = new UtcTimestampJdbcType

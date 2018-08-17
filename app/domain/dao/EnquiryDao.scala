@@ -27,9 +27,7 @@ class EnquiryDaoImpl @Inject() (
   extends EnquiryDao with HasDatabaseConfigProvider[JdbcProfile] {
 
   override def insert(enquiry: Enquiry): DBIO[Enquiry] =
-    (Enquiry.enquiries += enquiry).flatMap { e =>
-      Enquiry.enquiries.update(e)
-    }
+    Enquiry.enquiries += enquiry
 
   def getById(id: UUID): DBIO[Enquiry] = Enquiry.enquiries.table.filter(_.id === id).take(1).result.head
 

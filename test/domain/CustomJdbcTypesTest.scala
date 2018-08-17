@@ -27,7 +27,7 @@ class CustomJdbcTypesTest extends AbstractDaoTest {
 
     val table = TableQuery[EntityTable]
 
-    db.run(table.schema.create)
+    execWithCommit(table.schema.create)
   }
 
   "OffsetDateTime mapper" should {
@@ -36,16 +36,16 @@ class CustomJdbcTypesTest extends AbstractDaoTest {
 
       val entity = Entity(UUID.randomUUID(), dt)
 
-      db.run(table += entity).futureValue mustBe 1
+      execWithCommit(table += entity) mustBe 1
 
       val inserted = db.run(table.filter(_.id === entity.id).result.head).futureValue
       inserted.id mustBe entity.id
       inserted.dt mustBe dt
 
-      val ts = db.run(table.filter(_.id === entity.id).map(_.dtButItsATimestamp).result.head).futureValue
+      val ts = execWithCommit(table.filter(_.id === entity.id).map(_.dtButItsATimestamp).result.head)
       ts.toString mustBe "2018-08-17 09:44:43.182" // Converted 10:44am BST to UTC
 
-      db.run(table.filter(_.dt === entity.dt).result.headOption).futureValue mustBe 'defined
+      execWithCommit(table.filter(_.dt === entity.dt).result.headOption) mustBe 'defined
     }
   }
 
