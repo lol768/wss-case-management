@@ -1,6 +1,6 @@
 package controllers.enquiries
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
 import controllers.{BaseController, RequestContext, TeamSpecificActionRefiner}
 import domain._
@@ -74,12 +74,12 @@ class EnquiryController @Inject()(
           "enquiries" -> enquiries.map {
             case (enquiry, messages) => Json.obj(
               "id" -> enquiry.id,
-              "updatedDate" -> enquiry.version.toOffsetDateTime,
+              "updatedDate" -> enquiry.version,
               "messages" -> messages.map { message =>
                 Json.obj(
                   "from" -> message.sender,
                   "text" -> message.text,
-                  "date" -> message.created.toOffsetDateTime
+                  "date" -> message.created
                 )
               }
             )

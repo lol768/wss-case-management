@@ -1,6 +1,6 @@
 package domain.dao
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
 import com.google.inject.{ImplementedBy, Inject}
 import domain.CustomJdbcTypes._
@@ -19,12 +19,12 @@ object RegistrationDao {
   case class Registration(
     universityID: UniversityID,
     data: JsValue,
-    version: ZonedDateTime = JavaTime.zonedDateTime
+    version: OffsetDateTime = JavaTime.offsetDateTime
   ) extends Versioned[Registration] {
 
-    override def atVersion(at: ZonedDateTime): Registration = copy(version = at)
+    override def atVersion(at: OffsetDateTime): Registration = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[Registration]](operation: DatabaseOperation, timestamp: ZonedDateTime): B =
+    override def storedVersion[B <: StoredVersion[Registration]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
       RegistrationVersion(
         universityID,
         data,
@@ -43,17 +43,17 @@ object RegistrationDao {
   case class RegistrationVersion(
     universityId: UniversityID,
     data: JsValue,
-    version: ZonedDateTime = JavaTime.zonedDateTime,
+    version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
-    timestamp: ZonedDateTime
+    timestamp: OffsetDateTime
   ) extends StoredVersion[Registration]
 
   object Registration extends Versioning {
-    def tupled: ((UniversityID, JsValue, ZonedDateTime)) => Registration = (Registration.apply _).tupled
+    def tupled: ((UniversityID, JsValue, OffsetDateTime)) => Registration = (Registration.apply _).tupled
 
     sealed trait CommonProperties { self: Table[_] =>
       def data = column[JsValue]("data")
-      def version = column[ZonedDateTime]("version")
+      def version = column[OffsetDateTime]("version")
     }
 
     class Registrations(tag: Tag) extends Table[Registration](tag, "user_registration") with VersionedTable[Registration] with CommonProperties {
@@ -67,7 +67,7 @@ object RegistrationDao {
     class RegistrationVersions(tag: Tag) extends Table[RegistrationVersion](tag, "user_registration_version") with StoredVersionTable[Registration] with CommonProperties {
       def universityID = column[UniversityID]("university_id")
       def operation = column[DatabaseOperation]("version_operation")
-      def timestamp = column[ZonedDateTime]("version_timestamp")
+      def timestamp = column[OffsetDateTime]("version_timestamp")
 
       def * = (universityID, data, version, operation, timestamp).mapTo[RegistrationVersion]
       def pk = primaryKey("pk_user_registration_versions", (universityID, timestamp))
@@ -85,7 +85,7 @@ trait RegistrationDao {
 
   def insert(universityID: UniversityID, data: domain.RegistrationData): DBIO[RegistrationDao.Registration]
 
-  def update(universityID: UniversityID, data: domain.RegistrationData, version: ZonedDateTime): DBIO[RegistrationDao.Registration]
+  def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime): DBIO[RegistrationDao.Registration]
 
   def get(universityID: UniversityID): DBIO[Option[RegistrationDao.Registration]]
 
@@ -104,7 +104,7 @@ class RegistrationDaoImpl @Inject()(
       Json.toJson(data)(domain.RegistrationData.formatter)
     ))
 
-  override def update(universityID: UniversityID, data: domain.RegistrationData, version: ZonedDateTime): DBIO[RegistrationDao.Registration] =
+  override def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime): DBIO[RegistrationDao.Registration] =
     RegistrationDao.Registration.registrations.update(RegistrationDao.Registration(
       universityID,
       Json.toJson(data)(domain.RegistrationData.formatter),

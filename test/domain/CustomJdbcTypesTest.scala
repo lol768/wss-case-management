@@ -1,37 +1,76 @@
 package domain
 
-import java.sql.{PreparedStatement, Timestamp}
-import java.time.ZonedDateTime
+import java.sql.Timestamp
+import java.time.{OffsetDateTime, ZonedDateTime}
+import java.util.UUID
 
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.PlaySpec
-import org.mockito.Mockito._
+import domain.dao.AbstractDaoTest
+import helpers.JavaTime
+import slick.jdbc.PostgresProfile.api._
 
-class CustomJdbcTypesTest extends PlaySpec with MockitoSugar {
+class CustomJdbcTypesTest extends AbstractDaoTest {
 
   import CustomJdbcTypes._
 
-  "ZonedDateTime mapper" should {
+  trait DatabaseFixture {
+    def db: Database = dbConfig.db
 
-    /**
-      * Note that this is currently a bug under CASE-30.
-      * I've put this test in to demonstrate the behaviour and to
-      * test that a future fix works.
-      */
-    "currently maps to local time" in {
+    case class Entity(id: UUID, dt: OffsetDateTime)
 
-      val statement = mock[PreparedStatement]
-      val zdt = ZonedDateTime.parse("2018-08-08T12:30:00+01:00[Europe/London]")
+    class EntityTable(tag: Tag) extends Table[Entity](tag, "ENTITY") {
+      def id = column[UUID]("id")
+      def dt = column[OffsetDateTime]("DT")
+      def dtButItsATimestamp = column[Timestamp]("DT")
 
-      zdt.toInstant.toString mustBe "2018-08-08T11:30:00Z"
-
-      zonedDateTimeTypeMapper.setValue(zdt, statement, 0)
-
-      val t1: Timestamp = Timestamp.valueOf("2018-08-08 12:30:00")
-
-      verify(statement, times(1)).setTimestamp(0, t1)
+      def * = (id, dt).mapTo[Entity]
+      def pk = primaryKey("ENTITY_PK", id)
     }
 
+    val table = TableQuery[EntityTable]
+
+    execWithCommit(table.schema.create)
+  }
+
+  "OffsetDateTime mapper" should {
+    "correctly map to UTC" in new DatabaseFixture {
+      val dt = ZonedDateTime.of(2018, 8, 17, 10, 44, 43, 182000000, JavaTime.timeZone).toOffsetDateTime
+
+      val entity = Entity(UUID.randomUUID(), dt)
+
+      execWithCommit(table += entity) mustBe 1
+
+      val inserted = execWithCommit(table.filter(_.id === entity.id).result.head)
+      inserted.id mustBe entity.id
+      inserted.dt mustBe dt
+
+      val ts = execWithCommit(table.filter(_.id === entity.id).map(_.dtButItsATimestamp).result.head)
+      ts.toString mustBe "2018-08-17 09:44:43.182" // Converted 10:44am BST to UTC
+
+      execWithCommit(table.filter(_.dt === entity.dt).result.headOption) mustBe 'defined
+      execWithCommit(table.schema.drop)
+    }
+
+    "work across DST boundaries" in new DatabaseFixture {
+      val dt1 = ZonedDateTime.of(2018, 10, 28, 0, 30, 0, 0, JavaTime.timeZone)
+      val dt2 = dt1.plusHours(1).toOffsetDateTime
+      val dt3 = dt1.plusHours(2).toOffsetDateTime
+
+      dt2.toString mustBe "2018-10-28T01:30+01:00"
+      dt3.toString mustBe "2018-10-28T01:30Z"
+
+      val entity2 = Entity(UUID.randomUUID(), dt2)
+      val entity3 = Entity(UUID.randomUUID(), dt3)
+
+      execWithCommit(table += entity2) mustBe 1
+      execWithCommit(table += entity3) mustBe 1
+
+      execWithCommit(table.filter(_.id === entity2.id).map(_.dtButItsATimestamp).result.head).toString mustBe "2018-10-28 00:30:00.0"
+      execWithCommit(table.filter(_.id === entity3.id).map(_.dtButItsATimestamp).result.head).toString mustBe "2018-10-28 01:30:00.0"
+
+      execWithCommit(table.filter(_.id === entity2.id).result.head) mustBe entity2
+      execWithCommit(table.filter(_.id === entity3.id).result.head) mustBe entity3
+      execWithCommit(table.schema.drop)
+    }
   }
 
 }

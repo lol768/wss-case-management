@@ -55,3 +55,10 @@ sso-client {
 }
 
 memcached.1.host: "localhost:11211"
+
+wellbeing {
+  photos {
+    appname = "wellbeingsupportservices"
+    key = "Somekey"
+  }
+}

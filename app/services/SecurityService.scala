@@ -2,6 +2,7 @@ package services
 
 import com.google.inject.ImplementedBy
 import controllers.RequestContext
+import domain.Team
 import helpers.Json.JsonClientError
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json

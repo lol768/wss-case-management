@@ -51,7 +51,9 @@ object TestApplications extends MockitoSugar {
         bind[UserLookupService].to(mock[UserLookupService]),
         bind[GroupService].to {
           val groupService = mock[GroupService]
+          // TODO allow tests to get positive results back
           when(groupService.getGroupsForUser(Matchers.any())).thenReturn(Success(Seq.empty))
+          when(groupService.isUserInGroup(Matchers.any(), Matchers.any())).thenReturn(Success(false))
           groupService
         },
 

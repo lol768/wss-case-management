@@ -1,9 +1,21 @@
 @import domain.MessageData
 @import domain.Enquiry
 @import domain.MessageSender
-@(teams: Seq[domain.Team], enquiries: Seq[(Enquiry, Seq[MessageData])])(implicit context: RequestContext)
+@import domain.Registration
+@(
+  teams: Seq[domain.Team],
+  enquiries: Seq[(Enquiry, Seq[MessageData])],
+  registration: Option[Registration]
+)(implicit context: RequestContext)
 
-@main("Hello") {
+@main("Home") {
+  @registration.map { r =>
+    <div class="pull-right">
+      <a href="@controllers.registration.routes.RegisterController.form()" class="btn btn-default">
+        View and update registration
+      </a>
+    </div>
+  }
 
   <p>If you have a question or would like to arrange to speak to somebody about an issue:</p>
   <a class="btn btn-primary" href="@controllers.enquiries.routes.EnquiryController.form()">Make an enquiry</a>

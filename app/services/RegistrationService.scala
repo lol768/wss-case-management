@@ -1,6 +1,6 @@
 package services
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
 import com.google.inject.ImplementedBy
 import domain.dao.{DaoRunner, RegistrationDao}
@@ -17,7 +17,7 @@ trait RegistrationService {
 
   def save(universityID: UniversityID, data: domain.RegistrationData)(implicit ac: AuditLogContext): Future[ServiceResult[domain.Registration]]
 
-  def update(universityID: UniversityID, data: domain.RegistrationData, version: ZonedDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[domain.Registration]]
+  def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[domain.Registration]]
 
   def get(universityID: UniversityID): Future[ServiceResult[Option[domain.Registration]]]
 
@@ -40,7 +40,7 @@ class RegistrationServiceImpl @Inject()(
       daoRunner.run(dao.insert(universityID, data)).map(_.parsed).map(Right.apply)
     }
 
-  override def update(universityID: UniversityID, data: RegistrationData, version: ZonedDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
+  override def update(universityID: UniversityID, data: RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
     auditService.audit(
       "UpdateRegistration",
       universityID.string,
