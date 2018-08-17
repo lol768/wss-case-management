@@ -2,7 +2,7 @@ package domain
 
 import java.sql.{PreparedStatement, ResultSet, Timestamp}
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, OffsetDateTime, ZoneId, ZoneOffset}
+import java.time.{OffsetDateTime, ZoneOffset}
 import java.util.{Calendar, TimeZone}
 
 import enumeratum.SlickEnumSupport
@@ -12,7 +12,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.{JdbcProfile, JdbcType, PostgresProfile}
 import warwick.sso.{GroupName, UniversityID, Usercode}
 
-object CustomJdbcTypes extends warwick.slick.jdbctypes.CustomJdbcTypes(PostgresProfile) with SlickEnumSupport {
+object CustomJdbcTypes extends SlickEnumSupport {
   override val profile: JdbcProfile = PostgresProfile
   import profile._
 
@@ -34,11 +34,6 @@ object CustomJdbcTypes extends warwick.slick.jdbctypes.CustomJdbcTypes(PostgresP
   implicit val teamTypeMapper: JdbcType[Team] = MappedColumnType.base[Team, String](
     t => t.id,
     s => Teams.fromId(s)
-  )
-
-  implicit val localDateTimeTypeMapper: JdbcType[LocalDateTime] = MappedColumnType.base[LocalDateTime, Timestamp](
-    dt => Timestamp.from(dt.atZone(ZoneId.systemDefault).toInstant),
-    ts => LocalDateTime.ofInstant(ts.toInstant, ZoneId.systemDefault)
   )
 
   implicit val offsetDateTimeTypeMapper: JdbcType[OffsetDateTime] = new DriverJdbcType[OffsetDateTime]() {
