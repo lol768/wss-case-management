@@ -12,11 +12,11 @@ class EnquiryServiceTest extends PlaySpec {
   type Item = (Enquiry, Seq[MessageData])
 
   val enquiryToday = Enquiry(universityID = null, team = null)
-  val enquiryLastWeek = enquiryToday.copy(version = JavaTime.zonedDateTime.minusWeeks(1))
-  val enquiryNextWeek = enquiryToday.copy(version = JavaTime.zonedDateTime.plusWeeks(1))
+  val enquiryLastWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.minusWeeks(1))
+  val enquiryNextWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.plusWeeks(1))
 
-  val messageTomorrow = MessageData("hello", MessageSender.Client, JavaTime.zonedDateTime.plusDays(1))
-  val messageLastWeek = MessageData("hello", MessageSender.Client, JavaTime.zonedDateTime.minusWeeks(1))
+  val messageTomorrow = MessageData("hello", MessageSender.Client, JavaTime.offsetDateTime.plusDays(1))
+  val messageLastWeek = MessageData("hello", MessageSender.Client, JavaTime.offsetDateTime.minusWeeks(1))
 
   "lastModified" should {
 

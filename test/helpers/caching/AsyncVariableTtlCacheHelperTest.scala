@@ -1,6 +1,6 @@
 package helpers.caching
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
 import helpers.JavaTimeTest
 import javax.inject.Provider
@@ -42,7 +42,7 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
 
       fetchData().futureValue mustBe "Value 1"
       fetchData().futureValue mustBe "Value 1"
-      JavaTimeTest.withMockDateTime(ZonedDateTime.now.plusMinutes(1).toInstant){
+      JavaTimeTest.withMockDateTime(OffsetDateTime.now.plusMinutes(1).toInstant){
         fetchData().futureValue mustBe "Value 1" // returns the cached value but does a background update
       }
       fetchData().futureValue mustBe "Value 2"
@@ -59,7 +59,7 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
       fetchData().futureValue mustBe "Value 1"
       fetchData().futureValue mustBe "Value 1"
 
-      JavaTimeTest.withMockDateTime(ZonedDateTime.now.plusMinutes(12).toInstant) {
+      JavaTimeTest.withMockDateTime(OffsetDateTime.now.plusMinutes(12).toInstant) {
         fetchData().futureValue mustBe "Value 2"
       }
 
@@ -82,7 +82,7 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
       }
 
       fetchData().futureValue mustBe "Value 1"
-      JavaTimeTest.withMockDateTime(ZonedDateTime.now.plusMinutes(12).toInstant){
+      JavaTimeTest.withMockDateTime(OffsetDateTime.now.plusMinutes(12).toInstant){
         fetchData().futureValue mustBe "Value 1"
       }
       verify(provider).get

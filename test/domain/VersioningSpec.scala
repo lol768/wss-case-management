@@ -1,6 +1,6 @@
 package domain
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
 import akka.Done
 import domain.CustomJdbcTypes._
@@ -20,25 +20,25 @@ object VersioningSpec {
   case class Account(
     usercode: Usercode,
     webgroup: GroupName,
-    version: ZonedDateTime = JavaTime.zonedDateTime
+    version: OffsetDateTime = JavaTime.offsetDateTime
   ) extends Versioned[Account] {
-    override def atVersion(at: ZonedDateTime): Account = copy(version = at)
-    override def storedVersion[B <: StoredVersion[Account]](operation: DatabaseOperation, timestamp: ZonedDateTime): B =
+    override def atVersion(at: OffsetDateTime): Account = copy(version = at)
+    override def storedVersion[B <: StoredVersion[Account]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
       AccountVersion.versioned(this, operation, timestamp).asInstanceOf[B]
   }
 
   case class AccountVersion(
     usercode: Usercode,
     webgroup: GroupName,
-    version: ZonedDateTime,
+    version: OffsetDateTime,
     operation: DatabaseOperation,
-    timestamp: ZonedDateTime
+    timestamp: OffsetDateTime
   ) extends StoredVersion[Account]
 
   object AccountVersion {
     def tupled = (apply _).tupled
 
-    def versioned(account: Account, operation: DatabaseOperation, timestamp: ZonedDateTime): AccountVersion =
+    def versioned(account: Account, operation: DatabaseOperation, timestamp: OffsetDateTime): AccountVersion =
       AccountVersion(
         account.usercode,
         account.webgroup,
@@ -55,7 +55,7 @@ object VersioningSpec {
       self: Table[_] =>
 
       def webgroup = column[GroupName]("WEBGROUP")
-      def version = column[ZonedDateTime]("VERSION")
+      def version = column[OffsetDateTime]("VERSION")
     }
 
     class Accounts(tag: Tag) extends Table[Account](tag, "ACCOUNT") with VersionedTable[Account] with AccountProperties {
@@ -69,7 +69,7 @@ object VersioningSpec {
     class AccountVersions(tag: Tag) extends Table[AccountVersion](tag, "ACCOUNT_VERSION") with StoredVersionTable[Account] with AccountProperties {
       def usercode = column[Usercode]("USERCODE")
       def operation = column[DatabaseOperation]("VERSION_OPERATION")
-      def timestamp = column[ZonedDateTime]("VERSION_TIMESTAMP")
+      def timestamp = column[OffsetDateTime]("VERSION_TIMESTAMP")
 
       def * = (usercode, webgroup, version, operation, timestamp).mapTo[AccountVersion]
       def pk = primaryKey("pk_accountversions", (usercode, timestamp))

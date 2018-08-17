@@ -13,19 +13,19 @@ object JavaTime {
   val localDateFormat: DateTimeFormatter = DateTimeFormatter.ISO_DATE
   val iSO8601DateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").withZone(timeZone)
 
-  implicit def dateTimeOrdering: Ordering[ZonedDateTime] = Ordering.fromLessThan(_.isBefore(_))
+  implicit def dateTimeOrdering: Ordering[OffsetDateTime] = Ordering.fromLessThan(_.isBefore(_))
   implicit def localDateOrdering: Ordering[LocalDate] = Ordering.fromLessThan(_.isBefore(_))
 
   implicit val localDateWrites: Writes[LocalDate] = (d: LocalDate) => JsString(localDateFormat.format(d))
-  implicit val zonedDateTimeISOWrites: Writes[ZonedDateTime] = (d: ZonedDateTime) => JsString(JavaTime.iSO8601DateFormat.format(d))
-  implicit val zonedDateTimeEpochMilliReads: Reads[ZonedDateTime] =
-    (json: JsValue) => json.validate[Long].map(millis => ZonedDateTime.ofInstant(Instant.ofEpochMilli(millis), timeZone))
-  implicit val zonedDateTimeEpochMilliWrites: Writes[ZonedDateTime] = (d: ZonedDateTime) => JsNumber(d.toInstant.toEpochMilli)
+  implicit val offsetDateTimeISOWrites: Writes[OffsetDateTime] = (d: OffsetDateTime) => JsString(JavaTime.iSO8601DateFormat.format(d))
+  implicit val offsetDateTimeEpochMilliReads: Reads[OffsetDateTime] =
+    (json: JsValue) => json.validate[Long].map(millis => OffsetDateTime.ofInstant(Instant.ofEpochMilli(millis), timeZone))
+  implicit val offsetDateTimeEpochMilliWrites: Writes[OffsetDateTime] = (d: OffsetDateTime) => JsNumber(d.toInstant.toEpochMilli)
 
   def clock: Clock = DateTimeUtils.CLOCK_IMPLEMENTATION
 
   // Wrappers for now() that use the mockable clock
-  def zonedDateTime: ZonedDateTime = ZonedDateTime.now(clock)
+  def offsetDateTime: OffsetDateTime = OffsetDateTime.now(clock)
   def localDateTime: LocalDateTime = LocalDateTime.now(clock)
   def localDate: LocalDate = LocalDate.now(clock)
   def localTime: LocalTime = LocalTime.now(clock)
@@ -65,8 +65,8 @@ object JavaTime {
 
     }
 
-    def apply(date: ZonedDateTime, printToday: Boolean = false, onlyWeekday: Boolean = false): String = {
-      val now = zonedDateTime
+    def apply(date: OffsetDateTime, printToday: Boolean = false, onlyWeekday: Boolean = false): String = {
+      val now = offsetDateTime
 
       if (date.toLocalDate.isEqual(now.toLocalDate)) {
         if (printToday) {

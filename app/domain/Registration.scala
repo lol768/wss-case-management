@@ -1,13 +1,13 @@
 package domain
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
 import play.api.libs.json.{Format, Json}
 import warwick.sso.UniversityID
 
 case class Registration(
   universityID: UniversityID,
-  updatedDate: ZonedDateTime,
+  updatedDate: OffsetDateTime,
   data: RegistrationData
 )
 
