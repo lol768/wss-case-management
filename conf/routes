@@ -4,6 +4,8 @@
 
 ->          /sso                                    sso.Routes
 
+## Misc/System ##
+
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                           @controllers.Assets.versioned(path="/public", file: Asset)
 
@@ -13,6 +15,8 @@ GET         /service/healthcheck                    @controllers.ServiceCheckCon
 
 GET         /                                       @controllers.IndexController.home
 
+## Clients ##
+
 GET         /register                               @controllers.registration.RegisterController.form
 POST        /register                               @controllers.registration.RegisterController.submit
 
@@ -20,8 +24,15 @@ GET         /:teamId/enquiry                        @controllers.enquiries.Enqui
 POST        /:teamId/enquiry                        @controllers.enquiries.EnquiryController.submit(teamId: String)
 GET         /api/enquiries                          @controllers.enquiries.EnquiryController.myEnquiriesJson
 
+## Teams ##
+
+GET         /team/:teamId                     @controllers.admin.AdminController.teamHome(teamId: String)
+
+## Admins/Sysadmins ##
+
 GET         /admin/masquerade                       @controllers.admin.MasqueradeController.masquerade
-GET         /admin/team/:teamId                     @controllers.admin.AdminController.teamHome(teamId: String)
+
+## Fallbacks ##
 
 # Handle trailing slashes in URLs
 GET         /*path/                                 @controllers.IndexController.redirectToPath(path: String)
