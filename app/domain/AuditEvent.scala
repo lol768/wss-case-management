@@ -1,6 +1,6 @@
 package domain
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import domain.CustomJdbcTypes._
@@ -11,7 +11,7 @@ import warwick.sso.Usercode
 
 case class AuditEvent(
   id: Option[UUID] = None,
-  date: ZonedDateTime = JavaTime.zonedDateTime,
+  date: OffsetDateTime = JavaTime.offsetDateTime,
   operation: String,
   usercode: Option[Usercode],
   data: JsValue,
@@ -24,7 +24,7 @@ object AuditEvent {
 
   class AuditEvents(tag: Tag) extends Table[AuditEvent](tag, "audit_event") {
     def id = column[UUID]("id", O.PrimaryKey)
-    def date = column[ZonedDateTime]("event_date_utc")
+    def date = column[OffsetDateTime]("event_date_utc")
     def operation = column[String]("operation")
     def usercode = column[Usercode]("usercode")
     def data = column[JsValue]("data")

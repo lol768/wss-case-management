@@ -1,6 +1,6 @@
 package domain
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import warwick.sso.UniversityID
@@ -14,11 +14,11 @@ case class Enquiry(
   universityID: UniversityID,
   team: Team,
   state: EnquiryState = Open,
-  version: ZonedDateTime = ZonedDateTime.now(),
+  version: OffsetDateTime = OffsetDateTime.now(),
 ) extends Versioned[Enquiry] {
 
-  override def atVersion(at: ZonedDateTime): Enquiry = copy(version = at)
-  override def storedVersion[B <: StoredVersion[Enquiry]](operation: DatabaseOperation, timestamp: ZonedDateTime): B =
+  override def atVersion(at: OffsetDateTime): Enquiry = copy(version = at)
+  override def storedVersion[B <: StoredVersion[Enquiry]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
     EnquiryVersion(
       id.get,
       universityID,
@@ -43,7 +43,7 @@ object Enquiry extends Versioning {
 
 
     def team = column[Team]("team_id")
-    def version = column[ZonedDateTime]("version")
+    def version = column[OffsetDateTime]("version")
     def universityId = column[UniversityID]("university_id")
     def state = column[EnquiryState]("state")
   }
@@ -59,7 +59,7 @@ object Enquiry extends Versioning {
   class EnquiryVersions(tag: Tag) extends Table[EnquiryVersion](tag, "enquiry_version") with StoredVersionTable[Enquiry] with EnquiryProperties {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
-    def timestamp = column[ZonedDateTime]("version_timestamp")
+    def timestamp = column[OffsetDateTime]("version_timestamp")
 
     def * = (id, universityId, team, state, version, operation, timestamp).mapTo[EnquiryVersion]
     def pk = primaryKey("pk_enquiryversions", (id, timestamp))
@@ -76,9 +76,9 @@ case class EnquiryVersion(
   universityID: UniversityID,
   team: Team,
   state: EnquiryState,
-  version: ZonedDateTime = ZonedDateTime.now(),
+  version: OffsetDateTime = OffsetDateTime.now(),
   operation: DatabaseOperation,
-  timestamp: ZonedDateTime
+  timestamp: OffsetDateTime
 ) extends StoredVersion[Enquiry]
 
 sealed trait EnquiryState extends EnumEntry

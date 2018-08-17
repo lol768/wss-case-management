@@ -1,37 +1,52 @@
 package domain
 
 import java.sql.{PreparedStatement, Timestamp}
-import java.time.ZonedDateTime
+import java.time.{OffsetDateTime, ZoneOffset, ZonedDateTime}
+import java.util.UUID
 
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.PlaySpec
-import org.mockito.Mockito._
+import slick.jdbc.PostgresProfile.api._
+import domain.dao.AbstractDaoTest
+import helpers.JavaTime
 
-class CustomJdbcTypesTest extends PlaySpec with MockitoSugar {
+class CustomJdbcTypesTest extends AbstractDaoTest {
 
   import CustomJdbcTypes._
 
-  "ZonedDateTime mapper" should {
+  trait DatabaseFixture {
+    def db: Database = dbConfig.db
 
-    /**
-      * Note that this is currently a bug under CASE-30.
-      * I've put this test in to demonstrate the behaviour and to
-      * test that a future fix works.
-      */
-    "currently maps to local time" in {
+    case class Entity(id: UUID, dt: OffsetDateTime)
 
-      val statement = mock[PreparedStatement]
-      val zdt = ZonedDateTime.parse("2018-08-08T12:30:00+01:00[Europe/London]")
+    class EntityTable(tag: Tag) extends Table[Entity](tag, "ENTITY") {
+      def id = column[UUID]("id")
+      def dt = column[OffsetDateTime]("DT")
+      def dtButItsATimestamp = column[Timestamp]("DT")
 
-      zdt.toInstant.toString mustBe "2018-08-08T11:30:00Z"
-
-      zonedDateTimeTypeMapper.setValue(zdt, statement, 0)
-
-      val t1: Timestamp = Timestamp.valueOf("2018-08-08 12:30:00")
-
-      verify(statement, times(1)).setTimestamp(0, t1)
+      def * = (id, dt).mapTo[Entity]
     }
 
+    val table = TableQuery[EntityTable]
+
+    db.run(table.schema.create)
+  }
+
+  "OffsetDateTime mapper" should {
+    "correctly map to UTC" in new DatabaseFixture {
+      val dt = ZonedDateTime.of(2018, 8, 17, 10, 44, 43, 182000000, JavaTime.timeZone).toOffsetDateTime
+
+      val entity = Entity(UUID.randomUUID(), dt)
+
+      db.run(table += entity).futureValue mustBe 1
+
+      val inserted = db.run(table.filter(_.id === entity.id).result.head).futureValue
+      inserted.id mustBe entity.id
+      inserted.dt mustBe dt
+
+      val ts = db.run(table.filter(_.id === entity.id).map(_.dtButItsATimestamp).result.head).futureValue
+      ts.toString mustBe "2018-08-17 09:44:43.182" // Converted 10:44am BST to UTC
+
+      db.run(table.filter(_.dt === entity.dt).result.headOption).futureValue mustBe 'defined
+    }
   }
 
 }

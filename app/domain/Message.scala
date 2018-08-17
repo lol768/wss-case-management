@@ -1,6 +1,6 @@
 package domain
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import domain.CustomJdbcTypes._
@@ -19,12 +19,12 @@ case class Message (
   teamMember: Option[Usercode],
   ownerId: UUID,
   ownerType: MessageOwner,
-  created: ZonedDateTime = ZonedDateTime.now(),
-  version: ZonedDateTime = ZonedDateTime.now()
+  created: OffsetDateTime = OffsetDateTime.now(),
+  version: OffsetDateTime = OffsetDateTime.now()
 ) extends Versioned[Message] {
-  override def atVersion(at: ZonedDateTime): Message = copy(version = at)
+  override def atVersion(at: OffsetDateTime): Message = copy(version = at)
 
-  override def storedVersion[B <: StoredVersion[Message]](operation: DatabaseOperation, timestamp: ZonedDateTime): B =
+  override def storedVersion[B <: StoredVersion[Message]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
     MessageVersion(
       id,
       text,
@@ -56,10 +56,10 @@ object Message extends Versioning {
     def text = column [String]("text")
     def sender = column[MessageSender]("sender")
     def teamMember = column[Option[Usercode]]("team_member")
-    def created = column[ZonedDateTime]("created_utc")
+    def created = column[OffsetDateTime]("created_utc")
     def ownerId = column[UUID]("owner_id")
     def ownerType = column[MessageOwner]("owner_type")
-    def version = column[ZonedDateTime]("version")
+    def version = column[OffsetDateTime]("version")
   }
 
   class Messages(tag: Tag) extends Table[Message](tag, "message") with VersionedTable[Message] with CommonProperties {
@@ -75,7 +75,7 @@ object Message extends Versioning {
   class MessageVersions(tag: Tag) extends Table[MessageVersion](tag, "message_version") with StoredVersionTable[Message] with CommonProperties {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
-    def timestamp = column[ZonedDateTime]("version_timestamp")
+    def timestamp = column[OffsetDateTime]("version_timestamp")
 
     def * = (id, text, sender, teamMember, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
     def pk = primaryKey("pk_messageversions", (id, timestamp))
@@ -107,10 +107,10 @@ case class MessageVersion (
   teamMember: Option[Usercode],
   ownerId: UUID,
   ownerType: MessageOwner,
-  created: ZonedDateTime,
-  version: ZonedDateTime = ZonedDateTime.now(),
+  created: OffsetDateTime,
+  version: OffsetDateTime = OffsetDateTime.now(),
   operation: DatabaseOperation,
-  timestamp: ZonedDateTime
+  timestamp: OffsetDateTime
 ) extends StoredVersion[Message]
 
 /**
@@ -127,7 +127,7 @@ case class MessageSave (
 case class MessageData (
   text: String,
   sender: MessageSender,
-  created: ZonedDateTime
+  created: OffsetDateTime
 )
 
 sealed trait MessageSender extends EnumEntry

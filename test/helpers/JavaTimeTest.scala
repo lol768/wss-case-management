@@ -51,45 +51,45 @@ class JavaTimeTest extends PlaySpec with MockitoSugar {
       }
     }
 
-    "handle ZonedDateTime today" in {
+    "handle OffsetDateTime today" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2018, 3, 16).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault)) must be ("11:13")
+        JavaTime.Relative(LocalDate.of(2018, 3, 16).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault).toOffsetDateTime) must be ("11:13")
       }
     }
 
-    "handle ZonedDateTime today with Today" in {
+    "handle OffsetDateTime today with Today" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2018, 3, 16).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault), printToday = true) must be ("Today 11:13")
+        JavaTime.Relative(LocalDate.of(2018, 3, 16).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault).toOffsetDateTime, printToday = true) must be ("Today 11:13")
       }
     }
 
-    "handle ZonedDateTime yesterday" in {
+    "handle OffsetDateTime yesterday" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2018, 3, 15).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault)) must be ("Yesterday 11:13")
+        JavaTime.Relative(LocalDate.of(2018, 3, 15).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault).toOffsetDateTime) must be ("Yesterday 11:13")
       }
     }
 
-    "handle ZonedDateTime this week" in {
+    "handle OffsetDateTime this week" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2018, 3, 18).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault)) must be ("Sun 11:13")
+        JavaTime.Relative(LocalDate.of(2018, 3, 18).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault).toOffsetDateTime) must be ("Sun 11:13")
       }
     }
 
-    "handle ZonedDateTime only weekday" in {
+    "handle OffsetDateTime only weekday" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2018, 3, 21).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault), onlyWeekday = true) must be ("Wed 11:13")
+        JavaTime.Relative(LocalDate.of(2018, 3, 21).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault).toOffsetDateTime, onlyWeekday = true) must be ("Wed 11:13")
       }
     }
 
-    "handle ZonedDateTime this year" in {
+    "handle OffsetDateTime this year" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2018, 3, 3).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault)) must be ("Sat 3 Mar, 11:13")
+        JavaTime.Relative(LocalDate.of(2018, 3, 3).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault).toOffsetDateTime) must be ("Sat 3 Mar, 11:13")
       }
     }
 
-    "handle ZonedDateTime last year" in {
+    "handle OffsetDateTime last year" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2017, 3, 3).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault)) must be ("Fri 3 Mar 2017, 11:13")
+        JavaTime.Relative(LocalDate.of(2017, 3, 3).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault).toOffsetDateTime) must be ("Fri 3 Mar 2017, 11:13")
       }
     }
 

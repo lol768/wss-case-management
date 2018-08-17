@@ -1,6 +1,6 @@
 package services
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
@@ -37,7 +37,7 @@ class EnquiryServiceImpl @Inject() (
 ) extends EnquiryService {
 
   import EnquiryService.sortByRecent
-
+  
   override def save(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
     val id = UUID.randomUUID()
     val messageId = UUID.randomUUID()
@@ -70,7 +70,7 @@ class EnquiryServiceImpl @Inject() (
     // in plain Scala after we've got our (Enquiry, Message) tuples back.
 
     // Newest first
-    implicit def dateOrdering: Ordering[ZonedDateTime] = JavaTime.dateTimeOrdering.reverse
+    implicit def dateOrdering: Ordering[OffsetDateTime] = JavaTime.dateTimeOrdering.reverse
 
     daoRunner.run(query.result).map { pairs =>
       Right(sortByRecent(OneToMany.leftJoin(pairs)))
@@ -85,11 +85,11 @@ object EnquiryService {
     * updated (perhaps from its state changing)
     */
   def sortByRecent(data: Seq[(Enquiry, Seq[MessageData])]): Seq[(Enquiry, Seq[MessageData])] = {
-    implicit def dateOrdering: Ordering[ZonedDateTime] = JavaTime.dateTimeOrdering.reverse
+    implicit def dateOrdering: Ordering[OffsetDateTime] = JavaTime.dateTimeOrdering.reverse
     data.sortBy(lastModified)
   }
 
-  def lastModified(entry: (Enquiry, Seq[MessageData])): ZonedDateTime = {
+  def lastModified(entry: (Enquiry, Seq[MessageData])): OffsetDateTime = {
     import JavaTime.dateTimeOrdering
     entry match {
       case (enquiry, messages) => Stream.cons(enquiry.version, messages.toStream.map(_.created)).max

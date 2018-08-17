@@ -1,6 +1,6 @@
 package domain
 
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 
 import akka.Done
 import domain.CustomJdbcTypes._
@@ -13,27 +13,27 @@ import slick.sql.FixedSqlStreamingAction
 import scala.concurrent.ExecutionContext
 
 trait Versioned[A <: Versioned[A]] {
-  def version: ZonedDateTime
+  def version: OffsetDateTime
 
-  def atVersion(at: ZonedDateTime): A
-  def storedVersion[B <: StoredVersion[A]](operation: DatabaseOperation, timestamp: ZonedDateTime): B
+  def atVersion(at: OffsetDateTime): A
+  def storedVersion[B <: StoredVersion[A]](operation: DatabaseOperation, timestamp: OffsetDateTime): B
 }
 
 trait StoredVersion[A <: Versioned[A]] {
-  def version: ZonedDateTime
+  def version: OffsetDateTime
   def operation: DatabaseOperation
-  def timestamp: ZonedDateTime
+  def timestamp: OffsetDateTime
 }
 
 trait VersionedTable[A <: Versioned[A]] {
-  def version: Rep[ZonedDateTime]
+  def version: Rep[OffsetDateTime]
   def matchesPrimaryKey(other: A): Rep[Boolean]
 }
 
 trait StoredVersionTable[A <: Versioned[A]] {
-  def version: Rep[ZonedDateTime]
+  def version: Rep[OffsetDateTime]
   def operation: Rep[DatabaseOperation]
-  def timestamp: Rep[ZonedDateTime]
+  def timestamp: Rep[OffsetDateTime]
 }
 
 trait Versioning {
@@ -50,7 +50,7 @@ trait Versioning {
 
     def insert(value: A)(implicit ec: ExecutionContext): DBIO[A] = {
       // We ignore the version passed through
-      val versionTimestamp = JavaTime.zonedDateTime
+      val versionTimestamp = JavaTime.offsetDateTime
       val versionedValue = value.atVersion(versionTimestamp)
       val storedVersion = versionedValue.storedVersion[B](DatabaseOperation.Insert, versionTimestamp)
 
@@ -69,7 +69,7 @@ trait Versioning {
 
     def update(value: A)(implicit ec: ExecutionContext): DBIO[A] = {
       val originalVersion = value.version
-      val versionTimestamp = JavaTime.zonedDateTime
+      val versionTimestamp = JavaTime.offsetDateTime
       val versionedValue = value.atVersion(versionTimestamp)
       val storedVersion = versionedValue.storedVersion[B](DatabaseOperation.Update, versionTimestamp)
 
@@ -86,7 +86,7 @@ trait Versioning {
     }
 
     def delete(value: A)(implicit ec: ExecutionContext): DBIO[Done] = {
-      val storedVersion = value.storedVersion[B](DatabaseOperation.Delete, JavaTime.zonedDateTime)
+      val storedVersion = value.storedVersion[B](DatabaseOperation.Delete, JavaTime.offsetDateTime)
 
       val deleteAction =
         table.filter { a => a.matchesPrimaryKey(value) && a.version === value.version }.delete.flatMap {
