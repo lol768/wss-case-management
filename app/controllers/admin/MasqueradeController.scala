@@ -1,5 +1,6 @@
-package controllers
+package controllers.admin
 
+import controllers.BaseController
 import javax.inject.{Inject, Singleton}
 import play.api.mvc.{Action, AnyContent}
 import services.SecurityService

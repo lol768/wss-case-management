@@ -1,0 +1,8 @@
+@import controllers.RequestContext
+@import domain.Team
+
+@(team: Team)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@main(team.name) {
+
+}
