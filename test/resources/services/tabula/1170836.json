@@ -1,0 +1,39 @@
+{
+  "member": {
+    "affiliatedDepartments": [
+      {
+        "code": "in",
+        "name": "IT Services"
+      }
+    ],
+    "dateOfBirth": "1986-08-23",
+    "email": "Ritchie.Allen@warwick.ac.uk",
+    "firstName": "Ritchie",
+    "fullFirstName": "Ritchie",
+    "fullName": "Ritchie Allen",
+    "gender": "Male",
+    "groupName": "University Staff",
+    "homeDepartment": {
+      "code": "in",
+      "name": "IT Services"
+    },
+    "inUseFlag": "Active",
+    "inactivationDate": "3333-03-03",
+    "jobTitle": "Senior Web Developer",
+    "lastName": "Allen",
+    "officialName": "Mr Ritchie Allen",
+    "phoneNumber": "51348",
+    "title": "Mr",
+    "touchedDepartments": [
+      {
+        "code": "in",
+        "name": "IT Services"
+      }
+    ],
+    "universityId": "1170836",
+    "userId": "cuslaj",
+    "userType": "Staff"
+  },
+  "status": "ok",
+  "success": true
+}
