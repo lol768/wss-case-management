@@ -2,12 +2,11 @@ package services
 
 import com.google.inject.ImplementedBy
 import controllers.RequestContext
-import domain.Team
 import helpers.Json.JsonClientError
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc._
-import system.ImplicitRequestContext
+import system.{ImplicitRequestContext, Roles}
 import warwick.sso._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,7 +36,7 @@ class SecurityServiceImpl @Inject()(
   override def RequiredRoleAction(role: RoleName): AuthActionBuilder = sso.RequireRole(role, forbidden)(defaultParser)
   override def RequiredActualUserRoleAction(role: RoleName): AuthActionBuilder = sso.RequireActualUserRole(role, forbidden)(defaultParser)
 
-  val RequireSysadmin: AuthActionBuilder = RequiredActualUserRoleAction(RoleName("sysadmin"))
+  val RequireSysadmin: AuthActionBuilder = RequiredActualUserRoleAction(Roles.Sysadmin)
 
   class RequireConditionActionFilter(block: AuthenticatedRequest[_] => Boolean, otherwise: AuthenticatedRequest[_] => Result)(implicit val executionContext: ExecutionContext) extends ActionFilter[AuthenticatedRequest] {
     override protected def filter[A](request: AuthenticatedRequest[A]): Future[Option[Result]] =
