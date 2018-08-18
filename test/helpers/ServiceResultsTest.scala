@@ -24,10 +24,10 @@ class ServiceResultsTest extends PlaySpec with MockitoSugar with ScalaFutures {
 
     "collect errors" in {
       val f1 = Future.successful(Right(true))
-      val f2 = Future.successful(Left(Seq(CustomServiceError("failed"))))
+      val f2 = Future.successful(Left(List(CustomServiceError("failed"))))
       val f3 = Future.successful(Right(true))
 
-      Future.sequence(Seq(f1, f2, f3)).map(ServiceResults.sequence).futureValue mustBe Left(Seq(CustomServiceError("failed")))
+      Future.sequence(Seq(f1, f2, f3)).map(ServiceResults.sequence).futureValue mustBe Left(List(CustomServiceError("failed")))
     }
 
     "propagate Future.failed" in {

@@ -22,7 +22,7 @@ class ErrorHandler @Inject()(
 ) extends HttpErrorHandler with Results with Status with Logging with Rendering with AcceptExtractors {
 
   def onClientError(request: RequestHeader, statusCode: Int, message: String) = {
-    implicit val context = RequestContext.authenticated(sso, request, Nil)
+    implicit val context = RequestContext.anonymous(sso, request, Nil)
 
     Future.successful(
       statusCode match {
@@ -39,7 +39,7 @@ class ErrorHandler @Inject()(
   }
 
   def onServerError(request: RequestHeader, exception: Throwable) = {
-    implicit val context = RequestContext.authenticated(sso, request, Nil)
+    implicit val context = RequestContext.anonymous(sso, request, Nil)
 
     logger.error("Internal Server Error", exception)
     Future.successful(

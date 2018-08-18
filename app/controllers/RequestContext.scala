@@ -7,6 +7,7 @@ import warwick.sso.{AuthenticatedRequest, SSOClient, User}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
+import scala.util.Try
 
 case class RequestContext(
   path: String,
@@ -48,7 +49,7 @@ object RequestContext {
       loginUrl = linkGenerator.getLoginUrl,
       logoutUrl = linkGenerator.getLogoutUrl,
       navigation = navigation,
-      flash = request.flash,
+      flash = Try(request.flash).toOption.getOrElse(Flash()),
       userAgent = request.headers.get("User-Agent"),
       ipAddress = request.remoteAddress
     )

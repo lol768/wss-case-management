@@ -3,6 +3,7 @@ package domain
 import enumeratum.{Enum, EnumEntry}
 import play.api.data.FormError
 import play.api.data.format.Formatter
+import play.api.libs.json.{Format, JsPath, JsString}
 
 import scala.collection.immutable
 
@@ -42,4 +43,9 @@ object ReasonableAdjustment extends Enum[ReasonableAdjustment] {
       key -> value.entryName
     )
   }
+
+  implicit val reasonableAdjustmentFormatter: Format[ReasonableAdjustment] = Format(
+    JsPath.read[String].map[ReasonableAdjustment](id => values.find(_.entryName == id).getOrElse(throw new IllegalArgumentException(s"Unknown reasonable adjustment id $id"))),
+    (o: ReasonableAdjustment) => JsString(o.entryName)
+  )
 }

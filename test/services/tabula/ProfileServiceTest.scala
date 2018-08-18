@@ -1,5 +1,6 @@
 package services.tabula
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.time.LocalDate
 
 import domain._
@@ -11,16 +12,16 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.{Millis, Span}
 import org.scalatestplus.play.PlaySpec
-import play.api.{Configuration, Environment}
 import play.api.http.DefaultFileMimeTypesProvider
 import play.api.http.HttpConfiguration.HttpConfigurationProvider
-import play.api.test.WsTestClient
-import play.core.server.Server
-import play.api.routing.sird._
 import play.api.mvc._
+import play.api.routing.sird._
+import play.api.test.WsTestClient
+import play.api.{Configuration, Environment}
+import play.core.server.Server
+import uk.ac.warwick.sso.client.trusted.TrustedApplication.HEADER_ERROR_CODE
 import uk.ac.warwick.sso.client.trusted.{CurrentApplication, EncryptedCertificate, TrustedApplicationsManager}
 import warwick.sso.UniversityID
-import uk.ac.warwick.sso.client.trusted.TrustedApplication.HEADER_ERROR_CODE
 
 import scala.concurrent.ExecutionContext
 
@@ -97,6 +98,15 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       studentProfile.disability mustBe Some(SitsDisability("I","Unclassified disability","Condition not listed"))
       studentProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/842cfad8a90147436f7a7dfeb2d42800/1234567")
       studentProfile.userType mustBe UserType.Student
+
+      val baos = new ByteArrayOutputStream()
+      val oos = new ObjectOutputStream(baos)
+      oos.writeObject(studentProfile)
+      oos.close()
+
+      val bais = new ByteArrayInputStream(baos.toByteArray)
+      val ois = new ObjectInputStream(bais)
+      ois.readObject() mustBe studentProfile
     }
 
     "fetch an applicant profile" in  withProfileService() { profileService =>
