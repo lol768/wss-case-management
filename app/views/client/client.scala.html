@@ -35,18 +35,18 @@
       <strong>Residence: </strong> @profile.residence<br />
       <strong>Nationality: </strong> @profile.nationality<br />
       <strong>Dual nationality: </strong> @profile.dualNationality<br />
-      <strong>Tier 4 visa required: </strong> @profile.tier4VisaRequired<br />
-      <strong>Disability: </strong> @profile.disability<br />
+      <strong>Tier 4 visa required: </strong> @if(profile.tier4VisaRequired.contains(true)) { Yes } else { No }<br />
+      <strong>Disability: </strong> @profile.disability.map(_.description)<br />
       <strong>User type: </strong> @profile.userType
     </div>
     <div class="col-md-4 col-lg-5">
-      <strong>Course: </strong> @profile.course<br />
-      <strong>Route: </strong> @profile.route<br />
-      <strong>Course status: </strong> @profile.courseStatus<br />
-      <strong>Enrolment status: </strong> @profile.enrolmentStatus<br />
-      <strong>Attendance: </strong> @profile.attendance<br />
-      <strong>Group: </strong> @profile.group<br />
-      <strong>Year of study: </strong> @profile.yearOfStudy<br />
+      <strong>Course: </strong> @profile.course.map(_.name)<br />
+      <strong>Route: </strong> @profile.route.map(_.name)<br />
+      <strong>Course status: </strong> @profile.courseStatus.map(_.description)<br />
+      <strong>Enrolment status: </strong> @profile.enrolmentStatus.map(_.description)<br />
+      <strong>Attendance: </strong> @profile.attendance.map(_.description)<br />
+      <strong>Group: </strong> @profile.group.map(_.description)<br />
+      <strong>Year of study: </strong> @profile.yearOfStudy.map(_.block)<br />
       <strong>Start date: </strong> @profile.startDate<br />
       <strong>End date: </strong> @profile.endDate<br />
     </div>
@@ -70,13 +70,14 @@
       '_label -> "Alternative contact number"
     )
 
-    @b3.text(form("alternative-email-address"),
+    @b3.email(form("alternative-email-address"),
       '_label -> "Alternative email address"
     )
 
     @b3.select(form("risk-status"),
-      options = ClientRiskStatus.values,
-      '_label -> "Risk status"
+      options = ClientRiskStatus.values.map { s => s.entryName -> s.entryName },
+      '_label -> "Risk status",
+      '_default -> ""
     )
 
     @b3.checkboxGroup(

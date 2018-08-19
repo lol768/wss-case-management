@@ -7,7 +7,9 @@ import play.api.libs.json.{Format, JsPath, JsString}
 
 import scala.collection.immutable
 
-sealed abstract class ReasonableAdjustment(override val entryName: String, val description: String) extends EnumEntry
+sealed abstract class ReasonableAdjustment(override val entryName: String, val description: String) extends EnumEntry with IdAndDescription {
+  val id: String = entryName
+}
 
 object ReasonableAdjustment extends Enum[ReasonableAdjustment] {
   case object Extra25 extends ReasonableAdjustment("Extra25", "25% extra time in exams")

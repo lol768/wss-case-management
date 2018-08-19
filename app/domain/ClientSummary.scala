@@ -38,9 +38,11 @@ object ClientRiskStatus extends PlayEnum[ClientRiskStatus] {
   val values: immutable.IndexedSeq[ClientRiskStatus] = findValues
 }
 
-sealed trait AlertFlag extends EnumEntry
+sealed abstract class AlertFlag(val description: String) extends EnumEntry with IdAndDescription {
+  val id: String = entryName
+}
 object AlertFlag extends PlayEnum[AlertFlag] with CapitalWords {
-  case object HighMentalHealthRisk extends AlertFlag
+  case object HighMentalHealthRisk extends AlertFlag("High mental health risk")
 
   val values: immutable.IndexedSeq[AlertFlag] = findValues
 }

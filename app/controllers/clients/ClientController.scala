@@ -2,8 +2,7 @@ package controllers.clients
 
 import controllers.BaseController
 import domain._
-import helpers.ServiceResults
-import helpers.ServiceResults.ServiceResult
+import helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -38,11 +37,7 @@ class ClientController @Inject()(
     val registration = registrationService.get(universityID)
     val clientSummary = clientSummaryService.get(universityID)
 
-    Future.sequence(Seq(profile, registration, clientSummary)).map(ServiceResults.sequence).map {
-      case Left(errors) => Left(errors)
-      case Right(Seq(profile: SitsProfile @unchecked, registration: Option[Registration] @unchecked, clientSummary: Option[ClientSummary] @unchecked)) =>
-        Right((profile, registration, clientSummary))
-    }
+    zip(profile, registration, clientSummary)
   }
 
   // TODO permissions
