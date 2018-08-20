@@ -45,7 +45,12 @@ object CustomJdbcTypes extends SlickEnumSupport {
 
     def sqlType: Int = java.sql.Types.TIMESTAMP
     def setValue(v: OffsetDateTime, p: PreparedStatement, idx: Int): Unit = p.setTimestamp(idx, map(v), referenceCalendar)
-    def getValue(r: ResultSet, idx: Int): OffsetDateTime = comap(r.getTimestamp(idx, referenceCalendar))
+    def getValue(r: ResultSet, idx: Int): OffsetDateTime = {
+      val v = r.getTimestamp(idx, referenceCalendar)
+
+      if ((v eq null) || wasNull(r, idx)) null
+      else comap(v)
+    }
     def updateValue(v: OffsetDateTime, r: ResultSet, idx: Int): Unit = r.updateTimestamp(idx, map(v))
     override def valueToSQLLiteral(value: OffsetDateTime): String =
       s"{ts '${value.atZoneSameInstant(ZoneOffset.UTC).format(literalDateTimeFormatter)}'}"

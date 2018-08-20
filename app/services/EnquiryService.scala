@@ -48,7 +48,7 @@ class EnquiryServiceImpl @Inject() (
   override def save(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
     val id = UUID.randomUUID()
     val messageId = UUID.randomUUID()
-    auditService.audit("EnquirySave", id.toString, "Enquiry", Json.obj()) {
+    auditService.audit('EnquirySave, id.toString, 'Enquiry, Json.obj()) {
       daoRunner.run(for {
         e <- enquiryDao.insert(enquiry.copy(id = Some(id)))
         _ <- messageDao.insert(Message(
@@ -65,7 +65,7 @@ class EnquiryServiceImpl @Inject() (
 
   override def addMessage(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Message]] = {
     val messageId = UUID.randomUUID()
-    auditService.audit("EnquiryAddMessage", enquiry.id.get.toString, "Enquiry", Json.obj()) {
+    auditService.audit('EnquiryAddMessage, enquiry.id.get.toString, 'Enquiry, Json.obj()) {
       daoRunner.run(
         messageDao.insert(Message(
           id = messageId,

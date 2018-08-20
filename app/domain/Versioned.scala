@@ -61,6 +61,19 @@ trait Versioning {
     }
     def +=(value: A)(implicit ec: ExecutionContext): DBIO[A] = insert(value)
 
+    def insertAll(values: Seq[A])(implicit ec: ExecutionContext): DBIO[Seq[A]] = {
+      // We ignore the versions passed through
+      val versionTimestamp = JavaTime.offsetDateTime
+      val versionedValues = values.map(_.atVersion(versionTimestamp))
+      val storedVersions = versionedValues.map(_.storedVersion[B](DatabaseOperation.Insert, versionTimestamp))
+
+      for {
+        inserted <- table ++= versionedValues if inserted.isEmpty || inserted.contains(versionedValues.size)
+        _ <- versionsTable ++= storedVersions
+      } yield versionedValues
+    }
+    def ++=(values: Seq[A])(implicit ec: ExecutionContext): DBIO[Seq[A]] = insertAll(values)
+
     private[this] def optimisticLockingException(value: A)(implicit ec: ExecutionContext): DBIO[Nothing] =
       table.filter(_.matchesPrimaryKey(value)).result.flatMap {
         case Seq(current) => DBIO.failed(new Exception(s"Optimistic locking failed - tried to update version ${value.version} but current value is ${current.version}"))

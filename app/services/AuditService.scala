@@ -22,10 +22,14 @@ case class AuditLogContext(
   userAgent: Option[String] = None
 )
 
+object AuditLogContext {
+  def empty(): AuditLogContext = AuditLogContext()
+}
+
 @ImplementedBy(classOf[AuditServiceImpl])
 trait AuditService {
-  def audit[A](operation: String, targetId: String, targetType: String, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]]
-  def audit[A](operation: String, targetIdTransform: A => String, targetType: String, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]]
+  def audit[A](operation: Symbol, targetId: String, targetType: Symbol, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]]
+  def audit[A](operation: Symbol, targetIdTransform: A => String, targetType: Symbol, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]]
 }
 
 @Singleton
@@ -35,7 +39,7 @@ class AuditServiceImpl @Inject()(
 
   lazy val AUDIT_LOGGER: AuditLogger = AuditLogger.getAuditLogger("casemanagement")
 
-  private def doAudit[A](operation: String, targetId: String, targetType: String, data: JsValue)(implicit context: AuditLogContext): Unit = {
+  private def doAudit[A](operation: Symbol, targetId: String, targetType: Symbol, data: JsValue)(implicit context: AuditLogContext): Unit = {
     def handle(value: JsValue): AnyRef = value match {
       case JsBoolean(b) => Option(b).map(Boolean.box).getOrElse("-")
       case JsNumber(n) => Option(n).map(bd => new java.math.BigDecimal(bd.toDouble, MathContext.DECIMAL128)).getOrElse("-")
@@ -49,11 +53,11 @@ class AuditServiceImpl @Inject()(
       case obj: JsObject => obj.value.map { case (k, v) => new AuditLogger.Field(k) -> handle(v) }
       case _ => Map[AuditLogger.Field, AnyRef]()
     }) ++ Map(
-      new AuditLogger.Field(targetType) -> targetId
+      new AuditLogger.Field(targetType.name) -> targetId
     )
 
     AUDIT_LOGGER.log(
-      RequestInformation.forEventType(operation)
+      RequestInformation.forEventType(operation.name)
         .when(context.ipAddress.nonEmpty) { _.withIpAddress(context.ipAddress.get) }
         .when(context.userAgent.nonEmpty) { _.withUserAgent(context.userAgent.get) }
         .when(context.usercode.nonEmpty) { _.withUsername(context.usercode.get.string) },
@@ -61,35 +65,35 @@ class AuditServiceImpl @Inject()(
     )
   }
 
-  override def audit[A](operation: String, targetIdTransform: A => String, targetType: String, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]] =
+  override def audit[A](operation: Symbol, targetIdTransform: A => String, targetType: Symbol, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]] =
     f.flatMap {
       case Left(errors) =>
         Future.successful(Left(errors))
       case Right(result) =>
         val targetId = targetIdTransform(result)
         dao.insert(AuditEvent(
-          operation = operation,
+          operation = operation.name,
           usercode = context.usercode,
           data = data,
           targetId = targetId,
-          targetType = targetType
+          targetType = targetType.name
         )).map { _ =>
           doAudit(operation, targetId, targetType, data)
           Right(result)
         }
     }
 
-  override def audit[A](operation: String, targetId: String, targetType: String, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]] =
+  override def audit[A](operation: Symbol, targetId: String, targetType: Symbol, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]] =
     f.flatMap {
       case Left(errors) =>
         Future.successful(Left(errors))
       case Right(result) =>
         dao.insert(AuditEvent(
-          operation = operation,
+          operation = operation.name,
           usercode = context.usercode,
           data = data,
           targetId = targetId,
-          targetType = targetType
+          targetType = targetType.name
         )).map { _ =>
           doAudit(operation, targetId, targetType, data)
           Right(result)
