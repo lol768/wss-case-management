@@ -1,7 +1,7 @@
 package domain
 
 import enumeratum.{Enum, EnumEntry}
-import play.api.data.FormError
+import play.api.data.{FormError, Forms, Mapping}
 import play.api.data.format.Formatter
 import play.api.libs.json.{Format, JsPath, JsString}
 
@@ -45,6 +45,8 @@ object ReasonableAdjustment extends Enum[ReasonableAdjustment] {
       key -> value.entryName
     )
   }
+
+  val formField: Mapping[ReasonableAdjustment] = Forms.of(Formatter)
 
   implicit val reasonableAdjustmentFormatter: Format[ReasonableAdjustment] = Format(
     JsPath.read[String].map[ReasonableAdjustment](id => values.find(_.entryName == id).getOrElse(throw new IllegalArgumentException(s"Unknown reasonable adjustment id $id"))),

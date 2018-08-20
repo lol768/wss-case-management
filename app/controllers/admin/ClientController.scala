@@ -28,7 +28,7 @@ class ClientController @Inject()(
     "alternative-contact-number" -> text,
     "alternative-email-address" -> text,
     "risk-status" -> ClientRiskStatus.formField,
-    "reasonable-adjustments" -> set(of[ReasonableAdjustment](ReasonableAdjustment.Formatter)),
+    "reasonable-adjustments" -> set(ReasonableAdjustment.formField),
     "alert-flags" -> set(AlertFlag.formField)
   )(ClientSummaryData.apply)(ClientSummaryData.unapply))
 
