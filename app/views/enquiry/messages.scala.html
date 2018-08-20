@@ -1,0 +1,30 @@
+@import domain.Enquiry
+@import domain.MessageData
+@import domain.Message.FormData
+
+@(
+  enquiry: Enquiry,
+  messages: Seq[MessageData],
+  form: Form[FormData]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"${enquiry.team.name} enquiry from ${enquiry.universityID.string}") {
+  <div class="enquiry panel panel-default">
+    <div class="panel-body">
+      @*<span class="badge pull-right">@helpers.JavaTime.Relative(enquiry.version)</span>*@
+      <strong>Enquiry with @enquiry.team.name</strong>
+      @tags.conversation(messages)
+
+      @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.id.get)) { implicit ifc =>
+        @b3.textarea(form("text"),
+          '_label -> "Add a message",
+          'rows -> 3
+        )
+
+        @b3.free() {
+          <button type="submit" class="btn btn-primary">Add message</button>
+        }
+      }
+    </div>
+  </div>
+}
