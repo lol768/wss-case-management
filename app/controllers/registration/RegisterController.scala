@@ -16,8 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class RegisterController @Inject()(
   securityService: SecurityService,
-  registrationService: RegistrationService,
-  notificationService: NotificationService
+  registrationService: RegistrationService
 )(implicit executionContext: ExecutionContext) extends BaseController with I18nSupport {
 
   import securityService._
@@ -58,10 +57,8 @@ class RegisterController @Inject()(
               Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.registration.updated"))
             }
           case _ =>
-            registrationService.save(universityID, data).successFlatMap { _ =>
-              notificationService.newRegistration(universityID).successMap { _ =>
-                Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.registration.complete"))
-              }
+            registrationService.save(universityID, data).successMap { _ =>
+              Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.registration.complete"))
             }
         }
       }

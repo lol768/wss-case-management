@@ -38,10 +38,9 @@ class EnquiryServiceImpl @Inject() (
   auditService: AuditService,
   enquiryDao: EnquiryDao,
   messageDao: MessageDao,
-  daoRunner: DaoRunner
-)(
-  implicit ec: ExecutionContext
-) extends EnquiryService {
+  daoRunner: DaoRunner,
+  notificationService: NotificationService
+)(implicit ec: ExecutionContext) extends EnquiryService {
 
   import EnquiryService.sortByRecent
   
@@ -60,7 +59,10 @@ class EnquiryServiceImpl @Inject() (
           ownerType = MessageOwner.Enquiry
         ), Seq(enquiry.universityID))
       } yield e).map(Right.apply)
-    }
+    }.flatMap(_.fold(
+      errors => Future.successful(Left(errors)),
+      enquiry => notificationService.newEnquiry(enquiry).map(_.right.map(_ => enquiry))
+    ))
   }
 
   override def addMessage(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Message]] = {

@@ -4,6 +4,7 @@ import com.google.inject.ImplementedBy
 import controllers.RequestContext
 import helpers.Json.JsonClientError
 import javax.inject.{Inject, Singleton}
+import play.api.Configuration
 import play.api.libs.json.Json
 import play.api.mvc._
 import system.{ImplicitRequestContext, Roles}
@@ -26,7 +27,8 @@ trait SecurityService {
 @Singleton
 class SecurityServiceImpl @Inject()(
   sso: SSOClient,
-  parse: PlayBodyParsers
+  parse: PlayBodyParsers,
+  configuration: Configuration
 )(implicit executionContext: ExecutionContext) extends SecurityService with Results with Rendering with AcceptExtractors with ImplicitRequestContext {
 
   private def defaultParser = parse.default
@@ -81,5 +83,5 @@ class SecurityServiceImpl @Inject()(
   private val unauthorizedResponse =
     Unauthorized(Json.toJson(JsonClientError(status = "unauthorized", errors = Seq("You are not signed in.  You may authenticate through Web Sign-On."))))
 
-  private def noUniversityIdResponse(request: AuthenticatedRequest[_]) = PreconditionFailed(views.html.errors.noUniversityId()(RequestContext.authenticated(sso, request, Seq())))
+  private def noUniversityIdResponse(request: AuthenticatedRequest[_]) = PreconditionFailed(views.html.errors.noUniversityId()(RequestContext.authenticated(sso, request, Seq(), configuration)))
 }
