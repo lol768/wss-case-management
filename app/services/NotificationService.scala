@@ -1,7 +1,7 @@
 package services
 
 import com.google.inject.ImplementedBy
-import domain.{Enquiry, Teams}
+import domain._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.Inject
 import play.api.Configuration
@@ -18,6 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 trait NotificationService {
   def newRegistration(universityID: UniversityID): Future[ServiceResult[Activity]]
   def newEnquiry(enquiry: Enquiry): Future[ServiceResult[Activity]]
+  def enquiryMessage(enquiry: Enquiry, message: Message): Future[ServiceResult[Activity]]
 }
 
 class NotificationServiceImpl @Inject()(
@@ -85,6 +86,59 @@ class NotificationServiceImpl @Inject()(
       }
     }
 
+  override def enquiryMessage(enquiry: Enquiry, message: Message): Future[ServiceResult[Activity]] =
+    if (message.sender == MessageSender.Client) {
+      withTeamUsers(enquiry.team) { users =>
+        val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get).url}"
+
+        emailService.queue(
+          Email(
+            subject = "Case Management: Enquiry message from client received",
+            from = "no-reply@warwick.ac.uk",
+            bodyText = Some(views.txt.emails.enquirymessagefromclient(url).toString)
+          ),
+          users
+        ).flatMap {
+          case Left(errors) => Future.successful(Left(errors))
+          case _ =>
+            val activity = new Activity(
+              Set[String]().asJava,
+              Set(permissionService.webgroupFor(enquiry.team).string).asJava,
+              "Enquiry message from client received",
+              url,
+              null,
+              "enquiry-message-from-client"
+            )
+            sendAndHandleResponse(activity)
+        }
+      }
+    } else {
+      withUsersForUniversityID(enquiry.universityID) { users =>
+        val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get).url}"
+
+        emailService.queue(
+          Email(
+            subject = s"A message from the ${enquiry.team.name} team has been received",
+            from = "no-reply@warwick.ac.uk",
+            bodyText = Some(views.txt.emails.enquirymessagefromteam(enquiry.team, url).toString)
+          ),
+          users
+        ).flatMap {
+          case Left(errors) => Future.successful(Left(errors))
+          case _ =>
+            val activity = new Activity(
+              users.map(_.usercode.string).toSet.asJava,
+              Set[String]().asJava,
+              s"The ${enquiry.team.name} team has replied to your enquiry",
+              url,
+              null,
+              "enquiry-message-from-team"
+            )
+            sendAndHandleResponse(activity)
+        }
+      }
+    }
+
   private def sendAndHandleResponse(activity: Activity): Future[ServiceResult[Activity]] = {
     FutureConverters.toScala(myWarwickService.sendAsNotification(activity)).map { resultList =>
       val results = resultList.asScala
@@ -98,8 +152,11 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  private def withInitialTeamUsers(f: Seq[User] => Future[ServiceResult[Activity]]): Future[ServiceResult[Activity]] = {
-    val webGroup = permissionService.webgroupFor(initialTeam)
+  private def withInitialTeamUsers(f: Seq[User] => Future[ServiceResult[Activity]]): Future[ServiceResult[Activity]] =
+    withTeamUsers(initialTeam)(f)
+
+  private def withTeamUsers(team: Team)(f: Seq[User] => Future[ServiceResult[Activity]]): Future[ServiceResult[Activity]] = {
+    val webGroup = permissionService.webgroupFor(team)
     groupService.getWebGroup(webGroup).fold(
       e => Future.successful(Left(List(new ServiceError {
         override def message: String = e.getMessage
@@ -115,9 +172,19 @@ class NotificationServiceImpl @Inject()(
         )
       ).getOrElse(
         Future.successful(Left(List(new ServiceError {
-          override def message: String = s"Cannot fnd webgroup with name ${webGroup.string}"
+          override def message: String = s"Cannot find webgroup with name ${webGroup.string}"
         })))
       )
+    )
+  }
+
+  private def withUsersForUniversityID(universityID: UniversityID)(f: Seq[User] => Future[ServiceResult[Activity]]): Future[ServiceResult[Activity]] = {
+    userLookupService.getUsers(Seq(universityID)).fold(
+      e => Future.successful(Left(List(new ServiceError {
+        override def message: String = e.getMessage
+        override def cause = Some(e)
+      }))),
+      r => f(r.get(universityID).toSeq)
     )
   }
 

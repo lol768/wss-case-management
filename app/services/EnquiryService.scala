@@ -78,7 +78,10 @@ class EnquiryServiceImpl @Inject() (
           ownerType = MessageOwner.Enquiry
         ), Seq(enquiry.universityID))
       ).map(Right.apply)
-    }
+    }.flatMap(_.fold(
+      errors => Future.successful(Left(errors)),
+      message => notificationService.enquiryMessage(enquiry, message).map(_.right.map(_ => message))
+    ))
   }
 
   override def findEnquiriesForClient(client: UniversityID): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]] = {

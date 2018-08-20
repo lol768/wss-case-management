@@ -1,0 +1,6 @@
+@import domain.Team
+@(team: Team, url: String)
+
+The @team.name team has replied to your enquiry: @url
+
+This email was sent from an automated system and replies to it will not reach a real person.
