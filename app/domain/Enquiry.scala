@@ -9,6 +9,8 @@ import CustomJdbcTypes._
 import domain.EnquiryState.Open
 import enumeratum.{EnumEntry, PlayEnum}
 
+import scala.language.higherKinds
+
 case class Enquiry(
   id: Option[UUID] = None,
   universityID: UniversityID,
@@ -41,7 +43,6 @@ object Enquiry extends Versioning {
   sealed trait EnquiryProperties {
     self: Table[_] =>
 
-
     def team = column[Team]("team_id")
     def version = column[OffsetDateTime]("version")
     def universityId = column[UniversityID]("university_id")
@@ -69,6 +70,13 @@ object Enquiry extends Versioning {
   val enquiries: VersionedTableQuery[Enquiry, EnquiryVersion, Enquiries, EnquiryVersions] =
     VersionedTableQuery(TableQuery[Enquiries], TableQuery[EnquiryVersions])
 
+  implicit class EnquiryExtensions[C[_]](q: Query[Enquiries, Enquiry, C]) {
+    def withMessages = q
+      .joinLeft(Message.messages.table)
+      .on { (e, m) =>
+        e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
+      }
+  }
 }
 
 case class EnquiryVersion(
