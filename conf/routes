@@ -20,16 +20,16 @@ GET         /                                       @controllers.IndexController
 GET         /register                               @controllers.registration.RegisterController.form
 POST        /register                               @controllers.registration.RegisterController.submit
 
-GET         /client/:universityID                   @controllers.clients.ClientController.client(universityID: warwick.sso.UniversityID)
-POST        /client/:universityID                   @controllers.clients.ClientController.updateSummary(universityID: warwick.sso.UniversityID)
-
 GET         /enquiry                                @controllers.enquiries.EnquiryController.form()
 POST        /enquiry                                @controllers.enquiries.EnquiryController.submit()
 GET         /api/enquiries                          @controllers.enquiries.EnquiryController.myEnquiriesJson
 
 ## Teams ##
 
-GET         /team/:teamId                     @controllers.admin.AdminController.teamHome(teamId: String)
+GET         /team/:teamId                           @controllers.admin.AdminController.teamHome(teamId: String)
+
+GET         /team/client/:universityID              @controllers.admin.ClientController.client(universityID: warwick.sso.UniversityID)
+POST        /team/client/:universityID              @controllers.admin.ClientController.updateSummary(universityID: warwick.sso.UniversityID)
 
 ## Admins/Sysadmins ##
 

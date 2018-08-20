@@ -49,7 +49,7 @@ object RequestContext {
       loginUrl = linkGenerator.getLoginUrl,
       logoutUrl = linkGenerator.getLogoutUrl,
       navigation = navigation,
-      flash = Try(request.flash).toOption.getOrElse(Flash()),
+      flash = Try(request.flash).getOrElse(Flash()),
       userAgent = request.headers.get("User-Agent"),
       ipAddress = request.remoteAddress
     )

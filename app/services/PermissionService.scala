@@ -1,7 +1,8 @@
 package services
 
 import com.google.inject.ImplementedBy
-import domain.Team
+import domain.{Team, Teams}
+import helpers.ServiceResults
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
@@ -10,6 +11,7 @@ import warwick.sso.{GroupName, GroupService, Usercode}
 @ImplementedBy(classOf[PermissionServiceImpl])
 trait PermissionService {
   def inTeam(user: Usercode, team: Team): ServiceResult[Boolean]
+  def inAnyTeam(user: Usercode): ServiceResult[Boolean]
 }
 
 @Singleton
@@ -31,6 +33,10 @@ class PermissionServiceImpl @Inject() (
       })),
       r => Right(r)
     )
+
+  override def inAnyTeam(user: Usercode): ServiceResult[Boolean] =
+    ServiceResults.sequence(Teams.all.map(inTeam(user, _)))
+      .right.map(_.contains(true))
 
 }
 

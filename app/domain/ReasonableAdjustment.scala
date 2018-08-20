@@ -7,29 +7,29 @@ import play.api.libs.json.{Format, JsPath, JsString}
 
 import scala.collection.immutable
 
-sealed abstract class ReasonableAdjustment(override val entryName: String, val description: String) extends EnumEntry with IdAndDescription {
+sealed abstract class ReasonableAdjustment(val description: String) extends EnumEntry with IdAndDescription {
   val id: String = entryName
 }
 
 object ReasonableAdjustment extends Enum[ReasonableAdjustment] {
-  case object Extra25 extends ReasonableAdjustment("Extra25", "25% extra time in exams")
-  case object Extra50 extends ReasonableAdjustment("Extra50", "50% extra time in exams")
-  case object SmallerRoom extends ReasonableAdjustment("SmallerRoom", "Smaller room for exams")
-  case object SoleRoom extends ReasonableAdjustment("SoleRoom", "Sole room for exams")
-  case object ExtendedDeadlines extends ReasonableAdjustment("ExtendedDeadlines", "Extended deadlines for assignments")
-  case object AlternativeAssessment extends ReasonableAdjustment("AlternativeAssessment", "Alternative mode of assessment")
-  case object SeatArrangement extends ReasonableAdjustment("SeatArrangement", "Seat arrangement (door/window/front/rear of room)")
-  case object SuggestionsAnxious extends ReasonableAdjustment("SuggestionsAnxious", "Suggestions for managing anxious students")
-  case object RecordingDevice extends ReasonableAdjustment("RecordingDevice", "Recording device in lecture")
-  case object Reader extends ReasonableAdjustment("Reader", "Reader")
-  case object Scribe extends ReasonableAdjustment("Scribe", "Scribe")
-  case object ExamFood extends ReasonableAdjustment("ExamFood", "Take food into exam")
-  case object ExamMedication extends ReasonableAdjustment("ExamMedication", "Take medication into exam")
-  case object Exam5 extends ReasonableAdjustment("Exam5", "Discounted exam rest break up to 5 mins/hr")
-  case object Exam10 extends ReasonableAdjustment("Exam10", "Discounted exam rest break up to 10 mins/hr")
-  case object Exam15 extends ReasonableAdjustment("Exam15", "Discounted exam rest break up to 15 mins/hr")
-  case object SpecialistAccommodation extends ReasonableAdjustment("SpecialistAccommodation", "Specialist accommodation due to MH/Disability need")
-  case object Other extends ReasonableAdjustment("Other", "Other")
+  case object Extra25 extends ReasonableAdjustment("25% extra time in exams")
+  case object Extra50 extends ReasonableAdjustment("50% extra time in exams")
+  case object SmallerRoom extends ReasonableAdjustment("Smaller room for exams")
+  case object SoleRoom extends ReasonableAdjustment("Sole room for exams")
+  case object ExtendedDeadlines extends ReasonableAdjustment("Extended deadlines for assignments")
+  case object AlternativeAssessment extends ReasonableAdjustment("Alternative mode of assessment")
+  case object SeatArrangement extends ReasonableAdjustment("Seat arrangement (door/window/front/rear of room)")
+  case object SuggestionsAnxious extends ReasonableAdjustment("Suggestions for managing anxious students")
+  case object RecordingDevice extends ReasonableAdjustment("Recording device in lecture")
+  case object Reader extends ReasonableAdjustment("Reader")
+  case object Scribe extends ReasonableAdjustment("Scribe")
+  case object ExamFood extends ReasonableAdjustment("Take food into exam")
+  case object ExamMedication extends ReasonableAdjustment("Take medication into exam")
+  case object Exam5 extends ReasonableAdjustment("Discounted exam rest break up to 5 mins/hr")
+  case object Exam10 extends ReasonableAdjustment("Discounted exam rest break up to 10 mins/hr")
+  case object Exam15 extends ReasonableAdjustment("Discounted exam rest break up to 15 mins/hr")
+  case object SpecialistAccommodation extends ReasonableAdjustment("Specialist accommodation due to MH/Disability need")
+  case object Other extends ReasonableAdjustment("Other")
 
   val values: immutable.IndexedSeq[ReasonableAdjustment] = findValues
 

@@ -2,7 +2,6 @@ package domain
 
 import java.time.OffsetDateTime
 
-import enumeratum.EnumEntry.CapitalWords
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.JavaTime
 import play.api.libs.json.{Format, Json}
@@ -41,7 +40,7 @@ object ClientRiskStatus extends PlayEnum[ClientRiskStatus] {
 sealed abstract class AlertFlag(val description: String) extends EnumEntry with IdAndDescription {
   val id: String = entryName
 }
-object AlertFlag extends PlayEnum[AlertFlag] with CapitalWords {
+object AlertFlag extends PlayEnum[AlertFlag] {
   case object HighMentalHealthRisk extends AlertFlag("High mental health risk")
 
   val values: immutable.IndexedSeq[AlertFlag] = findValues

@@ -55,12 +55,20 @@
   @registration.map { registration =>
     <h2>Registration</h2>
 
-    ...
+    <p>
+      <strong>Registered: </strong> @helpers.JavaTime.Relative(registration.updatedDate)<br />
+      <strong>GP: </strong> @registration.data.gp<br />
+      <strong>Tutor: </strong> @registration.data.tutor<br />
+      <strong>Disabilities: </strong> @registration.data.disabilities.map(_.description).mkString(", ")<br />
+      <strong>Medication: </strong> @registration.data.medications.map(_.description).mkString(", ")<br />
+      <strong>Appointment adjustments: </strong> @views.utils.nl2br(registration.data.appointmentAdjustments)<br />
+      <strong>Referrals: </strong> @registration.data.referrals.map(_.description).mkString(", ")
+    </p>
   }
 
   <h2>Client summary</h2>
 
-  @b3.vertical.formCSRF(controllers.clients.routes.ClientController.updateSummary(profile.universityID)) { implicit ifc =>
+  @b3.vertical.formCSRF(controllers.admin.routes.ClientController.updateSummary(profile.universityID)) { implicit ifc =>
     @b3.textarea(form("notes"),
       '_label -> "Notes",
       'rows -> 5

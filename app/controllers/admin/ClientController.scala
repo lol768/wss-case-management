@@ -1,27 +1,27 @@
-package controllers.clients
+package controllers.admin
 
-import controllers.BaseController
+import controllers.{BaseController, TeamSpecificActionRefiner}
 import domain._
 import helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.mvc.{Action, AnyContent}
-import services.{ClientSummaryService, RegistrationService, SecurityService}
 import services.tabula.ProfileService
+import services.{ClientSummaryService, RegistrationService}
 import warwick.sso.UniversityID
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ClientController @Inject()(
-  securityService: SecurityService,
   profileService: ProfileService,
   registrationService: RegistrationService,
   clientSummaryService: ClientSummaryService,
+  teamSpecificActionRefiner: TeamSpecificActionRefiner,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import securityService._
+  import teamSpecificActionRefiner._
 
   val form = Form(mapping(
     "notes" -> text,
@@ -40,22 +40,21 @@ class ClientController @Inject()(
     zip(profile, registration, clientSummary)
   }
 
-  // TODO permissions
-  def client(universityID: UniversityID): Action[AnyContent] = SigninRequiredAction.async { implicit request =>
+  def client(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     clientInformation(universityID).successMap { case (profile, registration, clientSummary) =>
       val f = clientSummary match {
         case Some(cs) => form.fill(cs.data)
         case _ => form
       }
 
-      Ok(views.html.client.client(profile, registration, clientSummary, f))
+      Ok(views.html.admin.client.client(profile, registration, clientSummary, f))
     }
   }
 
-  def updateSummary(universityID: UniversityID): Action[AnyContent] = SigninRequiredAction.async { implicit request =>
+  def updateSummary(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     clientInformation(universityID).successFlatMap { case (profile, registration, clientSummary) =>
       form.bindFromRequest.fold(
-        formWithErrors => Future.successful(Ok(views.html.client.client(profile, registration, clientSummary, formWithErrors))),
+        formWithErrors => Future.successful(Ok(views.html.admin.client.client(profile, registration, clientSummary, formWithErrors))),
         data => {
           val f =
             if (clientSummary.isEmpty) clientSummaryService.save(universityID, data)
@@ -63,7 +62,7 @@ class ClientController @Inject()(
 
           f.map(_.fold(
             showErrors,
-            summary => Ok(views.html.client.client(profile, registration, Some(summary), form))
+            summary => Ok(views.html.admin.client.client(profile, registration, Some(summary), form))
           ))
         }
       )
