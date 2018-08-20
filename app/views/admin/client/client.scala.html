@@ -1,0 +1,109 @@
+@import domain.SitsProfile
+@import domain.Registration
+@import domain.ClientSummary
+@import domain.ClientSummaryData
+@import domain.ReasonableAdjustment
+@import domain.AlertFlag
+@import domain.ClientRiskStatus
+@(
+  profile: SitsProfile,
+  registration: Option[Registration],
+  clientSummary: Option[ClientSummary],
+  form: Form[ClientSummaryData]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"${profile.fullName}") {
+  <h2>Profile</h2>
+
+  <div class="row">
+    @profile.photo.map { photo =>
+      <div class="col-md-4 col-lg-3">
+        <div class="photo">
+          <img src="@photo" class="img-thumbnail">
+        </div>
+      </div>
+    }
+    <div class="col-md-4">
+      <strong>University ID: </strong> @profile.universityID.string<br />
+      <strong>Full name: </strong> @profile.fullName<br />
+      <strong>Department: </strong> @profile.department.name<br />
+      <strong>Date of birth: </strong> @profile.dateOfBirth<br />
+      <strong>Phone number: </strong> @profile.phoneNumber<br />
+      <strong>Warwick email address: </strong> @profile.warwickEmail<br />
+      <strong>Alternative email address: </strong> @profile.alternateEmail<br />
+      <strong>Correspondence address: </strong> @profile.address<br />
+      <strong>Residence: </strong> @profile.residence<br />
+      <strong>Nationality: </strong> @profile.nationality<br />
+      <strong>Dual nationality: </strong> @profile.dualNationality<br />
+      <strong>Tier 4 visa required: </strong> @if(profile.tier4VisaRequired.contains(true)) { Yes } else { No }<br />
+      <strong>Disability: </strong> @profile.disability.map(_.description)<br />
+      <strong>User type: </strong> @profile.userType
+    </div>
+    <div class="col-md-4 col-lg-5">
+      <strong>Course: </strong> @profile.course.map(_.name)<br />
+      <strong>Route: </strong> @profile.route.map(_.name)<br />
+      <strong>Course status: </strong> @profile.courseStatus.map(_.description)<br />
+      <strong>Enrolment status: </strong> @profile.enrolmentStatus.map(_.description)<br />
+      <strong>Attendance: </strong> @profile.attendance.map(_.description)<br />
+      <strong>Group: </strong> @profile.group.map(_.description)<br />
+      <strong>Year of study: </strong> @profile.yearOfStudy.map(_.block)<br />
+      <strong>Start date: </strong> @profile.startDate<br />
+      <strong>End date: </strong> @profile.endDate<br />
+    </div>
+  </div>
+
+  @registration.map { registration =>
+    <h2>Registration</h2>
+
+    <p>
+      <strong>Registered: </strong> @helpers.JavaTime.Relative(registration.updatedDate)<br />
+      <strong>GP: </strong> @registration.data.gp<br />
+      <strong>Tutor: </strong> @registration.data.tutor<br />
+      <strong>Disabilities: </strong> @registration.data.disabilities.map(_.description).mkString(", ")<br />
+      <strong>Medication: </strong> @registration.data.medications.map(_.description).mkString(", ")<br />
+      <strong>Appointment adjustments: </strong> @views.utils.nl2br(registration.data.appointmentAdjustments)<br />
+      <strong>Referrals: </strong> @registration.data.referrals.map(_.description).mkString(", ")
+    </p>
+  }
+
+  <h2>Client summary</h2>
+
+  @b3.vertical.formCSRF(controllers.admin.routes.ClientController.updateSummary(profile.universityID)) { implicit ifc =>
+    @b3.textarea(form("notes"),
+      '_label -> "Notes",
+      'rows -> 5
+    )
+
+    @b3.text(form("alternative-contact-number"),
+      '_label -> "Alternative contact number"
+    )
+
+    @b3.email(form("alternative-email-address"),
+      '_label -> "Alternative email address"
+    )
+
+    @b3.select(form("risk-status"),
+      options = ClientRiskStatus.values.map { s => s.entryName -> s.entryName },
+      '_label -> "Risk status",
+      '_default -> ""
+    )
+
+    @b3.checkboxGroup(
+      label = "Reasonable adjustments",
+      items = ReasonableAdjustment.values,
+      form = form,
+      field = "reasonable-adjustments",
+      idPrefix = "reasonable-adjustment"
+    )
+
+    @b3.checkboxGroup(
+      label = "Alert flags",
+      items = AlertFlag.values,
+      form = form,
+      field = "alert-flags",
+      idPrefix = "alert-flag"
+    )
+
+    @tags.submitOrCancel("Update", controllers.routes.IndexController.home())
+  }
+}

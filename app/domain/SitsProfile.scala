@@ -63,7 +63,10 @@ object UserType extends Enum[UserType] {
   case object Applicant extends UserType
 }
 
-sealed abstract class Attendance(override val entryName: String, val description: String) extends EnumEntry
+sealed abstract class Attendance(override val entryName: String, val description: String) extends EnumEntry {
+  // Default constructor for serialization
+  def this() = this("", "")
+}
 
 object Attendance extends Enum[Attendance] {
   val values: immutable.IndexedSeq[Attendance] = findValues
@@ -72,7 +75,10 @@ object Attendance extends Enum[Attendance] {
   case object PartTime extends Attendance("P", "Part-time")
 }
 
-sealed abstract class StudentGroup(override val entryName: String, val description: String) extends EnumEntry
+sealed abstract class StudentGroup(override val entryName: String, val description: String) extends EnumEntry {
+  // Default constructor for serialization
+  def this() = this("", "")
+}
 
 object StudentGroup extends Enum[StudentGroup] {
 

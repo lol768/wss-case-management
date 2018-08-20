@@ -42,7 +42,7 @@ class ProfileServiceImpl  @Inject()(
   private val photosAppName = configuration.get[String]("wellbeing.photos.appname")
   private val photosKey = configuration.get[String]("wellbeing.photos.key")
 
-  private lazy val ttlStrategy : ServiceResult[SitsProfile] => Ttl = a => a.fold(
+  private lazy val ttlStrategy: ServiceResult[SitsProfile] => Ttl = a => a.fold(
     _ => Ttl(soft = 10.seconds, medium = 1.minute, hard = 1.hour),
     _ => Ttl(soft = 1.hour, medium = 1.day, hard = 7.days)
   )
@@ -84,7 +84,7 @@ class ProfileServiceImpl  @Inject()(
       ProfileServiceError(s"$path: ${validationErrors.map(_.message).mkString(", ")}")
     }
     logger.error(s"Could not parse JSON result from Tabula:\n$json\n${serviceErrors.map(_.message).mkString("\n")}")
-    Left(serviceErrors)
+    Left(serviceErrors.toList)
   }
 
   private def photoUrl(universityId: UniversityID): String = {
