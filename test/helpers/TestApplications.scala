@@ -8,12 +8,11 @@ import play.api.db.evolutions.{ClassLoaderEvolutionsReader, EvolutionsReader}
 import play.api.inject._
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.{Configuration, Environment}
-import services.MockSSOClientHandler
 import uk.ac.warwick.sso.client.SSOClientHandler
 import warwick.accesslog.LogbackAccessModule
 import warwick.sso._
 
-import scala.util.Success
+import scala.util.{Success, Try}
 
 object TestApplications extends MockitoSugar {
 
@@ -49,15 +48,9 @@ object TestApplications extends MockitoSugar {
       )
       .disable[PlayLogbackAccessModule]
       .overrides(
-        bind[SSOClientHandler].to[MockSSOClientHandler],
+        bind[SSOClientHandler].to[warwick.sso.MockSSOClientHandler],
         bind[UserLookupService].to(mock[UserLookupService]),
-        bind[GroupService].to {
-          val groupService = mock[GroupService]
-          // TODO allow tests to get positive results back
-          when(groupService.getGroupsForUser(Matchers.any())).thenReturn(Success(Seq.empty))
-          when(groupService.isUserInGroup(Matchers.any(), Matchers.any())).thenReturn(Success(false))
-          groupService
-        },
+        bind[GroupService].to[warwick.sso.MockGroupService],
 
         // Allows putting test versions of migrations under test/resources/evolutions/default
         bind[EvolutionsReader].toInstance(new ClassLoaderEvolutionsReader)

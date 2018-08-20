@@ -1,17 +1,22 @@
 package specs
 
+import helpers.FakeRequestMethods._
 import helpers.OneAppPerSuite
+import org.dom4j.io.DOMReader
+import org.dom4j.{Document, Element}
+import org.htmlcleaner.{DomSerializer, HtmlCleaner}
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import uk.ac.warwick.util.web.Uri
 import warwick.sso.User
-import helpers.FakeRequestMethods._
 
+import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
-abstract class BaseSpec extends PlaySpec with MockitoSugar with OneAppPerSuite {
+abstract class BaseSpec extends PlaySpec with MockitoSugar with OneAppPerSuite with HtmlNavigation {
 
   // This might be a bad idea. Experimenting with ways to make all the specs
   // be readable and not too repetitive.

@@ -1,14 +1,7 @@
 package specs
 
-import domain.Fixtures.users
-import helpers.FakeRequestMethods._
 import play.api.http.MimeTypes
-import play.api.mvc.Result
 import play.api.test.Helpers._
-import play.api.test._
-import warwick.sso.User
-
-import scala.concurrent.Future
 
 class HealthSpec extends BaseSpec {
 

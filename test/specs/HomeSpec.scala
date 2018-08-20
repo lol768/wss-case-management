@@ -2,23 +2,32 @@ package specs
 
 
 import domain.Fixtures.users
-import play.api.mvc.{Headers, Result}
+import domain.Teams
 import play.api.test.Helpers._
-import play.api.test._
+import uk.ac.warwick.util.web.Uri
 import warwick.sso.User
-
-import scala.concurrent.Future
 
 class HomeSpec extends BaseSpec {
 
   "The home page" should {
 
-    "render for a student" in {
+    "render home page with no admin links for a student" in {
       val home = req("/").forUser(users.studentNewVisitor).get()
 
       status(home) mustEqual OK
       contentType(home).get mustEqual "text/html"
       contentAsString(home) must include("Make an enquiry")
+
+      val html = contentAsHtml(home)
+      navigationPages(html) mustBe 'empty
+    }
+
+    "render team link for member of a test" in {
+      val home = req("/").forUser(users.ss1).get()
+      val html = contentAsHtml(home)
+      navigationPages(html) mustBe Seq(
+        (s"${Teams.StudentSupport.name} Team", Uri.parse(s"/team/${Teams.StudentSupport.id}"))
+      )
     }
 
     "reject a user without a University ID" in {
