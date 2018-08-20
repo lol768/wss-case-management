@@ -4,7 +4,7 @@ import domain.{Team, Teams}
 import javax.inject.Inject
 import play.api.Configuration
 import play.api.mvc._
-import services.SecurityService
+import services.{PermissionService, SecurityService}
 import system.ImplicitRequestContext
 import warwick.sso.AuthenticatedRequest
 
@@ -13,7 +13,8 @@ import scala.util.Try
 
 class TeamSpecificActionRefiner @Inject()(
   config: Configuration,
-  securityService: SecurityService
+  securityService: SecurityService,
+  permissionService: PermissionService
 )(implicit ec: ExecutionContext) extends ImplicitRequestContext {
 
   private def WithTeam(teamId: String) = new ActionRefiner[AuthenticatedRequest, TeamSpecificRequest] {
@@ -29,11 +30,51 @@ class TeamSpecificActionRefiner @Inject()(
     override protected def executionContext: ExecutionContext = ec
   }
 
+  private def TeamMember = new ActionFilter[TeamSpecificRequest] {
+    override protected def filter[A](request: TeamSpecificRequest[A]): Future[Option[Result]] = {
+      implicit val implicitRequest: AuthenticatedRequest[A] = request
+
+      Future.successful {
+        permissionService.inTeam(request.context.user.get.usercode, request.team).fold(
+          errors => Some(Results.BadRequest(views.html.errors.multiple(errors))),
+          inTeam =>
+            if (inTeam) None
+            else Some(Results.NotFound(views.html.errors.notFound()))
+        )
+      }
+    }
+
+    override protected def executionContext: ExecutionContext = ec
+  }
+
+  private def AnyTeamMember = new ActionFilter[AuthenticatedRequest] {
+    override protected def filter[A](request: AuthenticatedRequest[A]): Future[Option[Result]] = {
+      implicit val implicitRequest: AuthenticatedRequest[A] = request
+
+      Future.successful {
+        permissionService.inAnyTeam(request.context.user.get.usercode).fold(
+          errors => Some(Results.BadRequest(views.html.errors.multiple(errors))),
+          inTeam =>
+            if (inTeam) None
+            else Some(Results.Forbidden(views.html.errors.forbidden(request.context.user.flatMap(_.name.full))))
+        )
+      }
+    }
+
+    override protected def executionContext: ExecutionContext = ec
+  }
+
   def TeamSpecificAction(teamId: String): ActionBuilder[TeamSpecificRequest, AnyContent] =
     securityService.SigninAwareAction andThen WithTeam(teamId)
 
   def TeamSpecificSignInRequiredAction(teamId: String): ActionBuilder[TeamSpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithTeam(teamId)
+
+  def TeamSpecificMemberRequiredAction(teamId: String): ActionBuilder[TeamSpecificRequest, AnyContent] =
+    TeamSpecificSignInRequiredAction(teamId) andThen TeamMember
+
+  def AnyTeamMemberRequiredAction: ActionBuilder[AuthenticatedRequest, AnyContent] =
+    securityService.SigninRequiredAction andThen AnyTeamMember
 
 }
 

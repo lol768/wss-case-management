@@ -23,7 +23,14 @@ trait EnquiryService {
     */
   def save(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
+  /**
+    * Add a message to an existing Enquiry.
+    */
+  def addMessage(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Message]]
+
   def findEnquiriesForClient(client: UniversityID): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]]
+
+  def get(id: UUID): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
 }
 
 @Singleton
@@ -47,12 +54,28 @@ class EnquiryServiceImpl @Inject() (
         _ <- messageDao.insert(Message(
           id = messageId,
           text = message.text,
-          sender = MessageSender.Client,
-          teamMember = None,
+          sender = message.sender,
+          teamMember = message.teamMember,
           ownerId = e.id.get,
           ownerType = MessageOwner.Enquiry
         ), Seq(enquiry.universityID))
       } yield e).map(Right.apply)
+    }
+  }
+
+  override def addMessage(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Message]] = {
+    val messageId = UUID.randomUUID()
+    auditService.audit("EnquiryAddMessage", enquiry.id.get.toString, "Enquiry", Json.obj()) {
+      daoRunner.run(
+        messageDao.insert(Message(
+          id = messageId,
+          text = message.text,
+          sender = message.sender,
+          teamMember = message.teamMember,
+          ownerId = enquiry.id.get,
+          ownerType = MessageOwner.Enquiry
+        ), Seq(enquiry.universityID))
+      ).map(Right.apply)
     }
   }
 
@@ -61,7 +84,7 @@ class EnquiryServiceImpl @Inject() (
       (enquiry, message) <- enquiryDao.findByClientQuery(client)
           .joinLeft(messageDao.findByClientQuery(client))
           .on { (e, m) =>
-            e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry:MessageOwner)
+            e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
           }
     } yield (enquiry, message.map(_.messageData))
 
@@ -77,6 +100,18 @@ class EnquiryServiceImpl @Inject() (
     }
   }
 
+  override def get(id: UUID): Future[ServiceResult[(Enquiry, Seq[MessageData])]] = {
+    val query = for {
+      (enquiry, message) <- enquiryDao.findByIDQuery(id).withMessages
+    } yield (enquiry, message.map(_.messageData))
+
+    // Newest first
+    implicit def dateOrdering: Ordering[OffsetDateTime] = JavaTime.dateTimeOrdering.reverse
+
+    daoRunner.run(query.result).map { pairs =>
+      Right(sortByRecent(OneToMany.leftJoin(pairs)).head)
+    }
+  }
 }
 
 object EnquiryService {

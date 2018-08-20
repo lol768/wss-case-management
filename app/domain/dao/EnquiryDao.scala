@@ -16,6 +16,7 @@ import scala.concurrent.ExecutionContext
 @ImplementedBy(classOf[EnquiryDaoImpl])
 trait EnquiryDao {
   def insert(enquiry: Enquiry): DBIO[Enquiry]
+  def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq]
 }
 
@@ -30,6 +31,9 @@ class EnquiryDaoImpl @Inject() (
     Enquiry.enquiries += enquiry
 
   def getById(id: UUID): DBIO[Enquiry] = Enquiry.enquiries.table.filter(_.id === id).take(1).result.head
+
+  def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq] =
+    Enquiry.enquiries.table.filter(_.id === id)
 
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table.filter(_.universityId === client).sortBy(_.version.reverse)
