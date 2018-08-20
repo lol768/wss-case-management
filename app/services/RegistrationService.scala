@@ -32,9 +32,9 @@ class RegistrationServiceImpl @Inject()(
 
   override def save(universityID: UniversityID, data: RegistrationData)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
     auditService.audit(
-      "SaveRegistration",
+      'SaveRegistration,
       universityID.string,
-      "Registration",
+      'Registration,
       Json.toJson(data)(RegistrationData.formatter)
     ) {
       daoRunner.run(dao.insert(universityID, data)).map(_.parsed).map(Right.apply)
@@ -42,9 +42,9 @@ class RegistrationServiceImpl @Inject()(
 
   override def update(universityID: UniversityID, data: RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
     auditService.audit(
-      "UpdateRegistration",
+      'UpdateRegistration,
       universityID.string,
-      "Registration",
+      'Registration,
       Json.toJson(data)(RegistrationData.formatter)
     ) {
       daoRunner.run(dao.update(universityID, data, version)).map(_.parsed).map(Right.apply)

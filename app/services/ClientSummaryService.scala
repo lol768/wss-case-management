@@ -28,9 +28,9 @@ class ClientSummaryServiceImpl @Inject()(
 
   override def save(universityID: UniversityID, data: ClientSummaryData)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]] =
     auditService.audit(
-      "SaveClientSummary",
+      'SaveClientSummary,
       universityID.string,
-      "ClientSummary",
+      'ClientSummary,
       Json.toJson(data)(ClientSummaryData.formatter)
     ) {
       daoRunner.run(dao.insert(universityID, data)).map(_.parsed).map(Right.apply)
@@ -38,9 +38,9 @@ class ClientSummaryServiceImpl @Inject()(
 
   override def update(universityID: UniversityID, data: ClientSummaryData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]] =
     auditService.audit(
-      "UpdateClientSummary",
+      'UpdateClientSummary,
       universityID.string,
-      "ClientSummary",
+      'ClientSummary,
       Json.toJson(data)(ClientSummaryData.formatter)
     ) {
       daoRunner.run(dao.update(universityID, data, version)).map(_.parsed).map(Right.apply)

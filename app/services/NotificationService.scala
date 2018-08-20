@@ -5,7 +5,7 @@ import domain.Teams
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.Inject
 import play.api.Configuration
-import play.api.libs.mailer.{Email, MailerClient}
+import play.api.libs.mailer.Email
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.sso._
@@ -26,7 +26,7 @@ class NotificationServiceImpl @Inject()(
   permissionService: PermissionService,
   groupService: GroupService,
   userLookupService: UserLookupService,
-  mailer: MailerClient,
+  emailService: EmailService,
   config: Configuration
 )(implicit executionContext: ExecutionContext) extends NotificationService {
 
@@ -35,24 +35,28 @@ class NotificationServiceImpl @Inject()(
 
   def newRegistration(universityID: UniversityID): Future[ServiceResult[Activity]] = {
     withInitialTeamUsers { users =>
-      val url = s"https://$domain/client/${universityID.string}" // TODO this should be a route and, you know, exist
+      val url = s"https://$domain${controllers.admin.routes.ClientController.client(universityID).url}"
 
-      mailer.send(Email(
-        subject = "Case Management: New registration received",
-        from = "no-reply@warwick.ac.uk",
-        to = users.flatMap(_.email),
-        bodyText = Some(views.txt.emails.newregistration(url).toString)
-      ))
-
-      val activity = new Activity(
-        Set[String]().asJava,
-        Set(permissionService.webgroupFor(initialTeam).string).asJava,
-        "New registration received",
-        url,
-        null,
-        "new-registration"
-      )
-      sendAndHandleResponse(activity)
+      emailService.queue(
+        Email(
+          subject = "Case Management: New registration received",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.newregistration(url).toString)
+        ),
+        users
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            Set[String]().asJava,
+            Set(permissionService.webgroupFor(initialTeam).string).asJava,
+            "New registration received",
+            url,
+            null,
+            "new-registration"
+          )
+          sendAndHandleResponse(activity)
+      }
     }
   }
 
@@ -62,7 +66,7 @@ class NotificationServiceImpl @Inject()(
       if (results.forall(_.getErrors.isEmpty)) {
         Right(activity)
       } else  {
-        Left(results.filterNot(_.getErrors.isEmpty).map(response => new ServiceError {
+        Left(results.toList.filterNot(_.getErrors.isEmpty).map(response => new ServiceError {
           override def message: String = response.getErrors.asScala.map(_.getMessage).mkString(", ")
         }))
       }
@@ -72,20 +76,20 @@ class NotificationServiceImpl @Inject()(
   private def withInitialTeamUsers(f: Seq[User] => Future[ServiceResult[Activity]]): Future[ServiceResult[Activity]] = {
     val webGroup = permissionService.webgroupFor(initialTeam)
     groupService.getWebGroup(webGroup).fold(
-      e => Future.successful(Left(Seq(new ServiceError {
+      e => Future.successful(Left(List(new ServiceError {
         override def message: String = e.getMessage
         override def cause = Some(e)
       }))),
       r => r.map(group =>
         userLookupService.getUsers(group.members).fold(
-          e => Future.successful(Left(Seq(new ServiceError {
+          e => Future.successful(Left(List(new ServiceError {
             override def message: String = e.getMessage
             override def cause = Some(e)
           }))),
           userMap => f(userMap.values.toSeq)
         )
       ).getOrElse(
-        Future.successful(Left(Seq(new ServiceError {
+        Future.successful(Left(List(new ServiceError {
           override def message: String = s"Cannot fnd webgroup with name ${webGroup.string}"
         })))
       )

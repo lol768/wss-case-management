@@ -1,13 +1,13 @@
 package services.healthcheck
 
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 
 import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
 import helpers.JavaTime
 import system.Logging
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 object HealthCheckService {
@@ -16,14 +16,16 @@ object HealthCheckService {
 }
 
 @Singleton
-class HealthCheckService @Inject()(system: ActorSystem) extends Logging {
+class HealthCheckService @Inject()(
+  system: ActorSystem
+)(implicit executionContext: ExecutionContext) extends Logging {
 
   import HealthCheckService._
 
-  var healthCheckLastRunAt: LocalDateTime = _
+  var healthCheckLastRunAt: OffsetDateTime = _
 
   def runNow(): Unit = {
-    healthCheckLastRunAt = JavaTime.localDateTime
+    healthCheckLastRunAt = JavaTime.offsetDateTime
   }
 
   runNow()

@@ -16,5 +16,6 @@ class AppModule extends ScalaModule {
     val healthchecks = ScalaMultibinder.newSetBinder[HealthCheck](binder)
     healthchecks.addBinding.to[UptimeHealthCheck]
     healthchecks.addBinding.to[EncryptedObjectStorageHealthCheck]
+    healthchecks.addBinding.to[OutgoingEmailQueueHealthCheck]
   }
 }

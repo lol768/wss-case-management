@@ -1,6 +1,6 @@
 package services.healthcheck
 
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 
 import helpers.JavaTime
 import play.api.libs.json.{JsObject, Json}
@@ -62,7 +62,7 @@ abstract class NumericHealthCheck[T](implicit num: Numeric[T]) extends HealthChe
 
   def perfData: Seq[PerfData[T]] = Seq()
 
-  def testedAt: LocalDateTime
+  def testedAt: OffsetDateTime
 
   override def toJson: JsObject =
     Try(Json.obj(
@@ -77,7 +77,7 @@ abstract class NumericHealthCheck[T](implicit num: Numeric[T]) extends HealthChe
         "name" -> name,
         "status" -> HealthCheckStatus.Unknown.string,
         "message" -> s"Error performing health check: ${t.getMessage}",
-        "testedAt" -> JavaTime.localDateTime
+        "testedAt" -> JavaTime.offsetDateTime
       )
     }
 

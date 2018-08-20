@@ -68,5 +68,7 @@ mywarwick.instances.0.providerId = "wellbeing"
 mywarwick.instances.0.userName = "wellbeing-mywarwick-api"
 mywarwick.instances.0.password = "THE PASSWORD"
 
-play.mailer.user = "..."
-play.mailer.password = "..."
+play.mailer {
+  user = "..."
+  password = "..."
+}
