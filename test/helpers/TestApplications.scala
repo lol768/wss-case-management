@@ -8,6 +8,8 @@ import play.api.db.evolutions.{ClassLoaderEvolutionsReader, EvolutionsReader}
 import play.api.inject._
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.{Configuration, Environment}
+import services.MockSSOClientHandler
+import uk.ac.warwick.sso.client.SSOClientHandler
 import warwick.accesslog.LogbackAccessModule
 import warwick.sso._
 
@@ -47,7 +49,7 @@ object TestApplications extends MockitoSugar {
       )
       .disable[PlayLogbackAccessModule]
       .overrides(
-        bind[SSOClient].to[MockSSOClient],
+        bind[SSOClientHandler].to[MockSSOClientHandler],
         bind[UserLookupService].to(mock[UserLookupService]),
         bind[GroupService].to {
           val groupService = mock[GroupService]

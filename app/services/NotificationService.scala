@@ -1,7 +1,7 @@
 package services
 
 import com.google.inject.ImplementedBy
-import domain.Teams
+import domain.{Enquiry, Teams}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.Inject
 import play.api.Configuration
@@ -16,9 +16,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[NotificationServiceImpl])
 trait NotificationService {
-
   def newRegistration(universityID: UniversityID): Future[ServiceResult[Activity]]
-
+  def newEnquiry(enquiry: Enquiry): Future[ServiceResult[Activity]]
 }
 
 class NotificationServiceImpl @Inject()(
@@ -33,7 +32,7 @@ class NotificationServiceImpl @Inject()(
   private lazy val domain: String = config.get[String]("domain")
   private lazy val initialTeam = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
 
-  def newRegistration(universityID: UniversityID): Future[ServiceResult[Activity]] = {
+  override def newRegistration(universityID: UniversityID): Future[ServiceResult[Activity]] = {
     withInitialTeamUsers { users =>
       val url = s"https://$domain${controllers.admin.routes.ClientController.client(universityID).url}"
 
@@ -59,6 +58,32 @@ class NotificationServiceImpl @Inject()(
       }
     }
   }
+
+  override def newEnquiry(enquiry: Enquiry): Future[ServiceResult[Activity]] =
+    withInitialTeamUsers { users =>
+      val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get).url}"
+
+      emailService.queue(
+        Email(
+          subject = "Case Management: New enquiry received",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.newenquiry(url).toString)
+        ),
+        users
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            Set[String]().asJava,
+            Set(permissionService.webgroupFor(initialTeam).string).asJava,
+            "New enquiry received",
+            url,
+            null,
+            "new-enquiry"
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
 
   private def sendAndHandleResponse(activity: Activity): Future[ServiceResult[Activity]] = {
     FutureConverters.toScala(myWarwickService.sendAsNotification(activity)).map { resultList =>

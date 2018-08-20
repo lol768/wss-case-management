@@ -27,7 +27,8 @@ trait RegistrationService {
 class RegistrationServiceImpl @Inject()(
   auditService: AuditService,
   dao: RegistrationDao,
-  daoRunner: DaoRunner
+  daoRunner: DaoRunner,
+  notificationService: NotificationService
 )(implicit executionContext: ExecutionContext) extends RegistrationService {
 
   override def save(universityID: UniversityID, data: RegistrationData)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
@@ -38,7 +39,10 @@ class RegistrationServiceImpl @Inject()(
       Json.toJson(data)(RegistrationData.formatter)
     ) {
       daoRunner.run(dao.insert(universityID, data)).map(_.parsed).map(Right.apply)
-    }
+    }.flatMap(_.fold(
+      errors => Future.successful(Left(errors)),
+      registration => notificationService.newRegistration(universityID).map(_.right.map(_ => registration))
+    ))
 
   override def update(universityID: UniversityID, data: RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
     auditService.audit(
