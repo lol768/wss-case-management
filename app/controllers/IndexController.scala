@@ -2,7 +2,7 @@ package controllers
 
 import domain.Teams
 import javax.inject.{Inject, Singleton}
-import services.{EmailService, EnquiryService, RegistrationService, SecurityService}
+import services.{EnquiryService, RegistrationService, SecurityService}
 
 import scala.concurrent.ExecutionContext
 
