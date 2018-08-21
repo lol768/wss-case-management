@@ -17,6 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[NotificationServiceImpl])
 trait NotificationService {
   def newRegistration(universityID: UniversityID): Future[ServiceResult[Activity]]
+  def registrationInvite(universityID: UniversityID): Future[ServiceResult[Activity]]
   def newEnquiry(enquiry: Enquiry): Future[ServiceResult[Activity]]
 }
 
@@ -53,6 +54,31 @@ class NotificationServiceImpl @Inject()(
             url,
             null,
             "new-registration"
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
+  }
+
+  override def registrationInvite(universityID: UniversityID): Future[ServiceResult[Activity]] = {
+    val url = s"https://$domain${controllers.registration.routes.RegisterController.form().url}"
+    withUser(universityID) { user =>
+      emailService.queue(
+        Email(
+          subject = "Case Management: Register for Wellbeing Support Services",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.registrationinvite(user, url).toString)
+        ),
+        Seq(user)
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            Set(user.usercode.string).asJava,
+            "Register for Wellbeing Support Services",
+            url,
+            "You have been invited to register for Wellbeing Support Services",
+            "registration-invite"
           )
           sendAndHandleResponse(activity)
       }
@@ -115,7 +141,21 @@ class NotificationServiceImpl @Inject()(
         )
       ).getOrElse(
         Future.successful(Left(List(new ServiceError {
-          override def message: String = s"Cannot fnd webgroup with name ${webGroup.string}"
+          override def message: String = s"Cannot find webgroup with name ${webGroup.string}"
+        })))
+      )
+    )
+  }
+
+  private def withUser(universityID: UniversityID)(f: User => Future[ServiceResult[Activity]]): Future[ServiceResult[Activity]] = {
+    userLookupService.getUsers(Seq(universityID)).fold(
+      e => Future.successful(Left(List(new ServiceError {
+        override def message: String = e.getMessage
+        override def cause = Some(e)
+      }))),
+      userMap => userMap.get(universityID).map(f).getOrElse(
+        Future.successful(Left(List(new ServiceError {
+          override def message: String = s"Cannot find user with ID ${universityID.string}"
         })))
       )
     )

@@ -63,9 +63,10 @@
     </div>
   </div>
 
-  @registration.map { registration =>
-    <h2>Registration</h2>
 
+  <h2>Registration</h2>
+
+  @registration.map { registration =>
     <p>
       <strong>Registered: </strong> @helpers.JavaTime.Relative(registration.updatedDate)<br />
       <strong>GP: </strong> @registration.data.gp<br />
@@ -75,6 +76,13 @@
       <strong>Appointment adjustments: </strong> @views.utils.nl2br(registration.data.appointmentAdjustments)<br />
       <strong>Referrals: </strong> @registration.data.referrals.map(_.description).mkString(", ")
     </p>
+  }.getOrElse {
+    <em>Client is not currently registered</em>
+    @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(profile.universityID)) { implicit ifc =>
+      @b3.submit('class -> "btn btn-default") {
+        Invite to register
+      }
+    }
   }
 
   <h2>Client summary</h2>
