@@ -47,8 +47,11 @@ trait HtmlNavigation {
       link.getText() -> Uri.parse(link.asInstanceOf[Element].attributeValue("href"))
     }
 
+  def pageHeading(html: Document): String =
+    html.selectSingleNode("//div[@class='id7-page-title']/h1").getText
+
   private def xpathNodes(html: Document, path: String): Seq[Node] =
-    html.getRootElement.selectNodes(path).asScala.toSeq
+    html.selectNodes(path).asScala.toSeq
 
   private def xpathElements(html: Document, path: String): Seq[Element] =
     xpathNodes(html, path).map(_.asInstanceOf[Element])

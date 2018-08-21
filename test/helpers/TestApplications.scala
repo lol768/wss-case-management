@@ -16,10 +16,12 @@ import scala.util.{Success, Try}
 
 object TestApplications extends MockitoSugar {
 
+  def simpleEnvironment = Environment.simple()
+
   def testConfig(environment: Environment) =
     config("test/test.conf", environment)
 
-  def config(file: String, environment: Environment) =
+  def config(file: String, environment: Environment = simpleEnvironment) =
     Configuration.load(environment, Map("config.file" -> file))
 
   /**
@@ -29,7 +31,7 @@ object TestApplications extends MockitoSugar {
     */
   def minimal() =
     GuiceApplicationBuilder(loadConfiguration = e => config("minimal.conf", e))
-      .in(Environment.simple())
+      .in(simpleEnvironment)
       .disable[PlayLogbackAccessModule]
       .disable[LogbackAccessModule]
       .build()
@@ -41,7 +43,7 @@ object TestApplications extends MockitoSugar {
     */
   def full(defaultUser: Option[User] = None, additionalConfiguration: Map[String, Any] = Map.empty) =
     GuiceApplicationBuilder(loadConfiguration = testConfig)
-      .in(Environment.simple())
+      .in(simpleEnvironment)
       .configure(additionalConfiguration)
       .bindings(
         bind[LoginContext].toInstance(new MockLoginContext(defaultUser))

@@ -4,7 +4,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, 
 import java.time.LocalDate
 
 import domain._
-import helpers.OneAppPerSuite
+import helpers.{OneAppPerSuite, TestApplications}
 import helpers.caching.NeverExpiringMemoryAsyncCacheApi
 import org.mockito.Matchers
 import org.mockito.Mockito.when
@@ -51,13 +51,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
         val cert = mock[EncryptedCertificate]
         when(currentApp.encode(Matchers.any(), Matchers.any())).thenReturn(cert)
         when(trustedApplicationsManager.getCurrentApplication).thenReturn(currentApp)
-        val config = Configuration.from(Map(
-          "wellbeing.tabula.user" -> "heron-user",
-          "wellbeing.tabula.profile" -> "/test-profile",
-          "wellbeing.photos.host" -> "photos.warwick.ac.uk",
-          "wellbeing.photos.appname" -> "heron",
-          "wellbeing.photos.key" -> "heron-key"
-        ))
+        val config = TestApplications.config("test-profileservice.conf")
         val cache = new NeverExpiringMemoryAsyncCacheApi()
         val profileService = new ProfileServiceImpl(
           client,

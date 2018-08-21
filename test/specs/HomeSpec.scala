@@ -20,6 +20,7 @@ class HomeSpec extends BaseSpec {
 
       val html = contentAsHtml(home)
       navigationPages(html) mustBe 'empty
+      pageHeading(html) mustBe "Home"
     }
 
     "render team link for member of a test" in {
