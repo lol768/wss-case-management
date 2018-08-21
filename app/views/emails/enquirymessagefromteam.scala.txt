@@ -1,0 +1,7 @@
+@import domain.Team
+@import warwick.sso.User
+@(user: User, team: Team, url: String)
+
+@email(user.name.first) {
+  The @team.name team has replied to your enquiry: @url
+}

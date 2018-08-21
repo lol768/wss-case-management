@@ -61,7 +61,7 @@ object ClientSummaryDao {
 
     sealed trait CommonProperties { self: Table[_] =>
       def data: Rep[JsValue] = column[JsValue]("data")
-      def version: Rep[OffsetDateTime] = column[OffsetDateTime]("version")
+      def version: Rep[OffsetDateTime] = column[OffsetDateTime]("version_utc")
     }
 
     class PersistedClientSummaries(tag: Tag) extends Table[PersistedClientSummary](tag, "client_summary") with VersionedTable[PersistedClientSummary] with CommonProperties {
@@ -75,7 +75,7 @@ object ClientSummaryDao {
     class PersistedClientSummaryVersions(tag: Tag) extends Table[PersistedClientSummaryVersion](tag, "client_summary_version") with StoredVersionTable[PersistedClientSummary] with CommonProperties {
       def universityID: Rep[UniversityID] = column[UniversityID]("university_id")
       def operation: Rep[DatabaseOperation] = column[DatabaseOperation]("version_operation")
-      def timestamp: Rep[OffsetDateTime] = column[OffsetDateTime]("version_timestamp")
+      def timestamp: Rep[OffsetDateTime] = column[OffsetDateTime]("version_timestamp_utc")
 
       def * : ProvenShape[PersistedClientSummaryVersion] = (universityID, data, version, operation, timestamp).mapTo[PersistedClientSummaryVersion]
       def pk: PrimaryKey = primaryKey("pk_client_summary_version", (universityID, timestamp))

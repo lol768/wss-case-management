@@ -55,7 +55,7 @@ object VersioningSpec {
       self: Table[_] =>
 
       def webgroup = column[GroupName]("WEBGROUP")
-      def version = column[OffsetDateTime]("VERSION")
+      def version = column[OffsetDateTime]("VERSION_UTC")
     }
 
     class Accounts(tag: Tag) extends Table[Account](tag, "ACCOUNT") with VersionedTable[Account] with AccountProperties {
@@ -69,7 +69,7 @@ object VersioningSpec {
     class AccountVersions(tag: Tag) extends Table[AccountVersion](tag, "ACCOUNT_VERSION") with StoredVersionTable[Account] with AccountProperties {
       def usercode = column[Usercode]("USERCODE")
       def operation = column[DatabaseOperation]("VERSION_OPERATION")
-      def timestamp = column[OffsetDateTime]("VERSION_TIMESTAMP")
+      def timestamp = column[OffsetDateTime]("VERSION_TIMESTAMP_UTC")
 
       def * = (usercode, webgroup, version, operation, timestamp).mapTo[AccountVersion]
       def pk = primaryKey("pk_accountversions", (usercode, timestamp))

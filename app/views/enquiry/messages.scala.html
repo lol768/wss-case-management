@@ -1,11 +1,13 @@
 @import domain.Enquiry
 @import domain.MessageData
 @import domain.Message.FormData
+@import domain.MessageSender
 
 @(
   enquiry: Enquiry,
   messages: Seq[MessageData],
-  form: Form[FormData]
+  form: Form[FormData],
+  messageSender: MessageSender
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"${enquiry.team.name} enquiry from ${enquiry.universityID.string}") {
@@ -13,7 +15,14 @@
     <div class="panel-body">
       @*<span class="badge pull-right">@helpers.JavaTime.Relative(enquiry.version)</span>*@
       <strong>Enquiry with @enquiry.team.name</strong>
-      @tags.conversation(messages)
+
+      @{
+        val clientName = messageSender match {
+          case MessageSender.Team => "Client"
+          case MessageSender.Client => "You"
+        }
+        tags.conversation(messages, clientName = clientName)
+      }
 
       @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.id.get)) { implicit ifc =>
         @b3.textarea(form("text"),

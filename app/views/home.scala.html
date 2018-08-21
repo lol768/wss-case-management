@@ -28,7 +28,7 @@
         <div class="panel-body">
           @*<span class="badge pull-right">@helpers.JavaTime.Relative(enquiry.version)</span>*@
           <strong>Enquiry with @enquiry.team.name</strong>
-          @tags.conversation(messages)
+          @tags.conversation(messages, clientName = "You")
         </div>
       </div>
     }

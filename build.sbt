@@ -37,7 +37,7 @@ lazy val main = (project in file("."))
   )
 
 val playUtilsVersion = "1.16"
-val ssoClientVersion = "2.48"
+val ssoClientVersion = "2.50"
 val warwickUtilsVersion = "20180518"
 val enumeratumVersion = "1.5.13"
 val enumeratumSlickVersion = "1.5.15"
@@ -55,9 +55,6 @@ val appDeps = Seq(
   "com.typesafe.play" %% "play-mailer-guice" % "6.0.1",
 
   "com.typesafe.slick" %% "slick" % "3.2.3",
-
-  "com.typesafe.akka" %% "akka-cluster" % "2.5.11",
-  "com.typesafe.akka" %% "akka-cluster-tools" % "2.5.11",
 
   "org.postgresql" % "postgresql" % "42.2.4",
 
@@ -86,7 +83,9 @@ val appDeps = Seq(
 
   "org.apache.jclouds.api" % "filesystem" % "2.1.0",
 
-  "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0"
+  "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
+
+  "org.dom4j" % "dom4j" % "2.1.1",
 )
 
 val testDeps = Seq(
@@ -97,13 +96,18 @@ val testDeps = Seq(
   "uk.ac.warwick.sso" %% "sso-client-play-testing" % ssoClientVersion,
   "org.seleniumhq.selenium" % "selenium-java" % "3.14.0",
   "org.seleniumhq.selenium" % "selenium-chrome-driver" % "3.14.0",
-  "com.h2database" % "h2" % "1.4.196"
+  "com.h2database" % "h2" % "1.4.196",
+  "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.22",
+  "jaxen" % "jaxen" % "1.1.6"
 ).map(_ % Test)
 
 libraryDependencies ++= (appDeps ++ testDeps).map(_.excludeAll(
   ExclusionRule(organization = "commons-logging"),
   // ehcache renamed ehcache-core, don't load in the old version
-  ExclusionRule(organization = "net.sf.ehcache", name = "ehcache")
+  ExclusionRule(organization = "net.sf.ehcache", name = "ehcache"),
+  // brought in by warwick utils, pulls in old XML shit
+  ExclusionRule(organization = "rome"),
+  ExclusionRule(organization = "dom4j"),
 ))
 
 libraryDependencies += specs2 % Test

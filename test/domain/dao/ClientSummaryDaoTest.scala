@@ -24,7 +24,7 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
           notes = "Some guy doing something\n\ngood for him",
           alternativeContactNumber = "07777123456",
           alternativeEmailAddress = "nobody@example.com",
-          riskStatus = ClientRiskStatus.Medium,
+          riskStatus = Some(ClientRiskStatus.Medium),
           reasonableAdjustments = Set(ReasonableAdjustment.Exam5, ReasonableAdjustment.ExtendedDeadlines),
           alertFlags = Set()
         )
@@ -61,7 +61,7 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
         notes = "Some guy doing something\n\ngood for him",
         alternativeContactNumber = "07777123456",
         alternativeEmailAddress = "nobody@example.com",
-        riskStatus = ClientRiskStatus.Medium,
+        riskStatus = Some(ClientRiskStatus.Medium),
         reasonableAdjustments = Set(ReasonableAdjustment.Exam5, ReasonableAdjustment.ExtendedDeadlines),
         alertFlags = Set()
       )
@@ -70,7 +70,7 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
         notes = "Ah okay then.",
         alternativeContactNumber = "0181 811 8181",
         alternativeEmailAddress = "other@something-else.com",
-        riskStatus = ClientRiskStatus.High,
+        riskStatus = Some(ClientRiskStatus.High),
         reasonableAdjustments = Set(),
         alertFlags = Set(AlertFlag.HighMentalHealthRisk)
       )
