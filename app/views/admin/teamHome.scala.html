@@ -1,8 +1,38 @@
 @import controllers.RequestContext
 @import domain.Team
+@import domain.Enquiry
+@import domain.MessageData
 
-@(team: Team)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+@import domain.SitsProfile
+@import java.time.Duration
+@(team: Team,  enquiries: Seq[(Enquiry, MessageData, SitsProfile)])(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main(team.name) {
 
+  @if(enquiries.nonEmpty) {
+    <h2>Enquiries requiring action</h2>
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Created</th>
+          <th>Last message</th>
+          <th>Team assigned</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @enquiries.map { case (enquiry, message, profile) =>
+          <tr>
+            <td><a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.fullName</a></td>
+            <td>@helpers.JavaTime.Relative(enquiry.version)</td>
+            <td>@helpers.JavaTime.Relative(message.created)</td>
+            <td>@enquiry.team.name</td>
+            <td><a class="btn btn-default" href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get)">View</a></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+  }
 }

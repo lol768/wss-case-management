@@ -6,7 +6,7 @@ import java.util.UUID
 import warwick.sso.UniversityID
 import slick.jdbc.PostgresProfile.api._
 import CustomJdbcTypes._
-import domain.EnquiryState.Open
+import domain.EnquiryState.{Open, Reopened}
 import enumeratum.{EnumEntry, PlayEnum}
 
 import scala.language.higherKinds
@@ -55,6 +55,10 @@ object Enquiry extends Versioning {
     def id = column[UUID]("id", O.PrimaryKey)
 
     def * = (id.?, universityId, team, state, version).mapTo[Enquiry]
+  }
+
+  implicit class EnquiriesQueryOps(enquiries: Enquiries){
+    def isOpen = enquiries.state === (Open : EnquiryState) || enquiries.state === (Reopened : EnquiryState)
   }
 
   class EnquiryVersions(tag: Tag) extends Table[EnquiryVersion](tag, "enquiry_version") with StoredVersionTable[Enquiry] with EnquiryProperties {

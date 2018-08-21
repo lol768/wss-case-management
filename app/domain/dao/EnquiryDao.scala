@@ -2,7 +2,7 @@ package domain.dao
 
 import java.util.UUID
 
-import domain.{Enquiry, Message, MessageData, MessageOwner}
+import domain._
 import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -18,6 +18,7 @@ trait EnquiryDao {
   def insert(enquiry: Enquiry): DBIO[Enquiry]
   def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq]
+  def findOpenQuery: Query[Enquiry.Enquiries, Enquiry, Seq]
 }
 
 @Singleton
@@ -37,5 +38,10 @@ class EnquiryDaoImpl @Inject() (
 
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table.filter(_.universityId === client).sortBy(_.version.reverse)
+
+  def findOpenQuery: Query[Enquiry.Enquiries, Enquiry, Seq] =
+    Enquiry.enquiries.table
+      .filter(_.isOpen)
+      .sortBy(_.version.reverse)
 
 }

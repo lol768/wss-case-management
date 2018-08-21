@@ -36,6 +36,9 @@ object ServiceResults {
     case (errors, _) => Left(errors.toList.collect { case Left(x) => x }.flatten)
   }
 
+  def futureSequence[A](in: Seq[Future[ServiceResult[A]]])(implicit executionContext: ExecutionContext): Future[ServiceResult[Seq[A]]] =
+    Future.sequence(in).map(a=>sequence(a))
+
   def zip[T1, T2](_1: Future[ServiceResult[T1]], _2: Future[ServiceResult[T2]])(implicit executionContext: ExecutionContext): Future[ServiceResult[(T1, T2)]] =
     _1.zip(_2).map {
       case (Right(r1), Right(r2)) => Right((r1, r2))
