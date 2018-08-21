@@ -44,7 +44,7 @@ object Enquiry extends Versioning {
     self: Table[_] =>
 
     def team = column[Team]("team_id")
-    def version = column[OffsetDateTime]("version")
+    def version = column[OffsetDateTime]("version_utc")
     def universityId = column[UniversityID]("university_id")
     def state = column[EnquiryState]("state")
   }
@@ -62,7 +62,7 @@ object Enquiry extends Versioning {
   class EnquiryVersions(tag: Tag) extends Table[EnquiryVersion](tag, "enquiry_version") with StoredVersionTable[Enquiry] with EnquiryProperties {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
-    def timestamp = column[OffsetDateTime]("version_timestamp")
+    def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
     def * = (id, universityId, team, state, version, operation, timestamp).mapTo[EnquiryVersion]
     def pk = primaryKey("pk_enquiryversions", (id, timestamp))

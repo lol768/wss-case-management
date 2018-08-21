@@ -95,14 +95,14 @@ object OutgoingEmailDao {
     sealed trait CommonProperties {
       self: Table[_] =>
 
-      def created = column[OffsetDateTime]("created_at")
+      def created = column[OffsetDateTime]("created_utc")
       def email = column[JsValue]("email")
       def recipient = column[Usercode]("recipient")
       def emailAddress = column[String]("recipient_email")
-      def sent = column[OffsetDateTime]("sent_at")
-      def lastSendAttempt = column[OffsetDateTime]("last_send_attempt_at")
+      def sent = column[OffsetDateTime]("sent_at_utc")
+      def lastSendAttempt = column[OffsetDateTime]("last_send_attempt_at_utc")
       def failureReason = column[String]("failure_reason")
-      def version = column[OffsetDateTime]("version")
+      def version = column[OffsetDateTime]("version_utc")
     }
 
     class OutgoingEmails(tag: Tag) extends Table[PersistedOutgoingEmail](tag, "outgoing_email") with VersionedTable[PersistedOutgoingEmail] with CommonProperties {
@@ -116,7 +116,7 @@ object OutgoingEmailDao {
     class OutgoingEmailVersions(tag: Tag) extends Table[PersistedOutgoingEmailVersion](tag, "outgoing_email_version") with StoredVersionTable[PersistedOutgoingEmail] with CommonProperties {
       def id = column[UUID]("id")
       def operation = column[DatabaseOperation]("version_operation")
-      def timestamp = column[OffsetDateTime]("version_timestamp")
+      def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
       def * = (id, created, email, recipient.?, emailAddress.?, sent.?, lastSendAttempt.?, failureReason.?, version, operation, timestamp).mapTo[PersistedOutgoingEmailVersion]
       def pk = primaryKey("pk_outgoing_email_version", (id, timestamp))

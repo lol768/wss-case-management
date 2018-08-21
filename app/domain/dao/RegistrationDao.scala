@@ -53,7 +53,7 @@ object RegistrationDao {
 
     sealed trait CommonProperties { self: Table[_] =>
       def data = column[JsValue]("data")
-      def version = column[OffsetDateTime]("version")
+      def version = column[OffsetDateTime]("version_utc")
     }
 
     class Registrations(tag: Tag) extends Table[Registration](tag, "user_registration") with VersionedTable[Registration] with CommonProperties {
@@ -67,7 +67,7 @@ object RegistrationDao {
     class RegistrationVersions(tag: Tag) extends Table[RegistrationVersion](tag, "user_registration_version") with StoredVersionTable[Registration] with CommonProperties {
       def universityID = column[UniversityID]("university_id")
       def operation = column[DatabaseOperation]("version_operation")
-      def timestamp = column[OffsetDateTime]("version_timestamp")
+      def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
       def * = (universityID, data, version, operation, timestamp).mapTo[RegistrationVersion]
       def pk = primaryKey("pk_user_registration_versions", (universityID, timestamp))

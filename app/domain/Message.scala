@@ -62,7 +62,7 @@ object Message extends Versioning {
     def created = column[OffsetDateTime]("created_utc")
     def ownerId = column[UUID]("owner_id")
     def ownerType = column[MessageOwner]("owner_type")
-    def version = column[OffsetDateTime]("version")
+    def version = column[OffsetDateTime]("version_utc")
   }
 
   class Messages(tag: Tag) extends Table[Message](tag, "message") with VersionedTable[Message] with CommonProperties {
@@ -78,7 +78,7 @@ object Message extends Versioning {
   class MessageVersions(tag: Tag) extends Table[MessageVersion](tag, "message_version") with StoredVersionTable[Message] with CommonProperties {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
-    def timestamp = column[OffsetDateTime]("version_timestamp")
+    def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
     def * = (id, text, sender, teamMember, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
     def pk = primaryKey("pk_messageversions", (id, timestamp))
