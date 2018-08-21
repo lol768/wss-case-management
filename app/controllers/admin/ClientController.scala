@@ -62,10 +62,10 @@ class ClientController @Inject()(
             if (clientSummary.isEmpty) clientSummaryService.save(universityID, data)
             else clientSummaryService.update(universityID, data, clientSummary.get.updatedDate)
 
-          f.map(_.fold(
-            showErrors,
-            summary => Ok(views.html.admin.client.client(profile, registration, Some(summary), form, Some(Messages("flash.client.summary.updated"))))
-          ))
+          f.successMap { _ =>
+            Redirect(routes.ClientController.client(universityID))
+              .flashing("success" -> Messages("flash.client.summary.updated"))
+          }
         }
       )
     }
