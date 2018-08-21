@@ -1,5 +1,6 @@
 package domain.dao
 
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import domain._
@@ -16,6 +17,7 @@ import scala.concurrent.ExecutionContext
 @ImplementedBy(classOf[EnquiryDaoImpl])
 trait EnquiryDao {
   def insert(enquiry: Enquiry): DBIO[Enquiry]
+  def update(enquiry: Enquiry, version: OffsetDateTime): DBIO[Enquiry]
   def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findOpenQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq]
@@ -30,6 +32,9 @@ class EnquiryDaoImpl @Inject() (
 
   override def insert(enquiry: Enquiry): DBIO[Enquiry] =
     Enquiry.enquiries += enquiry
+
+  override def update(enquiry: Enquiry, version: OffsetDateTime): DBIO[Enquiry] =
+    Enquiry.enquiries.update(enquiry.copy(version = version))
 
   def getById(id: UUID): DBIO[Enquiry] = Enquiry.enquiries.table.filter(_.id === id).take(1).result.head
 

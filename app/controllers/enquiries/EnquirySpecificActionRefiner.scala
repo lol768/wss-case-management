@@ -4,7 +4,7 @@ import java.util.UUID
 
 import domain.{Enquiry, MessageData}
 import helpers.ServiceResults.ServiceResult
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.mvc._
 import services.{EnquiryService, PermissionService, SecurityService}
@@ -14,6 +14,7 @@ import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
+@Singleton
 class EnquirySpecificActionRefiner @Inject()(
   config: Configuration,
   enquiryService: EnquiryService,
@@ -65,11 +66,31 @@ class EnquirySpecificActionRefiner @Inject()(
     override protected def executionContext: ExecutionContext = ec
   }
 
+  private def TeamMember = new ActionFilter[EnquirySpecificRequest] {
+    override protected def filter[A](request: EnquirySpecificRequest[A]): Future[Option[Result]] = {
+      implicit val implicitRequest: AuthenticatedRequest[A] = request
+
+      Future.successful {
+        permissionService.inTeam(request.context.user.get.usercode, request.enquiry.team).fold(
+          errors => Some(Results.BadRequest(views.html.errors.multiple(errors))),
+          inTeam =>
+            if (inTeam) None
+            else Some(Results.NotFound(views.html.errors.notFound()))
+        )
+      }
+    }
+
+    override protected def executionContext: ExecutionContext = ec
+  }
+
   def EnquirySpecificSignInRequiredAction(enquiryId: UUID): ActionBuilder[EnquirySpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithEnquiry(enquiryId)
 
   def EnquirySpecificMessagesAction(enquiryId: UUID): ActionBuilder[EnquirySpecificRequest, AnyContent] =
     EnquirySpecificSignInRequiredAction(enquiryId) andThen HasMessagesPermissions
+
+  def EnquirySpecificTeamMemberAction(enquiryId: UUID): ActionBuilder[EnquirySpecificRequest, AnyContent] =
+    EnquirySpecificSignInRequiredAction(enquiryId) andThen TeamMember
 
 }
 

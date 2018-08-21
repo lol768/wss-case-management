@@ -36,6 +36,9 @@ GET         /team/client/:universityID              @controllers.admin.ClientCon
 POST        /team/client/:universityID              @controllers.admin.ClientController.updateSummary(universityID: warwick.sso.UniversityID)
 POST        /team/client/:universityID/invite       @controllers.admin.ClientController.invite(universityID: warwick.sso.UniversityID)
 
+GET         /team/enquiry/:id/reassign              @controllers.admin.TeamEnquiryController.reassignForm(id: java.util.UUID)
+POST        /team/enquiry/:id/reassign              @controllers.admin.TeamEnquiryController.reassign(id: java.util.UUID)
+
 ## Admins/Sysadmins ##
 
 GET         /admin/masquerade                       @controllers.admin.MasqueradeController.masquerade

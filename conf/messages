@@ -11,5 +11,6 @@ error.appointmentAvailability.missing=Please select an availability
 flash.client.summary.updated=Client summary updated
 flash.client.registration.invited=Invitation to register sent to client
 flash.enquiry.received=Your enquiry has been received
+flash.enquiry.reassigned=The enquiry has been re-assigned to {0}
 flash.registration.complete=Registration complete
 flash.registration.updated=Registration updated
