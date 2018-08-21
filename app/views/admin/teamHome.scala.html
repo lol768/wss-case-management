@@ -2,10 +2,14 @@
 @import domain.Team
 @import domain.Enquiry
 @import domain.MessageData
-
 @import domain.SitsProfile
 @import java.time.Duration
-@(team: Team,  enquiries: Seq[(Enquiry, MessageData, SitsProfile)])(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+@import warwick.sso.UniversityID
+
+@(team: Team,
+  enquiries: Seq[(Enquiry, MessageData)],
+  profiles: Map[UniversityID, SitsProfile]
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main(team.name) {
 
@@ -22,14 +26,20 @@
         </tr>
       </thead>
       <tbody>
-        @enquiries.map { case (enquiry, message, profile) =>
-          <tr>
-            <td><a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.fullName</a></td>
-            <td>@helpers.JavaTime.Relative(enquiry.version)</td>
-            <td>@helpers.JavaTime.Relative(message.created)</td>
-            <td>@enquiry.team.name</td>
-            <td><a class="btn btn-default" href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get)">View</a></td>
-          </tr>
+        @enquiries.map { case (enquiry, message) =>
+          @defining(profiles.get(enquiry.universityID)) { profile: Option[SitsProfile] =>
+            <tr>
+              <td>
+                @profile.map { p: SitsProfile =>
+                  <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>
+                }.getOrElse { @enquiry.universityID }
+              </td>
+              <td>@*TODO*@</td>
+              <td>@helpers.JavaTime.Relative(message.created)</td>
+              <td>@enquiry.team.name</td>
+              <td><a class="btn btn-default" href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get)">View</a></td>
+            </tr>
+          }
         }
       </tbody>
     </table>

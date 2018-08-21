@@ -33,7 +33,7 @@ trait EnquiryService {
 
   def get(id: UUID): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
 
-  def findEnquiriesNeedingReply: Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+  def findEnquiriesNeedingReply(team: Team): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
 }
 
 @Singleton
@@ -118,8 +118,8 @@ class EnquiryServiceImpl @Inject() (
     }
   }
 
-  override def findEnquiriesNeedingReply: Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
-    val query = enquiryDao.findOpenQuery
+  override def findEnquiriesNeedingReply(team: Team): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
+    val query = enquiryDao.findOpenQuery(team)
       .join(Message.messages.table)
       .on((enquiry, message) => {
         message.id in messageDao.latestForEnquiryQuery(enquiry)

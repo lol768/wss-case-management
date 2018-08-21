@@ -24,6 +24,7 @@ import play.api.cache.AsyncCacheApi
 @ImplementedBy(classOf[ProfileServiceImpl])
 trait ProfileService {
   def getProfile(universityID: UniversityID): Future[CacheElement[ServiceResult[SitsProfile]]]
+  def getProfiles(universityIDs: Set[UniversityID]): Future[ServiceResult[Map[UniversityID, SitsProfile]]]
 }
 
 class ProfileServiceImpl  @Inject()(
@@ -78,6 +79,11 @@ class ProfileServiceImpl  @Inject()(
         })
       })
     }(CacheOptions.default)
+
+  override def getProfiles(universityIDs: Set[UniversityID]): Future[ServiceResult[Map[UniversityID, SitsProfile]]] = {
+    val profiles = ServiceResults.futureSequence(universityIDs.toSeq.map(id => getProfile(id).map(_.value)))
+    profiles.map(_.map(_.map(p => (p.universityID, p)).toMap))
+  }
 
   private def handleValidationError(json: JsValue, errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[SitsProfile] = {
     val serviceErrors = errors.map { case (path, validationErrors) =>

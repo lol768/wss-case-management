@@ -55,10 +55,8 @@ object Enquiry extends Versioning {
     def id = column[UUID]("id", O.PrimaryKey)
 
     def * = (id.?, universityId, team, state, version).mapTo[Enquiry]
-  }
 
-  implicit class EnquiriesQueryOps(enquiries: Enquiries){
-    def isOpen = enquiries.state === (Open : EnquiryState) || enquiries.state === (Reopened : EnquiryState)
+    def isOpen = state === (Open : EnquiryState) || state === (Reopened : EnquiryState)
   }
 
   class EnquiryVersions(tag: Tag) extends Table[EnquiryVersion](tag, "enquiry_version") with StoredVersionTable[Enquiry] with EnquiryProperties {
