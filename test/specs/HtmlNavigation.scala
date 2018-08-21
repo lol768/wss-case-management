@@ -30,25 +30,31 @@ trait HtmlNavigation {
     * Parse with HTMLCleaner (because it's not XML) then
     * output as a W3C Document so that Dom4j can read it.
     */
-  def contentAsHtml(res: Future[Result]): Document = {
+  def contentAsHtml(res: Future[Result]): HtmlNavigator = {
     val tagNode = htmlCleaner.clean(contentAsString(res))
     val serializer = new DomSerializer(htmlCleaner.getProperties())
     val doc: org.w3c.dom.Document = serializer.createDOM(tagNode)
-    new DOMReader().read(doc)
+    new HtmlNavigator(new DOMReader().read(doc))
   }
 
   /**
-    * Return all the ID7 navigation links on the given page.
-    * It is a flat list, so all the nested items in submenus and secondary and tertiary
-    * items are all included. It would be possible to parse these with a bit of work.
+    * Wrapper around a parsed document, with methods for querying on various parts of
+    * the ID7scape and CASE page layouts.
     */
-  def navigationPages(html: Document): Seq[(String, Uri)] =
-    xpathElements(html, "//nav[@role='navigation']//a").map { link =>
-      link.getText() -> Uri.parse(link.asInstanceOf[Element].attributeValue("href"))
-    }
+  class HtmlNavigator(html: Document) {
+    /**
+      * Return all the ID7 navigation links on the given page.
+      * It is a flat list, so all the nested items in submenus and secondary and tertiary
+      * items are all included. It would be possible to parse these with a bit of work.
+      */
+    lazy val navigationPages: Seq[(String, Uri)] =
+      xpathElements(html, "//nav[@role='navigation']//a").map { link =>
+        link.getText() -> Uri.parse(link.asInstanceOf[Element].attributeValue("href"))
+      }
 
-  def pageHeading(html: Document): String =
-    html.selectSingleNode("//div[@class='id7-page-title']/h1").getText
+    lazy val pageHeading: String =
+      html.selectSingleNode("//div[@class='id7-page-title']/h1").getText
+  }
 
   private def xpathNodes(html: Document, path: String): Seq[Node] =
     html.selectNodes(path).asScala.toSeq
