@@ -1,5 +1,6 @@
 package controllers.admin
 
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import controllers.BaseController
@@ -13,6 +14,22 @@ import play.api.mvc.{Action, AnyContent}
 import services.EnquiryService
 
 import scala.concurrent.{ExecutionContext, Future}
+import TeamEnquiryController._
+import helpers.JavaTime
+
+object TeamEnquiryController {
+  case class ReassignEnquiryData(
+    team: Team,
+    version: OffsetDateTime
+  )
+
+  def form(enquiry: Enquiry) = Form(
+    mapping(
+      "team" -> Teams.formField.verifying("error.team.reassign.same", _ != enquiry.team),
+      "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version)
+    )(ReassignEnquiryData.apply)(ReassignEnquiryData.unapply)
+  )
+}
 
 @Singleton
 class TeamEnquiryController @Inject()(
@@ -22,24 +39,23 @@ class TeamEnquiryController @Inject()(
 
   import enquirySpecificActionRefiner._
 
-  private val reassignForm = Form(single(
-    "team" -> Teams.formField
-  ))
-
   def reassignForm(id: UUID): Action[AnyContent] = EnquirySpecificTeamMemberAction(id) { implicit request =>
-    Ok(views.html.admin.enquiry.reassign(request.enquiry, reassignForm.fill(request.enquiry.team)))
+    Ok(views.html.admin.enquiry.reassign(request.enquiry, form(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version))))
   }
 
   def reassign(id: UUID): Action[AnyContent] = EnquirySpecificTeamMemberAction(id).async { implicit request =>
-    reassignForm.bindFromRequest().fold(
-      formWithErrors => Future.successful(Ok(views.html.admin.enquiry.reassign(request.enquiry, formWithErrors))),
-      team =>
-        if (team == request.enquiry.team) // No change
-          Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(team.id)))
+    form(request.enquiry).bindFromRequest().fold(
+      formWithErrors => Future.successful(
+        // TODO submitted team is lost here
+        Ok(views.html.admin.enquiry.reassign(request.enquiry, formWithErrors.fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version))))
+      ),
+      data =>
+        if (data.team == request.enquiry.team) // No change
+          Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(data.team.id)))
         else
-          service.reassign(request.enquiry, team).successMap { _ =>
+          service.reassign(request.enquiry, data.team, data.version).successMap { _ =>
             Redirect(controllers.admin.routes.AdminController.teamHome(request.enquiry.team.id))
-              .flashing("success" -> Messages("flash.enquiry.reassigned", team.name))
+              .flashing("success" -> Messages("flash.enquiry.reassigned", data.team.name))
           }
     )
   }

@@ -32,7 +32,7 @@ trait EnquiryService {
   /**
     * Re-assign an enquiry to another team
     */
-  def reassign(enquiry: Enquiry, team: Team)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
+  def reassign(enquiry: Enquiry, team: Team, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
   def findEnquiriesForClient(client: UniversityID): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]]
 
@@ -93,10 +93,10 @@ class EnquiryServiceImpl @Inject() (
   }
 
 
-  override def reassign(enquiry: Enquiry, team: Team)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] =
+  override def reassign(enquiry: Enquiry, team: Team, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] =
     auditService.audit('EnquiryReassign, enquiry.id.get.toString, 'Enquiry, Json.obj("team" -> team.id)) {
       daoRunner.run(
-        enquiryDao.update(enquiry.copy(team = team), enquiry.version)
+        enquiryDao.update(enquiry.copy(team = team), version)
       ).map(Right.apply)
     }.flatMap(_.fold(
       errors => Future.successful(Left(errors)),

@@ -4,6 +4,8 @@ import java.time._
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 
+import play.api.data.{FormError, Forms, Mapping}
+import play.api.data.format.{Formats, Formatter}
 import play.api.libs.json._
 import uk.ac.warwick.util.core.DateTimeUtils
 
@@ -30,6 +32,20 @@ object JavaTime {
   def localDate: LocalDate = LocalDate.now(clock)
   def localTime: LocalTime = LocalTime.now(clock)
   def instant: Instant = Instant.now(clock)
+
+  object OffsetDateTimeFormatter extends Formatter[OffsetDateTime] {
+    override def bind(key: String, data: Map[String, String]): Either[Seq[FormError], OffsetDateTime] =
+      Formats.stringFormat.bind(key, data).right.flatMap { s =>
+        scala.util.control.Exception.allCatch[OffsetDateTime]
+          .either(OffsetDateTime.parse(s, iSO8601DateFormat))
+          .left.map(_ => Seq(FormError(key, "error.date", Nil)))
+      }
+
+    override def unbind(key: String, value: OffsetDateTime): Map[String, String] =
+      Map(key -> value.format(iSO8601DateFormat))
+  }
+
+  val offsetDateTimeFormField: Mapping[OffsetDateTime] = Forms.of(OffsetDateTimeFormatter)
 
   object Relative {
 

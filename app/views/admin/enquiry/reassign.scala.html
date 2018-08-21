@@ -1,16 +1,22 @@
 @import domain.Team
 @import domain.Enquiry
-
 @import domain.Teams
+@import controllers.admin.TeamEnquiryController.ReassignEnquiryData
 @(
   enquiry: Enquiry,
-  form: Form[Team]
+  form: Form[ReassignEnquiryData]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("Reassign enquiry") {
   @b3.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.reassign(enquiry.id.get)) { implicit ifc =>
+    @if(form.errors("version").nonEmpty) {
+      @b3.inputWrapped("hidden", form("version")) { input => @input }
+    } else {
+      @b3.hidden(form("version"))
+    }
+
     @b3.select(form("team"),
-      options = Teams.all.map { t => t.id -> t.name },
+      options = Teams.all.filterNot(_ == enquiry.team).map { t => t.id -> t.name },
       '_label -> "Team",
       '_default -> ""
     )
