@@ -24,7 +24,6 @@ POST        /register                               @controllers.registration.Re
 
 GET         /enquiry                                @controllers.enquiries.EnquiryController.form()
 POST        /enquiry                                @controllers.enquiries.EnquiryController.submit()
-GET         /api/enquiries                          @controllers.enquiries.EnquiryController.myEnquiriesJson
 
 GET         /enquiry/:id                            @controllers.enquiries.EnquiryMessagesController.messages(id: java.util.UUID)
 POST        /enquiry/:id                            @controllers.enquiries.EnquiryMessagesController.addMessage(id: java.util.UUID)
