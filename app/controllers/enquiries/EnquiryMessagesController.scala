@@ -26,8 +26,8 @@ class EnquiryMessagesController @Inject()(
 
   import enquirySpecificActionRefiner._
 
-  private def render(enquiry: Enquiry, messages: Seq[MessageData], f: Form[Data])(implicit req: RequestHeader) =
-    Ok(views.html.enquiry.messages(enquiry, messages, f))
+  private def render(enquiry: Enquiry, messages: Seq[MessageData], f: Form[Data])(implicit req: EnquirySpecificRequest[_]) =
+    Ok(views.html.enquiry.messages(enquiry, messages, f, messageSender(req)))
 
   def messages(id: UUID): Action[AnyContent] = EnquirySpecificMessagesAction(id) { implicit request =>
     render(request.enquiry, request.messages, baseForm)
@@ -37,12 +37,12 @@ class EnquiryMessagesController @Inject()(
     baseForm.bindFromRequest().fold(
       formWithErrors => Future.successful(render(request.enquiry, request.messages, formWithErrors)),
       formData => {
-        val isClient = request.context.user.flatMap(_.universityId).contains(request.enquiry.universityID)
+        val sender = messageSender(request)
 
         val message = domain.MessageSave(
           text = formData.text,
-          sender = if (isClient) MessageSender.Client else MessageSender.Team,
-          teamMember = if (isClient) None else request.context.user.map(_.usercode)
+          sender = sender,
+          teamMember = if (sender == MessageSender.Team) request.context.user.map(_.usercode) else None
         )
 
         service.addMessage(request.enquiry, message).successMap { m =>
@@ -52,4 +52,9 @@ class EnquiryMessagesController @Inject()(
     )
   }
 
+  private def messageSender(request: EnquirySpecificRequest[_]): MessageSender =
+    if (request.context.user.flatMap(_.universityId).contains(request.enquiry.universityID))
+      MessageSender.Client
+    else
+      MessageSender.Team
 }

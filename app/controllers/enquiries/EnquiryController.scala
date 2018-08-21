@@ -64,31 +64,4 @@ class EnquiryController @Inject()(
     )
   }
 
-  /**
-    * Not sure if JSON is what we'll be doing so this is kind of temporary and mostly
-    * just to test that we can query for a user's enquiries.
-    */
-  def myEnquiriesJson = SigninRequiredAction.async { implicit request =>
-    service.findEnquiriesForClient(request.context.user.get.universityId.get).map(
-      _.fold(
-        showErrors,
-        enquiries => Ok(Json.obj(
-          "enquiries" -> enquiries.map {
-            case (enquiry, messages) => Json.obj(
-              "id" -> enquiry.id,
-              "updatedDate" -> enquiry.version,
-              "messages" -> messages.map { message =>
-                Json.obj(
-                  "from" -> message.sender,
-                  "text" -> message.text,
-                  "date" -> message.created
-                )
-              }
-            )
-          }
-        ))
-      )
-    )
-  }
-
 }
