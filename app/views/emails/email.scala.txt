@@ -1,6 +1,6 @@
 @(salutation: Option[String] = None)(content: Txt)
 
-@salutation.map { n => Dear @n, }
+@salutation.map { n => Dear @n,}
 
 @content.toString().trim().replaceAll("(?m)^[\\s&&[^\n]]+", "")
 

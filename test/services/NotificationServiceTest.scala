@@ -127,7 +127,7 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
         subject = "Register for Wellbeing Support Services",
         from = "no-reply@warwick.ac.uk",
         bodyText = Some(
-          """Dear Mathew, 
+          """Dear Mathew,
             |
             |You have been invited to register for Wellbeing Support Services.
             |
