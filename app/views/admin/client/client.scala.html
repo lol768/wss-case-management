@@ -9,10 +9,21 @@
   profile: SitsProfile,
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
-  form: Form[ClientSummaryData]
+  form: Form[ClientSummaryData],
+  success: Option[String] = None
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"${profile.fullName}") {
+  @if(form.hasErrors) {
+    <div class="alert alert-danger">
+      There were errors in the client summary below. Please correct them and submit again.
+    </div>
+  } else if (success.nonEmpty) {
+    <div class="alert alert-success">
+      @success.get
+    </div>
+  }
+
   <h2>Profile</h2>
 
   <div class="row">
