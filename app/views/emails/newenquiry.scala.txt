@@ -1,5 +1,5 @@
 @(url: String)
 
-A new enquiry has been received: @url
-
-This email was sent from an automated system and replies to it will not reach a real person.
+@email() {
+  A new enquiry has been received: @url
+}
