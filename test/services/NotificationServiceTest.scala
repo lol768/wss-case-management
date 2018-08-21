@@ -23,7 +23,7 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
 
   private trait Fixture {
     val config = Configuration.from(Map(
-      "domain" -> "wss.warwick.ac.uK",
+      "domain" -> "wss.warwick.ac.uk",
       "app.enquiries.initialTeamId" -> "disability"
     ))
 
@@ -78,14 +78,14 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
       activity.getRecipients.getGroups.asScala mustBe Set("disability-team")
       activity.getTitle mustBe "New registration received"
       activity.getText mustBe null
-      activity.getUrl mustBe "https://wss.warwick.ac.uK/team/client/0672089"
+      activity.getUrl mustBe "https://wss.warwick.ac.uk/team/client/0672089"
       activity.getType mustBe "new-registration"
 
       val expectedEmail = Email(
         subject = "Case Management: New registration received",
         from = "no-reply@warwick.ac.uk",
         bodyText = Some(
-          """A new registration has been received: https://wss.warwick.ac.uK/team/client/0672089
+          """A new registration has been received: https://wss.warwick.ac.uk/team/client/0672089
             |
             |This email was sent from an automated system and replies to it will not reach a real person.""".stripMargin
         )
