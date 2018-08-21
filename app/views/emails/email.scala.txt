@@ -1,0 +1,5 @@
+@(content: Txt)
+
+@content.toString().trim()
+
+This email was sent from an automated system and replies to it will not reach a real person.

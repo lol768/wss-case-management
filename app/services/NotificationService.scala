@@ -41,7 +41,7 @@ class NotificationServiceImpl @Inject()(
         Email(
           subject = "Case Management: New registration received",
           from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.newregistration(url).toString)
+          bodyText = Some(views.txt.emails.newregistration(url).toString.trim)
         ),
         users
       ).flatMap {
@@ -68,7 +68,7 @@ class NotificationServiceImpl @Inject()(
         Email(
           subject = "Case Management: New enquiry received",
           from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.newenquiry(url).toString)
+          bodyText = Some(views.txt.emails.newenquiry(url).toString.trim)
         ),
         users
       ).flatMap {
@@ -95,7 +95,7 @@ class NotificationServiceImpl @Inject()(
           Email(
             subject = "Case Management: Enquiry message from client received",
             from = "no-reply@warwick.ac.uk",
-            bodyText = Some(views.txt.emails.enquirymessagefromclient(url).toString)
+            bodyText = Some(views.txt.emails.enquirymessagefromclient(url).toString.trim)
           ),
           users
         ).flatMap {
@@ -120,7 +120,7 @@ class NotificationServiceImpl @Inject()(
           Email(
             subject = s"A message from the ${enquiry.team.name} team has been received",
             from = "no-reply@warwick.ac.uk",
-            bodyText = Some(views.txt.emails.enquirymessagefromteam(user, enquiry.team, url).toString)
+            bodyText = Some(views.txt.emails.enquirymessagefromteam(user, enquiry.team, url).toString.trim)
           ),
           Seq(user)
         ).flatMap {
