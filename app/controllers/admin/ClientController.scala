@@ -6,6 +6,7 @@ import helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
+import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent}
 import services.tabula.ProfileService
 import services.{ClientSummaryService, RegistrationService}
@@ -27,7 +28,7 @@ class ClientController @Inject()(
     "notes" -> text,
     "alternative-contact-number" -> text,
     "alternative-email-address" -> text,
-    "risk-status" -> ClientRiskStatus.formField,
+    "risk-status" -> optional(ClientRiskStatus.formField),
     "reasonable-adjustments" -> set(ReasonableAdjustment.formField),
     "alert-flags" -> set(AlertFlag.formField)
   )(ClientSummaryData.apply)(ClientSummaryData.unapply))
@@ -62,7 +63,7 @@ class ClientController @Inject()(
 
           f.map(_.fold(
             showErrors,
-            summary => Ok(views.html.admin.client.client(profile, registration, Some(summary), form))
+            summary => Ok(views.html.admin.client.client(profile, registration, Some(summary), form, Some(Messages("flash.client.summary.updated"))))
           ))
         }
       )

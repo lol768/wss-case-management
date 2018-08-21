@@ -8,6 +8,7 @@ error.previousCounselling.unknown=Unknown previous counselling type
 error.appointmentAvailability.unknown=Unknown appointment availability type
 error.appointmentAvailability.missing=Please select an availability
 
+flash.client.summary.updated=Client summary updated
 flash.enquiry.received=Your enquiry has been received
 flash.registration.complete=Registration complete
 flash.registration.updated=Registration updated
