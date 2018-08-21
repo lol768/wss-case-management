@@ -9,7 +9,7 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent}
 import services.tabula.ProfileService
-import services.{ClientSummaryService, RegistrationService}
+import services.{ClientSummaryService, NotificationService, RegistrationService}
 import warwick.sso.UniversityID
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -19,6 +19,7 @@ class ClientController @Inject()(
   profileService: ProfileService,
   registrationService: RegistrationService,
   clientSummaryService: ClientSummaryService,
+  notificationService: NotificationService,
   teamSpecificActionRefiner: TeamSpecificActionRefiner,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
@@ -67,6 +68,12 @@ class ClientController @Inject()(
           ))
         }
       )
+    }
+  }
+
+  def invite(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    notificationService.registrationInvite(universityID).successMap { _ =>
+      Redirect(routes.ClientController.client(universityID)).flashing("success" -> Messages("flash.client.registration.invited"))
     }
   }
 

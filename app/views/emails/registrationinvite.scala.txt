@@ -1,0 +1,9 @@
+@(user: warwick.sso.User, url: String)
+
+Dear @user.name.first.getOrElse("client"),
+
+You have been invited to register for Wellbeing Support Services.
+
+Follow this link to complete your registration: @url
+
+This email was sent from an automated system and replies to it will not reach a real person.

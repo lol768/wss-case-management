@@ -35,6 +35,7 @@ GET         /team/:teamId                           @controllers.admin.AdminCont
 
 GET         /team/client/:universityID              @controllers.admin.ClientController.client(universityID: warwick.sso.UniversityID)
 POST        /team/client/:universityID              @controllers.admin.ClientController.updateSummary(universityID: warwick.sso.UniversityID)
+POST        /team/client/:universityID/invite       @controllers.admin.ClientController.invite(universityID: warwick.sso.UniversityID)
 
 ## Admins/Sysadmins ##
 
