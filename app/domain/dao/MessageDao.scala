@@ -1,16 +1,14 @@
 package domain.dao
 
-import java.time.OffsetDateTime
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
-import domain.{Message, MessageClient, MessageData, MessageSender}
+import domain.{Message, MessageClient}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.MappedProjection
 import warwick.sso.UniversityID
 
 import scala.concurrent.ExecutionContext
