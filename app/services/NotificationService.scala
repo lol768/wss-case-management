@@ -66,9 +66,9 @@ class NotificationServiceImpl @Inject()(
     withUser(universityID) { user =>
       emailService.queue(
         Email(
-          subject = "Case Management: Register for Wellbeing Support Services",
+          subject = "Register for Wellbeing Support Services",
           from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.registrationinvite(user, url).toString)
+          bodyText = Some(views.txt.emails.registrationinvite(user, url).toString.trim)
         ),
         Seq(user)
       ).flatMap {

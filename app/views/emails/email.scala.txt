@@ -2,6 +2,6 @@
 
 @salutation.map { n => Dear @n, }
 
-@content.toString().trim()
+@content.toString().trim().replaceAll("(?m)^[\\s&&[^\n]]+", "")
 
 This email was sent from an automated system and replies to it will not reach a real person.

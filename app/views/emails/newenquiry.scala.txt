@@ -1,5 +1,5 @@
 @(url: String)
 
-@email {
+@email() {
   A new enquiry has been received: @url
 }

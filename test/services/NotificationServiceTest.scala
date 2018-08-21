@@ -95,6 +95,52 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
       verify(myWarwickService, times(1)).sendAsNotification(activity)
       verifyNoMoreInteractions(emailService, myWarwickService)
     }
+
+    "send an email and a My Warwick notification when a client is invited to register" in new Fixture {
+      val universityID = UniversityID("0672089")
+      val user = User(new uk.ac.warwick.userlookup.User("u0672089") {{
+        setFoundUser(true)
+        setWarwickId("0672089")
+        setFirstName("Mathew")
+        setLastName("Mannion")
+      }})
+
+      when(userLookupService.getUsers(Seq(universityID))).thenReturn(Success(Map(
+        universityID -> user
+      )))
+
+      when(emailService.queue(Matchers.any(), Matchers.any())).thenReturn(Future.successful(Right(Nil)))
+      when(myWarwickService.sendAsNotification(Matchers.any())).thenReturn(FutureConverters.toJava(Future.successful(List(
+        new Response()
+      ).asJava)).toCompletableFuture)
+
+      val activity = notificationService.registrationInvite(universityID).futureValue.right.get
+
+      activity.getRecipients.getUsers.asScala mustBe Set("u0672089")
+      activity.getRecipients.getGroups.asScala mustBe Set()
+      activity.getTitle mustBe "Register for Wellbeing Support Services"
+      activity.getText mustBe "You have been invited to register for Wellbeing Support Services"
+      activity.getUrl mustBe "https://wss.warwick.ac.uk/register"
+      activity.getType mustBe "registration-invite"
+
+      val expectedEmail = Email(
+        subject = "Register for Wellbeing Support Services",
+        from = "no-reply@warwick.ac.uk",
+        bodyText = Some(
+          """Dear Mathew, 
+            |
+            |You have been invited to register for Wellbeing Support Services.
+            |
+            |Follow this link to complete your registration: https://wss.warwick.ac.uk/register
+            |
+            |This email was sent from an automated system and replies to it will not reach a real person.""".stripMargin
+        )
+      )
+
+      verify(emailService, times(1)).queue(expectedEmail, Seq(user))
+      verify(myWarwickService, times(1)).sendAsNotification(activity)
+      verifyNoMoreInteractions(emailService, myWarwickService)
+    }
   }
 
 }
