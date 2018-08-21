@@ -4,7 +4,8 @@ import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
-import domain.{Message, MessageClient}
+import domain.Enquiry.Enquiries
+import domain.{Message, MessageClient, MessageOwner}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
@@ -18,6 +19,8 @@ trait MessageDao {
   def insert(message: Message, clients: Seq[UniversityID]): DBIO[Message]
 
   def findByClientQuery(client: UniversityID): Query[Message.Messages, Message, Seq]
+
+  def latestForEnquiryQuery(enquiry: Enquiries): Query[Message.Messages, Message, Seq]
 }
 
 @Singleton
@@ -51,4 +54,12 @@ class MessageDaoImpl @Inject() (
 
     messages.sortBy(_.created.reverse)
   }
+
+  def latestForEnquiryQuery(enquiry: Enquiries): Query[Message.Messages, Message, Seq] = {
+    Message.messages.table
+      .filter(m => enquiry.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner))
+      .sortBy(_.created.reverse)
+      .take(1)
+  }
+
 }
