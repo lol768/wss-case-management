@@ -1,4 +1,6 @@
-@(content: Txt)
+@(salutation: Option[String] = None)(content: Txt)
+
+@salutation.map { n => Dear @n, }
 
 @content.toString().trim()
 
