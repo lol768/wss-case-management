@@ -37,7 +37,7 @@ object ServiceResults {
   }
 
   def futureSequence[A](in: Seq[Future[ServiceResult[A]]])(implicit executionContext: ExecutionContext): Future[ServiceResult[Seq[A]]] =
-    Future.sequence(in).map(a=>sequence(a))
+    Future.sequence(in).map(a => sequence(a))
 
   def zip[T1, T2](_1: Future[ServiceResult[T1]], _2: Future[ServiceResult[T2]])(implicit executionContext: ExecutionContext): Future[ServiceResult[(T1, T2)]] =
     _1.zip(_2).map {
