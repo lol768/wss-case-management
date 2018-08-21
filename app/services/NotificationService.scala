@@ -113,21 +113,21 @@ class NotificationServiceImpl @Inject()(
         }
       }
     } else {
-      withUsersForUniversityID(enquiry.universityID) { users =>
+      withUserForUniversityID(enquiry.universityID) { user =>
         val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get).url}"
 
         emailService.queue(
           Email(
             subject = s"A message from the ${enquiry.team.name} team has been received",
             from = "no-reply@warwick.ac.uk",
-            bodyText = Some(views.txt.emails.enquirymessagefromteam(enquiry.team, url).toString)
+            bodyText = Some(views.txt.emails.enquirymessagefromteam(user, enquiry.team, url).toString)
           ),
-          users
+          Seq(user)
         ).flatMap {
           case Left(errors) => Future.successful(Left(errors))
           case _ =>
             val activity = new Activity(
-              users.map(_.usercode.string).toSet.asJava,
+              Set(user.usercode.string).asJava,
               Set[String]().asJava,
               s"The ${enquiry.team.name} team has replied to your enquiry",
               url,
@@ -178,13 +178,17 @@ class NotificationServiceImpl @Inject()(
     )
   }
 
-  private def withUsersForUniversityID(universityID: UniversityID)(f: Seq[User] => Future[ServiceResult[Activity]]): Future[ServiceResult[Activity]] = {
+  private def withUserForUniversityID(universityID: UniversityID)(f: User => Future[ServiceResult[Activity]]): Future[ServiceResult[Activity]] = {
     userLookupService.getUsers(Seq(universityID)).fold(
       e => Future.successful(Left(List(new ServiceError {
         override def message: String = e.getMessage
         override def cause = Some(e)
       }))),
-      r => f(r.get(universityID).toSeq)
+      r => r.get(universityID).map(f).getOrElse(
+        Future.successful(Left(List(new ServiceError {
+          override def message: String = s"Cannot find user with university ID ${universityID.string}"
+        })))
+      )
     )
   }
 
