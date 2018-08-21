@@ -2,7 +2,7 @@ package domain
 
 import java.util.UUID
 
-import warwick.sso.{UniversityID, Usercode, Users}
+import warwick.sso._
 
 object Fixtures {
   object users {
@@ -12,6 +12,19 @@ object Fixtures {
       universityId = Some(UniversityID("9900001")),
       student = true,
       undergraduate = true
+    )
+
+    private val baseStaff: User = Users.create(
+      usercode = null,
+      universityId = None,
+      staff = true
+    )
+
+    // Staff users here correspond with webgroup members defined in test.conf
+    val ss1: User = baseStaff.copy(
+      usercode = Usercode("ss1"),
+      universityId = Some(UniversityID("1700001")),
+      name = Name(Some("Studentsupport"), Some("User1"))
     )
   }
 
