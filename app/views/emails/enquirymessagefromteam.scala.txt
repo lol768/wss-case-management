@@ -1,5 +1,8 @@
 @import domain.Team
-@(team: Team, url: String)
+@import warwick.sso.User
+@(user: User, team: Team, url: String)
+
+@user.name.first.map { n => Hi @n, }
 
 @email {
   The @team.name team has replied to your enquiry: @url
