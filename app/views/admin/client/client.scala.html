@@ -9,10 +9,21 @@
   profile: SitsProfile,
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
-  form: Form[ClientSummaryData]
+  form: Form[ClientSummaryData],
+  success: Option[String] = None
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"${profile.fullName}") {
+  @if(form.hasErrors) {
+    <div class="alert alert-danger">
+      There were errors in the client summary below. Please correct them and submit again.
+    </div>
+  } else if (success.nonEmpty) {
+    <div class="alert alert-success">
+      @success.get
+    </div>
+  }
+
   <h2>Profile</h2>
 
   <div class="row">
@@ -52,9 +63,10 @@
     </div>
   </div>
 
-  @registration.map { registration =>
-    <h2>Registration</h2>
 
+  <h2>Registration</h2>
+
+  @registration.map { registration =>
     <p>
       <strong>Registered: </strong> @helpers.JavaTime.Relative(registration.updatedDate)<br />
       <strong>GP: </strong> @registration.data.gp<br />
@@ -64,6 +76,13 @@
       <strong>Appointment adjustments: </strong> @views.utils.nl2br(registration.data.appointmentAdjustments)<br />
       <strong>Referrals: </strong> @registration.data.referrals.map(_.description).mkString(", ")
     </p>
+  }.getOrElse {
+    <em>Client is not currently registered</em>
+    @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(profile.universityID)) { implicit ifc =>
+      @b3.submit('class -> "btn btn-default") {
+        Invite to register
+      }
+    }
   }
 
   <h2>Client summary</h2>

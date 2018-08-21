@@ -8,7 +8,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.{I18nSupport, Messages}
 import play.api.mvc.{Action, AnyContent, Result}
-import services.{NotificationService, RegistrationService, SecurityService}
+import services.{RegistrationService, SecurityService}
 import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}

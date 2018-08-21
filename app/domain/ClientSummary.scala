@@ -19,7 +19,7 @@ case class ClientSummaryData(
   notes: String,
   alternativeContactNumber: String,
   alternativeEmailAddress: String,
-  riskStatus: ClientRiskStatus,
+  riskStatus: Option[ClientRiskStatus],
   reasonableAdjustments: Set[ReasonableAdjustment],
   alertFlags: Set[AlertFlag]
 )
