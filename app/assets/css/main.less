@@ -45,12 +45,13 @@
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: @grid-float-breakpoint) {
+  @dl-horizontal-offset: 220px;
   .dl-horizontal.field-history dt {
-    width: 220px;
+    width: @dl-horizontal-offset;
   }
   .dl-horizontal.field-history dd {
-    margin-left: 240px;
+    margin-left: @dl-horizontal-offset + @grid-gutter-width;
   }
 }
 

@@ -1,7 +1,7 @@
 /* eslint-env browser, jquery */
 
 import _ from 'lodash-es';
-import moment from 'moment';
+import * as DateFormats from './dateFormats';
 
 function getValue(value) {
   if (_.isArray(value)) {
@@ -29,7 +29,7 @@ export default function FieldHistory(container) {
         container: 'body',
         content: _.map($i.data('field-history-data'), item => `
             <dl>
-              <dt>${moment(item.version).format('ddd D MMM YYYY HH:mm')}</dt>
+              <dt>${DateFormats.formatDateTime(item.version)}</dt>
               <dd>${getValue(item.value)}</dd>
             </dl>
           `),

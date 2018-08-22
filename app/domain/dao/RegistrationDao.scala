@@ -118,7 +118,12 @@ class RegistrationDaoImpl @Inject()(
 
   override def getHistory(universityID: UniversityID): DBIO[Seq[(JsValue, OffsetDateTime)]] =
     RegistrationDao.Registration.registrations.versionsTable
-      .filter(_.universityID === universityID)
+      .filter(r =>
+        r.universityID === universityID && (
+          r.operation === (DatabaseOperation.Insert:DatabaseOperation) ||
+          r.operation === (DatabaseOperation.Update:DatabaseOperation)
+        )
+      )
       .sortBy(_.timestamp)
       .map(v => (v.data, v.timestamp))
       .result
