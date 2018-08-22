@@ -17,6 +17,7 @@ case class Enquiry(
   team: Team,
   state: EnquiryState = Open,
   version: OffsetDateTime = OffsetDateTime.now(),
+  created: OffsetDateTime = OffsetDateTime.now(),
 ) extends Versioned[Enquiry] {
 
   override def atVersion(at: OffsetDateTime): Enquiry = copy(version = at)
@@ -27,6 +28,7 @@ case class Enquiry(
       team,
       state,
       version,
+      created,
       operation,
       timestamp
     ).asInstanceOf[B]
@@ -47,6 +49,7 @@ object Enquiry extends Versioning {
     def version = column[OffsetDateTime]("version_utc")
     def universityId = column[UniversityID]("university_id")
     def state = column[EnquiryState]("state")
+    def created = column[OffsetDateTime]("created_utc")
   }
 
   class Enquiries(tag: Tag) extends Table[Enquiry](tag, "enquiry") with VersionedTable[Enquiry] with EnquiryProperties {
@@ -54,7 +57,7 @@ object Enquiry extends Versioning {
 
     def id = column[UUID]("id", O.PrimaryKey)
 
-    def * = (id.?, universityId, team, state, version).mapTo[Enquiry]
+    def * = (id.?, universityId, team, state, version, created).mapTo[Enquiry]
 
     def isOpen = state === (Open : EnquiryState) || state === (Reopened : EnquiryState)
   }
@@ -64,7 +67,7 @@ object Enquiry extends Versioning {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
-    def * = (id, universityId, team, state, version, operation, timestamp).mapTo[EnquiryVersion]
+    def * = (id, universityId, team, state, version, created, operation, timestamp).mapTo[EnquiryVersion]
     def pk = primaryKey("pk_enquiryversions", (id, timestamp))
     def idx = index("idx_enquiryversions", (id, version))
   }
@@ -87,6 +90,7 @@ case class EnquiryVersion(
   team: Team,
   state: EnquiryState,
   version: OffsetDateTime = OffsetDateTime.now(),
+  created: OffsetDateTime = OffsetDateTime.now(),
   operation: DatabaseOperation,
   timestamp: OffsetDateTime
 ) extends StoredVersion[Enquiry]
