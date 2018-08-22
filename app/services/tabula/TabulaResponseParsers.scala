@@ -1,9 +1,10 @@
 package services.tabula
 
 import java.time.format.DateTimeFormatter
-import java.time.LocalDate
+import java.time.{LocalDate, OffsetDateTime}
 
 import domain._
+import helpers.JavaTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import warwick.sso.UniversityID
@@ -29,6 +30,37 @@ object TabulaResponseParsers {
       (__ \ "enrolmentDepartment").read[SitsDepartment](departmentReads)
     )(StudentCourseYearDetails.apply _)
 
+    // A reduced Member object, defined again here so no cyclic dependency
+    case class StudentRelationshipAgent(
+      universityId: String,
+      fullName: String,
+      dateOfBirth: LocalDate,
+      email: Option[String],
+      homeDepartment: SitsDepartment,
+      userType: String,
+    )
+    val studentRelationshipAgentReads: Reads[StudentRelationshipAgent] = (
+      (__ \ "universityId").read[String] and
+      (__ \ "fullName").read[String] and
+      (__ \ "dateOfBirth").read[LocalDate] and
+      (__ \ "email").readNullable[String] and
+      (__ \ "homeDepartment").read[SitsDepartment](departmentReads) and
+      (__ \ "userType").read[String]
+    )(StudentRelationshipAgent.apply _)
+
+    case class StudentRelationship(
+      agent: StudentRelationshipAgent,
+      startDate: OffsetDateTime,
+      endDate: Option[OffsetDateTime],
+      percentage: Option[BigDecimal]
+    )
+    val studentRelationshipReads: Reads[StudentRelationship] = (
+      (__ \ "agent").read[StudentRelationshipAgent](studentRelationshipAgentReads) and
+      (__ \ "startDate").read[OffsetDateTime] and
+      (__ \ "endDate").readNullable[OffsetDateTime] and
+      (__ \ "percentage").readNullable[BigDecimal]
+    )(StudentRelationship.apply _)
+
     case class StudentCourseDetails(
       mostSignificant: Boolean,
       beginDate: LocalDate,
@@ -38,7 +70,8 @@ object TabulaResponseParsers {
       route: Route,
       courseStatus: CourseStatus,
       level: String,
-      studentCourseYearDetails: Seq[StudentCourseYearDetails]
+      studentCourseYearDetails: Seq[StudentCourseYearDetails],
+      relationships: Map[String, Seq[StudentRelationship]]
     )
     val studentCourseDetailsReads: Reads[StudentCourseDetails] = (
       (__ \ "mostSignificant").read[Boolean] and
@@ -49,7 +82,8 @@ object TabulaResponseParsers {
       (__ \ "currentRoute").read[Route](routeReads) and
       (__ \ "statusOnCourse").read[CourseStatus](courseStatusReads) and
       (__ \ "levelCode").read[String] and
-      (__ \ "studentCourseYearDetails").read[Seq[StudentCourseYearDetails]](Reads.seq(studentCourseYearDetailsReads))
+      (__ \ "studentCourseYearDetails").read[Seq[StudentCourseYearDetails]](Reads.seq(studentCourseYearDetailsReads)) and
+      (__ \ "relationships").read[Map[String, Seq[StudentRelationship]]](Reads.map(Reads.seq(studentRelationshipReads)))
     )(StudentCourseDetails.apply _)
 
     case class Member(
@@ -70,10 +104,50 @@ object TabulaResponseParsers {
       userType: String,
     ) {
       def toUserProfile: SitsProfile = {
-
         val latestScd = studentCourseDetails.flatMap(scds => scds.find(_.mostSignificant))
         val latestScyd = latestScd.flatMap(_.studentCourseYearDetails.lastOption)
         val department = latestScyd.map(_.enrolmentDepartment).getOrElse(homeDepartment)
+
+        def currentAgents(relationshipType: String): Seq[SitsProfile] = {
+          studentCourseDetails.toSeq
+            .flatMap(_.flatMap(_.relationships.get(relationshipType).toSeq).flatten)
+            .filter { relationship =>
+              relationship.startDate.isBefore(JavaTime.offsetDateTime) &&
+              !relationship.endDate.exists(_.isBefore(JavaTime.offsetDateTime))
+            }
+            .sortBy { rel => (rel.startDate, rel.agent.universityId) }
+            .map(_.agent).distinct
+            .map { agent =>
+              SitsProfile(
+                universityID = UniversityID(agent.universityId),
+                fullName = agent.fullName,
+                dateOfBirth = agent.dateOfBirth,
+                phoneNumber = None,
+                warwickEmail = agent.email,
+                alternateEmail = None,
+                address = None,
+                residence = None,
+                department = SitsDepartment(agent.homeDepartment.code, agent.homeDepartment.name),
+                course = None,
+                route = None,
+                courseStatus = None,
+                enrolmentStatus = None,
+                attendance = None,
+                group = None,
+                yearOfStudy = None,
+                startDate = None,
+                endDate = None,
+                nationality = None,
+                dualNationality = None,
+                tier4VisaRequired = None,
+                disability = None,
+                photo = None,
+                personalTutors = Nil,
+                researchSupervisors = Nil,
+                userType = UserType.withName(agent.userType)
+              )
+            }
+        }
 
         SitsProfile(
           universityID = UniversityID(universityId),
@@ -99,6 +173,8 @@ object TabulaResponseParsers {
           tier4VisaRequired = tier4VisaRequirement,
           disability = disability,
           photo = None,
+          personalTutors = currentAgents("tutor"),
+          researchSupervisors = currentAgents("supervisor"),
           userType = UserType.withName(userType)
         )
       }
