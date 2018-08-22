@@ -13,6 +13,32 @@
   success: Option[String] = None
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
+@agents(name: String, profiles: Seq[SitsProfile]) = {
+  <h3>@name</h3>
+
+  <div class="row">
+    @profiles.map { profile =>
+      <div class="col-sm-6 col-md-4">
+        <div class="row">
+          @profile.photo.map { photo =>
+            <div class="col-sm-4">
+              <div class="photo">
+                <img src="@photo" class="img-thumbnail">
+              </div>
+            </div>
+          }
+          <div class="col-sm-8">
+            <strong>University ID: </strong> @profile.universityID.string<br />
+            <strong>Full name: </strong> @profile.fullName<br />
+            <strong>Department: </strong> @profile.department.name<br />
+            <strong>Warwick email address: </strong> @profile.warwickEmail<br />
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
 @main(s"${profile.fullName}") {
   @if(form.hasErrors) {
     <div class="alert alert-danger">
@@ -64,55 +90,11 @@
   </div>
 
   @if(profile.personalTutors.nonEmpty) {
-    <h3>Personal tutor</h3>
-
-    <div class="row">
-      @profile.personalTutors.map { tutor =>
-        <div class="col-sm-6 col-md-4">
-          <div class="row">
-            @tutor.photo.map { photo =>
-              <div class="col-sm-4">
-                <div class="photo">
-                  <img src="@photo" class="img-thumbnail">
-                </div>
-              </div>
-            }
-            <div class="col-sm-8">
-              <strong>University ID: </strong> @tutor.universityID.string<br />
-              <strong>Full name: </strong> @tutor.fullName<br />
-              <strong>Department: </strong> @tutor.department.name<br />
-              <strong>Warwick email address: </strong> @tutor.warwickEmail<br />
-            </div>
-          </div>
-        </div>
-      }
-    </div>
+    @agents("Personal tutor", profile.personalTutors)
   }
 
   @if(profile.researchSupervisors.nonEmpty) {
-    <h3>Research supervisor</h3>
-
-    <div class="row">
-    @profile.researchSupervisors.map { supervisor =>
-      <div class="col-sm-6 col-md-4">
-        <div class="row">
-          @supervisor.photo.map { photo =>
-            <div class="col-sm-4">
-              <div class="photo">
-                <img src="@photo" class="img-thumbnail">
-              </div>
-            </div>
-          }
-          <div class="col-sm-8">
-            <strong>University ID: </strong> @supervisor.universityID.string<br />
-            <strong>Full name: </strong> @supervisor.fullName<br />
-            <strong>Department: </strong> @supervisor.department.name<br />
-            <strong>Warwick email address: </strong> @supervisor.warwickEmail<br />
-          </div>
-        </div>
-      </div>
-    }
-    </div>
+    @agents("Research supervisor", profile.researchSupervisors)
   }
 
   <h2>Registration</h2>
