@@ -6,9 +6,11 @@ import akka.Done
 import play.api.cache.AsyncCacheApi
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
+import scala.util.Success
 
 /**
   * Stores stuff in memory. NOTE hard expiry is ignored!!
@@ -49,7 +51,13 @@ class NeverExpiringMemoryAsyncCacheApi extends AsyncCacheApi {
   }
 
   override def getOrElseUpdate[A : ClassTag](key: String, expiration: Duration)(orElse: => Future[A]): Future[A] = {
-    Future.successful(data.getOrElseUpdate(key, serialize(orElse)).asInstanceOf[A])
+    if (data.contains(key)) {
+      Future.successful(deserialize(data(key)))
+    } else {
+      orElse.andThen {
+        case Success(a) => set(key, a)
+      }
+    }
   }
 
   override def get[T : ClassTag](key: String): Future[Option[T]] = {
