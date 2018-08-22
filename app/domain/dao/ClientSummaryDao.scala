@@ -27,6 +27,7 @@ trait ClientSummaryDao {
 object ClientSummaryDao {
   case class PersistedClientSummary(
     universityID: UniversityID,
+    highMentalHealthRisk: Option[Boolean],
     data: JsValue,
     version: OffsetDateTime = JavaTime.offsetDateTime
   ) extends Versioned[PersistedClientSummary] {
@@ -35,6 +36,7 @@ object ClientSummaryDao {
     override def storedVersion[B <: StoredVersion[PersistedClientSummary]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
       PersistedClientSummaryVersion(
         universityID,
+        highMentalHealthRisk,
         data,
         version,
         operation,
@@ -44,12 +46,16 @@ object ClientSummaryDao {
     def parsed = ClientSummary(
       universityID = universityID,
       updatedDate = version,
-      data = data.validate[ClientSummaryData](ClientSummaryData.formatter).get
+      data = ClientSummaryData(
+        highMentalHealthRisk = highMentalHealthRisk,
+        fields = data.validate[ClientSummaryFields](ClientSummaryFields.formatter).get
+      )
     )
   }
 
   case class PersistedClientSummaryVersion(
     universityId: UniversityID,
+    highMentalHealthRisk: Option[Boolean],
     data: JsValue,
     version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
@@ -57,9 +63,10 @@ object ClientSummaryDao {
   ) extends StoredVersion[PersistedClientSummary]
 
   object PersistedClientSummary extends Versioning {
-    def tupled: ((UniversityID, JsValue, OffsetDateTime)) => PersistedClientSummary = (PersistedClientSummary.apply _).tupled
+    def tupled: ((UniversityID, Option[Boolean], JsValue, OffsetDateTime)) => PersistedClientSummary = (PersistedClientSummary.apply _).tupled
 
     sealed trait CommonProperties { self: Table[_] =>
+      def highMentalHealthRisk: Rep[Option[Boolean]] = column[Option[Boolean]]("mental_health_risk")
       def data: Rep[JsValue] = column[JsValue]("data")
       def version: Rep[OffsetDateTime] = column[OffsetDateTime]("version_utc")
     }
@@ -69,7 +76,7 @@ object ClientSummaryDao {
 
       def universityID: Rep[UniversityID] = column[UniversityID]("university_id", O.PrimaryKey)
 
-      def * : ProvenShape[PersistedClientSummary] = (universityID, data, version).mapTo[PersistedClientSummary]
+      def * : ProvenShape[PersistedClientSummary] = (universityID, highMentalHealthRisk, data, version).mapTo[PersistedClientSummary]
     }
 
     class PersistedClientSummaryVersions(tag: Tag) extends Table[PersistedClientSummaryVersion](tag, "client_summary_version") with StoredVersionTable[PersistedClientSummary] with CommonProperties {
@@ -77,7 +84,7 @@ object ClientSummaryDao {
       def operation: Rep[DatabaseOperation] = column[DatabaseOperation]("version_operation")
       def timestamp: Rep[OffsetDateTime] = column[OffsetDateTime]("version_timestamp_utc")
 
-      def * : ProvenShape[PersistedClientSummaryVersion] = (universityID, data, version, operation, timestamp).mapTo[PersistedClientSummaryVersion]
+      def * : ProvenShape[PersistedClientSummaryVersion] = (universityID, highMentalHealthRisk, data, version, operation, timestamp).mapTo[PersistedClientSummaryVersion]
       def pk: PrimaryKey = primaryKey("pk_client_summary_version", (universityID, timestamp))
       def idx: Index = index("idx_client_summary_version", (universityID, version))
     }
@@ -98,13 +105,15 @@ class ClientSummaryDaoImpl @Inject()(
   override def insert(universityID: UniversityID, data: ClientSummaryData): DBIO[PersistedClientSummary] =
     clientSummaries.insert(PersistedClientSummary(
       universityID,
-      Json.toJson(data)(ClientSummaryData.formatter)
+      data.highMentalHealthRisk,
+      Json.toJson(data.fields)(ClientSummaryFields.formatter)
     ))
 
   override def update(universityID: UniversityID, data: ClientSummaryData, version: OffsetDateTime): DBIO[PersistedClientSummary] =
     clientSummaries.update(PersistedClientSummary(
       universityID,
-      Json.toJson(data)(ClientSummaryData.formatter),
+      data.highMentalHealthRisk,
+      Json.toJson(data.fields)(ClientSummaryFields.formatter),
       version
     ))
 

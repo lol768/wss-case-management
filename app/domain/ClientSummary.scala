@@ -16,16 +16,20 @@ case class ClientSummary(
 )
 
 case class ClientSummaryData(
+  highMentalHealthRisk: Option[Boolean],
+  fields: ClientSummaryFields
+)
+
+case class ClientSummaryFields(
   notes: String,
   alternativeContactNumber: String,
   alternativeEmailAddress: String,
   riskStatus: Option[ClientRiskStatus],
-  reasonableAdjustments: Set[ReasonableAdjustment],
-  alertFlags: Set[AlertFlag]
+  reasonableAdjustments: Set[ReasonableAdjustment]
 )
 
-object ClientSummaryData {
-  implicit val formatter: Format[ClientSummaryData] = Json.format[ClientSummaryData]
+object ClientSummaryFields {
+  implicit val formatter: Format[ClientSummaryFields] = Json.format[ClientSummaryFields]
 }
 
 sealed trait ClientRiskStatus extends EnumEntry
@@ -35,13 +39,4 @@ object ClientRiskStatus extends PlayEnum[ClientRiskStatus] {
   case object High extends ClientRiskStatus
 
   val values: immutable.IndexedSeq[ClientRiskStatus] = findValues
-}
-
-sealed abstract class AlertFlag(val description: String) extends EnumEntry with IdAndDescription {
-  val id: String = entryName
-}
-object AlertFlag extends PlayEnum[AlertFlag] {
-  case object HighMentalHealthRisk extends AlertFlag("High mental health risk")
-
-  val values: immutable.IndexedSeq[AlertFlag] = findValues
 }

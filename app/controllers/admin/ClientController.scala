@@ -9,8 +9,8 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent}
 import services.tabula.ProfileService
-import services.{ClientSummaryService, NotificationService, RegistrationService}
-import warwick.sso.UniversityID
+import services.{ClientSummaryService, NotificationService, PermissionService, RegistrationService}
+import warwick.sso.{AuthenticatedRequest, UniversityID}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -20,18 +20,21 @@ class ClientController @Inject()(
   registrationService: RegistrationService,
   clientSummaryService: ClientSummaryService,
   notificationService: NotificationService,
+  permissionService: PermissionService,
   teamSpecificActionRefiner: TeamSpecificActionRefiner,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import teamSpecificActionRefiner._
 
   val form = Form(mapping(
-    "notes" -> text,
-    "alternative-contact-number" -> text,
-    "alternative-email-address" -> text,
-    "risk-status" -> optional(ClientRiskStatus.formField),
-    "reasonable-adjustments" -> set(ReasonableAdjustment.formField),
-    "alert-flags" -> set(AlertFlag.formField)
+    "high-mental-health-risk" -> optional(boolean),
+    "fields" -> mapping(
+      "notes" -> text,
+      "alternative-contact-number" -> text,
+      "alternative-email-address" -> text,
+      "risk-status" -> optional(ClientRiskStatus.formField),
+      "reasonable-adjustments" -> set(ReasonableAdjustment.formField),
+    )(ClientSummaryFields.apply)(ClientSummaryFields.unapply)
   )(ClientSummaryData.apply)(ClientSummaryData.unapply))
 
   private def clientInformation(universityID: UniversityID): Future[ServiceResult[(SitsProfile, Option[Registration], Option[ClientSummary])]] = {
@@ -49,18 +52,19 @@ class ClientController @Inject()(
         case _ => form
       }
 
-      Ok(views.html.admin.client.client(profile, registration, clientSummary, f))
+      Ok(views.html.admin.client.client(profile, registration, clientSummary, f, inMentalHealthTeam))
     }
   }
 
   def updateSummary(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     clientInformation(universityID).successFlatMap { case (profile, registration, clientSummary) =>
       form.bindFromRequest.fold(
-        formWithErrors => Future.successful(Ok(views.html.admin.client.client(profile, registration, clientSummary, formWithErrors))),
+        formWithErrors => Future.successful(Ok(views.html.admin.client.client(profile, registration, clientSummary, formWithErrors, inMentalHealthTeam))),
         data => {
+          val processedData = if (inMentalHealthTeam) data else data.copy(highMentalHealthRisk = clientSummary.flatMap(_.data.highMentalHealthRisk))
           val f =
-            if (clientSummary.isEmpty) clientSummaryService.save(universityID, data)
-            else clientSummaryService.update(universityID, data, clientSummary.get.updatedDate)
+            if (clientSummary.isEmpty) clientSummaryService.save(universityID, processedData)
+            else clientSummaryService.update(universityID, processedData, clientSummary.get.updatedDate)
 
           f.successMap { _ =>
             Redirect(routes.ClientController.client(universityID))
@@ -76,5 +80,15 @@ class ClientController @Inject()(
       Redirect(routes.ClientController.client(universityID)).flashing("success" -> Messages("flash.client.registration.invited"))
     }
   }
+
+  private def inMentalHealthTeam(implicit request: AuthenticatedRequest[_]): Boolean =
+    permissionService.inTeam(request.context.user.get.usercode, Teams.MentalHealth).fold(
+      e => {
+        val message = s"Could not determine if ${request.context.user.get.usercode.string} was in ${Teams.MentalHealth.id}; returning false"
+        e.headOption.flatMap(_.cause).fold(logger.error(message))(t => logger.error(message, t))
+        false
+      },
+      inTeam => inTeam
+    )
 
 }

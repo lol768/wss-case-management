@@ -3,13 +3,13 @@
 @import domain.ClientSummary
 @import domain.ClientSummaryData
 @import domain.ReasonableAdjustment
-@import domain.AlertFlag
 @import domain.ClientRiskStatus
 @(
   profile: SitsProfile,
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
   form: Form[ClientSummaryData],
+  inMentalHealthTeam: Boolean,
   success: Option[String] = None
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
@@ -22,6 +22,22 @@
     <div class="alert alert-success">
       @success.get
     </div>
+  }
+
+  @if(inMentalHealthTeam) {
+    @if(clientSummary.flatMap(_.data.highMentalHealthRisk).isEmpty) {
+      <div class="alert alert-info">
+        No mental health risk alert specified (<a href="#high-mental-health-risk">update</a>)
+      </div>
+    } else if (clientSummary.flatMap(_.data.highMentalHealthRisk).contains(true)) {
+      <div class="alert alert-warning">
+        Client has a high mental health risk alert (<a href="#high-mental-health-risk">update</a>)
+      </div>
+    } else {
+      <div class="alert alert-info">
+        Client does not have a high mental health risk alert (<a href="#high-mental-health-risk">update</a>)
+      </div>
+    }
   }
 
   <h2>Profile</h2>
@@ -88,20 +104,20 @@
   <h2>Client summary</h2>
 
   @b3.vertical.formCSRF(controllers.admin.routes.ClientController.updateSummary(profile.universityID)) { implicit ifc =>
-    @b3.textarea(form("notes"),
+    @b3.textarea(form("fields.notes"),
       '_label -> "Notes",
       'rows -> 5
     )
 
-    @b3.text(form("alternative-contact-number"),
+    @b3.text(form("fields.alternative-contact-number"),
       '_label -> "Alternative contact number"
     )
 
-    @b3.email(form("alternative-email-address"),
+    @b3.email(form("fields.alternative-email-address"),
       '_label -> "Alternative email address"
     )
 
-    @b3.select(form("risk-status"),
+    @b3.select(form("fields.risk-status"),
       options = ClientRiskStatus.values.map { s => s.entryName -> s.entryName },
       '_label -> "Risk status",
       '_default -> ""
@@ -111,17 +127,15 @@
       label = "Reasonable adjustments",
       items = ReasonableAdjustment.values,
       form = form,
-      field = "reasonable-adjustments",
+      field = "fields.reasonable-adjustments",
       idPrefix = "reasonable-adjustment"
     )
 
-    @b3.checkboxGroup(
-      label = "Alert flags",
-      items = AlertFlag.values,
-      form = form,
-      field = "alert-flags",
-      idPrefix = "alert-flag"
-    )
+    @if(inMentalHealthTeam) {
+      @b3.select(form("high-mental-health-risk"), options = Seq("" -> "Not specified", "true" -> "Yes", "false" -> "No"),
+        '_label -> "High mental health risk"
+      )
+    }
 
     @tags.submitOrCancel("Update", controllers.routes.IndexController.home())
   }
