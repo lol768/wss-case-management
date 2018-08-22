@@ -2,7 +2,7 @@ package domain
 
 import java.time.OffsetDateTime
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, JsValue, Json, Writes}
 import warwick.sso.UniversityID
 
 case class Registration(
@@ -25,4 +25,53 @@ case class RegistrationData(
   medications: Set[Medication],
   appointmentAdjustments: String,
   referrals: Set[RegistrationReferral]
+)
+
+object RegistrationDataHistory {
+
+  val writer: Writes[RegistrationDataHistory] = (r: RegistrationDataHistory) => Json.obj(
+    "gp" -> toJson(r.gp),
+    "tutor" -> toJson(r.tutor),
+    "disabilities" -> toJson(r.disabilities)(Writes.set(IdAndDescription.writer)),
+    "medications" -> toJson(r.medications)(Writes.set(IdAndDescription.writer)),
+    "appointmentAdjustments" -> toJson(r.appointmentAdjustments),
+    "referrals" -> toJson(r.referrals)(Writes.set(IdAndDescription.writer))
+  )
+
+  def apply(history: Seq[(RegistrationData, OffsetDateTime)]): RegistrationDataHistory = RegistrationDataHistory(
+    gp = flatten(history.map { case (result, ts) => (result.gp, ts) }.toList),
+    tutor = flatten(history.map { case (result, ts) => (result.tutor, ts) }.toList),
+    disabilities = flatten(history.map { case (result, ts) => (result.disabilities, ts) }.toList),
+    medications = flatten(history.map { case (result, ts) => (result.medications, ts) }.toList),
+    appointmentAdjustments = flatten(history.map { case (result, ts) => (result.appointmentAdjustments, ts) }.toList),
+    referrals = flatten(history.map { case (result, ts) => (result.referrals, ts) }.toList),
+  )
+
+  private def flatten[A](items: List[(A, OffsetDateTime)]): Seq[(A, OffsetDateTime)] = (items match {
+    case Nil => Nil
+    case head :: Nil => Seq(head)
+    case head :: tail => tail.foldLeft(Seq(head)) { (foldedItems, item) =>
+      if (foldedItems.last._1 != item._1) {
+        foldedItems ++ Seq(item)
+      } else {
+        foldedItems
+      }
+    }
+  }).reverse
+
+  private def toJson[A](items: Seq[(A, OffsetDateTime)])(implicit itemWriter: Writes[A]): JsValue =
+    Json.toJson(items.map { case (item, ts) => Json.obj(
+      "value" -> Json.toJson(item),
+      "version" -> ts
+    ) })
+
+}
+
+case class RegistrationDataHistory(
+  gp: Seq[(String, OffsetDateTime)],
+  tutor: Seq[(String, OffsetDateTime)],
+  disabilities: Seq[(Set[Disability], OffsetDateTime)],
+  medications: Seq[(Set[Medication], OffsetDateTime)],
+  appointmentAdjustments: Seq[(String, OffsetDateTime)],
+  referrals: Seq[(Set[RegistrationReferral], OffsetDateTime)]
 )
