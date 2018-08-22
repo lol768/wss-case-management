@@ -9,11 +9,7 @@
 
 @main("Reassign enquiry") {
   @b3.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.reassign(enquiry.id.get)) { implicit ifc =>
-    @if(form.errors("version").nonEmpty) {
-      @b3.inputWrapped("hidden", form("version")) { input => @input }
-    } else {
-      @b3.hidden(form("version"))
-    }
+    @b3.validatedHidden(form, "version")
 
     @b3.select(form("team"),
       options = Teams.all.filterNot(_ == enquiry.team).map { t => t.id -> t.name },
