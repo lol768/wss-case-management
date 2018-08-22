@@ -33,9 +33,10 @@ POST        /enquiry/:id                            @controllers.enquiries.Enqui
 
 GET         /team/:teamId                           @controllers.admin.AdminController.teamHome(teamId: String)
 
-GET         /team/client/:universityID              @controllers.admin.ClientController.client(universityID: warwick.sso.UniversityID)
-POST        /team/client/:universityID              @controllers.admin.ClientController.updateSummary(universityID: warwick.sso.UniversityID)
-POST        /team/client/:universityID/invite       @controllers.admin.ClientController.invite(universityID: warwick.sso.UniversityID)
+GET         /team/client/:universityID                          @controllers.admin.ClientController.client(universityID: warwick.sso.UniversityID)
+POST        /team/client/:universityID                          @controllers.admin.ClientController.updateSummary(universityID: warwick.sso.UniversityID)
+POST        /team/client/:universityID/invite                   @controllers.admin.ClientController.invite(universityID: warwick.sso.UniversityID)
+GET         /team/client/:universityID/registration-history     @controllers.admin.ClientController.registrationHistory(universityID: warwick.sso.UniversityID)
 
 ## Admins/Sysadmins ##
 

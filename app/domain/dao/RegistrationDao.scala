@@ -89,6 +89,8 @@ trait RegistrationDao {
 
   def get(universityID: UniversityID): DBIO[Option[RegistrationDao.Registration]]
 
+  def getHistory(universityID: UniversityID): DBIO[Seq[(JsValue, OffsetDateTime)]]
+
 }
 
 class RegistrationDaoImpl @Inject()(
@@ -113,5 +115,12 @@ class RegistrationDaoImpl @Inject()(
 
   override def get(universityID: UniversityID): DBIO[Option[RegistrationDao.Registration]] =
     RegistrationDao.Registration.registrations.table.filter(_.universityID === universityID).take(1).result.headOption
+
+  override def getHistory(universityID: UniversityID): DBIO[Seq[(JsValue, OffsetDateTime)]] =
+    RegistrationDao.Registration.registrations.versionsTable
+      .filter(_.universityID === universityID)
+      .sortBy(_.timestamp)
+      .map(v => (v.data, v.timestamp))
+      .result
 
 }

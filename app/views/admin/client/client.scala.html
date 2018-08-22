@@ -67,15 +67,22 @@
   <h2>Registration</h2>
 
   @registration.map { registration =>
-    <p>
-      <strong>Registered: </strong> @helpers.JavaTime.Relative(registration.updatedDate)<br />
-      <strong>GP: </strong> @registration.data.gp<br />
-      <strong>Tutor: </strong> @registration.data.tutor<br />
-      <strong>Disabilities: </strong> @registration.data.disabilities.map(_.description).mkString(", ")<br />
-      <strong>Medication: </strong> @registration.data.medications.map(_.description).mkString(", ")<br />
-      <strong>Appointment adjustments: </strong> @views.utils.nl2br(registration.data.appointmentAdjustments)<br />
-      <strong>Referrals: </strong> @registration.data.referrals.map(_.description).mkString(", ")
-    </p>
+    <dl class="dl-horizontal field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(profile.universityID)">
+      <dt>Registered</dt>
+      <dd>@helpers.JavaTime.Relative(registration.updatedDate)</dd>
+      <dt data-field-history="gp">GP</dt>
+      <dd>@registration.data.gp</dd>
+      <dt data-field-history="tutor">Tutor</dt>
+      <dd>@registration.data.tutor</dd>
+      <dt data-field-history="disabilities">Disabilities</dt>
+      <dd>@registration.data.disabilities.map(_.description).mkString(", ")</dd>
+      <dt data-field-history="medications">Medication</dt>
+      <dd>@registration.data.medications.map(_.description).mkString(", ")</dd>
+      <dt data-field-history="appointmentAdjustments">Appointment adjustments</dt>
+      <dd>@views.utils.nl2br(registration.data.appointmentAdjustments)</dd>
+      <dt data-field-history="referrals">Referrals</dt>
+      <dd>@registration.data.referrals.map(_.description).mkString(", ")</dd>
+    </dl>
   }.getOrElse {
     <em>Client is not currently registered</em>
     @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(profile.universityID)) { implicit ifc =>
