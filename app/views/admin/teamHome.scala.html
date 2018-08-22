@@ -36,7 +36,10 @@
               </td>
               <td>@*TODO*@</td>
               <td>@helpers.JavaTime.Relative(message.created)</td>
-              <td>@enquiry.team.name</td>
+              <td>
+                @enquiry.team.name
+                <a class="btn btn-default" href="@controllers.admin.routes.TeamEnquiryController.reassignForm(enquiry.id.get)">Reassign</a>
+              </td>
               <td><a class="btn btn-default" href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get)">View</a></td>
             </tr>
           }

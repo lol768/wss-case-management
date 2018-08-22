@@ -1,0 +1,5 @@
+@(url: String)
+
+@email() {
+  An enquiry has been assigned to your team: @url
+}

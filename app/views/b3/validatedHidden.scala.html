@@ -1,0 +1,10 @@
+@(
+  form: Form[_],
+  field: String
+)(implicit fc: views.html.b3.B3FieldConstructor, messagesProvider: MessagesProvider)
+
+@if(form.errors(field).nonEmpty) {
+  @b3.inputWrapped("hidden", form(field)) { input => @input }
+} else {
+  @b3.hidden(form(field))
+}

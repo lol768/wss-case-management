@@ -29,6 +29,11 @@ trait EnquiryService {
     */
   def addMessage(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Message]]
 
+  /**
+    * Reassign an enquiry to another team
+    */
+  def reassign(enquiry: Enquiry, team: Team, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
+
   def findEnquiriesForClient(client: UniversityID): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]]
 
   def get(id: UUID): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
@@ -86,6 +91,17 @@ class EnquiryServiceImpl @Inject() (
       message => notificationService.enquiryMessage(enquiry, message).map(_.right.map(_ => message))
     ))
   }
+
+
+  override def reassign(enquiry: Enquiry, team: Team, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] =
+    auditService.audit('EnquiryReassign, enquiry.id.get.toString, 'Enquiry, Json.obj("team" -> team.id)) {
+      daoRunner.run(
+        enquiryDao.update(enquiry.copy(team = team), version)
+      ).map(Right.apply)
+    }.flatMap(_.fold(
+      errors => Future.successful(Left(errors)),
+      enquiry => notificationService.enquiryReassign(enquiry).map(_.right.map(_ => enquiry))
+    ))
 
   override def findEnquiriesForClient(client: UniversityID): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]] = {
     val query = for {

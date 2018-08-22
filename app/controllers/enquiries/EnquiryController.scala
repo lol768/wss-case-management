@@ -1,30 +1,26 @@
 package controllers.enquiries
 
-import controllers.{BaseController, TeamSpecificActionRefiner}
+import controllers.BaseController
 import domain.Enquiry.{FormData => Data}
 import domain._
 import javax.inject.{Inject, Singleton}
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, RequestHeader}
 import services.{EnquiryService, SecurityService}
 
 import scala.concurrent.{ExecutionContext, Future}
-import domain.Enquiry.{FormData => Data}
-import play.api.Configuration
-import play.api.libs.json.Json
 
 @Singleton
 class EnquiryController @Inject()(
-  teamSpecificActionRefiner: TeamSpecificActionRefiner,
+  enquirySpecificActionRefiner: EnquirySpecificActionRefiner,
   securityService: SecurityService,
   service: EnquiryService,
   config: Configuration
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import teamSpecificActionRefiner._
   import securityService._
 
   private val baseForm = Form(mapping(

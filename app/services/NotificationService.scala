@@ -20,6 +20,7 @@ trait NotificationService {
   def registrationInvite(universityID: UniversityID): Future[ServiceResult[Activity]]
   def newEnquiry(enquiry: Enquiry): Future[ServiceResult[Activity]]
   def enquiryMessage(enquiry: Enquiry, message: Message): Future[ServiceResult[Activity]]
+  def enquiryReassign(enquiry: Enquiry): Future[ServiceResult[Activity]]
 }
 
 class NotificationServiceImpl @Inject()(
@@ -162,6 +163,32 @@ class NotificationServiceImpl @Inject()(
             )
             sendAndHandleResponse(activity)
         }
+      }
+    }
+
+  override def enquiryReassign(enquiry: Enquiry): Future[ServiceResult[Activity]] =
+    withTeamUsers(enquiry.team) { users =>
+      val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get).url}"
+
+      emailService.queue(
+        Email(
+          subject = "Case Management: Enquiry assigned",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.enquiryreassigned(url).toString.trim)
+        ),
+        users
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            Set[String]().asJava,
+            Set(permissionService.webgroupFor(enquiry.team).string).asJava,
+            "Enquiry assigned",
+            url,
+            null,
+            "enquiry-assigned"
+          )
+          sendAndHandleResponse(activity)
       }
     }
 
