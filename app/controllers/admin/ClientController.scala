@@ -89,13 +89,11 @@ class ClientController @Inject()(
   }
 
   private def inMentalHealthTeam(implicit request: AuthenticatedRequest[_]): Boolean =
-    permissionService.inTeam(request.context.user.get.usercode, Teams.MentalHealth).fold(
-      e => {
-        val message = s"Could not determine if ${request.context.user.get.usercode.string} was in ${Teams.MentalHealth.id}; returning false"
-        e.headOption.flatMap(_.cause).fold(logger.error(message))(t => logger.error(message, t))
-        false
-      },
-      inTeam => inTeam
+    logErrors(
+      permissionService.inTeam(request.context.user.get.usercode, Teams.MentalHealth),
+      logger,
+      false,
+      _ => Some(s"Could not determine if ${request.context.user.get.usercode.string} was in ${Teams.MentalHealth.id}; returning false")
     )
 
 }
