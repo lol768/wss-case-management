@@ -30,7 +30,7 @@ trait EnquiryService {
   def addMessage(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Message]]
 
   /**
-    * Re-assign an enquiry to another team
+    * Reassign an enquiry to another team
     */
   def reassign(enquiry: Enquiry, team: Team, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
