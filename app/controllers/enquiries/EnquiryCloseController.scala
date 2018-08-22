@@ -30,7 +30,7 @@ class EnquiryCloseController @Inject()(
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version)
   )(CloseForm.apply)(CloseForm.unapply))
 
-  def close(id: UUID): Action[AnyContent] = EnquirySpecificMessagesAction(id).async { implicit request =>
+  def close(id: UUID): Action[AnyContent] = EnquirySpecificTeamMemberAction(id).async { implicit request =>
     closeForm(request.enquiry).bindFromRequest().fold(
       formWithErrors => {
         Future.successful(
