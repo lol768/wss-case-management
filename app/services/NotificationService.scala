@@ -19,7 +19,7 @@ trait NotificationService {
   def newRegistration(universityID: UniversityID): Future[ServiceResult[Activity]]
   def registrationInvite(universityID: UniversityID): Future[ServiceResult[Activity]]
   def newEnquiry(enquiry: Enquiry): Future[ServiceResult[Activity]]
-  def enquiryMessage(enquiry: Enquiry, message: Message): Future[ServiceResult[Activity]]
+  def enquiryMessage(enquiry: Enquiry, sender: MessageSender): Future[ServiceResult[Activity]]
   def enquiryReassign(enquiry: Enquiry): Future[ServiceResult[Activity]]
 }
 
@@ -113,8 +113,8 @@ class NotificationServiceImpl @Inject()(
       }
     }
 
-  override def enquiryMessage(enquiry: Enquiry, message: Message): Future[ServiceResult[Activity]] =
-    if (message.sender == MessageSender.Client) {
+  override def enquiryMessage(enquiry: Enquiry, sender: MessageSender): Future[ServiceResult[Activity]] =
+    if (sender == MessageSender.Client) {
       withTeamUsers(enquiry.team) { users =>
         val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get).url}"
 

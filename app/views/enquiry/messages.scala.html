@@ -1,19 +1,22 @@
+@import controllers.enquiries.EnquiryMessagesController.ReopenForm
 @import domain.Enquiry
+@import domain.EnquiryState
 @import domain.MessageData
 @import domain.Message.FormData
 @import domain.MessageSender
-
+@import helpers.JavaTime.iSO8601DateFormat
 @(
   enquiry: Enquiry,
   messages: Seq[MessageData],
   form: Form[FormData],
+  reopenForm: Form[ReopenForm],
   messageSender: MessageSender
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"${enquiry.team.name} enquiry from ${enquiry.universityID.string}") {
   <div class="enquiry panel panel-default">
     <div class="panel-body">
-      @*<span class="badge pull-right">@helpers.JavaTime.Relative(enquiry.version)</span>*@
+      <span class="badge pull-right">@helpers.JavaTime.Relative(enquiry.created)</span>
       <strong>Enquiry with @enquiry.team.name</strong>
 
       @{
@@ -24,14 +27,39 @@
         tags.conversation(messages, clientName = clientName)
       }
 
-      @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.id.get)) { implicit ifc =>
-        @b3.textarea(form("text"),
-          '_label -> "Add a message",
-          'rows -> 3
-        )
+      @if(enquiry.state != EnquiryState.Closed) {
+        @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.id.get)) { implicit ifc =>
+          @b3.textarea(form("text"),
+            '_label -> "Add a message",
+            'rows -> 3
+          )
 
-        @b3.free() {
-          <button type="submit" class="btn btn-primary">Add message</button>
+          @b3.free() {
+            <button type="submit" class="btn btn-primary">Add message</button>
+          }
+        }
+        @if(messageSender == MessageSender.Team) {
+          @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryCloseController.close(enquiry.id.get)) { implicit ifc =>
+            <input type="hidden" name="version" value="@enquiry.version.format(iSO8601DateFormat)" />
+            <button type="submit" class="btn btn-primary">Close enquiry</button>
+          }
+        }
+      } else {
+        @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.reopen(enquiry.id.get)) { implicit ifc =>
+          @if(reopenForm.errors("version").nonEmpty) {
+            @b3.inputWrapped("hidden", reopenForm("version")) { input => @input }
+          } else {
+            @b3.hidden(reopenForm("version"))
+          }
+
+          @b3.textarea(reopenForm("text"),
+            '_label -> "Add a message",
+            'rows -> 3
+          )
+
+          @b3.free() {
+            <button type="submit" class="btn btn-primary">Reopen enquiry</button>
+          }
         }
       }
     </div>
