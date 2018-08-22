@@ -1,6 +1,5 @@
 package services.tabula
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.time.LocalDate
 
 import domain._
@@ -98,15 +97,6 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       studentProfile.disability mustBe Some(SitsDisability("I","Unclassified disability","Condition not listed"))
       studentProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/842cfad8a90147436f7a7dfeb2d42800/1234567")
       studentProfile.userType mustBe UserType.Student
-
-      val baos = new ByteArrayOutputStream()
-      val oos = new ObjectOutputStream(baos)
-      oos.writeObject(studentProfile)
-      oos.close()
-
-      val bais = new ByteArrayInputStream(baos.toByteArray)
-      val ois = new ObjectInputStream(bais)
-      ois.readObject() mustBe studentProfile
     }
 
     "fetch an applicant profile" in  withProfileService() { profileService =>

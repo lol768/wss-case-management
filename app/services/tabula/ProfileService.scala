@@ -5,26 +5,30 @@ import java.security.MessageDigest
 import com.google.inject.ImplementedBy
 import domain.SitsProfile
 import helpers.ServiceResults.{ServiceError, ServiceResult}
+import helpers.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
 import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
 import javax.inject.Inject
 import play.api.Configuration
+import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
+import services.tabula.ProfileService._
+import system.Logging
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
 import warwick.sso.UniversityID
 
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.collection.JavaConverters._
-import system.Logging
-import helpers.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
-import play.api.cache.AsyncCacheApi
-
 
 @ImplementedBy(classOf[ProfileServiceImpl])
 trait ProfileService {
   def getProfile(universityID: UniversityID): Future[CacheElement[ServiceResult[SitsProfile]]]
   def getProfiles(universityIDs: Set[UniversityID]): Future[ServiceResult[Map[UniversityID, SitsProfile]]]
+}
+
+object ProfileService {
+  case class ProfileServiceError(message: String) extends ServiceError
 }
 
 class ProfileServiceImpl  @Inject()(
@@ -33,9 +37,6 @@ class ProfileServiceImpl  @Inject()(
   configuration: Configuration,
   cache: AsyncCacheApi
 )(implicit ec: ExecutionContext) extends ProfileService with Logging {
-
-  case class ProfileServiceError(message: String) extends ServiceError
-
   private val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
   private val tabulaProfileUrl = configuration.get[String]("wellbeing.tabula.profile")
 

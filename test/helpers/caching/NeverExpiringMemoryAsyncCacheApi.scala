@@ -1,5 +1,7 @@
 package helpers.caching
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
+
 import akka.Done
 import play.api.cache.AsyncCacheApi
 
@@ -10,12 +12,34 @@ import scala.reflect.ClassTag
 
 /**
   * Stores stuff in memory. NOTE hard expiry is ignored!!
+  *
+  * Serializes objects to a byte array just like memcached will
   */
 class NeverExpiringMemoryAsyncCacheApi extends AsyncCacheApi {
-  private val data: mutable.Map[String, Any] = mutable.Map()
+  private val data: mutable.Map[String, Array[Byte]] = mutable.Map()
+
+  private def serialize(value: Any): Array[Byte] = {
+    val baos = new ByteArrayOutputStream()
+    val oos = new ObjectOutputStream(baos)
+    oos.writeObject(value)
+    oos.close()
+
+    baos.toByteArray
+  }
+
+  private def deserialize[A](value: Array[Byte]): A = {
+    val bais = new ByteArrayInputStream(value)
+    val ois = new ObjectInputStream(bais)
+
+    try {
+      ois.readObject().asInstanceOf[A]
+    } finally {
+      ois.close()
+    }
+  }
 
   override def set(key: String, value: Any, expiration: Duration): Future[Done] = {
-    data.put(key, value)
+    data.put(key, serialize(value))
     Future.successful(Done)
   }
 
@@ -25,11 +49,11 @@ class NeverExpiringMemoryAsyncCacheApi extends AsyncCacheApi {
   }
 
   override def getOrElseUpdate[A : ClassTag](key: String, expiration: Duration)(orElse: => Future[A]): Future[A] = {
-    Future.successful(data.getOrElseUpdate(key, orElse).asInstanceOf[A])
+    Future.successful(data.getOrElseUpdate(key, serialize(orElse)).asInstanceOf[A])
   }
 
   override def get[T : ClassTag](key: String): Future[Option[T]] = {
-    Future.successful(data.get(key).map(_.asInstanceOf[T]))
+    Future.successful(data.get(key).map(deserialize[T]))
   }
 
   override def removeAll(): Future[Done] = {
