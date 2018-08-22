@@ -44,3 +44,24 @@
     font-weight: bold;
   }
 }
+
+@media (min-width: @grid-float-breakpoint) {
+  @dl-horizontal-offset: 220px;
+  .dl-horizontal.field-history dt {
+    width: @dl-horizontal-offset;
+  }
+  .dl-horizontal.field-history dd {
+    margin-left: @dl-horizontal-offset + @grid-gutter-width;
+  }
+}
+
+.field-history {
+  i.fa-history {
+    margin-left: 5px;
+    cursor: pointer;
+  }
+}
+
+.popover button.close {
+  padding: 0 2px;
+}

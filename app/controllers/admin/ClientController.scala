@@ -7,6 +7,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import services.tabula.ProfileService
 import services.{ClientSummaryService, NotificationService, PermissionService, RegistrationService}
@@ -78,6 +79,12 @@ class ClientController @Inject()(
   def invite(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     notificationService.registrationInvite(universityID).successMap { _ =>
       Redirect(routes.ClientController.client(universityID)).flashing("success" -> Messages("flash.client.registration.invited"))
+    }
+  }
+
+  def registrationHistory(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    registrationService.getHistory(universityID).successMap { history =>
+      Ok(Json.toJson(history)(RegistrationDataHistory.writer))
     }
   }
 

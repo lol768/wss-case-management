@@ -97,6 +97,17 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       studentProfile.disability mustBe Some(SitsDisability("I","Unclassified disability","Condition not listed"))
       studentProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/842cfad8a90147436f7a7dfeb2d42800/1234567")
       studentProfile.userType mustBe UserType.Student
+      studentProfile.personalTutors mustBe Nil
+      studentProfile.researchSupervisors.size mustBe 1
+
+      val supervisorProfile = studentProfile.researchSupervisors.head
+      supervisorProfile.universityID mustBe UniversityID("1222222")
+      supervisorProfile.fullName mustBe "Garza Hegre"
+      supervisorProfile.dateOfBirth mustBe LocalDate.parse("1972-03-14")
+      supervisorProfile.warwickEmail mustBe Some("garza.hegre@warwick.ac.uk")
+      supervisorProfile.department mustBe SitsDepartment("lf", "Life Sciences")
+      supervisorProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/d48375298d78b79384e2ff529e2aac62/1222222")
+      supervisorProfile.userType mustBe UserType.Staff
     }
 
     "fetch an applicant profile" in  withProfileService() { profileService =>

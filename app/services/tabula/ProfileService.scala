@@ -74,7 +74,11 @@ class ProfileServiceImpl  @Inject()(
             errors => handleValidationError(json, errors),
             data => {
               val tabulaProfile = data.toUserProfile
-              Right(tabulaProfile.copy(photo = Some(photoUrl(universityID))))
+              Right(tabulaProfile.copy(
+                photo = Some(photoUrl(universityID)),
+                personalTutors = tabulaProfile.personalTutors.map { p => p.copy(photo = Some(photoUrl(p.universityID))) },
+                researchSupervisors = tabulaProfile.researchSupervisors.map { p => p.copy(photo = Some(photoUrl(p.universityID))) }
+              ))
             }
           )
         })

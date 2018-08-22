@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 
 import com.google.inject.ImplementedBy
 import domain.dao.{DaoRunner, RegistrationDao}
-import domain.{Registration, RegistrationData}
+import domain.{Registration, RegistrationData, RegistrationDataHistory}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
@@ -20,6 +20,8 @@ trait RegistrationService {
   def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[domain.Registration]]
 
   def get(universityID: UniversityID): Future[ServiceResult[Option[domain.Registration]]]
+
+  def getHistory(universityID: UniversityID): Future[ServiceResult[RegistrationDataHistory]]
 
 }
 
@@ -56,5 +58,12 @@ class RegistrationServiceImpl @Inject()(
 
   override def get(universityID: UniversityID): Future[ServiceResult[Option[domain.Registration]]] =
     daoRunner.run(dao.get(universityID)).map(_.map(_.parsed)).map(Right.apply)
+
+  override def getHistory(universityID: UniversityID): Future[ServiceResult[RegistrationDataHistory]] = {
+    daoRunner.run(dao.getHistory(universityID)).map(_.map { case (jsValue, ts) => (
+      jsValue.validate[domain.RegistrationData](domain.RegistrationData.formatter).get,
+      ts
+    )}).map(RegistrationDataHistory.apply).map(Right.apply)
+  }
 
 }
