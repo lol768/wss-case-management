@@ -7,7 +7,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.json.Json
 import play.api.mvc._
-import system.{ImplicitRequestContext, Roles}
+import system.{CSRFPageHelperFactory, ImplicitRequestContext, Roles}
 import warwick.sso._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -28,6 +28,7 @@ trait SecurityService {
 class SecurityServiceImpl @Inject()(
   sso: SSOClient,
   parse: PlayBodyParsers,
+  csrfPageHelperFactory: CSRFPageHelperFactory,
   configuration: Configuration
 )(implicit executionContext: ExecutionContext) extends SecurityService with Results with Rendering with AcceptExtractors with ImplicitRequestContext {
 
@@ -83,5 +84,5 @@ class SecurityServiceImpl @Inject()(
   private val unauthorizedResponse =
     Unauthorized(Json.toJson(JsonClientError(status = "unauthorized", errors = Seq("You are not signed in.  You may authenticate through Web Sign-On."))))
 
-  private def noUniversityIdResponse(request: AuthenticatedRequest[_]) = PreconditionFailed(views.html.errors.noUniversityId()(RequestContext.authenticated(sso, request, Seq(), configuration)))
+  private def noUniversityIdResponse(request: AuthenticatedRequest[_]) = PreconditionFailed(views.html.errors.noUniversityId()(RequestContext.authenticated(sso, request, Nil, csrfPageHelperFactory, configuration)))
 }

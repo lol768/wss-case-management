@@ -2,6 +2,7 @@
 
 import 'core-js/modules/es6.object.assign';
 import FieldHistory from './field-history';
+import './flexi-picker';
 
 jQuery(($) => {
   $('[data-toggle="popover"]').popover();

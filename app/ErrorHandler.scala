@@ -5,7 +5,7 @@ import play.api.http.{HttpErrorHandler, Status}
 import play.api.libs.json.Json
 import play.api.mvc.{AcceptExtractors, Rendering, RequestHeader, Results}
 import play.api.{Configuration, Environment}
-import system.Logging
+import system.{CSRFPageHelperFactory, Logging}
 import warwick.sso.SSOClient
 
 import scala.concurrent.Future
@@ -17,11 +17,12 @@ import scala.concurrent.Future
 class ErrorHandler @Inject()(
   environment: Environment,
   sso: SSOClient,
+  csrfPageHelperFactory: CSRFPageHelperFactory,
   configuration: Configuration
 ) extends HttpErrorHandler with Results with Status with Logging with Rendering with AcceptExtractors {
 
   def onClientError(request: RequestHeader, statusCode: Int, message: String) = {
-    implicit val context = RequestContext.authenticated(sso, request, Nil, configuration)
+    implicit val context = RequestContext.authenticated(sso, request, Nil, csrfPageHelperFactory, configuration)
 
     Future.successful(
       statusCode match {
@@ -38,7 +39,7 @@ class ErrorHandler @Inject()(
   }
 
   def onServerError(request: RequestHeader, exception: Throwable) = {
-    implicit val context = RequestContext.authenticated(sso, request, Nil, configuration)
+    implicit val context = RequestContext.authenticated(sso, request, Nil, csrfPageHelperFactory, configuration)
 
     logger.error("Internal Server Error", exception)
     Future.successful(

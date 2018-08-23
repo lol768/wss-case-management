@@ -16,16 +16,19 @@ trait ImplicitRequestContext {
   private[this] var ssoClient: SSOClient = _
 
   @Inject
+  private[this] var csrfPageHelperFactory: CSRFPageHelperFactory = _
+
+  @Inject
   private[this] var configuration: Configuration = _
 
   implicit def requestContext(implicit request: RequestHeader): RequestContext = request match {
     case req: AuthenticatedRequest[_] =>
-      RequestContext.authenticated(ssoClient, req, navigationService.getNavigation(req.context), configuration)
+      RequestContext.authenticated(ssoClient, req, navigationService.getNavigation(req.context), csrfPageHelperFactory, configuration)
 
     case req: WrappedAuthenticatedRequest[_] =>
-      RequestContext.authenticated(ssoClient, req, navigationService.getNavigation(req.authRequest.context), configuration)
+      RequestContext.authenticated(ssoClient, req, navigationService.getNavigation(req.authRequest.context), csrfPageHelperFactory, configuration)
 
-    case _ => RequestContext.anonymous(ssoClient, request, Nil, configuration)
+    case _ => RequestContext.anonymous(ssoClient, request, Nil, csrfPageHelperFactory, configuration)
   }
 
   implicit def requestToAuditLogContext(implicit requestContext: RequestContext): AuditLogContext =
