@@ -4,7 +4,6 @@ import com.google.inject.ImplementedBy
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
 import javax.inject.Inject
-import play.api.Configuration
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
 import system.Logging
@@ -22,8 +21,7 @@ trait MemberSearchService {
 
 class MemberSearchServiceImpl @Inject()(
   ws: WSClient,
-  trustedApplicationsManager: TrustedApplicationsManager,
-  val configuration: Configuration
+  trustedApplicationsManager: TrustedApplicationsManager
 )(implicit ec: ExecutionContext) extends MemberSearchService with ProvidesPhotoUrl with Logging {
 
   private val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")

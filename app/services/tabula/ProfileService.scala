@@ -6,7 +6,6 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
 import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
 import javax.inject.Inject
-import play.api.Configuration
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
@@ -32,11 +31,10 @@ object ProfileService {
 class ProfileServiceImpl  @Inject()(
   ws: WSClient,
   trustedApplicationsManager: TrustedApplicationsManager,
-  val configuration: Configuration,
   cache: AsyncCacheApi
 )(implicit ec: ExecutionContext) extends ProfileService with ProvidesPhotoUrl with Logging {
-  private val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
-  private val tabulaProfileUrl = configuration.get[String]("wellbeing.tabula.profile")
+  private lazy val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
+  private lazy val tabulaProfileUrl = configuration.get[String]("wellbeing.tabula.profile")
 
   private lazy val ttlStrategy: ServiceResult[SitsProfile] => Ttl = a => a.fold(
     _ => Ttl(soft = 10.seconds, medium = 1.minute, hard = 1.hour),

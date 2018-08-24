@@ -6,7 +6,6 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain._
 import domain.dao.ClientSummaryDao.PersistedClientSummary
-import domain.dao.ClientSummaryDao.PersistedClientSummary.PersistedClientSummaries
 import helpers.JavaTime
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}

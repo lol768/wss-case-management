@@ -61,9 +61,11 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
         val profileService = new ProfileServiceImpl(
           client,
           trustedApplicationsManager,
-          config,
           cache
-        )
+        ) {
+          configuration = config
+        }
+
 
         block(profileService)
       }

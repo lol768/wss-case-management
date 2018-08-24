@@ -21,7 +21,7 @@ export default function ClientSearch(container) {
 
   function doSearch(query, callback) {
     currentQuery = query;
-    $.get(`${url}?query=${query}`).done((response) => {
+    $.get(`${url}?query=${encodeURIComponent(query)}`).done((response) => {
       if (currentQuery === query) {
         if (response.success) {
           $.each(response.data.results, (i, item) => transformItem(item));
