@@ -52,6 +52,7 @@ export default function ClientSearch(container) {
     </div>`,
     highlighter: html => html,
     changeInputOnSelect: false,
+    changeInputOnMove: false,
     followLinkOnSelect: true,
     openLinkInNewTab: true,
     selectOnBlur: false,
