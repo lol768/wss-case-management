@@ -41,7 +41,7 @@
       <header class="id7-page-header">
         @if(context.isMasquerading) {
           <div id="masquerade-notice" class="sysadmin-only-content">
-            Masquerading as <strong>@context.user.map(_.name.full)</strong> (@context.user.map(_.usercode.string), @context.user.map(_.universityId.map(_.string))). <a href="@controllers.admin.routes.MasqueradeController.masquerade()">Change</a>
+            Masquerading as <strong>@context.user.map(_.name.full)</strong> (@context.user.map(_.usercode.string), @context.user.map(_.universityId.map(_.string))). <a href="@controllers.sysadmin.routes.MasqueradeController.masquerade()">Change</a>
           </div>
         }
 

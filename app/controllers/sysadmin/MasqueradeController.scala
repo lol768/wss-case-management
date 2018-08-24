@@ -1,4 +1,4 @@
-package controllers.admin
+package controllers.sysadmin
 
 import controllers.BaseController
 import javax.inject.{Inject, Singleton}

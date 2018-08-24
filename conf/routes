@@ -38,7 +38,7 @@ POST        /team/enquiry/:id/reassign              @controllers.admin.TeamEnqui
 
 ## Admins/Sysadmins ##
 
-GET         /admin/masquerade                       @controllers.admin.MasqueradeController.masquerade
+GET         /sysadmin/masquerade                    @controllers.sysadmin.MasqueradeController.masquerade
 
 ## Service controllers ##
 
