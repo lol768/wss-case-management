@@ -2,12 +2,11 @@ package services
 
 import domain._
 import domain.dao.{AbstractDaoTest, DaoRunner}
-import helpers.{JavaTime, TestApplications}
-import org.scalatest.BeforeAndAfterAll
+import helpers.{DataFixture, JavaTime}
+import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.ac.warwick.util.core.DateTimeUtils
 import warwick.sso.UniversityID
-import play.api.inject.bind
 
 import scala.util.Random
 
@@ -26,11 +25,6 @@ class EnquiryServiceTest extends AbstractDaoTest {
 
   val uniId1 = UniversityID("1")
 
-  trait DataFixture {
-    def setup(): Unit
-    def teardown(): Unit
-  }
-
   class EnquiriesFixture(addMessages: Boolean) extends DataFixture {
     override def setup(): Unit = {
       for (_ <- 1 to 10) {
@@ -44,12 +38,14 @@ class EnquiryServiceTest extends AbstractDaoTest {
           "Hello", MessageSender.Client, None
         )).serviceValue
 
-        /*for (_ <- 1 to 10) {
-          val messageDate = enquiryDate.plusHours(Random.nextInt(1000).toLong)
-          DateTimeUtils.useMockDateTime(messageDate.toInstant, () => {
-            enquiryService.addMessage(enquiry, MessageSave("Reply!", MessageSender.Team, None))
-          })
-        }*/
+        if (addMessages) {
+          for (_ <- 1 to 10) {
+            val messageDate = enquiryDate.plusHours(Random.nextInt(1000).toLong)
+            DateTimeUtils.useMockDateTime(messageDate.toInstant, () => {
+              enquiryService.addMessage(enquiry, MessageSave("Reply!", MessageSender.Team, None))
+            })
+          }
+        }
       }
     }
 
@@ -61,17 +57,6 @@ class EnquiryServiceTest extends AbstractDaoTest {
           Message.messages.versionsTable.delete andThen
           Message.messageClients.delete
       ).futureValue
-    }
-  }
-
-
-
-  def withData(data: DataFixture)(fn: => Unit) = {
-    try {
-      data.setup()
-      fn
-    } finally {
-      data.teardown()
     }
   }
 

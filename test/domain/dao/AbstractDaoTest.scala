@@ -2,7 +2,7 @@ package domain.dao
 
 import domain._
 import helpers.ServiceResults.ServiceResult
-import helpers.{DaoPatience, OneAppPerSuite, ServiceResults}
+import helpers.{DaoPatience, DataFixture, OneAppPerSuite, ServiceResults}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
@@ -70,5 +70,14 @@ abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPer
           .getOrElse(fail(e.map(_.message).mkString("; "))),
         identity // return success as-is
       )
+  }
+
+  def withData(data: DataFixture)(fn: => Unit): Unit = {
+    try {
+      data.setup()
+      fn
+    } finally {
+      data.teardown()
+    }
   }
 }
