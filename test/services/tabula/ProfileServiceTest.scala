@@ -18,6 +18,7 @@ import play.api.routing.sird._
 import play.api.test.WsTestClient
 import play.api.{Configuration, Environment}
 import play.core.server.Server
+import services.PhotoServiceImpl
 import uk.ac.warwick.sso.client.trusted.TrustedApplication.HEADER_ERROR_CODE
 import uk.ac.warwick.sso.client.trusted.{CurrentApplication, EncryptedCertificate, TrustedApplicationsManager}
 import warwick.sso.UniversityID
@@ -61,10 +62,10 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
         val profileService = new ProfileServiceImpl(
           client,
           trustedApplicationsManager,
-          cache
-        ) {
-          configuration = config
-        }
+          cache,
+          new PhotoServiceImpl(config),
+          config
+        )
 
 
         block(profileService)

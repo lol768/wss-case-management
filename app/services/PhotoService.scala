@@ -1,21 +1,28 @@
-package services.tabula
+package services
 
 import java.security.MessageDigest
 
+import com.google.inject.ImplementedBy
 import javax.inject.Inject
 import play.api.Configuration
 import warwick.sso.UniversityID
 
-trait ProvidesPhotoUrl {
+@ImplementedBy(classOf[PhotoServiceImpl])
+trait PhotoService {
 
-  @Inject
-  protected var configuration: Configuration = _
+  def photoUrl(universityId: UniversityID): String
+
+}
+
+class PhotoServiceImpl @Inject()(
+  configuration: Configuration
+) extends PhotoService {
 
   private lazy val photosHost = configuration.get[String]("wellbeing.photos.host")
   private lazy val photosAppName = configuration.get[String]("wellbeing.photos.appname")
   private lazy val photosKey = configuration.get[String]("wellbeing.photos.key")
 
-  protected def photoUrl(universityId: UniversityID): String = {
+  override def photoUrl(universityId: UniversityID): String = {
     val hash = MessageDigest.getInstance("MD5").digest(s"$photosKey${universityId.string}".getBytes)
       .map("%02x".format(_)).mkString
 

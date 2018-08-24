@@ -4,8 +4,10 @@ import com.google.inject.ImplementedBy
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
 import javax.inject.Inject
+import play.api.Configuration
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
+import services.PhotoService
 import system.Logging
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
 
@@ -21,8 +23,10 @@ trait MemberSearchService {
 
 class MemberSearchServiceImpl @Inject()(
   ws: WSClient,
-  trustedApplicationsManager: TrustedApplicationsManager
-)(implicit ec: ExecutionContext) extends MemberSearchService with ProvidesPhotoUrl with Logging {
+  trustedApplicationsManager: TrustedApplicationsManager,
+  photoService: PhotoService,
+  configuration: Configuration
+)(implicit ec: ExecutionContext) extends MemberSearchService with Logging {
 
   private val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
   private val tabulaQueryUrl = configuration.get[String]("wellbeing.tabula.query")
@@ -47,7 +51,7 @@ class MemberSearchServiceImpl @Inject()(
           errors => handleValidationError(json, errors),
           data => {
             Right(data.map(result => result.copy(
-              photo = Some(photoUrl(result.universityID))
+              photo = Some(photoService.photoUrl(result.universityID))
             )).sorted)
           }
         )

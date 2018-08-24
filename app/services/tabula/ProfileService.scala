@@ -6,9 +6,11 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
 import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
 import javax.inject.Inject
+import play.api.Configuration
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
+import services.PhotoService
 import services.tabula.ProfileService._
 import system.Logging
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
@@ -31,8 +33,11 @@ object ProfileService {
 class ProfileServiceImpl  @Inject()(
   ws: WSClient,
   trustedApplicationsManager: TrustedApplicationsManager,
-  cache: AsyncCacheApi
-)(implicit ec: ExecutionContext) extends ProfileService with ProvidesPhotoUrl with Logging {
+  cache: AsyncCacheApi,
+  photoService: PhotoService,
+  configuration: Configuration
+)(implicit ec: ExecutionContext) extends ProfileService with Logging {
+
   private lazy val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
   private lazy val tabulaProfileUrl = configuration.get[String]("wellbeing.tabula.profile")
 
@@ -67,9 +72,9 @@ class ProfileServiceImpl  @Inject()(
             data => {
               val tabulaProfile = data.toUserProfile
               Right(tabulaProfile.copy(
-                photo = Some(photoUrl(universityID)),
-                personalTutors = tabulaProfile.personalTutors.map { p => p.copy(photo = Some(photoUrl(p.universityID))) },
-                researchSupervisors = tabulaProfile.researchSupervisors.map { p => p.copy(photo = Some(photoUrl(p.universityID))) }
+                photo = Some(photoService.photoUrl(universityID)),
+                personalTutors = tabulaProfile.personalTutors.map { p => p.copy(photo = Some(photoService.photoUrl(p.universityID))) },
+                researchSupervisors = tabulaProfile.researchSupervisors.map { p => p.copy(photo = Some(photoService.photoUrl(p.universityID))) }
               ))
             }
           )
