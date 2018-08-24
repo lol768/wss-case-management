@@ -6,6 +6,7 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain._
 import domain.dao.ClientSummaryDao.PersistedClientSummary
+import domain.dao.ClientSummaryDao.PersistedClientSummary.PersistedClientSummaries
 import helpers.JavaTime
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -22,6 +23,7 @@ trait ClientSummaryDao {
   def insert(universityID: UniversityID, data: ClientSummaryData): DBIO[PersistedClientSummary]
   def update(universityID: UniversityID, data: ClientSummaryData, version: OffsetDateTime): DBIO[PersistedClientSummary]
   def get(universityID: UniversityID): DBIO[Option[PersistedClientSummary]]
+  def all: DBIO[Seq[PersistedClientSummary]]
 }
 
 object ClientSummaryDao {
@@ -110,6 +112,9 @@ class ClientSummaryDaoImpl @Inject()(
 
   override def get(universityID: UniversityID): DBIO[Option[PersistedClientSummary]] =
     clientSummaries.table.filter(_.universityID === universityID).take(1).result.headOption
+
+  override def all: DBIO[Seq[PersistedClientSummary]] =
+    clientSummaries.table.result
 
 }
 

@@ -1,7 +1,5 @@
 package services.tabula
 
-import java.security.MessageDigest
-
 import com.google.inject.ImplementedBy
 import domain.SitsProfile
 import helpers.ServiceResults.{ServiceError, ServiceResult}
@@ -34,15 +32,11 @@ object ProfileService {
 class ProfileServiceImpl  @Inject()(
   ws: WSClient,
   trustedApplicationsManager: TrustedApplicationsManager,
-  configuration: Configuration,
+  val configuration: Configuration,
   cache: AsyncCacheApi
-)(implicit ec: ExecutionContext) extends ProfileService with Logging {
+)(implicit ec: ExecutionContext) extends ProfileService with ProvidesPhotoUrl with Logging {
   private val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
   private val tabulaProfileUrl = configuration.get[String]("wellbeing.tabula.profile")
-
-  private val photosHost = configuration.get[String]("wellbeing.photos.host")
-  private val photosAppName = configuration.get[String]("wellbeing.photos.appname")
-  private val photosKey = configuration.get[String]("wellbeing.photos.key")
 
   private lazy val ttlStrategy: ServiceResult[SitsProfile] => Ttl = a => a.fold(
     _ => Ttl(soft = 10.seconds, medium = 1.minute, hard = 1.hour),
@@ -96,13 +90,6 @@ class ProfileServiceImpl  @Inject()(
     }
     logger.error(s"Could not parse JSON result from Tabula:\n$json\n${serviceErrors.map(_.message).mkString("\n")}")
     Left(serviceErrors.toList)
-  }
-
-  private def photoUrl(universityId: UniversityID): String = {
-    val hash = MessageDigest.getInstance("MD5").digest(s"$photosKey${universityId.string}".getBytes)
-      .map("%02x".format(_)).mkString
-
-    s"https://$photosHost/$photosAppName/photo/$hash/${universityId.string}"
   }
 
 }

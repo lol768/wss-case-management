@@ -13,6 +13,9 @@ GET         /assets/*file                           @controllers.Assets.versione
 GET         /service/gtg                            @controllers.ServiceCheckController.gtg
 GET         /service/healthcheck                    @controllers.ServiceCheckController.healthcheck
 
+# Other services
+GET         /service/clientsearch                   @controllers.ClientSearchController.search(query: String ?= "")
+
 GET         /                                       @controllers.IndexController.home
 
 ## Clients ##
