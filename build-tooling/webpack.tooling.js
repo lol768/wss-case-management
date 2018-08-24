@@ -145,8 +145,8 @@ const minify = () => ({
 });
 
 
-const generateSourceMaps = ({ type }) => ({
-  devtool: type,
+const generateSourceMaps = (devtool) => ({
+  devtool,
 });
 
 export {
