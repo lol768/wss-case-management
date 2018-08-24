@@ -56,7 +56,7 @@ class RichResultField {
 
 /**
  * An AJAX autocomplete-style picker that can return a variety of different
- * result types, such as users, webgroups, and typed-in email addresses.
+ * result types, such as users or webgroups.
  *
  * The actual searching logic is handled by the corresponding controller -
  * this plugin just passes it option flags to tell it what to search.
@@ -67,7 +67,6 @@ export default class FlexiPicker {
   constructor(input, {
     includeUsers = true,
     includeGroups = false,
-    includeEmail = false,
     prefixGroups = '',
     universityId = false,
   } = {}) {
@@ -85,7 +84,6 @@ export default class FlexiPicker {
 
     this.includeUsers = includeUsers;
     this.includeGroups = includeGroups;
-    this.includeEmail = includeEmail;
     this.prefixGroups = prefixGroups;
     this.universityId = universityId;
 
@@ -100,7 +98,6 @@ export default class FlexiPicker {
         postJsonWithCredentials('/service/flexipicker', {
           includeUsers: this.includeUsers,
           includeGroups: this.includeGroups,
-          includeEmail: this.includeEmail,
           universityId: this.universityId,
           query,
         })
@@ -123,7 +120,21 @@ export default class FlexiPicker {
         let icon = '';
         if (item.type === 'user') icon = 'fa-user';
         else if (item.type === 'group') icon = 'fa-globe';
-        else if (item.type === 'email') icon = 'fa-envelope';
+
+        if (item.photo) {
+          return `
+            <div class="flexi-picker-result">
+              <div class="media-left">
+                <img class="media-object" src="${item.photo}" />
+              </div>
+              <div class="media-body">
+                <span class="title">${item.title}</span>
+                <div class="description">
+                  ${(typeof (item.description) !== 'undefined' ? item.description : '')}
+                </div>
+              </div>
+            </div>`;
+        }
 
         return `
           <div class="flexi-picker-result">
@@ -136,6 +147,7 @@ export default class FlexiPicker {
           </div>`;
       },
       highlighter: html => html,
+      changeInputOnMove: false,
       afterSelect: (item) => {
         const description = (
           typeof (item.description) !== 'undefined' ? ` (${item.description})` : ''
@@ -152,9 +164,7 @@ export default class FlexiPicker {
 
     if (item.type === 'user') {
       item.title = item.name;
-
-      const userType = (item.isStaff === 'true') ? 'Staff' : 'Student';
-      item.description = `${item.value}, ${userType}`;
+      item.description = `${item.value}, ${item.userType}`;
 
       if (item.department !== null) {
         item.description += `, ${item.department}`;
@@ -162,9 +172,6 @@ export default class FlexiPicker {
     } else if (item.type === 'group') {
       item.description = item.title;
       item.title = item.value;
-    } else if (item.type === 'email') {
-      item.title = item.name;
-      item.description = item.address;
     }
   }
 }
@@ -179,7 +186,6 @@ $.fn.flexiPicker = function initFlexiPicker(options = {}) {
 
     const allOptions = {
       includeGroups: $this.data('include-groups'),
-      includeEmail: $this.data('include-email'),
       includeUsers: $this.data('include-users') !== false,
       prefixGroups: $this.data('prefix-groups') || '',
       universityId: $this.data('universityid'),

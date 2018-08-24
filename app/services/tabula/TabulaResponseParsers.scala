@@ -7,7 +7,7 @@ import domain._
 import helpers.JavaTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, Usercode}
 
 object TabulaResponseParsers {
 
@@ -33,6 +33,7 @@ object TabulaResponseParsers {
     // A reduced Member object, defined again here so no cyclic dependency
     case class StudentRelationshipAgent(
       universityId: String,
+      userId: String,
       fullName: String,
       dateOfBirth: LocalDate,
       email: Option[String],
@@ -41,6 +42,7 @@ object TabulaResponseParsers {
     )
     val studentRelationshipAgentReads: Reads[StudentRelationshipAgent] = (
       (__ \ "universityId").read[String] and
+      (__ \ "userId").read[String] and
       (__ \ "fullName").read[String] and
       (__ \ "dateOfBirth").read[LocalDate] and
       (__ \ "email").readNullable[String] and
@@ -88,6 +90,7 @@ object TabulaResponseParsers {
 
     case class Member(
       universityId: String,
+      userId: String,
       fullName: String,
       dateOfBirth: LocalDate,
       phoneNumber: Option[String],
@@ -120,6 +123,7 @@ object TabulaResponseParsers {
             .map { agent =>
               SitsProfile(
                 universityID = UniversityID(agent.universityId),
+                usercode = Usercode(agent.userId),
                 fullName = agent.fullName,
                 dateOfBirth = agent.dateOfBirth,
                 phoneNumber = None,
@@ -151,6 +155,7 @@ object TabulaResponseParsers {
 
         SitsProfile(
           universityID = UniversityID(universityId),
+          usercode = Usercode(userId),
           fullName = fullName,
           dateOfBirth = dateOfBirth,
           phoneNumber = phoneNumber,
@@ -181,6 +186,7 @@ object TabulaResponseParsers {
     }
     val memberReads: Reads[Member] = (
       (__ \ "member" \ "universityId").read[String] and
+      (__ \ "member" \ "userId").read[String] and
       (__ \ "member" \ "fullName").read[String] and
       (__ \ "member" \ "dateOfBirth").read[LocalDate] and
       (__ \ "member" \ "mobileNumber").readNullable[String] and
@@ -243,6 +249,7 @@ object TabulaResponseParsers {
 
   case class MemberSearchResult(
     universityID: UniversityID,
+    usercode: Usercode,
     firstName: String,
     lastName: String,
     email: Option[String],
@@ -273,6 +280,7 @@ object TabulaResponseParsers {
 
   val memberSearchResultReads: Reads[MemberSearchResult] = (
     (__ \ "universityId").read[String].map[UniversityID](UniversityID.apply) and
+    (__ \ "userId").read[String].map[Usercode](Usercode.apply) and
     (__ \ "firstName").read[String] and
     (__ \ "lastName").read[String] and
     (__ \ "email").readNullable[String] and

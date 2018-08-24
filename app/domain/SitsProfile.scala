@@ -2,15 +2,16 @@ package domain
 
 import java.time.LocalDate
 
-import enumeratum.{Enum, EnumEntry}
 import enumeratum.EnumEntry.CapitalWords
-import warwick.sso.{Department, UniversityID}
+import enumeratum.{Enum, EnumEntry}
+import helpers.StringUtils._
+import warwick.sso.{UniversityID, Usercode}
 
 import scala.collection.immutable
-import helpers.StringUtils._
 
 case class SitsProfile(
   universityID: UniversityID,
+  usercode: Usercode,
   fullName: String,
   dateOfBirth: LocalDate,
   phoneNumber: Option[String],

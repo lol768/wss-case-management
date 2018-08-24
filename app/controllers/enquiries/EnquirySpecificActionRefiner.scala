@@ -46,7 +46,7 @@ class EnquirySpecificActionRefiner @Inject()(
       // or I am a sysadmin
       val hasPermissions: ServiceResult[Boolean] =
         if (request.context.user.isEmpty) Right(false)
-        else if (request.context.userHasRole(Sysadmin))
+        else if (request.context.actualUserHasRole(Sysadmin))
           Right(true)
         else if (request.context.user.flatMap(_.universityId).contains(request.enquiry.universityID))
           Right(true)
