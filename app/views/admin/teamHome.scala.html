@@ -12,6 +12,9 @@
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main(team.name) {
+  <form action="@routes.ClientSearchController.search()" method="get" class="client-search">
+    <input type="text" class="form-control input-lg" placeholder="Search for a client" />
+  </form>
 
   @if(enquiries.nonEmpty) {
     <h2>Enquiries requiring action</h2>
