@@ -75,17 +75,6 @@ const commonConfig = merge([
 const productionConfig = merge([
   {
     mode: 'production',
-    optimization: {
-      splitChunks: {
-        chunks: 'initial',
-      },
-      runtimeChunk: {
-        name: 'manifest',
-      },
-    },
-    performance: {
-      hints: 'error',
-    },
   },
   tooling.transpileJS(),
   tooling.minify(),
@@ -103,13 +92,10 @@ const developmentConfig = merge([
   tooling.generateSourceMaps('inline-cheap-source-map'),
 ]);
 
-module.exports = (env) => {
-  let config = merge(commonConfig, developmentConfig, { mode: env });
-
-
-  if (env === 'production') {
-    config = merge(commonConfig, productionConfig, { mode: env });
+module.exports = ({ production } = {}) => {
+  if (production) {
+    return merge(commonConfig, productionConfig);
+  } else {
+    return merge(commonConfig, developmentConfig);
   }
-
-  return config;
 };
