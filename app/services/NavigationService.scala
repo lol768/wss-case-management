@@ -52,13 +52,13 @@ class NavigationServiceImpl @Inject() (
   permission: PermissionService
 ) extends NavigationService {
 
-  private lazy val masquerade = Option(NavigationPage("Masquerade", controllers.admin.routes.MasqueradeController.masquerade()))
+  private lazy val masquerade = Option(NavigationPage("Masquerade", controllers.sysadmin.routes.MasqueradeController.masquerade()))
 
   private lazy val teams = Teams.all.map { team =>
     team -> NavigationPage(s"${team.name} Team", controllers.admin.routes.AdminController.teamHome(team.id))
   }
 
-  private def adminLinks(loginContext: LoginContext): Seq[Navigation] = {
+  private def sysadminLinks(loginContext: LoginContext): Seq[Navigation] = {
     loginContext.user.map { user =>
 
       val links: Seq[NavigationPage] = Seq(
@@ -68,7 +68,7 @@ class NavigationServiceImpl @Inject() (
 
       if (links.nonEmpty) {
         Seq(
-          NavigationDropdown("Admin", controllers.admin.routes.MasqueradeController.masquerade(), links)
+          NavigationDropdown("Sysadmin", controllers.sysadmin.routes.MasqueradeController.masquerade(), links)
         )
       } else {
         Nil
@@ -90,5 +90,5 @@ class NavigationServiceImpl @Inject() (
     }
 
   override def getNavigation(loginContext: LoginContext): Seq[Navigation] =
-    adminLinks(loginContext) ++ teamLinks(loginContext)
+    sysadminLinks(loginContext) ++ teamLinks(loginContext)
 }

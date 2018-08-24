@@ -1,6 +1,7 @@
-/* eslint-env browser, jquery */
+/* eslint-env browser */
 
 import _ from 'lodash-es';
+import $ from 'jquery';
 import * as DateFormats from './dateFormats';
 
 function getValue(value) {
@@ -11,7 +12,6 @@ function getValue(value) {
 }
 
 export default function FieldHistory(container) {
-  const $ = jQuery;
   const $container = $(container);
   $.get($container.data('href')).done((data) => {
     $container.find('[data-field-history]').each((j, term) => {
