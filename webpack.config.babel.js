@@ -27,9 +27,11 @@ const commonConfig = merge([
       publicPath: paths.PUBLIC_PATH,
     },
     node: {
+      // Fix Webpack global CSP violation https://github.com/webpack/webpack/issues/6461
       global: false,
     },
     plugins: [
+      // Fix Webpack global CSP violation https://github.com/webpack/webpack/issues/6461
       new ProvidePlugin({
         global: require.resolve('./build-tooling/global.js'),
       }),
