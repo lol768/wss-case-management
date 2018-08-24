@@ -61,7 +61,7 @@ class ProfileServiceImpl  @Inject()(
       ).asScala.map(h => h.getName -> h.getValue).toSeq
 
       val jsonResponse = request.addHttpHeaders(trustedHeaders: _*).get()
-        .map(r => ServiceResults.throwableToError(Some("Trusted apps integration error")) {
+        .map(r => ServiceResults.catchAsServiceError(Some("Trusted apps integration error")) {
           TrustedAppsHelper.validateResponse(url, r).json
         })
 

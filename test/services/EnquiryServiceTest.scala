@@ -1,51 +1,100 @@
 package services
 
-import domain.{Enquiry, Fixtures, MessageData, MessageSender}
-import helpers.JavaTime
-import org.scalatest.FunSuite
-import org.scalatestplus.play.PlaySpec
+import domain._
+import domain.dao.{AbstractDaoTest, DaoRunner}
+import helpers.{JavaTime, TestApplications}
+import org.scalatest.BeforeAndAfterAll
+import play.api.inject.guice.GuiceApplicationBuilder
+import uk.ac.warwick.util.core.DateTimeUtils
+import warwick.sso.UniversityID
+import play.api.inject.bind
 
-class EnquiryServiceTest extends PlaySpec {
+import scala.util.Random
 
-  import services.EnquiryService._
+class EnquiryServiceTest extends AbstractDaoTest {
 
-  type Item = (Enquiry, Seq[MessageData])
+  override def fakeApplicationBuilder: GuiceApplicationBuilder =
+    super.fakeApplicationBuilder
+      .overrides(
+        bind[NotificationService].to[NullNotificationService]
+      )
 
-  val enquiryToday = Enquiry(universityID = null, team = null)
-  val enquiryLastWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.minusWeeks(1))
-  val enquiryNextWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.plusWeeks(1))
+  val enquiryService = get[EnquiryService]
+  val runner = get[DaoRunner]
 
-  val messageTomorrow = MessageData("hello", MessageSender.Client, JavaTime.offsetDateTime.plusDays(1))
-  val messageLastWeek = MessageData("hello", MessageSender.Client, JavaTime.offsetDateTime.minusWeeks(1))
+  import profile.api._
 
-  "lastModified" should {
+  val uniId1 = UniversityID("1")
 
-    "always use enquiry if no messages" in {
-      lastModified((enquiryLastWeek, Nil)) mustBe enquiryLastWeek.version
-    }
-
-    "use enquiry date if newer" in {
-      lastModified((enquiryToday, Seq(messageLastWeek, messageLastWeek))) mustBe enquiryToday.version
-    }
-
-    "use most recent message if newer" in {
-      lastModified((enquiryLastWeek, Seq(messageLastWeek, messageTomorrow))) mustBe messageTomorrow.created
-    }
-
+  trait DataFixture {
+    def setup(): Unit
+    def teardown(): Unit
   }
 
-  "sortByRecent" should {
-    "sort descending" in {
-      val item1: Item = (enquiryLastWeek, Nil)
-      val item2: Item = (enquiryToday, Seq(messageLastWeek))
-      val item3: Item = (enquiryLastWeek, Seq(messageLastWeek, messageTomorrow))
+  class EnquiriesFixture(addMessages: Boolean) extends DataFixture {
+    override def setup(): Unit = {
+      for (_ <- 1 to 10) {
+        val enquiryDate = JavaTime.offsetDateTime.minusDays(10L).plusHours(Random.nextInt(24*20).toLong)
+        val enquiry = enquiryService.save(Enquiry(
+          universityID = uniId1,
+          team = Teams.StudentSupport,
+          version = enquiryDate,
+          created = enquiryDate
+        ), MessageSave(
+          "Hello", MessageSender.Client, None
+        )).serviceValue
 
-      sortByRecent(Seq(
-        item3, item1, item2
-      )) mustBe Seq(
-        item3, item2, item1
-      )
+        /*for (_ <- 1 to 10) {
+          val messageDate = enquiryDate.plusHours(Random.nextInt(1000).toLong)
+          DateTimeUtils.useMockDateTime(messageDate.toInstant, () => {
+            enquiryService.addMessage(enquiry, MessageSave("Reply!", MessageSender.Team, None))
+          })
+        }*/
+      }
     }
+
+    override def teardown(): Unit = {
+      runner.run(
+        Enquiry.enquiries.table.delete andThen
+          Enquiry.enquiries.versionsTable.delete andThen
+          Message.messages.table.delete andThen
+          Message.messages.versionsTable.delete andThen
+          Message.messageClients.delete
+      ).futureValue
+    }
+  }
+
+
+
+  def withData(data: DataFixture)(fn: => Unit) = {
+    try {
+      data.setup()
+      fn
+    } finally {
+      data.teardown()
+    }
+  }
+
+  "querying by client" should {
+
+    "sort enquiries by own version if no other messages" in {
+      withData(new EnquiriesFixture(addMessages = false)) {
+        val result = enquiryService.findEnquiriesForClient(uniId1).serviceValue
+        val enquiries = result.map(_._1)
+        val ids = enquiries.map(e => (e.id, e.version)).mkString("\n")
+        val idsSorted = enquiries.sortBy(_.version).reverse.map(e => (e.id, e.version)).mkString("\n")
+        ids mustBe idsSorted
+      }
+    }
+
+    "sort enquiries by message version if newer" ignore {
+      withData(new EnquiriesFixture(addMessages = true)) {
+        val result = enquiryService.findEnquiriesForClient(uniId1).serviceValue
+        // TODO check that sorting is as expected (most recent message/enquiry timestamp)
+        ???
+      }
+    }
+
   }
 
 }
