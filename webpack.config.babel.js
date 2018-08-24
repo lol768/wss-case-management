@@ -2,6 +2,7 @@ import path from 'path';
 import EventEmitter from 'events';
 import WebpackNotifierPlugin from 'webpack-notifier';
 import RemovePlugin from 'remove-files-webpack-plugin';
+import { ProvidePlugin } from 'webpack';
 
 import PlayFingerprintsPlugin from './build-tooling/PlayFingerprintsPlugin';
 import WatchEventsPlugin from './build-tooling/WatchEventsPlugin';
@@ -25,7 +26,13 @@ const commonConfig = merge([
       path: paths.ASSETS,
       publicPath: paths.PUBLIC_PATH,
     },
+    node: {
+      global: false,
+    },
     plugins: [
+      new ProvidePlugin({
+        global: require.resolve('./build-tooling/global.js'),
+      }),
       new PlayFingerprintsPlugin(),
       new RemovePlugin({
         before: {
