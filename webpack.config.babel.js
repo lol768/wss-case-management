@@ -48,6 +48,9 @@ const commonConfig = merge([
         id7: paths.ID7,
       },
     },
+    externals: {
+      jquery: 'jQuery'
+    }
   },
   tooling.lintJS(),
   tooling.transpileJS({
@@ -102,6 +105,7 @@ const developmentConfig = merge([
 
 module.exports = (env) => {
   let config = merge(commonConfig, developmentConfig, { mode: env });
+
 
   if (env === 'production') {
     config = merge(commonConfig, productionConfig, { mode: env });
