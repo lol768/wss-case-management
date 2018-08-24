@@ -29,13 +29,11 @@ class ClientController @Inject()(
 
   val form = Form(mapping(
     "high-mental-health-risk" -> optional(boolean),
-    "fields" -> mapping(
-      "notes" -> text,
-      "alternative-contact-number" -> text,
-      "alternative-email-address" -> text,
-      "risk-status" -> optional(ClientRiskStatus.formField),
-      "reasonable-adjustments" -> set(ReasonableAdjustment.formField),
-    )(ClientSummaryFields.apply)(ClientSummaryFields.unapply)
+    "notes" -> text,
+    "alternative-contact-number" -> text,
+    "alternative-email-address" -> text,
+    "risk-status" -> optional(ClientRiskStatus.formField),
+    "reasonable-adjustments" -> set(ReasonableAdjustment.formField)
   )(ClientSummaryData.apply)(ClientSummaryData.unapply))
 
   private def clientInformation(universityID: UniversityID): Future[ServiceResult[(SitsProfile, Option[Registration], Option[ClientSummary])]] = {

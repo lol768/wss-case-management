@@ -144,20 +144,20 @@
   <h2>Client summary</h2>
 
   @b3.vertical.formCSRF(controllers.admin.routes.ClientController.updateSummary(profile.universityID)) { implicit ifc =>
-    @b3.textarea(form("fields.notes"),
+    @b3.textarea(form("notes"),
       '_label -> "Notes",
       'rows -> 5
     )
 
-    @b3.text(form("fields.alternative-contact-number"),
+    @b3.text(form("alternative-contact-number"),
       '_label -> "Alternative contact number"
     )
 
-    @b3.email(form("fields.alternative-email-address"),
+    @b3.email(form("alternative-email-address"),
       '_label -> "Alternative email address"
     )
 
-    @b3.select(form("fields.risk-status"),
+    @b3.select(form("risk-status"),
       options = ClientRiskStatus.values.map { s => s.entryName -> s.entryName },
       '_label -> "Risk status",
       '_default -> ""
@@ -167,7 +167,7 @@
       label = "Reasonable adjustments",
       items = ReasonableAdjustment.values,
       form = form,
-      field = "fields.reasonable-adjustments",
+      field = "reasonable-adjustments",
       idPrefix = "reasonable-adjustment"
     )
 

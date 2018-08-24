@@ -9,7 +9,7 @@ import domain.dao.ClientSummaryDao.PersistedClientSummary
 import helpers.JavaTime
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.JsValue
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{Index, PrimaryKey, ProvenShape}
@@ -48,7 +48,11 @@ object ClientSummaryDao {
       updatedDate = version,
       data = ClientSummaryData(
         highMentalHealthRisk = highMentalHealthRisk,
-        fields = data.validate[ClientSummaryFields](ClientSummaryFields.formatter).get
+        notes = data("notes").as[String],
+        alternativeContactNumber = data("alternativeContactNumber").as[String],
+        alternativeEmailAddress = data("alternativeEmailAddress").as[String],
+        riskStatus = data("riskStatus").asOpt[ClientRiskStatus],
+        reasonableAdjustments = data("reasonableAdjustments").as[Set[ReasonableAdjustment]]
       )
     )
   }
@@ -106,14 +110,14 @@ class ClientSummaryDaoImpl @Inject()(
     clientSummaries.insert(PersistedClientSummary(
       universityID,
       data.highMentalHealthRisk,
-      Json.toJson(data.fields)(ClientSummaryFields.formatter)
+      data.getJsonFields
     ))
 
   override def update(universityID: UniversityID, data: ClientSummaryData, version: OffsetDateTime): DBIO[PersistedClientSummary] =
     clientSummaries.update(PersistedClientSummary(
       universityID,
       data.highMentalHealthRisk,
-      Json.toJson(data.fields)(ClientSummaryFields.formatter),
+      data.getJsonFields,
       version
     ))
 

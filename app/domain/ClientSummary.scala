@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.JavaTime
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, JsValue, Json}
 import warwick.sso.UniversityID
 
 import scala.collection.immutable
@@ -15,21 +15,25 @@ case class ClientSummary(
   updatedDate: OffsetDateTime = JavaTime.offsetDateTime,
 )
 
+object ClientSummaryData {
+  val formatter: Format[ClientSummaryData] = Json.format[ClientSummaryData]
+}
+
 case class ClientSummaryData(
   highMentalHealthRisk: Option[Boolean],
-  fields: ClientSummaryFields
-)
-
-case class ClientSummaryFields(
   notes: String,
   alternativeContactNumber: String,
   alternativeEmailAddress: String,
   riskStatus: Option[ClientRiskStatus],
   reasonableAdjustments: Set[ReasonableAdjustment]
-)
-
-object ClientSummaryFields {
-  implicit val formatter: Format[ClientSummaryFields] = Json.format[ClientSummaryFields]
+) {
+  def getJsonFields: JsValue = Json.obj(
+    "notes" -> notes,
+    "alternativeContactNumber" -> alternativeContactNumber,
+    "alternativeEmailAddress" -> alternativeEmailAddress,
+    "riskStatus" -> riskStatus,
+    "reasonableAdjustments" -> reasonableAdjustments
+  )
 }
 
 sealed trait ClientRiskStatus extends EnumEntry

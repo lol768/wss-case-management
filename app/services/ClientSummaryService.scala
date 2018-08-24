@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 
 import com.google.inject.ImplementedBy
 import domain.dao.{ClientSummaryDao, DaoRunner}
-import domain.{ClientSummary, ClientSummaryData, ClientSummaryFields}
+import domain.{ClientSummary, ClientSummaryData}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
@@ -31,10 +31,7 @@ class ClientSummaryServiceImpl @Inject()(
       'SaveClientSummary,
       universityID.string,
       'ClientSummary,
-      Json.obj(
-        "highMentalHealthRisk" -> data.highMentalHealthRisk,
-        "fields" -> Json.toJson(data.fields)(ClientSummaryFields.formatter)
-      )
+      Json.toJson(data)(ClientSummaryData.formatter)
     ) {
       daoRunner.run(dao.insert(universityID, data)).map(_.parsed).map(Right.apply)
     }
@@ -44,10 +41,7 @@ class ClientSummaryServiceImpl @Inject()(
       'UpdateClientSummary,
       universityID.string,
       'ClientSummary,
-      Json.obj(
-        "highMentalHealthRisk" -> data.highMentalHealthRisk,
-        "fields" -> Json.toJson(data.fields)(ClientSummaryFields.formatter)
-      )
+      Json.toJson(data)(ClientSummaryData.formatter)
     ) {
       daoRunner.run(dao.update(universityID, data, version)).map(_.parsed).map(Right.apply)
     }

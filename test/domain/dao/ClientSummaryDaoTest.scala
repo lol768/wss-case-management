@@ -22,13 +22,11 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
 
         val data = ClientSummaryData(
           highMentalHealthRisk = Some(false),
-          fields = ClientSummaryFields(
-            notes = "Some guy doing something\n\ngood for him",
-            alternativeContactNumber = "07777123456",
-            alternativeEmailAddress = "nobody@example.com",
-            riskStatus = Some(ClientRiskStatus.Medium),
-            reasonableAdjustments = Set(ReasonableAdjustment.Exam5, ReasonableAdjustment.ExtendedDeadlines)
-          )
+          notes = "Some guy doing something\n\ngood for him",
+          alternativeContactNumber = "07777123456",
+          alternativeEmailAddress = "nobody@example.com",
+          riskStatus = Some(ClientRiskStatus.Medium),
+          reasonableAdjustments = Set(ReasonableAdjustment.Exam5, ReasonableAdjustment.ExtendedDeadlines)
         )
 
         val test = for {
@@ -41,11 +39,11 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
             result.universityID mustBe uniID
             result.version.toInstant.equals(now) mustBe true
             result.parsed.data.highMentalHealthRisk mustBe data.highMentalHealthRisk
-            result.parsed.data.fields.notes mustBe data.fields.notes
-            result.parsed.data.fields.alternativeContactNumber mustBe data.fields.alternativeContactNumber
-            result.parsed.data.fields.alternativeEmailAddress mustBe data.fields.alternativeEmailAddress
-            result.parsed.data.fields.riskStatus mustBe data.fields.riskStatus
-            result.parsed.data.fields.reasonableAdjustments mustBe data.fields.reasonableAdjustments
+            result.parsed.data.notes mustBe data.notes
+            result.parsed.data.alternativeContactNumber mustBe data.alternativeContactNumber
+            result.parsed.data.alternativeEmailAddress mustBe data.alternativeEmailAddress
+            result.parsed.data.riskStatus mustBe data.riskStatus
+            result.parsed.data.reasonableAdjustments mustBe data.reasonableAdjustments
 
             existsAfter.isEmpty mustBe false
             existsAfter mustBe Some(result)
@@ -61,24 +59,20 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
 
       val data = ClientSummaryData(
         highMentalHealthRisk = Some(false),
-        fields = ClientSummaryFields(
-          notes = "Some guy doing something\n\ngood for him",
-          alternativeContactNumber = "07777123456",
-          alternativeEmailAddress = "nobody@example.com",
-          riskStatus = Some(ClientRiskStatus.Medium),
-          reasonableAdjustments = Set(ReasonableAdjustment.Exam5, ReasonableAdjustment.ExtendedDeadlines)
-        )
+        notes = "Some guy doing something\n\ngood for him",
+        alternativeContactNumber = "07777123456",
+        alternativeEmailAddress = "nobody@example.com",
+        riskStatus = Some(ClientRiskStatus.Medium),
+        reasonableAdjustments = Set(ReasonableAdjustment.Exam5, ReasonableAdjustment.ExtendedDeadlines)
       )
 
       val updatedData = data.copy(
         highMentalHealthRisk = Some(true),
-        fields = ClientSummaryFields(
-          notes = "Ah okay then.",
-          alternativeContactNumber = "0181 811 8181",
-          alternativeEmailAddress = "other@something-else.com",
-          riskStatus = Some(ClientRiskStatus.High),
-          reasonableAdjustments = Set()
-        )
+        notes = "Ah okay then.",
+        alternativeContactNumber = "0181 811 8181",
+        alternativeEmailAddress = "other@something-else.com",
+        riskStatus = Some(ClientRiskStatus.High),
+        reasonableAdjustments = Set()
       )
 
       val earlier = ZonedDateTime.of(2018, 1, 1, 10, 0, 0, 0, JavaTime.timeZone).toInstant
@@ -97,11 +91,11 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
           updated.universityID mustBe uniID
           updated.version.toInstant.equals(now) mustBe true
           updated.parsed.data.highMentalHealthRisk mustBe updatedData.highMentalHealthRisk
-          updated.parsed.data.fields.notes mustBe updatedData.fields.notes
-          updated.parsed.data.fields.alternativeContactNumber mustBe updatedData.fields.alternativeContactNumber
-          updated.parsed.data.fields.alternativeEmailAddress mustBe updatedData.fields.alternativeEmailAddress
-          updated.parsed.data.fields.riskStatus mustBe updatedData.fields.riskStatus
-          updated.parsed.data.fields.reasonableAdjustments mustBe updatedData.fields.reasonableAdjustments
+          updated.parsed.data.notes mustBe updatedData.notes
+          updated.parsed.data.alternativeContactNumber mustBe updatedData.alternativeContactNumber
+          updated.parsed.data.alternativeEmailAddress mustBe updatedData.alternativeEmailAddress
+          updated.parsed.data.riskStatus mustBe updatedData.riskStatus
+          updated.parsed.data.reasonableAdjustments mustBe updatedData.reasonableAdjustments
         })
       } yield updated
 
