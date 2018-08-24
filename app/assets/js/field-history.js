@@ -18,7 +18,7 @@ export default function FieldHistory(container) {
       const $term = $(term);
       const $field = $term.data('field-history');
       if ($field && data[$field] && data[$field].length > 1) {
-        $term.append($('<i/>').addClass('fa fa-history').prop({
+        $term.append($('<i/>').addClass('fa fa-history has-popover').prop({
           title: 'View history',
         }).data('field-history-data', data[$field]));
       }
