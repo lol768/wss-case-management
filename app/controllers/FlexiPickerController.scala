@@ -176,7 +176,7 @@ class FlexiPickerController @Inject()(
                 }
 
               case _ => false
-            }
+            }.distinct
 
             Ok(Json.toJson(API.Success(data = Json.obj(
               "results" -> results.map(Json.toJson(_)(FlexiPickerResult.writesFlexiPickerResult))
