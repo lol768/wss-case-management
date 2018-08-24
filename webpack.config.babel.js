@@ -78,7 +78,7 @@ const productionConfig = merge([
   },
   tooling.transpileJS(),
   tooling.minify(),
-  tooling.generateSourceMaps('hidden-source-map'),
+  tooling.generateSourceMaps('source-map'),
 ]);
 
 const developmentConfig = merge([
