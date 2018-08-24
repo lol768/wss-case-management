@@ -9,6 +9,14 @@
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                           @controllers.Assets.versioned(path="/public", file: Asset)
 
+# Service health check
+GET         /service/gtg                            @controllers.ServiceCheckController.gtg
+GET         /service/healthcheck                    @controllers.ServiceCheckController.healthcheck
+
+# Other services
+POST        /service/flexipicker                    @controllers.FlexiPickerController.queryJson
+GET         /service/clientsearch                   @controllers.ClientSearchController.search(query: String ?= "")
+
 GET         /                                       @controllers.IndexController.home
 
 ## Clients ##
@@ -39,12 +47,6 @@ POST        /team/enquiry/:id/reassign              @controllers.admin.TeamEnqui
 ## Admins/Sysadmins ##
 
 GET         /sysadmin/masquerade                    @controllers.sysadmin.MasqueradeController.masquerade
-
-## Service controllers ##
-
-GET         /service/gtg                            @controllers.ServiceCheckController.gtg
-GET         /service/healthcheck                    @controllers.ServiceCheckController.healthcheck
-POST        /service/flexipicker                    @controllers.FlexiPickerController.queryJson
 
 ## Fallbacks ##
 
