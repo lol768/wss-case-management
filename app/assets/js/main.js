@@ -38,9 +38,9 @@ $(() => {
         closePopover($target.closest('.popover'));
       }
     }).on('keyup.popoverDismiss', (e) => {
-    const key = e.which || e.keyCode;
-    if (key === 27) {
-      $('.popover').each((i, popover) => closePopover($(popover)));
-    }
-  });
+      const key = e.which || e.keyCode;
+      if (key === 27) {
+        $('.popover').each((i, popover) => closePopover($(popover)));
+      }
+    });
 });
