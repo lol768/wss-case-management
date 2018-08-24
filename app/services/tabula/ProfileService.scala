@@ -1,7 +1,5 @@
 package services.tabula
 
-import java.security.MessageDigest
-
 import com.google.inject.ImplementedBy
 import domain.SitsProfile
 import helpers.ServiceResults.{ServiceError, ServiceResult}
@@ -12,6 +10,7 @@ import play.api.Configuration
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
+import services.PhotoService
 import services.tabula.ProfileService._
 import system.Logging
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
@@ -34,15 +33,13 @@ object ProfileService {
 class ProfileServiceImpl  @Inject()(
   ws: WSClient,
   trustedApplicationsManager: TrustedApplicationsManager,
-  configuration: Configuration,
-  cache: AsyncCacheApi
+  cache: AsyncCacheApi,
+  photoService: PhotoService,
+  configuration: Configuration
 )(implicit ec: ExecutionContext) extends ProfileService with Logging {
-  private val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
-  private val tabulaProfileUrl = configuration.get[String]("wellbeing.tabula.profile")
 
-  private val photosHost = configuration.get[String]("wellbeing.photos.host")
-  private val photosAppName = configuration.get[String]("wellbeing.photos.appname")
-  private val photosKey = configuration.get[String]("wellbeing.photos.key")
+  private lazy val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
+  private lazy val tabulaProfileUrl = configuration.get[String]("wellbeing.tabula.profile")
 
   private lazy val ttlStrategy: ServiceResult[SitsProfile] => Ttl = a => a.fold(
     _ => Ttl(soft = 10.seconds, medium = 1.minute, hard = 1.hour),
@@ -75,9 +72,9 @@ class ProfileServiceImpl  @Inject()(
             data => {
               val tabulaProfile = data.toUserProfile
               Right(tabulaProfile.copy(
-                photo = Some(photoUrl(universityID)),
-                personalTutors = tabulaProfile.personalTutors.map { p => p.copy(photo = Some(photoUrl(p.universityID))) },
-                researchSupervisors = tabulaProfile.researchSupervisors.map { p => p.copy(photo = Some(photoUrl(p.universityID))) }
+                photo = Some(photoService.photoUrl(universityID)),
+                personalTutors = tabulaProfile.personalTutors.map { p => p.copy(photo = Some(photoService.photoUrl(p.universityID))) },
+                researchSupervisors = tabulaProfile.researchSupervisors.map { p => p.copy(photo = Some(photoService.photoUrl(p.universityID))) }
               ))
             }
           )
@@ -96,13 +93,6 @@ class ProfileServiceImpl  @Inject()(
     }
     logger.error(s"Could not parse JSON result from Tabula:\n$json\n${serviceErrors.map(_.message).mkString("\n")}")
     Left(serviceErrors.toList)
-  }
-
-  private def photoUrl(universityId: UniversityID): String = {
-    val hash = MessageDigest.getInstance("MD5").digest(s"$photosKey${universityId.string}".getBytes)
-      .map("%02x".format(_)).mkString
-
-    s"https://$photosHost/$photosAppName/photo/$hash/${universityId.string}"
   }
 
 }
