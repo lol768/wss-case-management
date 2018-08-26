@@ -28,10 +28,7 @@ class PermissionServiceImpl @Inject() (
 
   override def inTeam(user: Usercode, team: Team): ServiceResult[Boolean] =
     groupService.isUserInGroup(user, webgroupFor(team)).fold(
-      e => Left(List(new ServiceError {
-        override def message: String = e.getMessage
-        override def cause = Some(e)
-      })),
+      e => ServiceResults.exceptionToServiceResult(e),
       r => Right(r)
     )
 
