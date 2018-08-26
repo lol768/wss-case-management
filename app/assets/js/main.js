@@ -5,6 +5,7 @@ import $ from 'jquery';
 import 'core-js/modules/es6.object.assign';
 import FieldHistory from './field-history';
 import ClientSearch from './client-search';
+import 'jquery.AreYouSure';
 
 $(() => {
   $('[data-toggle="popover"]').popover();
@@ -20,4 +21,6 @@ $(() => {
   $('body').on('click', '.popover .close', (e) => {
     $(e.target).closest('.popover').data('bs.popover').$element.popover('hide');
   });
+
+  $('form.dirty-check').areYouSure();
 });

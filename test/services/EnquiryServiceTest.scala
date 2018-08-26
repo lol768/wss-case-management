@@ -11,7 +11,7 @@ class EnquiryServiceTest extends PlaySpec {
 
   type Item = (Enquiry, Seq[MessageData])
 
-  val enquiryToday = Enquiry(universityID = null, team = null)
+  val enquiryToday = Enquiry(universityID = null, subject = null, team = null)
   val enquiryLastWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.minusWeeks(1))
   val enquiryNextWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.plusWeeks(1))
 

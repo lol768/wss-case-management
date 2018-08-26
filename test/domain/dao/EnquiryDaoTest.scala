@@ -15,6 +15,7 @@ class EnquiryDaoTest extends AbstractDaoTest {
 
   val newEnquiry = Enquiry(
     universityID = UniversityID("0123456"),
+    subject = "Please help",
     team = Teams.StudentSupport
   )
 

@@ -6,7 +6,6 @@ import domain._
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.data.Form
-import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, RequestHeader}
 import services.{EnquiryService, SecurityService}
@@ -23,26 +22,23 @@ class EnquiryController @Inject()(
 
   import securityService._
 
-  private val baseForm = Form(mapping(
-    "text" -> nonEmptyText
-  )(Data.apply)(Data.unapply))
-
   private val initialTeam: Team = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
 
   private def render(f: Form[Data])(implicit req: RequestHeader) =
     Ok(views.html.enquiry.form(f))
 
   def form(): Action[AnyContent] = SigninRequiredAction { implicit request =>
-    render(baseForm)
+    render(Enquiry.form)
   }
 
   def submit(): Action[AnyContent] = SigninRequiredAction.async { implicit request =>
-    baseForm.bindFromRequest().fold(
+    Enquiry.form.bindFromRequest().fold(
       formWithErrors => Future.successful(render(formWithErrors)),
       formData => {
         val enquiry = Enquiry(
           id = None,
           universityID = request.context.user.get.universityId.get,
+          subject = formData.subject,
           team = initialTeam
         )
 
