@@ -6,7 +6,8 @@ import java.util.{Date, UUID}
 import akka.Done
 import javax.inject.Inject
 import org.quartz._
-import services.{EmailService, TimingContext}
+import services.EmailService
+import services.timing.TimingContext
 import system.Logging
 
 import scala.concurrent.duration.Duration

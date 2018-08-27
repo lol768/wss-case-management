@@ -1,5 +1,6 @@
 package services
-import services.TimingService.Category
+import services.timing.{TimingContext, TimingService}
+import services.timing.TimingService.Category
 
 import scala.concurrent.Future
 

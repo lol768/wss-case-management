@@ -5,7 +5,7 @@ import javax.inject.Inject
 import play.api.libs.typedmap.TypedKey
 import play.api.mvc.{Filter, RequestHeader, Result}
 import play.api.routing.Router
-import services.TimingContext
+import services.timing.TimingContext
 
 import scala.concurrent.{ExecutionContext, Future}
 

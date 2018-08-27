@@ -2,7 +2,8 @@ package controllers
 
 import play.api.Configuration
 import play.api.mvc.{Flash, RequestHeader}
-import services.{Navigation, TimingContext}
+import services.Navigation
+import services.timing.TimingContext
 import system.ServerTimingFilter
 import warwick.sso.{AuthenticatedRequest, SSOClient, User}
 

@@ -6,6 +6,7 @@ import helpers.ServiceResults
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
+import services.timing.TimingService
 import warwick.sso.{GroupName, GroupService, Usercode}
 
 @ImplementedBy(classOf[PermissionServiceImpl])

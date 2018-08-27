@@ -7,6 +7,7 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.Inject
 import play.api.Configuration
 import play.api.libs.mailer.Email
+import services.timing.TimingContext
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.sso._

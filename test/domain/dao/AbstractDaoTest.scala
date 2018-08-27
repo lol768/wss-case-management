@@ -7,7 +7,7 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.db.slick.DatabaseConfigProvider
 import services.AuditLogContext
-import services.TimingContext
+import services.timing.TimingContext
 import slick.basic.DatabaseConfig
 import slick.dbio.{DBIO, DBIOAction}
 import slick.jdbc.JdbcProfile

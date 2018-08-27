@@ -13,6 +13,7 @@ import org.quartz.{JobBuilder, JobKey, Scheduler, TriggerBuilder}
 import play.api.libs.json.Json
 import play.api.libs.mailer.{Email, MailerClient}
 import services.job.SendOutgoingEmailJob
+import services.timing.TimingContext
 import system.Logging
 import warwick.sso.{User, UserLookupService}
 

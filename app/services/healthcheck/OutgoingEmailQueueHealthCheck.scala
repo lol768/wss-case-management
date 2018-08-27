@@ -2,7 +2,8 @@ package services.healthcheck
 
 import com.google.inject.Inject
 import helpers.JavaTime
-import services.{EmailService, TimingContext}
+import services.EmailService
+import services.timing.TimingContext
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

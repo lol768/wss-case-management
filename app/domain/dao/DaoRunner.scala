@@ -3,7 +3,7 @@ package domain.dao
 import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import services.{TimingContext, TimingService}
+import services.timing.{TimingContext, TimingService}
 import slick.jdbc.JdbcProfile
 import system.TimingCategories
 

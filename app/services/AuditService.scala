@@ -9,6 +9,7 @@ import helpers.ConditionalChain._
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
+import services.timing.TimingContext
 import uk.ac.warwick.util.logging.AuditLogger
 import uk.ac.warwick.util.logging.AuditLogger.RequestInformation
 import warwick.sso.Usercode
