@@ -2,7 +2,8 @@ package controllers
 
 import play.api.Configuration
 import play.api.mvc.{Flash, RequestHeader}
-import services.Navigation
+import services.{Navigation, TimingContext}
+import system.ServerTimingFilter
 import warwick.sso.{AuthenticatedRequest, SSOClient, User}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -20,8 +21,9 @@ case class RequestContext(
   navigation: Seq[Navigation],
   flash: Flash,
   userAgent: Option[String],
-  ipAddress: String
-) {
+  ipAddress: String,
+  timingData: TimingContext.Data
+) extends TimingContext {
   def isMasquerading: Boolean = user != actualUser
 }
 
@@ -54,7 +56,8 @@ object RequestContext {
       navigation = navigation,
       flash = Try(request.flash).getOrElse(Flash()),
       userAgent = request.headers.get("User-Agent"),
-      ipAddress = request.remoteAddress
+      ipAddress = request.remoteAddress,
+      timingData = request.attrs(ServerTimingFilter.TimingData)
     )
   }
 

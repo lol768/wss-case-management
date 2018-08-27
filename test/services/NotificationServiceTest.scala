@@ -2,7 +2,7 @@ package services
 
 import domain.Teams
 import helpers.JavaTime
-import org.mockito.Matchers
+import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Success
 
-class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutures {
+class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutures with NoTimeTracking {
 
   private trait Fixture {
     val config = Configuration.from(Map(
@@ -66,8 +66,8 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
         Usercode("u000002") -> user2,
       )))
 
-      when(emailService.queue(Matchers.any(), Matchers.any())).thenReturn(Future.successful(Right(Nil)))
-      when(myWarwickService.sendAsNotification(Matchers.any())).thenReturn(FutureConverters.toJava(Future.successful(List(
+      when(emailService.queue(any(), any())(any())).thenReturn(Future.successful(Right(Nil)))
+      when(myWarwickService.sendAsNotification(any())).thenReturn(FutureConverters.toJava(Future.successful(List(
         new Response()
       ).asJava)).toCompletableFuture)
 
@@ -109,8 +109,8 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
         universityID -> user
       )))
 
-      when(emailService.queue(Matchers.any(), Matchers.any())).thenReturn(Future.successful(Right(Nil)))
-      when(myWarwickService.sendAsNotification(Matchers.any())).thenReturn(FutureConverters.toJava(Future.successful(List(
+      when(emailService.queue(any(), any())(any())).thenReturn(Future.successful(Right(Nil)))
+      when(myWarwickService.sendAsNotification(any())).thenReturn(FutureConverters.toJava(Future.successful(List(
         new Response()
       ).asJava)).toCompletableFuture)
 

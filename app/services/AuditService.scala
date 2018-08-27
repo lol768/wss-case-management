@@ -19,11 +19,12 @@ import scala.concurrent.{ExecutionContext, Future}
 case class AuditLogContext(
   usercode: Option[Usercode] = None,
   ipAddress: Option[String] = None,
-  userAgent: Option[String] = None
-)
+  userAgent: Option[String] = None,
+  timingData: TimingContext.Data
+) extends TimingContext
 
 object AuditLogContext {
-  def empty(): AuditLogContext = AuditLogContext()
+  def empty()(implicit t: TimingContext): AuditLogContext = AuditLogContext(timingData = t.timingData)
 }
 
 @ImplementedBy(classOf[AuditServiceImpl])

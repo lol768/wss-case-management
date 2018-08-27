@@ -19,9 +19,9 @@ trait RegistrationService {
 
   def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[domain.Registration]]
 
-  def get(universityID: UniversityID): Future[ServiceResult[Option[domain.Registration]]]
+  def get(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[domain.Registration]]]
 
-  def getHistory(universityID: UniversityID): Future[ServiceResult[RegistrationDataHistory]]
+  def getHistory(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[RegistrationDataHistory]]
 
 }
 
@@ -56,10 +56,10 @@ class RegistrationServiceImpl @Inject()(
       daoRunner.run(dao.update(universityID, data, version)).map(_.parsed).map(Right.apply)
     }
 
-  override def get(universityID: UniversityID): Future[ServiceResult[Option[domain.Registration]]] =
+  override def get(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[domain.Registration]]] =
     daoRunner.run(dao.get(universityID)).map(_.map(_.parsed)).map(Right.apply)
 
-  override def getHistory(universityID: UniversityID): Future[ServiceResult[RegistrationDataHistory]] = {
+  override def getHistory(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[RegistrationDataHistory]] = {
     daoRunner.run(dao.getHistory(universityID)).map(_.map { case (jsValue, ts) => (
       jsValue.validate[domain.RegistrationData](domain.RegistrationData.formatter).get,
       ts

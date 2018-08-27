@@ -3,10 +3,10 @@ package domain.dao
 import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import slick.dbio.{DBIOAction, NoStream}
+import services.{TimingContext, TimingService}
 import slick.jdbc.JdbcProfile
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Runs DB actions that have come from elsewhere.
@@ -18,14 +18,20 @@ trait DaoRunner {
   /**
     * Runs the given action in a transaction
     */
-  def run[R](a: DBIO[R]): Future[R]
+  def run[R](a: DBIO[R])(implicit t: TimingContext): Future[R]
 }
 
 @Singleton
 class DaoRunnerImpl @Inject() (
-  protected val dbConfigProvider: DatabaseConfigProvider
+  protected val dbConfigProvider: DatabaseConfigProvider,
+  val timing: TimingService
+)(
+  implicit ec: ExecutionContext
 ) extends DaoRunner with HasDatabaseConfigProvider[JdbcProfile] {
   import profile.api._
+  import timing._
 
-  override def run[R](a: DBIO[R]): Future[R] = db.run(a.transactionally)
+  override def run[R](a: DBIO[R])(implicit t: TimingContext): Future[R] = time("db") {
+    db.run(a.transactionally)
+  }
 }

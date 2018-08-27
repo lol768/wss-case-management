@@ -16,8 +16,8 @@ import scala.concurrent.{ExecutionContext, Future}
 trait ClientSummaryService {
   def save(universityID: UniversityID, data: ClientSummaryData)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]]
   def update(universityID: UniversityID, data: ClientSummaryData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]]
-  def get(universityID: UniversityID): Future[ServiceResult[Option[ClientSummary]]]
-  def getByAlternativeEmailAddress(email: String): Future[ServiceResult[Option[ClientSummary]]]
+  def get(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]]
+  def getByAlternativeEmailAddress(email: String)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]]
 }
 
 @Singleton
@@ -47,10 +47,10 @@ class ClientSummaryServiceImpl @Inject()(
       daoRunner.run(dao.update(universityID, data, version)).map(_.parsed).map(Right.apply)
     }
 
-  override def get(universityID: UniversityID): Future[ServiceResult[Option[ClientSummary]]] =
+  override def get(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]] =
     daoRunner.run(dao.get(universityID)).map(_.map(_.parsed)).map(Right.apply)
 
-  override def getByAlternativeEmailAddress(email: String): Future[ServiceResult[Option[ClientSummary]]] =
+  override def getByAlternativeEmailAddress(email: String)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]] =
     daoRunner.run(dao.all).map(
       _.map(_.parsed).find(_.data.alternativeEmailAddress.toLowerCase == email.toLowerCase)
     ).map(Right.apply)

@@ -2,7 +2,7 @@ package services.healthcheck
 
 import com.google.inject.Inject
 import helpers.JavaTime
-import services.EmailService
+import services.{EmailService, TimingContext}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -10,6 +10,9 @@ import scala.concurrent.duration._
 class OutgoingEmailQueueHealthCheck @Inject()(
   emailService: EmailService
 ) extends NumericHealthCheck[Int] {
+
+  // No timing
+  private implicit def timingContext: TimingContext = TimingContext.none
 
   override def name = "outgoing-email-queue"
   override def value = Await.result(emailService.countUnsentEmails(), Duration.Inf).right.getOrElse(Int.MaxValue)
