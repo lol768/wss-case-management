@@ -5,6 +5,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.{TimingContext, TimingService}
 import slick.jdbc.JdbcProfile
+import system.TimingCategories
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,7 +32,7 @@ class DaoRunnerImpl @Inject() (
   import profile.api._
   import timing._
 
-  override def run[R](a: DBIO[R])(implicit t: TimingContext): Future[R] = time("db") {
+  override def run[R](a: DBIO[R])(implicit t: TimingContext): Future[R] = time(TimingCategories.Db) {
     db.run(a.transactionally)
   }
 }

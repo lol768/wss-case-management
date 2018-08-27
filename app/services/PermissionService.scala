@@ -18,8 +18,10 @@ trait PermissionService {
 @Singleton
 class PermissionServiceImpl @Inject() (
   groupService: GroupService,
-  config: Configuration
+  config: Configuration,
+  timing: TimingService
 ) extends PermissionService {
+  import timing._
 
   private val webgroupPrefix = config.get[String]("app.webgroup.team.prefix")
 

@@ -12,7 +12,7 @@ import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
 import services.{PhotoService, TimingContext, TimingService}
 import services.tabula.ProfileService._
-import system.Logging
+import system.{Logging, TimingCategories}
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
 import warwick.sso.UniversityID
 
@@ -40,6 +40,8 @@ class ProfileServiceImpl  @Inject()(
 )(implicit ec: ExecutionContext) extends ProfileService with Logging {
   import timing._
 
+  private val TimingCategory = TimingCategories.Tabula
+
   private lazy val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
   private lazy val tabulaProfileUrl = configuration.get[String]("wellbeing.tabula.profile")
 
@@ -50,8 +52,7 @@ class ProfileServiceImpl  @Inject()(
 
   private lazy val wrappedCache = VariableTtlCacheHelper.async[ServiceResult[SitsProfile]](cache, logger, ttlStrategy)
 
-
-  override def getProfile(universityID: UniversityID)(implicit t: TimingContext): Future[CacheElement[ServiceResult[SitsProfile]]] = time("tabula") {
+  override def getProfile(universityID: UniversityID)(implicit t: TimingContext): Future[CacheElement[ServiceResult[SitsProfile]]] = time(TimingCategory) {
     wrappedCache.getOrElseUpdateElement(s"tabulaprofile:${universityID.string}") {
       val url = s"$tabulaProfileUrl/${universityID.string}"
       val request = ws.url(url)
@@ -85,7 +86,7 @@ class ProfileServiceImpl  @Inject()(
     }(CacheOptions.default)
   }
 
-  override def getProfiles(universityIDs: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, SitsProfile]]] = time("tabula") {
+  override def getProfiles(universityIDs: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, SitsProfile]]] = time(TimingCategory) {
     val profiles = ServiceResults.futureSequence(universityIDs.toSeq.map(id => getProfile(id).map(_.value)))
     profiles.map(_.map(_.map(p => (p.universityID, p)).toMap))
   }

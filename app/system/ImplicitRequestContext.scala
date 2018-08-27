@@ -31,7 +31,7 @@ trait ImplicitRequestContext extends LowPriorityRequestContextImplicits {
 }
 
 /**
-  * Low priority implcits to avoid implicit ambiguity when a TimingContext is needed (since it could either
+  * Low priority implicits to avoid implicit ambiguity when a TimingContext is needed (since it could either
   * convert to RequestContext, or it could also go on to convert that to AuditLogcontext which is also a TimingContext).
   */
 trait LowPriorityRequestContextImplicits {

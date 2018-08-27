@@ -34,7 +34,7 @@ class ServerTimingFilter @Inject() (
   def getHeader(data: TimingContext.Data): Option[(String, String)] =
     Option(data.profileSummary).filterNot(_.isEmpty).map { summary =>
       "Server-Timing" -> summary.map { case (category, time) =>
-        s"${category.toString};dur=$time"
+        s"${category.id};dur=$time"
       }.mkString(", ")
     }
 
