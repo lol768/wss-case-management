@@ -38,7 +38,7 @@
       <header class="id7-page-header">
         @if(context.isMasquerading) {
           <div id="masquerade-notice" class="sysadmin-only-content">
-            Masquerading as <strong>@context.user.map(_.name.full)</strong> (@context.user.map(_.usercode.string), @context.user.map(_.universityId.map(_.string))). <a href="@controllers.admin.routes.MasqueradeController.masquerade()">Change</a>
+            Masquerading as <strong>@context.user.map(_.name.full)</strong> (@context.user.map(_.usercode.string), @context.user.map(_.universityId.map(_.string))). <a href="@controllers.sysadmin.routes.MasqueradeController.masquerade()">Change</a>
           </div>
         }
 
@@ -87,20 +87,6 @@
                         <li><a href="https://warwick.ac.uk/about">About</a></li>
                       </ul>
                     </nav>
-                  </div>
-                </div>
-                <div class="id7-search-column">
-                  <div class="id7-search">
-                    <form action="//search.warwick.ac.uk/website" role="search">
-                      <input type="hidden" name="source" value="https://warwick.ac.uk/"> <!-- Replace with the current page URL -->
-                      <div class="form-group">
-                        <label class="sr-only" for="id7-search-box">Search</label>
-                        <div class="id7-search-box-container">
-                          <input type="search" class="form-control input-lg" id="id7-search-box" name="q" placeholder="Search Warwick" data-suggest="go">
-                          <i class="fa fa-search fa-2x"></i>
-                        </div>
-                      </div>
-                    </form>
                   </div>
                 </div>
               </div>

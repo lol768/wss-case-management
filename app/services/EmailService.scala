@@ -6,7 +6,7 @@ import akka.Done
 import com.google.inject.ImplementedBy
 import domain.OutgoingEmail
 import domain.dao.{DaoRunner, OutgoingEmailDao}
-import helpers.JavaTime
+import helpers.{JavaTime, ServiceResults}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import org.quartz.{JobBuilder, JobKey, Scheduler, TriggerBuilder}
@@ -90,10 +90,7 @@ class EmailServiceImpl @Inject()(
         }
 
         sendEmail
-          .recover { case t: Throwable => Left(List(new ServiceError {
-            override def message: String = t.getMessage
-            override def cause = Some(t)
-          })) }
+          .recover { case t => ServiceResults.exceptionToServiceResult(t) }
           .flatMap {
             case Left(errors) => update(e.copy(lastSendAttempt = Some(JavaTime.offsetDateTime), failureReason = Some(errors.map(_.message).mkString(", ")))).map { _ => Left(errors) }
             case Right(result) => update(e.copy(sent = Some(JavaTime.offsetDateTime), lastSendAttempt = None, failureReason = None)).map { _ => Right(result) }
