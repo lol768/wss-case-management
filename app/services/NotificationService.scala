@@ -7,6 +7,7 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.Inject
 import play.api.Configuration
 import play.api.libs.mailer.Email
+import warwick.core.timing.TimingContext
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.sso._
@@ -17,11 +18,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[NotificationServiceImpl])
 trait NotificationService {
-  def newRegistration(universityID: UniversityID): Future[ServiceResult[Activity]]
-  def registrationInvite(universityID: UniversityID): Future[ServiceResult[Activity]]
-  def newEnquiry(enquiry: Enquiry): Future[ServiceResult[Activity]]
-  def enquiryMessage(enquiry: Enquiry, message: Message): Future[ServiceResult[Activity]]
-  def enquiryReassign(enquiry: Enquiry): Future[ServiceResult[Activity]]
+  def newRegistration(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Activity]]
+  def registrationInvite(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Activity]]
+  def newEnquiry(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]]
+  def enquiryMessage(enquiry: Enquiry, message: Message)(implicit t: TimingContext): Future[ServiceResult[Activity]]
+  def enquiryReassign(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]]
 }
 
 class NotificationServiceImpl @Inject()(
@@ -36,7 +37,7 @@ class NotificationServiceImpl @Inject()(
   private lazy val domain: String = config.get[String]("domain")
   private lazy val initialTeam = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
 
-  override def newRegistration(universityID: UniversityID): Future[ServiceResult[Activity]] = {
+  override def newRegistration(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     withInitialTeamUsers { users =>
       val url = s"https://$domain${controllers.admin.routes.ClientController.client(universityID).url}"
 
@@ -63,7 +64,7 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  override def registrationInvite(universityID: UniversityID): Future[ServiceResult[Activity]] = {
+  override def registrationInvite(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     val url = s"https://$domain${controllers.registration.routes.RegisterController.form().url}"
     withUser(universityID) { user =>
       emailService.queue(
@@ -88,7 +89,7 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  override def newEnquiry(enquiry: Enquiry): Future[ServiceResult[Activity]] =
+  override def newEnquiry(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
     withInitialTeamUsers { users =>
       val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get).url}"
 
@@ -114,7 +115,7 @@ class NotificationServiceImpl @Inject()(
       }
     }
 
-  override def enquiryMessage(enquiry: Enquiry, message: Message): Future[ServiceResult[Activity]] =
+  override def enquiryMessage(enquiry: Enquiry, message: Message)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
     if (message.sender == MessageSender.Client) {
       withTeamUsers(enquiry.team) { users =>
         val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get).url}"
@@ -167,7 +168,7 @@ class NotificationServiceImpl @Inject()(
       }
     }
 
-  override def enquiryReassign(enquiry: Enquiry): Future[ServiceResult[Activity]] =
+  override def enquiryReassign(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
     withTeamUsers(enquiry.team) { users =>
       val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get).url}"
 
@@ -193,7 +194,7 @@ class NotificationServiceImpl @Inject()(
       }
     }
 
-  private def sendAndHandleResponse(activity: Activity): Future[ServiceResult[Activity]] = {
+  private def sendAndHandleResponse(activity: Activity)(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     FutureConverters.toScala(myWarwickService.sendAsNotification(activity)).map { resultList =>
       val results = resultList.asScala
       if (results.forall(_.getErrors.isEmpty)) {
@@ -206,10 +207,10 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  private def withInitialTeamUsers(f: Seq[User] => Future[ServiceResult[Activity]]): Future[ServiceResult[Activity]] =
+  private def withInitialTeamUsers(f: Seq[User] => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] =
     withTeamUsers(initialTeam)(f)
 
-  private def withTeamUsers(team: Team)(f: Seq[User] => Future[ServiceResult[Activity]]): Future[ServiceResult[Activity]] = {
+  private def withTeamUsers(team: Team)(f: Seq[User] => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     val webGroup = permissionService.webgroupFor(team)
     groupService.getWebGroup(webGroup).fold(
       e => Future.successful(ServiceResults.exceptionToServiceResult(e)),
@@ -224,7 +225,7 @@ class NotificationServiceImpl @Inject()(
     )
   }
 
-  private def withUser(universityID: UniversityID)(f: User => Future[ServiceResult[Activity]]): Future[ServiceResult[Activity]] = {
+  private def withUser(universityID: UniversityID)(f: User => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     userLookupService.getUsers(Seq(universityID)).fold(
       e => Future.successful(ServiceResults.exceptionToServiceResult(e)),
       userMap => userMap.get(universityID).map(f).getOrElse(

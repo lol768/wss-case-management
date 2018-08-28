@@ -1,6 +1,5 @@
 package domain.dao
 
-import domain._
 import helpers.ServiceResults.ServiceResult
 import helpers.{DaoPatience, DataFixture, OneAppPerSuite, ServiceResults}
 import org.scalatest.concurrent.ScalaFutures
@@ -8,6 +7,7 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.db.slick.DatabaseConfigProvider
 import services.AuditLogContext
+import warwick.core.timing.TimingContext
 import slick.basic.DatabaseConfig
 import slick.dbio.{DBIO, DBIOAction}
 import slick.jdbc.JdbcProfile
@@ -19,7 +19,7 @@ case class IntentionalRollbackException[R](successResult: R) extends Exception("
 
 abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures with DaoPatience {
 
-  implicit def auditLogContext = AuditLogContext.empty()
+  implicit def auditLogContext = AuditLogContext.empty()(TimingContext.none)
 
   implicit lazy val ec = get[ExecutionContext]
 
@@ -57,7 +57,9 @@ abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPer
     */
   def exec[R](action: DBIO[R]): R = Await.result(runWithRollback(action), 5.seconds)
 
-  def execWithCommit[R](action: DBIO[R]): R = Await.result(runner.run(action), 5.seconds)
+  def execWithCommit[R](action: DBIO[R]): R = {
+    Await.result(runner.run(action), 5.seconds)
+  }
 
   implicit class FutureServiceResultOps[A](f: Future[ServiceResult[A]]) {
 

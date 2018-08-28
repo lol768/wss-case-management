@@ -12,6 +12,7 @@ import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
+import warwick.core.timing.TimingContext
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.MappedProjection
 import warwick.sso.UniversityID
@@ -35,11 +36,11 @@ trait EnquiryService {
     */
   def reassign(enquiry: Enquiry, team: Team, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
-  def findEnquiriesForClient(client: UniversityID): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]]
+  def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]]
 
-  def get(id: UUID): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
+  def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
 
-  def findEnquiriesNeedingReply(team: Team): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+  def findEnquiriesNeedingReply(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
 }
 
 @Singleton
@@ -106,7 +107,7 @@ class EnquiryServiceImpl @Inject() (
       enquiry => notificationService.enquiryReassign(enquiry).map(_.right.map(_ => enquiry))
     ))
 
-  override def findEnquiriesForClient(client: UniversityID): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]] = {
+  override def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]] = {
     val query = enquiryDao.findByClientQuery(client).withMessages
       .sortBy {
         case (e, m) => (e.version.reverse, m.map(_.created))
@@ -124,7 +125,7 @@ class EnquiryServiceImpl @Inject() (
     }
   }
 
-  override def get(id: UUID): Future[ServiceResult[(Enquiry, Seq[MessageData])]] = {
+  override def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]] = {
     val query = enquiryDao.findByIDQuery(id).withMessages
       .map {
         case (e, m) => (e, m.map(_.messageData))
@@ -135,7 +136,7 @@ class EnquiryServiceImpl @Inject() (
     }
   }
 
-  override def findEnquiriesNeedingReply(team: Team): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
+  override def findEnquiriesNeedingReply(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
     val query = enquiryDao.findOpenQuery(team)
       .join(Message.messages.table)
       .on((enquiry, message) => {
