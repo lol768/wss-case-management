@@ -11,10 +11,8 @@
   @b3.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.reassign(enquiry.id.get)) { implicit ifc =>
     @b3.validatedHidden(form, "version")
 
-    @b3.select(form("team"),
-      options = Teams.all.filterNot(_ == enquiry.team).map { t => t.id -> t.name },
-      '_label -> "Team",
-      '_default -> ""
+    @b3.radio(form("team"),
+      options = Teams.all.map { t => t.id -> t.name }
     )
 
     @tags.submitOrCancel("Reassign", controllers.admin.routes.AdminController.teamHome(enquiry.team.id))
