@@ -3,8 +3,7 @@ package controllers
 import play.api.Configuration
 import play.api.mvc.{Flash, RequestHeader}
 import services.Navigation
-import services.timing.TimingContext
-import system.ServerTimingFilter
+import warwick.core.timing._
 import warwick.sso.{AuthenticatedRequest, SSOClient, User}
 
 import scala.concurrent.ExecutionContext.Implicits.global

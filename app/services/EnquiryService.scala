@@ -12,7 +12,7 @@ import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import services.timing.TimingContext
+import warwick.core.timing.TimingContext
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.MappedProjection
 import warwick.sso.UniversityID

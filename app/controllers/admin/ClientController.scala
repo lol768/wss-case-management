@@ -10,7 +10,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import services.tabula.ProfileService
-import services.timing.TimingContext
+import warwick.core.timing.TimingContext
 import services.{ClientSummaryService, NotificationService, RegistrationService}
 import warwick.sso.UniversityID
 

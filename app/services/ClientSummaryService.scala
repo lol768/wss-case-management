@@ -8,7 +8,7 @@ import domain.{ClientSummary, ClientSummaryData}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import services.timing.TimingContext
+import warwick.core.timing.TimingContext
 import warwick.sso.UniversityID
 
 import scala.concurrent.{ExecutionContext, Future}

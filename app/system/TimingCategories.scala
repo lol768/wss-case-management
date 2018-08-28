@@ -1,6 +1,6 @@
 package system
 
-import services.timing.TimingService.Category
+import warwick.core.timing.TimingContext.Category
 
 object TimingCategories {
   object Http extends Category(id = "HTTP")

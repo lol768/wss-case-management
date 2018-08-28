@@ -1,6 +1,6 @@
 package services
 
-import services.timing.TimingContext
+import warwick.core.timing.TimingContext
 
 trait NoTimeTracking {
 

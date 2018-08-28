@@ -12,7 +12,7 @@ import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
 import services.PhotoService
 import services.tabula.ProfileService._
-import services.timing.{TimingContext, TimingService}
+import warwick.core.timing.{TimingContext, TimingService}
 import system.{Logging, TimingCategories}
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
 import warwick.sso.UniversityID

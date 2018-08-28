@@ -1,7 +1,7 @@
 package services
 import domain.{Enquiry, Message}
 import helpers.ServiceResults.ServiceResult
-import services.timing.TimingContext
+import warwick.core.timing.TimingContext
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.sso.UniversityID
 

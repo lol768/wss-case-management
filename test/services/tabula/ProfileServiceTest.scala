@@ -18,7 +18,7 @@ import play.api.routing.sird._
 import play.api.test.WsTestClient
 import play.api.{Configuration, Environment}
 import play.core.server.Server
-import services.timing.TimingContext
+import warwick.core.timing.TimingContext
 import services.{NoTimeTracking, NullTimingService, PhotoServiceImpl}
 import uk.ac.warwick.sso.client.trusted.TrustedApplication.HEADER_ERROR_CODE
 import uk.ac.warwick.sso.client.trusted.{CurrentApplication, EncryptedCertificate, TrustedApplicationsManager}

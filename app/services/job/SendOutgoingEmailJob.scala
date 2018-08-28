@@ -7,7 +7,7 @@ import akka.Done
 import javax.inject.Inject
 import org.quartz._
 import services.EmailService
-import services.timing.TimingContext
+import warwick.core.timing.TimingContext
 import system.Logging
 
 import scala.concurrent.duration.Duration
