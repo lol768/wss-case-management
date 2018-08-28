@@ -1,5 +1,6 @@
 package helpers
 
+import play.api.Logger
 import play.api.libs.json._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,6 +40,22 @@ object ServiceResults {
 
   def exceptionToServiceResult[A](ex: Throwable, msg: Option[String] = None): ServiceResult[A] =
     Left(List(ServiceError(msg.getOrElse(ex.getMessage), ex)))
+
+  def logErrors[A](
+    result: ServiceResult[A],
+    logger: Logger,
+    fallback: A,
+    message: List[_ <: ServiceError] => Option[String] = _ => None
+  ): A  = {
+    result.fold(
+      e => {
+        val msg = message(e).getOrElse(e.head.message)
+        e.headOption.flatMap(_.cause).fold(logger.error(msg))(t => logger.error(msg, t))
+        fallback
+      },
+      success => success
+    )
+  }
 
   def sequence[A](in: Seq[ServiceResult[A]]): ServiceResult[Seq[A]] = in.partition(_.isLeft) match {
     case (Nil, results) => Right(results.collect { case Right(x) => x })
