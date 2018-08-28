@@ -52,7 +52,8 @@ class MessageDaoImpl @Inject() (
       message <- clients.message
     } yield message
 
-    messages.sortBy(_.created.reverse)
+    // Sorting here might not mean anything one this becomes part of a join
+    messages.sortBy(_.created)
   }
 
   def latestForEnquiryQuery(enquiry: Enquiries): Query[Message.Messages, Message, Seq] = {

@@ -13,6 +13,9 @@ GET         /assets/*file                           @controllers.Assets.versione
 GET         /service/gtg                            @controllers.ServiceCheckController.gtg
 GET         /service/healthcheck                    @controllers.ServiceCheckController.healthcheck
 
+# Other services
+GET         /service/clientsearch                   @controllers.ClientSearchController.search(query: String ?= "")
+
 GET         /                                       @controllers.IndexController.home
 
 ## Clients ##
@@ -46,7 +49,7 @@ POST        /team/enquiry/:id/reassign              @controllers.admin.TeamEnqui
 
 ## Admins/Sysadmins ##
 
-GET         /admin/masquerade                       @controllers.admin.MasqueradeController.masquerade
+GET         /sysadmin/masquerade                    @controllers.sysadmin.MasqueradeController.masquerade
 
 ## Fallbacks ##
 

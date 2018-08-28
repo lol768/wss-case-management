@@ -241,6 +241,49 @@ object TabulaResponseParsers {
       )
   }
 
+  case class MemberSearchResult(
+    universityID: UniversityID,
+    firstName: String,
+    lastName: String,
+    email: Option[String],
+    alternateEmail: Option[String],
+    department: SitsDepartment,
+    userType: String,
+    photo: Option[String]
+  ) extends Ordered[MemberSearchResult] {
+    // Sort applicants to the bottom, and new applicants before others
+    override def compare(that: MemberSearchResult): Int = {
+      if (this.userType != that.userType) {
+        if (this.userType == "Applicant") {
+          1
+        } else if (that.userType == "Applicant") {
+          -1
+        } else {
+          0
+        }
+      } else {
+        if (this.userType == "Applicant") {
+          that.universityID.string.compare(this.universityID.string)
+        } else {
+          0
+        }
+      }
+    }
+  }
+
+  val memberSearchResultReads: Reads[MemberSearchResult] = (
+    (__ \ "universityId").read[String].map[UniversityID](UniversityID.apply) and
+    (__ \ "firstName").read[String] and
+    (__ \ "lastName").read[String] and
+    (__ \ "email").readNullable[String] and
+    (__ \ "homeEmail").readNullable[String] and
+    (__ \ "department").read[SitsDepartment](departmentReads) and
+    (__ \ "userType").read[String] and
+    Reads.pure(None)
+    )(MemberSearchResult.apply _)
+
+  val memberSearchResultsReads: Reads[Seq[MemberSearchResult]] = (__ \ "results").read[Seq[MemberSearchResult]](Reads.seq(memberSearchResultReads))
+
   private case class ErrorMessage(message: String)
   private val errorMessageReads = Json.reads[ErrorMessage]
 

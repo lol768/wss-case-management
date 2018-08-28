@@ -37,8 +37,8 @@ lazy val main = (project in file("."))
   )
 
 val playUtilsVersion = "1.16"
-val ssoClientVersion = "2.50"
-val warwickUtilsVersion = "20180518"
+val ssoClientVersion = "2.53"
+val warwickUtilsVersion = "20180823"
 val enumeratumVersion = "1.5.13"
 val enumeratumSlickVersion = "1.5.15"
 
@@ -103,8 +103,10 @@ val testDeps = Seq(
 
 libraryDependencies ++= (appDeps ++ testDeps).map(_.excludeAll(
   ExclusionRule(organization = "commons-logging"),
-  // ehcache renamed ehcache-core, don't load in the old version
-  ExclusionRule(organization = "net.sf.ehcache", name = "ehcache"),
+  // No EhCache please we're British
+  ExclusionRule(organization = "net.sf.ehcache"),
+  ExclusionRule(organization = "org.ehcache"),
+  ExclusionRule(organization = "ehcache"),
   // brought in by warwick utils, pulls in old XML shit
   ExclusionRule(organization = "rome"),
   ExclusionRule(organization = "dom4j"),

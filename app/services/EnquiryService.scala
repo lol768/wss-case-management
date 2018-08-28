@@ -13,6 +13,7 @@ import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import slick.jdbc.PostgresProfile.api._
+import slick.lifted.MappedProjection
 import warwick.sso.UniversityID
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -54,9 +55,11 @@ class EnquiryServiceImpl @Inject() (
   notificationService: NotificationService
 )(implicit ec: ExecutionContext) extends EnquiryService {
 
-  import EnquiryService.sortByRecent
+  import EnquiryService._
   
   override def save(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
+    require(enquiry.id.isEmpty, "Enquiry must not have an existing ID before being saved")
+    require(message.sender == MessageSender.Client, "Initial message must be from the Client")
     val id = UUID.randomUUID()
     val messageId = UUID.randomUUID()
     auditService.audit('EnquirySave, id.toString, 'Enquiry, Json.obj()) {
@@ -121,36 +124,31 @@ class EnquiryServiceImpl @Inject() (
   }
 
   override def findEnquiriesForClient(client: UniversityID): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]] = {
-    val query = for {
-      (enquiry, message) <- enquiryDao.findByClientQuery(client)
-          .joinLeft(messageDao.findByClientQuery(client))
-          .on { (e, m) =>
-            e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
-          }
-    } yield (enquiry, message.map(_.messageData))
+    val query = enquiryDao.findByClientQuery(client).withMessages
+      .sortBy {
+        case (e, m) => (e.version.reverse, m.map(_.created))
+      }
+      .map {
+        case (e, m) => (e, m.map(_.messageData))
+      }
 
     // Don't think it's possible within Slick to take a one-to-many mapping
     // and get a collection of (Enquiry, Seq[Message]), so this happens
     // in plain Scala after we've got our (Enquiry, Message) tuples back.
 
-    // Newest first
-    implicit def dateOrdering: Ordering[OffsetDateTime] = JavaTime.dateTimeOrdering.reverse
-
     daoRunner.run(query.result).map { pairs =>
-      Right(sortByRecent(OneToMany.leftJoin(pairs)))
+      Right(groupPairs(pairs))
     }
   }
 
   override def get(id: UUID): Future[ServiceResult[(Enquiry, Seq[MessageData])]] = {
-    val query = for {
-      (enquiry, message) <- enquiryDao.findByIDQuery(id).withMessages
-    } yield (enquiry, message.map(_.messageData))
-
-    // Newest first
-    implicit def dateOrdering: Ordering[OffsetDateTime] = JavaTime.dateTimeOrdering.reverse
+    val query = enquiryDao.findByIDQuery(id).withMessages
+      .map {
+        case (e, m) => (e, m.map(_.messageData))
+      }
 
     daoRunner.run(query.result).map { pairs =>
-      Right(sortByRecent(OneToMany.leftJoin(pairs)).head)
+      Right(groupPairs(pairs).head)
     }
   }
 
@@ -183,19 +181,21 @@ class EnquiryServiceImpl @Inject() (
 }
 
 object EnquiryService {
+  def groupPairs(pairs: Seq[(Enquiry, Option[MessageData])]): Seq[(Enquiry, Seq[MessageData])] = {
+    sortByRecent(OneToMany.leftJoin(pairs)(MessageData.dateOrdering))
+  }
+
   /**
     * Sort by the most recently updated, either by newest message or when the enquiry was last
     * updated (perhaps from its state changing)
     */
   def sortByRecent(data: Seq[(Enquiry, Seq[MessageData])]): Seq[(Enquiry, Seq[MessageData])] = {
-    implicit def dateOrdering: Ordering[OffsetDateTime] = JavaTime.dateTimeOrdering.reverse
-    data.sortBy(lastModified)
+    data.sortBy(lastModified)(JavaTime.dateTimeOrdering.reverse)
   }
 
   def lastModified(entry: (Enquiry, Seq[MessageData])): OffsetDateTime = {
     import JavaTime.dateTimeOrdering
-    entry match {
-      case (enquiry, messages) => Stream.cons(enquiry.version, messages.toStream.map(_.created)).max
-    }
+    val (enquiry, messages) = entry
+    Stream.cons(enquiry.version, messages.toStream.map(_.created)).max
   }
 }
