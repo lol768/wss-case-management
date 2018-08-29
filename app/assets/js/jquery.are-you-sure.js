@@ -1,3 +1,4 @@
+/* eslint-disable */
 // From https://raw.githubusercontent.com/codedance/jquery.AreYouSure/master/jquery.are-you-sure.js
 // Because the NPM library runs a pointless Bower task, breaking the build
 /*!
