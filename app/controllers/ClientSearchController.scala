@@ -1,6 +1,7 @@
 package controllers
 
-import helpers.ServiceResults.ServiceError
+import helpers.ServiceResults
+import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
@@ -42,28 +43,27 @@ class ClientSearchController @Inject()(
           }
         } else {
           // Check for usercode directly
-          userLookupService.getUser(Usercode(query)).fold(
-            e => Future.successful(Left(List(new ServiceError {
-              override def message: String = e.getMessage
-              override def cause = Some(e)
-            }))),
-            user => if (user.universityId.nonEmpty)
-              Future.successful(Right(user))
-            else
-              Future.successful(Left(List(new ServiceError {
-                override def message: String = s"Found user matching $query but user had no University ID"
-              })))
-          ).map(_.fold(
+          Future.successful(getUser(Usercode(query)).fold(
             _ => Ok(Json.toJson(API.Success(data = Json.obj()))), // Don't care if this fails
             user => Ok(Json.toJson(API.Success(data = Json.obj(
               "results" -> Json.arr(toJson(user))
             ))))
           ))
+
         }
       }
     }
 
   }
+
+  private def getUser(usercode: Usercode): ServiceResult[User] =
+    userLookupService.getUser(usercode).fold(
+      e => ServiceResults.exceptionToServiceResult(e),
+      user => if (user.universityId.nonEmpty)
+        Right(user)
+      else
+        Left(List(ServiceError(s"Found user matching $user but user had no University ID")))
+    )
 
   private def toJson(member: MemberSearchResult) = Json.obj(
     "name" -> s"${member.firstName} ${member.lastName}",

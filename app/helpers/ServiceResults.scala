@@ -1,5 +1,6 @@
 package helpers
 
+import play.api.Logger
 import play.api.libs.json._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -10,26 +11,51 @@ object ServiceResults {
     def cause: Option[Throwable] = None
   }
 
+  case class ServiceErrorImpl(message: String, override val cause: Option[Throwable]) extends ServiceError
+
+  object ServiceError {
+    def apply(msg: String, cause: Throwable): ServiceError = ServiceErrorImpl(msg, Option(cause))
+    def apply(msg: String): ServiceError = ServiceErrorImpl(msg, None)
+  }
+
   implicit def serviceErrorFormat: Format[ServiceError] = new Format[ServiceError] {
     def reads(js: JsValue): JsResult[ServiceError] =
-      js.validate[String].map { m => new ServiceError { override val message: String = m }}
+      js.validate[String].map(ServiceError.apply)
 
     def writes(a: ServiceError): JsValue = JsString(a.message)
   }
 
   type ServiceResult[A] = Either[List[_ <: ServiceError], A]
 
-  def throwableToError[A](msg: Option[String] = None)(block: => A): ServiceResult[A] =
+  /**
+    * Converts exception-throwing code into a ServiceResult, catching any exceptions
+    * into a Left(ServiceError) and any result into a Right(result).
+    */
+  def catchAsServiceError[A](msg: Option[String] = None)(block: => A): ServiceResult[A] =
     try {
       Right(block)
     } catch {
-      case ex: Throwable => Left(List(
-        new ServiceError {
-          val message: String = msg.getOrElse(ex.getMessage)
-          override val cause = Some(ex)
-        }
-      ))
+      case ex: Throwable => exceptionToServiceResult(ex, msg)
     }
+
+  def exceptionToServiceResult[A](ex: Throwable, msg: Option[String] = None): ServiceResult[A] =
+    Left(List(ServiceError(msg.getOrElse(ex.getMessage), ex)))
+
+  def logErrors[A](
+    result: ServiceResult[A],
+    logger: Logger,
+    fallback: A,
+    message: List[_ <: ServiceError] => Option[String] = _ => None
+  ): A  = {
+    result.fold(
+      e => {
+        val msg = message(e).getOrElse(e.head.message)
+        e.headOption.flatMap(_.cause).fold(logger.error(msg))(t => logger.error(msg, t))
+        fallback
+      },
+      success => success
+    )
+  }
 
   def sequence[A](in: Seq[ServiceResult[A]]): ServiceResult[Seq[A]] = in.partition(_.isLeft) match {
     case (Nil, results) => Right(results.collect { case Right(x) => x })

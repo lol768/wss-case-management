@@ -41,7 +41,7 @@ class MemberSearchServiceImpl @Inject()(
     ).asScala.map(h => h.getName -> h.getValue).toSeq
 
     val jsonResponse = request.addHttpHeaders(trustedHeaders: _*).get()
-      .map(r => ServiceResults.throwableToError(Some("Trusted apps integration error")) {
+      .map(r => ServiceResults.catchAsServiceError(Some("Trusted apps integration error")) {
         TrustedAppsHelper.validateResponse(tabulaQueryUrl, r).json
       })
 
@@ -61,9 +61,7 @@ class MemberSearchServiceImpl @Inject()(
 
   private def handleValidationError(json: JsValue, errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[Seq[TabulaResponseParsers.MemberSearchResult]] = {
     val serviceErrors = errors.map { case (path, validationErrors) =>
-      new ServiceError {
-        override def message: String = s"$path: ${validationErrors.map(_.message).mkString(", ")}"
-      }
+      ServiceError(s"$path: ${validationErrors.map(_.message).mkString(", ")}")
     }
     logger.error(s"Could not parse JSON result from Tabula:\n$json\n${serviceErrors.map(_.message).mkString("\n")}")
     Left(serviceErrors.toList)

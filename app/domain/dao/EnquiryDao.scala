@@ -42,11 +42,10 @@ class EnquiryDaoImpl @Inject() (
     Enquiry.enquiries.table.filter(_.id === id)
 
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq] =
-    Enquiry.enquiries.table.filter(_.universityId === client).sortBy(_.version.reverse)
+    Enquiry.enquiries.table.filter(_.universityId === client)
 
   def findOpenQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table
       .filter(e => e.isOpen && e.team === team)
-      .sortBy(_.version.reverse)
 
 }
