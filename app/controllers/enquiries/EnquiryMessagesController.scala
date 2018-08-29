@@ -46,6 +46,10 @@ class EnquiryMessagesController @Inject()(
     renderMessages(request.enquiry, request.messages, stateChangeForm(request.enquiry, messageSender(request)).fill(StateChangeForm("", request.enquiry.version)))
   }
 
+  def redirectToMessages(id: UUID): Action[AnyContent] = Action {
+    Redirect(routes.EnquiryMessagesController.messages(id))
+  }
+
   def addMessage(id: UUID): Action[AnyContent] = EnquirySpecificMessagesAction(id).async { implicit request =>
     Form(single("text" -> nonEmptyText)).bindFromRequest().fold(
       formWithErrors => {
