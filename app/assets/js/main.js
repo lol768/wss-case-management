@@ -3,9 +3,9 @@
 import $ from 'jquery';
 
 import 'core-js/modules/es6.object.assign';
+import './jquery.are-you-sure';
 import FieldHistory from './field-history';
 import ClientSearch from './client-search';
-import 'jquery.AreYouSure';
 
 $(() => {
   $('[data-toggle="popover"]').popover();
