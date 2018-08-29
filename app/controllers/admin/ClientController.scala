@@ -1,6 +1,6 @@
 package controllers.admin
 
-import controllers.{BaseController, TeamSpecificActionRefiner}
+import controllers.{BaseController, RequestContext, TeamSpecificActionRefiner}
 import domain._
 import helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
@@ -10,8 +10,9 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import services.tabula.ProfileService
-import services.{ClientSummaryService, NotificationService, PermissionService, RegistrationService}
-import warwick.sso.{AuthenticatedRequest, UniversityID}
+import services._
+import warwick.core.timing.TimingContext
+import warwick.sso._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,7 +37,7 @@ class ClientController @Inject()(
     "reasonable-adjustments" -> set(ReasonableAdjustment.formField)
   )(ClientSummaryData.apply)(ClientSummaryData.unapply))
 
-  private def clientInformation(universityID: UniversityID): Future[ServiceResult[(SitsProfile, Option[Registration], Option[ClientSummary])]] = {
+  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(SitsProfile, Option[Registration], Option[ClientSummary])]] = {
     val profile = profileService.getProfile(universityID).map(_.value)
     val registration = registrationService.get(universityID)
     val clientSummary = clientSummaryService.get(universityID)

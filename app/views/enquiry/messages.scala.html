@@ -1,15 +1,13 @@
-@import controllers.enquiries.EnquiryMessagesController.ReopenForm
+@import controllers.enquiries.EnquiryMessagesController.StateChangeForm
 @import domain.Enquiry
 @import domain.EnquiryState
 @import domain.MessageData
 @import domain.Message.FormData
 @import domain.MessageSender
-@import helpers.JavaTime.iSO8601DateFormat
 @(
   enquiry: Enquiry,
   messages: Seq[MessageData],
-  form: Form[FormData],
-  reopenForm: Form[ReopenForm],
+  stateChangeForm: Form[StateChangeForm],
   messageSender: MessageSender
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
@@ -29,30 +27,25 @@
 
       @if(enquiry.state != EnquiryState.Closed) {
         @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.id.get)) { implicit ifc =>
-          @b3.textarea(form("text"),
+          @b3.textarea(stateChangeForm("text"),
             '_label -> "Add a message",
             'rows -> 3
           )
 
           @b3.free() {
             <button type="submit" class="btn btn-primary">Add message</button>
-          }
-        }
-        @if(messageSender == MessageSender.Team) {
-          @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryCloseController.close(enquiry.id.get)) { implicit ifc =>
-            <input type="hidden" name="version" value="@enquiry.version.format(iSO8601DateFormat)" />
-            <button type="submit" class="btn btn-primary">Close enquiry</button>
+            @if(messageSender == MessageSender.Team) {
+              @b3.validatedHidden(stateChangeForm, "version")
+              <button type="submit" formaction="@controllers.enquiries.routes.EnquiryMessagesController.close(enquiry.id.get)" class="btn btn-primary"> Close enquiry</button>
+            }
           }
         }
       } else {
         @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.reopen(enquiry.id.get)) { implicit ifc =>
-          @if(reopenForm.errors("version").nonEmpty) {
-            @b3.inputWrapped("hidden", reopenForm("version")) { input => @input }
-          } else {
-            @b3.hidden(reopenForm("version"))
-          }
 
-          @b3.textarea(reopenForm("text"),
+          @b3.validatedHidden(stateChangeForm, "version")
+
+          @b3.textarea(stateChangeForm("text"),
             '_label -> "Add a message",
             'rows -> 3
           )

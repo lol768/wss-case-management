@@ -4,7 +4,6 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import controllers.BaseController
-import domain.Message.{FormData => Data}
 import domain.{Enquiry, EnquiryState, MessageData, MessageSender}
 import helpers.JavaTime
 import helpers.StringUtils._
@@ -12,13 +11,13 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, Result}
 import services.{EnquiryService, SecurityService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object EnquiryMessagesController {
-  case class ReopenForm (
+  case class StateChangeForm (
     text: String,
     version: OffsetDateTime
   )
@@ -31,52 +30,61 @@ class EnquiryMessagesController @Inject()(
   service: EnquiryService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import EnquiryMessagesController.ReopenForm
+  import EnquiryMessagesController.StateChangeForm
 
-  val baseForm = Form(mapping(
-    "text" -> nonEmptyText
-  )(Data.apply)(Data.unapply))
-
-  def reopenForm(enquiry: Enquiry, sender: MessageSender) = Form(mapping(
+  def stateChangeForm(enquiry: Enquiry, sender: MessageSender) = Form(mapping(
     "text" -> text.verifying("missing", text => sender == MessageSender.Team || text.hasText),
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version)
-  )(ReopenForm.apply)(ReopenForm.unapply))
+  )(StateChangeForm.apply)(StateChangeForm.unapply))
 
   import enquirySpecificActionRefiner._
 
-  private def renderMessages(enquiry: Enquiry, messages: Seq[MessageData], f: Form[Data], rf: Form[ReopenForm])(implicit req: EnquirySpecificRequest[_]) =
-    Ok(views.html.enquiry.messages(enquiry, messages, f, rf, messageSender(req)))
+  private def renderMessages(enquiry: Enquiry, messages: Seq[MessageData], f: Form[StateChangeForm])(implicit request: EnquirySpecificRequest[_]) =
+    Ok(views.html.enquiry.messages(enquiry, messages, f, messageSender(request)))
 
   def messages(id: UUID): Action[AnyContent] = EnquirySpecificMessagesAction(id) { implicit request =>
-    renderMessages(request.enquiry, request.messages, baseForm, reopenForm(request.enquiry, messageSender(request)).fill(ReopenForm("", request.enquiry.version)))
+    renderMessages(request.enquiry, request.messages, stateChangeForm(request.enquiry, messageSender(request)).fill(StateChangeForm("", request.enquiry.version)))
   }
 
   def addMessage(id: UUID): Action[AnyContent] = EnquirySpecificMessagesAction(id).async { implicit request =>
-    baseForm.bindFromRequest().fold(
-      formWithErrors => Future.successful(renderMessages(request.enquiry, request.messages, formWithErrors, reopenForm(request.enquiry, messageSender(request)))),
-      formData => {
-        val message = messageData(formData.text, request)
+    Form(single("text" -> nonEmptyText)).bindFromRequest().fold(
+      formWithErrors => {
+        val form = stateChangeForm(request.enquiry, messageSender(request))
+          .fill(StateChangeForm(formWithErrors.value.getOrElse(""), request.enquiry.version))
+          .copy(errors = formWithErrors.errors)
+        Future.successful(renderMessages(request.enquiry, request.messages, form))
+      },
+      messageText => {
+        val message = messageData(messageText, request)
         service.addMessage(request.enquiry, message).successMap { m =>
-          renderMessages(request.enquiry, request.messages :+ MessageData(m.text, m.sender, m.created), baseForm, reopenForm(request.enquiry, messageSender(request)))
+          renderMessages(request.enquiry, request.messages :+ MessageData(m.text, m.sender, m.created), stateChangeForm(request.enquiry, messageSender(request)))
         }
       }
     )
   }
 
+  def close(id: UUID): Action[AnyContent] = EnquirySpecificTeamMemberAction(id).async { implicit request =>
+    updateStateAndMessage(EnquiryState.Closed)
+  }
+
   def reopen(id: UUID): Action[AnyContent] = EnquirySpecificMessagesAction(id).async { implicit request =>
-    reopenForm(request.enquiry, messageSender(request)).bindFromRequest().fold(
-      formWithErrors => Future.successful(renderMessages(request.enquiry, request.messages, baseForm, formWithErrors)),
+    updateStateAndMessage(EnquiryState.Reopened)
+  }
+
+  private def updateStateAndMessage(newState: EnquiryState)(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
+    stateChangeForm(request.enquiry, messageSender(request)).bindFromRequest().fold(
+      formWithErrors => Future.successful(renderMessages(request.enquiry, request.messages, formWithErrors)),
       formData => {
         val action = if(formData.text.hasText) {
           val message = messageData(formData.text, request)
-          service.updateStateWithMessage(request.enquiry, EnquiryState.Reopened, message)
+          service.updateStateWithMessage(request.enquiry, newState, message, formData.version)
         } else {
-          service.updateState(request.enquiry, EnquiryState.Reopened)
+          service.updateState(request.enquiry, newState, formData.version)
         }
 
         action.successMap { enquiry =>
           Redirect(routes.EnquiryMessagesController.messages(enquiry.id.get))
-            .flashing("success" -> Messages("flash.enquiry.reopened"))
+            .flashing("success" -> Messages(s"flash.enquiry.$newState"))
         }
       }
     )
