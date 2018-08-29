@@ -3,17 +3,31 @@
 @(form: Form[FormData])(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Make an enquiry") {
-  @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryController.submit()) { implicit ifc =>
-    @* md column so it's not so wide on desktop *@
-    <div class="row">
-      <div class="col-md-10">
-      @b3.textarea(form("text"),
-        '_label -> "Please provide as much detail as you need to describe your enquiry.",
-        'rows -> 6
-      )
-      </div>
-    </div>
+  @* There's a bug in play-bootstrap where b3.free labels will be the wrong
+   * size if you define more than a single column width, so just defining md *@
+  @b3.horizontal.formCSRF(
+    controllers.enquiries.routes.EnquiryController.submit(),
+    "col-md-2", "col-md-5",
+    'class -> "dirty-check"
+  ) { implicit ifc =>
+    @b3.free('_label -> "Name") {
+      <p class="form-control-static">@context.user.flatMap(_.name.full)</p>
+    }
 
-    @tags.submitOrCancel("Submit", controllers.routes.IndexController.home())
+    @b3.text(form("subject"),
+      '_label -> "Subject"
+    )
+
+    @b3.textarea(form("text"),
+      '_label -> "Message (please tell us as much as you need to about your enquiry)",
+      'rows -> 10
+    )
+
+    @b3.free() {
+      <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Privacy statement</a>
+      <span class="hint">(what will happen after I send this enquiry?)</span>
+    }
+
+    @tags.submitOrCancel("Send this enquiry", controllers.routes.IndexController.home())
   }
 }

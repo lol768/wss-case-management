@@ -31,6 +31,7 @@ class EnquiryServiceTest extends AbstractDaoTest {
         val enquiryDate = JavaTime.offsetDateTime.minusDays(10L).plusHours(Random.nextInt(24*20).toLong)
         val enquiry = enquiryService.save(Enquiry(
           universityID = uniId1,
+          subject = "Enquiry",
           team = Teams.StudentSupport,
           version = enquiryDate,
           created = enquiryDate

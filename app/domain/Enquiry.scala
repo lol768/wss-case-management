@@ -8,12 +8,15 @@ import slick.jdbc.PostgresProfile.api._
 import CustomJdbcTypes._
 import domain.EnquiryState.{Open, Reopened}
 import enumeratum.{EnumEntry, PlayEnum}
+import play.api.data.Form
+import play.api.data.Forms._
 
 import scala.language.higherKinds
 
 case class Enquiry(
   id: Option[UUID] = None,
   universityID: UniversityID,
+  subject: String,
   team: Team,
   state: EnquiryState = Open,
   version: OffsetDateTime = OffsetDateTime.now(),
@@ -25,6 +28,7 @@ case class Enquiry(
     EnquiryVersion(
       id.get,
       universityID,
+      subject,
       team,
       state,
       version,
@@ -38,9 +42,17 @@ case class Enquiry(
 object Enquiry extends Versioning {
   def tupled = (Enquiry.apply _).tupled
 
+  val SubjectMaxLength = 200
+
   case class FormData(
+    subject: String,
     text: String
   )
+
+  val form = Form(mapping(
+    "subject" -> nonEmptyText(maxLength = Enquiry.SubjectMaxLength),
+    "text" -> nonEmptyText
+  )(FormData.apply)(FormData.unapply))
 
   sealed trait EnquiryProperties {
     self: Table[_] =>
@@ -48,6 +60,7 @@ object Enquiry extends Versioning {
     def team = column[Team]("team_id")
     def version = column[OffsetDateTime]("version_utc")
     def universityId = column[UniversityID]("university_id")
+    def subject = column[String]("subject")
     def state = column[EnquiryState]("state")
     def created = column[OffsetDateTime]("created_utc")
   }
@@ -57,7 +70,7 @@ object Enquiry extends Versioning {
 
     def id = column[UUID]("id", O.PrimaryKey)
 
-    def * = (id.?, universityId, team, state, version, created).mapTo[Enquiry]
+    def * = (id.?, universityId, subject, team, state, version, created).mapTo[Enquiry]
 
     def isOpen = state === (Open : EnquiryState) || state === (Reopened : EnquiryState)
   }
@@ -67,7 +80,7 @@ object Enquiry extends Versioning {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
-    def * = (id, universityId, team, state, version, created, operation, timestamp).mapTo[EnquiryVersion]
+    def * = (id, universityId, subject, team, state, version, created, operation, timestamp).mapTo[EnquiryVersion]
     def pk = primaryKey("pk_enquiryversions", (id, timestamp))
     def idx = index("idx_enquiryversions", (id, version))
   }
@@ -87,6 +100,7 @@ object Enquiry extends Versioning {
 case class EnquiryVersion(
   id: UUID,
   universityID: UniversityID,
+  subject: String,
   team: Team,
   state: EnquiryState,
   version: OffsetDateTime = OffsetDateTime.now(),

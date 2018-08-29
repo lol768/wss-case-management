@@ -2,6 +2,7 @@
 
 import $ from 'jquery';
 import 'core-js/modules/es6.object.assign';
+import './jquery.are-you-sure';
 import FieldHistory from './field-history';
 import ClientSearch from './client-search';
 
@@ -43,4 +44,6 @@ $(() => {
         $('.popover').each((i, popover) => closePopover($(popover)));
       }
     });
+
+  $('form.dirty-check').areYouSure();
 });
