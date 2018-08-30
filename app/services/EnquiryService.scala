@@ -11,10 +11,10 @@ import domain.dao.{DaoRunner, EnquiryDao, MessageDao}
 import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.Json
 import slick.jdbc.PostgresProfile.api._
 import warwick.core.timing.TimingContext
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,11 +41,7 @@ trait EnquiryService {
 
   def findEnquiriesNeedingReply(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
 
-  def findEnquiriesNeedingReply(owner: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
-
-  def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[EnquiryOwner]]]]
-
-  def setOwners(enquiryId: UUID, owners: Seq[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Set[EnquiryOwner]]]
+  def findEnquiriesNeedingReply(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
 }
 
 @Singleton
@@ -145,7 +141,7 @@ class EnquiryServiceImpl @Inject() (
     findEnquiriesNeedingReplyInternal(enquiryDao.findOpenQuery(team))
   }
 
-  override def findEnquiriesNeedingReply(owner: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
+  override def findEnquiriesNeedingReply(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
     findEnquiriesNeedingReplyInternal(enquiryDao.findOpenQuery(owner))
   }
 
@@ -162,33 +158,6 @@ class EnquiryServiceImpl @Inject() (
     daoRunner.run(query.result).map { pairs =>
       implicit def dateOrdering: Ordering[OffsetDateTime] = JavaTime.dateTimeOrdering.reverse
       Right(pairs.sortBy{ case (enquiry, latestMessage) => Seq(enquiry.version, latestMessage.created).min })
-    }
-  }
-
-  override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[EnquiryOwner]]]] = {
-    val query = enquiryDao.findOwnersQuery(ids)
-
-    daoRunner.run(query.result).map(_.groupBy(_.enquiryId).mapValues(_.toSet)).map(Right.apply)
-  }
-
-  override def setOwners(enquiryId: UUID, owners: Seq[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Set[EnquiryOwner]]] = {
-    auditService.audit('EnquirySetOwners, enquiryId.toString, 'Enquiry, Json.arr(owners.map(o => JsString(o.string)))) {
-      val existing = enquiryDao.findOwnersQuery(Set(enquiryId)).result
-
-      val needsRemoving = existing.map(_.filterNot(e => owners.contains(e.universityID)))
-      val removals = needsRemoving.flatMap(r => DBIO.sequence(r.map(enquiryDao.delete)))
-
-      val needsAdding = existing.map(e => owners.filterNot(e.map(_.universityID).contains))
-      val additions = needsAdding.flatMap(a => DBIO.sequence(a.map(o =>
-        enquiryDao.insert(EnquiryOwner(
-          enquiryId = enquiryId,
-          universityID = o
-        ))
-      )))
-
-      daoRunner.run(DBIO.seq(removals, additions)).flatMap(_ =>
-        daoRunner.run(enquiryDao.findOwnersQuery(Set(enquiryId)).result).map(_.toSet)
-      ).map(Right.apply)
     }
   }
 }

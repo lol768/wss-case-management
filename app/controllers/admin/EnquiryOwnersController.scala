@@ -10,15 +10,15 @@ import play.api.data.Forms.{mapping, seq, text}
 import play.api.data.{Form, FormError}
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent}
-import services.EnquiryService
-import warwick.sso.{UniversityID, UserLookupService}
+import services.OwnerService
+import warwick.sso.{UserLookupService, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class EnquiryOwnersController @Inject()(
   enquirySpecificActionRefiner: EnquirySpecificActionRefiner,
-  enquiryService: EnquiryService,
+  ownerService: OwnerService,
   userLookupService: UserLookupService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
@@ -29,9 +29,9 @@ class EnquiryOwnersController @Inject()(
   import enquirySpecificActionRefiner._
 
   def form(id: UUID): Action[AnyContent] = EnquirySpecificTeamMemberAction(id).async { implicit request =>
-    enquiryService.getOwners(Set(request.enquiry.id.get)).successMap(owners =>
+    ownerService.getEnquiryOwners(Set(request.enquiry.id.get)).successMap(owners =>
       Ok(views.html.admin.enquiry.owners(
-        ownersForm.fill(owners.getOrElse(request.enquiry.id.get, Set()).map(_.universityID.string).toSeq.sorted),
+        ownersForm.fill(owners.getOrElse(request.enquiry.id.get, Set()).map(_.string).toSeq.sorted),
         request.enquiry
       ))
     )
@@ -43,15 +43,15 @@ class EnquiryOwnersController @Inject()(
         Future.successful(Ok(views.html.admin.enquiry.owners(formWithErrors, request.enquiry)))
       },
       data => {
-        val universityIDs = data.filter(_.hasText).map(UniversityID)
-        val users = userLookupService.getUsers(universityIDs).toOption.getOrElse(Map.empty)
-        val invalid = universityIDs.filter(u => !users.get(u).exists(_.isFound))
+        val userIds = data.filter(_.hasText).map(Usercode)
+        val users = userLookupService.getUsers(userIds).toOption.getOrElse(Map.empty)
+        val invalid = userIds.filter(u => !users.get(u).exists(_.isFound))
         if (invalid.nonEmpty) {
-          val formWithErrors = ownersForm.fill(universityIDs.map(_.string))
-            .withError(FormError("admins", "error.universityIDs.invalid", invalid.map(_.string).mkString(", ")))
+          val formWithErrors = ownersForm.fill(userIds.map(_.string))
+            .withError(FormError("owners", "error.userId.invalid", invalid.map(_.string).mkString(", ")))
           Future.successful(Ok(views.html.admin.enquiry.owners(formWithErrors, request.enquiry)))
         } else {
-          enquiryService.setOwners(request.enquiry.id.get, universityIDs).successMap(_ =>
+          ownerService.setEnquiryOwners(request.enquiry.id.get, userIds.toSet).successMap(_ =>
             Redirect(controllers.admin.routes.AdminController.teamHome(request.enquiry.team.id))
               .flashing("success" -> Messages("flash.enquiry.owners.updated"))
           )

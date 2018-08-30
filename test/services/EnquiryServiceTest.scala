@@ -8,7 +8,7 @@ import helpers.{DataFixture, JavaTime}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.ac.warwick.util.core.DateTimeUtils
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, Usercode}
 
 import scala.util.Random
 
@@ -59,8 +59,8 @@ class EnquiryServiceTest extends AbstractDaoTest {
           Message.messages.table.delete andThen
           Message.messages.versionsTable.delete andThen
           Message.messageClients.delete andThen
-          EnquiryOwner.enquiryOwners.table.delete andThen
-          EnquiryOwner.enquiryOwners.versionsTable.delete
+          Owner.enquiryOwners.table.delete andThen
+          Owner.enquiryOwners.versionsTable.delete
       ).futureValue
     }
   }
@@ -91,9 +91,9 @@ class EnquiryServiceTest extends AbstractDaoTest {
     "persist correctly" in {
       withData(new EnquiriesFixture(addMessages = false)) {
         val enquiry = enquiryService.findEnquiriesForClient(uniId1).serviceValue.head._1
-        val owner1 = UniversityID("1234")
-        val owner2 = UniversityID("2345")
-        val owner3 = UniversityID("3456")
+        val owner1 = Usercode("1234")
+        val owner2 = Usercode("2345")
+        val owner3 = Usercode("3456")
 
         val before = ZonedDateTime.of(2018, 1, 1, 10, 0, 0, 0, JavaTime.timeZone).toInstant
         val now = ZonedDateTime.of(2018, 1, 1, 11, 0, 0, 0, JavaTime.timeZone).toInstant
@@ -105,8 +105,8 @@ class EnquiryServiceTest extends AbstractDaoTest {
         val initialOwners = enquiryService.getOwners(Set(enquiry.id.get)).serviceValue(enquiry.id.get)
         initialOwners.size mustBe 2
         initialOwners.forall(_.version.toInstant.equals(before)) mustBe true
-        initialOwners.exists(_.universityID == owner1) mustBe true
-        initialOwners.exists(_.universityID == owner2) mustBe true
+        initialOwners.exists(_.userId == owner1) mustBe true
+        initialOwners.exists(_.userId == owner2) mustBe true
 
         DateTimeUtils.useMockDateTime(now, () => {
           enquiryService.setOwners(enquiry.id.get, Seq(owner2, owner3)).serviceValue
@@ -114,11 +114,11 @@ class EnquiryServiceTest extends AbstractDaoTest {
 
         val updatedOwners = enquiryService.getOwners(Set(enquiry.id.get)).serviceValue(enquiry.id.get)
         updatedOwners.size mustBe 2
-        updatedOwners.exists(_.universityID == owner1) mustBe false
-        updatedOwners.exists(_.universityID == owner2) mustBe true
-        updatedOwners.exists(_.universityID == owner3) mustBe true
-        updatedOwners.find(_.universityID == owner2).get.version.toInstant.equals(before) mustBe true
-        updatedOwners.find(_.universityID == owner3).get.version.toInstant.equals(now) mustBe true
+        updatedOwners.exists(_.userId == owner1) mustBe false
+        updatedOwners.exists(_.userId == owner2) mustBe true
+        updatedOwners.exists(_.userId == owner3) mustBe true
+        updatedOwners.find(_.userId == owner2).get.version.toInstant.equals(before) mustBe true
+        updatedOwners.find(_.userId == owner3).get.version.toInstant.equals(now) mustBe true
 
       }
     }
