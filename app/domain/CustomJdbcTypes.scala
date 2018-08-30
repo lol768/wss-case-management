@@ -64,4 +64,6 @@ object CustomJdbcTypes extends SlickEnumSupport {
   implicit lazy val messageOwnerMapper: JdbcType[MessageOwner] = mappedColumnTypeForEnum(MessageOwner)
   implicit lazy val messageSenderMapper: JdbcType[MessageSender] = mappedColumnTypeForEnum(MessageSender)
   implicit lazy val enquiryStateMapper: JdbcType[EnquiryState] = mappedColumnTypeForEnum(EnquiryState)
+  implicit lazy val caseTypeMapper: JdbcType[CaseType] = mappedColumnTypeForEnum(CaseType)
+  implicit lazy val caseCauseMapper: JdbcType[CaseCause] = mappedColumnTypeForEnum(CaseCause)
 }

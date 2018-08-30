@@ -1,5 +1,6 @@
 package domain
 
+import domain.CaseType.findValues
 import enumeratum.{EnumEntry, PlayEnum}
 
 import scala.collection.immutable
@@ -36,4 +37,38 @@ object CaseTag extends PlayEnum[CaseTag] {
   object Racism extends CaseTag("Racism")
   object SexualAssault extends CaseTag("Sexual Assault")
   val values: immutable.IndexedSeq[CaseTag] = findValues
+}
+
+sealed trait EmergencyService extends EnumEntry
+object EmergencyService extends PlayEnum[EmergencyService] {
+  object Police extends EmergencyService
+  object Ambulance extends EmergencyService
+  object Fire extends EmergencyService
+  val values: immutable.IndexedSeq[EmergencyService] = findValues
+}
+
+sealed abstract class CaseType(val applicableTo: Seq[Team]) extends EnumEntry
+abstract class MentalHealthCaseType extends CaseType(Seq(Teams.MentalHealth))
+object CaseType extends PlayEnum[CaseType] {
+  object MentalHealthAssessment extends MentalHealthCaseType
+  object MentalHealthCrisis extends MentalHealthCaseType
+  object MentalHealthWellbeing extends MentalHealthCaseType
+  object MentalHealthMentoring extends MentalHealthCaseType
+
+  override def values: immutable.IndexedSeq[CaseType] = findValues
+
+  def valuesFor(team: Team): Seq[CaseType] = values.filter { t =>
+    t.applicableTo.contains(team)
+  }
+}
+
+sealed trait CaseCause extends EnumEntry
+object CaseCause extends PlayEnum[CaseCause] {
+  object New extends CaseCause
+  object Recurring extends CaseCause
+  object Ongoing extends CaseCause
+  object Referred extends CaseCause
+  object SelfReferred extends CaseCause
+
+  override def values: immutable.IndexedSeq[CaseCause] = findValues
 }

@@ -45,6 +45,8 @@ object CaseDao {
     state: EnquiryState,
     onCampus: Option[Boolean],
     originalEnquiry: Option[UUID],
+    caseType: Option[CaseType],
+    cause: CaseCause
   ) extends Versioned[Case] {
     override def atVersion(at: OffsetDateTime): Case = copy(version = at)
     override def storedVersion[B <: StoredVersion[Case]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
@@ -57,6 +59,8 @@ object CaseDao {
         state,
         onCampus,
         originalEnquiry,
+        caseType,
+        cause,
         operation,
         timestamp
       ).asInstanceOf[B]
@@ -71,6 +75,9 @@ object CaseDao {
     state: EnquiryState,
     onCampus: Option[Boolean],
     originalEnquiry: Option[UUID],
+    caseType: Option[CaseType],
+    cause: CaseCause,
+
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
   ) extends StoredVersion[Case]
@@ -83,6 +90,8 @@ object CaseDao {
     def state = column[EnquiryState]("state")
     def onCampus = column[Option[Boolean]]("on_campus")
     def originalEnquiry = column[Option[UUID]](("enquiry_id"))
+    def caseType = column[Option[CaseType]]("case_type")
+    def cause = column[CaseCause]("cause")
   }
 
   class Cases(tag: Tag) extends Table[Case](tag, "client_case")
@@ -94,7 +103,7 @@ object CaseDao {
     def isOpen = state === (Open : EnquiryState) || state === (Reopened : EnquiryState)
 
     override def * : ProvenShape[Case] =
-      (id.?, created, incidentDate, team, version, state, onCampus, originalEnquiry).mapTo[Case]
+      (id.?, created, incidentDate, team, version, state, onCampus, originalEnquiry, caseType, cause).mapTo[Case]
   }
 
   class CaseVersions(tag: Tag) extends Table[CaseVersion](tag, "client_case_version")
@@ -105,6 +114,6 @@ object CaseDao {
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
     override def * : ProvenShape[CaseVersion] =
-      (id, created, incidentDate, team, version, state, onCampus, originalEnquiry, operation, timestamp).mapTo[CaseVersion]
+      (id, created, incidentDate, team, version, state, onCampus, originalEnquiry, caseType, cause, operation, timestamp).mapTo[CaseVersion]
   }
 }

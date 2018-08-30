@@ -63,6 +63,8 @@ object Fixtures {
       EnquiryState.Open,
       None,
       None,
+      Some(CaseType.MentalHealthAssessment),
+      CaseCause.New
     )
   }
 }
