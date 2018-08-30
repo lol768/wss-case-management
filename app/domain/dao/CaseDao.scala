@@ -10,7 +10,7 @@ import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
 import domain.CustomJdbcTypes._
-import domain.EnquiryState._
+import domain.IssueState._
 import domain.dao.CaseDao._
 import slick.lifted.ProvenShape
 
@@ -42,7 +42,7 @@ object CaseDao {
     incidentDate: OffsetDateTime,
     team: Team,
     version: OffsetDateTime,
-    state: EnquiryState,
+    state: IssueState,
     onCampus: Option[Boolean],
     originalEnquiry: Option[UUID],
     caseType: Option[CaseType],
@@ -72,7 +72,7 @@ object CaseDao {
     incidentDate: OffsetDateTime,
     team: Team,
     version: OffsetDateTime,
-    state: EnquiryState,
+    state: IssueState,
     onCampus: Option[Boolean],
     originalEnquiry: Option[UUID],
     caseType: Option[CaseType],
@@ -87,7 +87,7 @@ object CaseDao {
     def incidentDate = column[OffsetDateTime]("incident_date_utc")
     def team = column[Team]("team_id")
     def version = column[OffsetDateTime]("version_utc")
-    def state = column[EnquiryState]("state")
+    def state = column[IssueState]("state")
     def onCampus = column[Option[Boolean]]("on_campus")
     def originalEnquiry = column[Option[UUID]](("enquiry_id"))
     def caseType = column[Option[CaseType]]("case_type")
@@ -100,7 +100,7 @@ object CaseDao {
     override def matchesPrimaryKey(other: Case): Rep[Boolean] = id === other.id.orNull
     def id = column[UUID]("id", O.PrimaryKey/*, O.AutoInc*/)
 
-    def isOpen = state === (Open : EnquiryState) || state === (Reopened : EnquiryState)
+    def isOpen = state === (Open : IssueState) || state === (Reopened : IssueState)
 
     override def * : ProvenShape[Case] =
       (id.?, created, incidentDate, team, version, state, onCampus, originalEnquiry, caseType, cause).mapTo[Case]

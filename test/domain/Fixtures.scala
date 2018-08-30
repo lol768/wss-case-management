@@ -60,7 +60,7 @@ object Fixtures {
       JavaTime.offsetDateTime,
       Teams.MentalHealth,
       JavaTime.offsetDateTime,
-      EnquiryState.Open,
+      IssueState.Open,
       None,
       None,
       Some(CaseType.MentalHealthAssessment),
