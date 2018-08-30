@@ -14,6 +14,6 @@ class MasqueradeController @Inject()(
   import securityService._
   
   def masquerade: Action[AnyContent] = RequiredActualUserRoleAction(Masquerader) { implicit request =>
-    Ok(views.html.admin.masquerade())
+    Ok(views.html.sysadmin.masquerade())
   }
 }

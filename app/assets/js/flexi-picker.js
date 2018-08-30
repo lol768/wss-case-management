@@ -2,57 +2,7 @@ import $ from 'jquery';
 import log from 'loglevel';
 import 'bootstrap-3-typeahead';
 import { postJsonWithCredentials } from './serverpipe';
-
-/**
- * RichResultField is a text field that can be overlaid with a similar-looking
- * box containing arbitrary text. Useful if you want to save a particular value
- * from a picker but display something more friendly from the user.
- *
- * Requires Bootstrap.
- */
-class RichResultField {
-  constructor(input) {
-    const self = this;
-    this.$input = $(input);
-    this.$uneditable = $('<span><span class="val"></span>'
-      + '<a href="#" class="clear-field" title="Clear">&times;</a></span>');
-    this.$uneditable.attr({
-      class: `uneditable-input rich-result-field ${this.$input.attr('class')}`,
-      disabled: true,
-    });
-
-    this.$input.after(this.$uneditable);
-    // Attempt to match the original widths; defined width needed for text-overflow to work
-    this.$input.css('width', this.$input.css('width'));
-    this.$uneditable.css('width', this.$input.css('width'));
-    this.$uneditable.find('a').click(() => {
-      self.edit();
-      return false;
-    });
-    this.$uneditable.hide();
-  }
-
-  /** Clear field, focus for typing */
-  edit() {
-    this.$input.val('').typeahead('val', '');
-    this.$input.show();
-    this.$input.trigger('change').trigger('richResultField.edit').focus();
-    this.$uneditable.hide()
-      .find('.val')
-      .text('')
-      .attr('title', '');
-  }
-
-  /** Set value of input field, hide it and show the rich `text` instead */
-  store(value, text) {
-    this.$input.val(value).trigger('change').trigger('richResultField.store');
-    this.$input.hide();
-    this.$uneditable.show()
-      .find('.val')
-      .text(text)
-      .attr('title', text);
-  }
-}
+import RichResultField from './rich-result-field';
 
 /**
  * An AJAX autocomplete-style picker that can return a variety of different
@@ -88,31 +38,12 @@ export default class FlexiPicker {
     this.universityId = universityId;
 
     this.richResultField = new RichResultField(input);
-
-    let currentQuery = null;
+    this.currentQuery = null;
+    this.doSearch = this.doSearch.bind(this);
 
     $element.typeahead({
       source: (query, callback) => {
-        currentQuery = query;
-
-        postJsonWithCredentials('/service/flexipicker', {
-          includeUsers: this.includeUsers,
-          includeGroups: this.includeGroups,
-          universityId: this.universityId,
-          query,
-        })
-          .then(response => response.json())
-          .catch((e) => {
-            log.error(e);
-            return [];
-          })
-          .then((response) => {
-            // Return the items only if the user hasn't since made a different query
-            if (currentQuery === query) {
-              $.each(response.data.results, (i, item) => FlexiPicker.transformItem(item));
-              callback(response.data.results || []);
-            }
-          });
+        this.doSearch(query, {}, callback);
       },
       delay: 200,
       matcher: () => true, // All data received from the server matches the query
@@ -157,6 +88,20 @@ export default class FlexiPicker {
         $element.data('item', item);
       },
     });
+
+    // On load, look up the existing value and give it human-friendly text if possible
+    // NOTE: this relies on the fact that the saved value is itself a valid search term
+    // (excluding the prefix on webgroup, which is handled by getQuery() method).
+    const currentValue = $element.val();
+    if (currentValue && currentValue.trim().length > 0) {
+      const searchQuery = (this.prefixGroups && currentValue.indexOf(this.prefixGroups) === 0)
+        ? currentValue.substring(this.prefixGroups.length) : currentValue;
+      this.doSearch(searchQuery, { exact: true }, (results) => {
+        if (results.length > 0) {
+          self.richResultField.storeText(`${results[0].title} (${results[0].description})`);
+        }
+      });
+    }
   }
 
   static transformItem(input) {
@@ -173,6 +118,30 @@ export default class FlexiPicker {
       item.description = item.title;
       item.title = item.value;
     }
+  }
+
+  doSearch(query, options, callback) {
+    this.currentQuery = query;
+
+    postJsonWithCredentials('/service/flexipicker', {
+      includeUsers: this.includeUsers,
+      includeGroups: this.includeGroups,
+      universityId: this.universityId,
+      query,
+      exact: options.exact, // if true, only returns 100% matches.
+    })
+      .then(response => response.json())
+      .catch((e) => {
+        log.error(e);
+        return [];
+      })
+      .then((response) => {
+        // Return the items only if the user hasn't since made a different query
+        if (this.currentQuery === query) {
+          $.each(response.data.results, (i, item) => FlexiPicker.transformItem(item));
+          callback(response.data.results || []);
+        }
+      });
   }
 }
 
@@ -203,4 +172,56 @@ $.fn.flexiPicker = function initFlexiPicker(options = {}) {
  */
 $(() => {
   $('.flexi-picker').flexiPicker();
+
+  /*
+  * Handle the multiple-flexi picker, by dynamically expanding to always
+  * have at least one empty picker field.
+  */
+  // Each set of pickers will be in a .flexi-picker-collection
+  $('.flexi-picker-collection').each((i, collection) => {
+    const $collection = $(collection);
+    const $blankInput = $collection
+      .find('.flexi-picker-container')
+      .first()
+      .clone()
+      .find('input')
+      .val('')
+      .end();
+    $blankInput.find('a.btn').remove(); // this button is added by initFlexiPicker, so remove it now or we'll see double
+
+    // check whenever field is changed or focused
+    if ($collection.data('automatic') === true) {
+      $collection.on('change focus', 'input', (ev) => {
+        // remove empty pickers
+        const $inputs = $collection.find('input');
+        if ($inputs.length > 1) {
+          $inputs
+            .not(':focus')
+            .not(':last')
+            .filter((j, element) => (element.value || '').trim() === '')
+            .closest('.flexi-picker-container')
+            .remove();
+        }
+
+        // if last picker is nonempty OR focused, append an blank picker.
+        const $last = $inputs.last();
+        const lastFocused = (ev.type === 'focusin' && ev.target === $last[0]);
+        if (lastFocused || $last.val().trim() !== '') {
+          const input = $blankInput.clone();
+          $collection.append(input);
+          input.find('input').first().flexiPicker({});
+        }
+      });
+    } else {
+      $collection.append($('<button />')
+        .attr({ type: 'button' })
+        .addClass('btn').addClass('btn btn-xs btn-default')
+        .html('Add another')
+        .on('click', () => {
+          const input = $blankInput.clone();
+          $(this).before(input);
+          input.find('input').first().flexiPicker({});
+        }));
+    }
+  });
 });

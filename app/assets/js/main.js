@@ -6,6 +6,7 @@ import './jquery.are-you-sure';
 import FieldHistory from './field-history';
 import './flexi-picker';
 import ClientSearch from './client-search';
+import UserListPopovers from './user-list-popovers';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -16,6 +17,8 @@ function closePopover($popover) {
 
 $(() => {
   $('[data-toggle="popover"]').popover();
+
+  UserListPopovers();
 
   $('.field-history').each((i, container) => {
     FieldHistory(container);

@@ -1,0 +1,14 @@
+@import domain.EnquiryOwner
+@import domain.Enquiry
+@(form: Form[Seq[String]], enquiry: Enquiry)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main("Edit owners") {
+  @b3.vertical.formCSRF(controllers.admin.routes.EnquiryOwnersController.submit(enquiry.id.get), 'class -> "dirty-check") { implicit ifc =>
+
+    @b3.free('_label -> "Owners") {
+      @tags.flexipicker(values = form.data.values.toSeq, name = "owners[]", placeholder = "Search for users", multiple = true, universityId = true)
+    }
+
+    @tags.submitOrCancel("Save", controllers.admin.routes.AdminController.teamHome(enquiry.team.id))
+  }
+}

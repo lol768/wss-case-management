@@ -6,18 +6,57 @@
 @import java.time.Duration
 @import warwick.sso.UniversityID
 
+@import domain.EnquiryOwner
+@import java.util.UUID
+@import warwick.sso.User
+@import play.api.libs.json._
 @(team: Team,
-  enquiries: Seq[(Enquiry, MessageData)],
-  profiles: Map[UniversityID, SitsProfile]
+  ownerEnquiries: Seq[(Enquiry, MessageData)],
+  teamEnquiries: Seq[(Enquiry, MessageData)],
+  profiles: Map[UniversityID, SitsProfile],
+  owners: Map[UUID, Set[User]]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@enquiryRow(enquiry: Enquiry, message: MessageData) = {
+  <tr>
+    <td>
+      @profiles.get(enquiry.universityID).map { p: SitsProfile =>
+        <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>
+      }.getOrElse { @enquiry.universityID }
+    </td>
+    <td>@enquiry.subject</td>
+    <td>@helpers.JavaTime.Relative(enquiry.created)</td>
+    <td>@helpers.JavaTime.Relative(message.created)</td>
+    <td>
+      @enquiry.team.name
+      <a class="btn btn-default" href="@controllers.admin.routes.TeamEnquiryController.reassignForm(enquiry.id.get)">Reassign</a>
+    </td>
+    <td>
+      <button
+        class="btn btn-link user-list-popover"
+        data-users="@Json.stringify(JsArray(owners.getOrElse(enquiry.id.get, Set()).map(u => Json.obj(
+          "universityID" -> u.universityId.get.string,
+          "name" -> JsString(u.name.full.getOrElse("[Unknown user]"))
+        )).toSeq))"
+        data-more-link="@controllers.admin.routes.EnquiryOwnersController.form(enquiry.id.get)"
+        data-more-caption="Edit owners"
+        type="button"
+      >
+        <i class="fa fa-users"></i>
+        @owners.getOrElse(enquiry.id.get, Set()).size
+      </button>
+    </td>
+    <td><a class="btn btn-default" href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get)">View</a></td>
+  </tr>
+}
 
 @main(team.name) {
   <form action="@routes.ClientSearchController.search()" method="get" class="client-search">
     <input type="text" class="form-control input-lg" placeholder="Search for a client" />
   </form>
 
-  @if(enquiries.nonEmpty) {
-    <h2>Enquiries requiring action</h2>
+  @if(ownerEnquiries.nonEmpty) {
+    <h2>Enquiries assigned to me requiring action</h2>
     <table class="table table-bordered table-striped">
       <thead>
         <tr>
@@ -26,31 +65,37 @@
           <th>Created</th>
           <th>Last message</th>
           <th>Team assigned</th>
+          <th>Owners</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        @enquiries.map { case (enquiry, message) =>
-          @defining(profiles.get(enquiry.universityID)) { profile: Option[SitsProfile] =>
-            <tr>
-              <td>
-                @profile.map { p: SitsProfile =>
-                  <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>
-                }.getOrElse { @enquiry.universityID }
-              </td>
-              <td>@enquiry.subject</td>
-              <td>@helpers.JavaTime.Relative(enquiry.created)</td>
-              <td>@helpers.JavaTime.Relative(message.created)</td>
-              <td>
-                @enquiry.team.name
-                <a class="btn btn-default" href="@controllers.admin.routes.TeamEnquiryController.reassignForm(enquiry.id.get)">Reassign</a>
-              </td>
-              <td><a class="btn btn-default" href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get)">View</a></td>
-            </tr>
-          }
+        @ownerEnquiries.map { case (enquiry, message) =>
+          @enquiryRow(enquiry, message)
         }
       </tbody>
     </table>
+  }
 
+  @if(teamEnquiries.nonEmpty) {
+    <h2>Enquiries assigned to @team.name requiring action</h2>
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Subject</th>
+          <th>Created</th>
+          <th>Last message</th>
+          <th>Team assigned</th>
+          <th>Owners</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @teamEnquiries.map { case (enquiry, message) =>
+          @enquiryRow(enquiry, message)
+        }
+      </tbody>
+    </table>
   }
 }

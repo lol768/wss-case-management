@@ -1,5 +1,7 @@
 package services
 
+import java.time.ZonedDateTime
+
 import domain._
 import domain.dao.{AbstractDaoTest, DaoRunner}
 import helpers.{DataFixture, JavaTime}
@@ -18,8 +20,8 @@ class EnquiryServiceTest extends AbstractDaoTest {
         bind[NotificationService].to[NullNotificationService]
       )
 
-  val enquiryService = get[EnquiryService]
-  val runner = get[DaoRunner]
+  private val enquiryService = get[EnquiryService]
+  private val runner = get[DaoRunner]
 
   import profile.api._
 
@@ -56,7 +58,9 @@ class EnquiryServiceTest extends AbstractDaoTest {
           Enquiry.enquiries.versionsTable.delete andThen
           Message.messages.table.delete andThen
           Message.messages.versionsTable.delete andThen
-          Message.messageClients.delete
+          Message.messageClients.delete andThen
+          EnquiryOwner.enquiryOwners.table.delete andThen
+          EnquiryOwner.enquiryOwners.versionsTable.delete
       ).futureValue
     }
   }
@@ -81,6 +85,43 @@ class EnquiryServiceTest extends AbstractDaoTest {
       }
     }
 
+  }
+
+  "saving owners" should {
+    "persist correctly" in {
+      withData(new EnquiriesFixture(addMessages = false)) {
+        val enquiry = enquiryService.findEnquiriesForClient(uniId1).serviceValue.head._1
+        val owner1 = UniversityID("1234")
+        val owner2 = UniversityID("2345")
+        val owner3 = UniversityID("3456")
+
+        val before = ZonedDateTime.of(2018, 1, 1, 10, 0, 0, 0, JavaTime.timeZone).toInstant
+        val now = ZonedDateTime.of(2018, 1, 1, 11, 0, 0, 0, JavaTime.timeZone).toInstant
+
+        DateTimeUtils.useMockDateTime(before, () => {
+          enquiryService.setOwners(enquiry.id.get, Seq(owner1, owner2)).serviceValue
+        })
+
+        val initialOwners = enquiryService.getOwners(Set(enquiry.id.get)).serviceValue(enquiry.id.get)
+        initialOwners.size mustBe 2
+        initialOwners.forall(_.version.toInstant.equals(before)) mustBe true
+        initialOwners.exists(_.universityID == owner1) mustBe true
+        initialOwners.exists(_.universityID == owner2) mustBe true
+
+        DateTimeUtils.useMockDateTime(now, () => {
+          enquiryService.setOwners(enquiry.id.get, Seq(owner2, owner3)).serviceValue
+        })
+
+        val updatedOwners = enquiryService.getOwners(Set(enquiry.id.get)).serviceValue(enquiry.id.get)
+        updatedOwners.size mustBe 2
+        updatedOwners.exists(_.universityID == owner1) mustBe false
+        updatedOwners.exists(_.universityID == owner2) mustBe true
+        updatedOwners.exists(_.universityID == owner3) mustBe true
+        updatedOwners.find(_.universityID == owner2).get.version.toInstant.equals(before) mustBe true
+        updatedOwners.find(_.universityID == owner3).get.version.toInstant.equals(now) mustBe true
+
+      }
+    }
   }
 
 }

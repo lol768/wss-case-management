@@ -44,6 +44,8 @@ GET         /team/client/:universityID/registration-history     @controllers.adm
 
 GET         /team/enquiry/:id/reassign              @controllers.admin.TeamEnquiryController.reassignForm(id: java.util.UUID)
 POST        /team/enquiry/:id/reassign              @controllers.admin.TeamEnquiryController.reassign(id: java.util.UUID)
+GET         /team/enquiry/:id/owners                @controllers.admin.EnquiryOwnersController.form(id: java.util.UUID)
+POST        /team/enquiry/:id/owners                @controllers.admin.EnquiryOwnersController.submit(id: java.util.UUID)
 
 ## Admins/Sysadmins ##
 
