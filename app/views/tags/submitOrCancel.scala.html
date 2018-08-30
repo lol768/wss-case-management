@@ -3,7 +3,7 @@
   cancelRoute: Call
 )(implicit fc: b3.B3FieldConstructor, messages: Messages)
 
-@b3.free() {
+@b3.free('_class -> "submit-or-cancel") {
   <button type="submit" class="btn btn-primary">@actionLabel</button>
   <a href="@cancelRoute" class="btn btn-default">Cancel</a>
 }

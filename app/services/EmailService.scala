@@ -6,13 +6,14 @@ import akka.Done
 import com.google.inject.ImplementedBy
 import domain.OutgoingEmail
 import domain.dao.{DaoRunner, OutgoingEmailDao}
-import helpers.JavaTime
+import helpers.{JavaTime, ServiceResults}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import org.quartz.{JobBuilder, JobKey, Scheduler, TriggerBuilder}
 import play.api.libs.json.Json
 import play.api.libs.mailer.{Email, MailerClient}
 import services.job.SendOutgoingEmailJob
+import warwick.core.timing.TimingContext
 import system.Logging
 import warwick.sso.{User, UserLookupService}
 
@@ -21,10 +22,10 @@ import scala.util.{Failure, Success}
 
 @ImplementedBy(classOf[EmailServiceImpl])
 trait EmailService {
-  def queue(email: Email, recipients: Seq[User]): Future[ServiceResult[Seq[OutgoingEmail]]]
-  def get(id: UUID): Future[ServiceResult[Option[OutgoingEmail]]]
-  def sendImmediately(email: OutgoingEmail): Future[ServiceResult[Done]]
-  def countUnsentEmails(): Future[ServiceResult[Int]]
+  def queue(email: Email, recipients: Seq[User])(implicit t: TimingContext): Future[ServiceResult[Seq[OutgoingEmail]]]
+  def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]]
+  def sendImmediately(email: OutgoingEmail)(implicit t: TimingContext): Future[ServiceResult[Done]]
+  def countUnsentEmails()(implicit t: TimingContext): Future[ServiceResult[Int]]
 }
 
 @Singleton
@@ -37,7 +38,7 @@ class EmailServiceImpl @Inject()(
   mailer: MailerClient,
 )(implicit executionContext: ExecutionContext) extends EmailService with Logging {
 
-  override def queue(email: Email, recipients: Seq[User]): Future[ServiceResult[Seq[OutgoingEmail]]] = {
+  override def queue(email: Email, recipients: Seq[User])(implicit t: TimingContext): Future[ServiceResult[Seq[OutgoingEmail]]] = {
     val emails = recipients.map { u =>
       OutgoingEmail(
         id = None, // Allow the DAO to set this
@@ -65,10 +66,10 @@ class EmailServiceImpl @Inject()(
     }).map(Right.apply)
   }
 
-  override def get(id: UUID): Future[ServiceResult[Option[OutgoingEmail]]] =
+  override def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]] =
     daoRunner.run(dao.get(id)).map(_.map(_.parsed)).map(Right.apply)
 
-  override def sendImmediately(email: OutgoingEmail): Future[ServiceResult[Done]] = {
+  override def sendImmediately(email: OutgoingEmail)(implicit t: TimingContext): Future[ServiceResult[Done]] = {
     def update(e: OutgoingEmail): Future[ServiceResult[OutgoingEmail]] =
       daoRunner.run(dao.update(e, e.updated)).map(_.parsed).map(Right.apply)
 
@@ -90,10 +91,7 @@ class EmailServiceImpl @Inject()(
         }
 
         sendEmail
-          .recover { case t: Throwable => Left(List(new ServiceError {
-            override def message: String = t.getMessage
-            override def cause = Some(t)
-          })) }
+          .recover { case t => ServiceResults.exceptionToServiceResult(t) }
           .flatMap {
             case Left(errors) => update(e.copy(lastSendAttempt = Some(JavaTime.offsetDateTime), failureReason = Some(errors.map(_.message).mkString(", ")))).map { _ => Left(errors) }
             case Right(result) => update(e.copy(sent = Some(JavaTime.offsetDateTime), lastSendAttempt = None, failureReason = None)).map { _ => Right(result) }
@@ -121,6 +119,6 @@ class EmailServiceImpl @Inject()(
     } else send(email, None)
   }
 
-  override def countUnsentEmails(): Future[ServiceResult[Int]] =
+  override def countUnsentEmails()(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(dao.countUnsentEmails()).map(Right.apply)
 }

@@ -9,6 +9,7 @@ import helpers.ConditionalChain._
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
+import warwick.core.timing.TimingContext
 import uk.ac.warwick.util.logging.AuditLogger
 import uk.ac.warwick.util.logging.AuditLogger.RequestInformation
 import warwick.sso.Usercode
@@ -19,11 +20,12 @@ import scala.concurrent.{ExecutionContext, Future}
 case class AuditLogContext(
   usercode: Option[Usercode] = None,
   ipAddress: Option[String] = None,
-  userAgent: Option[String] = None
-)
+  userAgent: Option[String] = None,
+  timingData: TimingContext.Data
+) extends TimingContext
 
 object AuditLogContext {
-  def empty(): AuditLogContext = AuditLogContext()
+  def empty()(implicit t: TimingContext): AuditLogContext = AuditLogContext(timingData = t.timingData)
 }
 
 @ImplementedBy(classOf[AuditServiceImpl])

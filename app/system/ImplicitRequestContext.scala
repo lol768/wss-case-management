@@ -7,7 +7,7 @@ import play.api.mvc.RequestHeader
 import services.{AuditLogContext, NavigationService}
 import warwick.sso.{AuthenticatedRequest, SSOClient}
 
-trait ImplicitRequestContext {
+trait ImplicitRequestContext extends LowPriorityRequestContextImplicits {
 
   @Inject
   private[this] var navigationService: NavigationService = _
@@ -31,11 +31,20 @@ trait ImplicitRequestContext {
     case _ => RequestContext.anonymous(ssoClient, request, Nil, csrfPageHelperFactory, configuration)
   }
 
+}
+
+/**
+  * Low priority implicits to avoid implicit ambiguity when a TimingContext is needed (since it could either
+  * convert to RequestContext, or it could also go on to convert that to AuditLogcontext which is also a TimingContext).
+  */
+trait LowPriorityRequestContextImplicits {
+
   implicit def requestToAuditLogContext(implicit requestContext: RequestContext): AuditLogContext =
     AuditLogContext(
       usercode = requestContext.user.map(_.usercode),
       ipAddress = Some(requestContext.ipAddress),
-      userAgent = requestContext.userAgent
+      userAgent = requestContext.userAgent,
+      timingData = requestContext.timingData
     )
 
 }

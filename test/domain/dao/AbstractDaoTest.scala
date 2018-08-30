@@ -1,10 +1,13 @@
 package domain.dao
 
-import helpers.{DaoPatience, OneAppPerSuite}
+import helpers.ServiceResults.ServiceResult
+import helpers.{DaoPatience, DataFixture, OneAppPerSuite, ServiceResults}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.db.slick.DatabaseConfigProvider
+import services.AuditLogContext
+import warwick.core.timing.TimingContext
 import slick.basic.DatabaseConfig
 import slick.dbio.{DBIO, DBIOAction}
 import slick.jdbc.JdbcProfile
@@ -15,6 +18,8 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 case class IntentionalRollbackException[R](successResult: R) extends Exception("Rolling back transaction")
 
 abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPerSuite with ScalaFutures with DaoPatience {
+
+  implicit def auditLogContext = AuditLogContext.empty()(TimingContext.none)
 
   implicit lazy val ec = get[ExecutionContext]
 
@@ -52,6 +57,29 @@ abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPer
     */
   def exec[R](action: DBIO[R]): R = Await.result(runWithRollback(action), 5.seconds)
 
-  def execWithCommit[R](action: DBIO[R]): R = Await.result(runner.run(action), 5.seconds)
+  def execWithCommit[R](action: DBIO[R]): R = {
+    Await.result(runner.run(action), 5.seconds)
+  }
 
+  implicit class FutureServiceResultOps[A](f: Future[ServiceResult[A]]) {
+
+    // Convenient way to block on a Future[ServiceResult[_]] that you expect
+    // to be successful.
+    def serviceValue: A =
+      f.futureValue.fold(
+        e => e.flatMap(_.cause).headOption
+          .map(throw _)
+          .getOrElse(fail(e.map(_.message).mkString("; "))),
+        identity // return success as-is
+      )
+  }
+
+  def withData(data: DataFixture)(fn: => Unit): Unit = {
+    try {
+      data.setup()
+      fn
+    } finally {
+      data.teardown()
+    }
+  }
 }

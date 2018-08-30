@@ -5,6 +5,7 @@ import java.util.UUID
 
 import domain.CustomJdbcTypes._
 import enumeratum._
+import helpers.JavaTime
 import slick.jdbc.PostgresProfile.api._
 import warwick.sso.{UniversityID, Usercode}
 
@@ -134,6 +135,13 @@ case class MessageData (
   sender: MessageSender,
   created: OffsetDateTime
 )
+
+object MessageData {
+  def tupled = (apply _).tupled
+
+  // oldest first
+  val dateOrdering = Ordering.by[MessageData, OffsetDateTime](data => data.created)(JavaTime.dateTimeOrdering)
+}
 
 sealed trait MessageSender extends EnumEntry
 object MessageSender extends PlayEnum[MessageSender] {

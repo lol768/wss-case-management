@@ -22,6 +22,7 @@
       <thead>
         <tr>
           <th>Client</th>
+          <th>Subject</th>
           <th>Created</th>
           <th>Last message</th>
           <th>Team assigned</th>
@@ -37,6 +38,7 @@
                   <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>
                 }.getOrElse { @enquiry.universityID }
               </td>
+              <td>@enquiry.subject</td>
               <td>@helpers.JavaTime.Relative(enquiry.created)</td>
               <td>@helpers.JavaTime.Relative(message.created)</td>
               <td>

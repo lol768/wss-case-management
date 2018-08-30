@@ -7,6 +7,7 @@
 ## Misc/System ##
 
 # Map static resources from the /public folder to the /assets URL path
++notiming
 GET         /assets/*file                           @controllers.Assets.versioned(path="/public", file: Asset)
 
 # Service health check

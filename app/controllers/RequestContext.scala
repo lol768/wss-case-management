@@ -3,6 +3,7 @@ package controllers
 import play.api.Configuration
 import play.api.mvc.{Flash, RequestHeader}
 import services.Navigation
+import warwick.core.timing._
 import system.{CSRFPageHelper, CSRFPageHelperFactory}
 import warwick.sso.{AuthenticatedRequest, SSOClient, User}
 
@@ -22,8 +23,9 @@ case class RequestContext(
   flash: Flash,
   csrfHelper: CSRFPageHelper,
   userAgent: Option[String],
-  ipAddress: String
-) {
+  ipAddress: String,
+  timingData: TimingContext.Data
+) extends TimingContext {
   def isMasquerading: Boolean = user != actualUser
 }
 
@@ -59,7 +61,8 @@ object RequestContext {
       flash = Try(request.flash).getOrElse(Flash()),
       csrfHelper = transformCsrfHelper(csrfHelperFactory, request),
       userAgent = request.headers.get("User-Agent"),
-      ipAddress = request.remoteAddress
+      ipAddress = request.remoteAddress,
+      timingData = request.attrs(ServerTimingFilter.TimingData)
     )
   }
 
