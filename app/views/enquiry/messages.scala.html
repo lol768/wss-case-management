@@ -32,7 +32,7 @@
             'rows -> 3
           )
 
-          @b3.free() {
+          @b3.free('_class -> "submit-or-cancel") {
             <button type="submit" class="btn btn-primary">Add message</button>
             @if(messageSender == MessageSender.Team) {
               @b3.validatedHidden(stateChangeForm, "version")
