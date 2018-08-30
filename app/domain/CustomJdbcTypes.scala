@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter
 import java.time.{OffsetDateTime, ZoneOffset}
 import java.util.{Calendar, TimeZone}
 
+import domain.dao.GeneratedId
 import enumeratum.SlickEnumSupport
 import helpers.JavaTime
 import play.api.libs.json.{JsValue, Json}

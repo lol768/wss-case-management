@@ -6,8 +6,8 @@
 		</encoder>
 	</appender>
 
-	<!--<logger name="slick.jdbc.JdbcBackend.statement" level="DEBUG" />-->
-	<!--<logger name="slick.jdbc.JdbcBackend.parameter" level="DEBUG" />-->
+	<logger name="slick.jdbc.JdbcBackend.statement" level="DEBUG" />
+	<logger name="slick.jdbc.JdbcBackend.parameter" level="DEBUG" />
 
 	<root level="INFO">
 		<appender-ref ref="S"/>

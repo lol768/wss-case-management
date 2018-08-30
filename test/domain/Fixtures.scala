@@ -1,7 +1,11 @@
 package domain
 
+import java.time.OffsetDateTime
 import java.util.UUID
 
+import domain.dao.CaseDao.Case
+import domain.dao.{CaseDao, GeneratedId}
+import helpers.JavaTime
 import warwick.sso._
 
 object Fixtures {
@@ -46,6 +50,19 @@ object Fixtures {
     def newEnquiryMessage(enquiry: UUID) = newMessage(
       ownerId = enquiry,
       ownerType = MessageOwner.Enquiry
+    )
+  }
+
+  object cases {
+    def newCase(): Case = Case(
+      Some(UUID.randomUUID()),
+      JavaTime.offsetDateTime,
+      JavaTime.offsetDateTime,
+      Teams.MentalHealth,
+      JavaTime.offsetDateTime,
+      EnquiryState.Open,
+      None,
+      None,
     )
   }
 }

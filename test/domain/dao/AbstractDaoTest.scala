@@ -74,10 +74,9 @@ abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPer
       )
   }
 
-  def withData(data: DataFixture)(fn: => Unit): Unit = {
+  def withData[A](data: DataFixture[A])(fn: A => Unit): Unit = {
     try {
-      data.setup()
-      fn
+      fn(data.setup())
     } finally {
       data.teardown()
     }
