@@ -1,6 +1,6 @@
 @import controllers.enquiries.EnquiryMessagesController.StateChangeForm
 @import domain.Enquiry
-@import domain.EnquiryState
+@import domain.IssueState
 @import domain.MessageData
 @import domain.Message.FormData
 @import domain.MessageSender
@@ -25,7 +25,7 @@
         tags.conversation(messages, clientName = clientName)
       }
 
-      @if(enquiry.state != EnquiryState.Closed) {
+      @if(enquiry.state != IssueState.Closed) {
         @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.id.get)) { implicit ifc =>
           @b3.textarea(stateChangeForm("text"),
             '_label -> "Add a message",

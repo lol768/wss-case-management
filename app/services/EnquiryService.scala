@@ -35,9 +35,9 @@ trait EnquiryService {
     */
   def reassign(enquiry: Enquiry, team: Team, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
-  def updateState(enquiry: Enquiry, targetState: EnquiryState, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
+  def updateState(enquiry: Enquiry, targetState: IssueState, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
-  def updateStateWithMessage(enquiry: Enquiry, targetState: EnquiryState, message: MessageSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
+  def updateStateWithMessage(enquiry: Enquiry, targetState: IssueState, message: MessageSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
   def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]]
 
@@ -102,7 +102,7 @@ class EnquiryServiceImpl @Inject() (
       enquiry => notificationService.enquiryReassign(enquiry).map(_.right.map(_ => enquiry))
     ))
 
-  override def updateState(enquiry: Enquiry, targetState: EnquiryState, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
+  override def updateState(enquiry: Enquiry, targetState: IssueState, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
     auditService.audit(Symbol(s"Enquiry${targetState.entryName}"), enquiry.id.get.toString, 'Enquiry, Json.obj()) {
       daoRunner.run(
         enquiryDao.update(enquiry.copy(state = targetState), version)
@@ -110,7 +110,7 @@ class EnquiryServiceImpl @Inject() (
     }
   }
 
-  def updateStateWithMessage(enquiry: Enquiry, targetState: EnquiryState, message: MessageSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
+  def updateStateWithMessage(enquiry: Enquiry, targetState: IssueState, message: MessageSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
     auditService.audit(Symbol(s"Enquiry${targetState.entryName}WithMessage"), enquiry.id.get.toString, 'Enquiry, Json.obj()) {
       daoRunner.run(
         addMessageDBIO(enquiry, message).andThen(

@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import controllers.BaseController
-import domain.{Enquiry, EnquiryState, MessageData, MessageSender}
+import domain.{Enquiry, IssueState, MessageData, MessageSender}
 import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
@@ -68,14 +68,14 @@ class EnquiryMessagesController @Inject()(
   }
 
   def close(id: UUID): Action[AnyContent] = EnquirySpecificTeamMemberAction(id).async { implicit request =>
-    updateStateAndMessage(EnquiryState.Closed)
+    updateStateAndMessage(IssueState.Closed)
   }
 
   def reopen(id: UUID): Action[AnyContent] = EnquirySpecificMessagesAction(id).async { implicit request =>
-    updateStateAndMessage(EnquiryState.Reopened)
+    updateStateAndMessage(IssueState.Reopened)
   }
 
-  private def updateStateAndMessage(newState: EnquiryState)(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
+  private def updateStateAndMessage(newState: IssueState)(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
     stateChangeForm(request.enquiry, messageSender(request)).bindFromRequest().fold(
       formWithErrors => Future.successful(renderMessages(request.enquiry, request.messages, formWithErrors)),
       formData => {
