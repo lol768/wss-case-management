@@ -32,11 +32,11 @@
             'rows -> 3
           )
 
-          @b3.free('_class -> "submit-or-cancel") {
+          @b3.free('_class -> "spaced-buttons") {
             <button type="submit" class="btn btn-primary">Add message</button>
             @if(messageSender == MessageSender.Team) {
-              @b3.validatedHidden(stateChangeForm, "version")
               <button type="submit" formaction="@controllers.enquiries.routes.EnquiryMessagesController.close(enquiry.id.get)" class="btn btn-primary"> Close enquiry</button>
+              @b3.validatedHidden(stateChangeForm, "version")
             }
           }
         }
