@@ -3,7 +3,9 @@ package domain.dao
 import java.time.{Clock, ZonedDateTime}
 
 import domain._
+import domain.dao.ClientSummaryDao.PersistedClientSummary
 import helpers.JavaTime
+import play.api.libs.json.JsObject
 import uk.ac.warwick.util.core.DateTimeUtils
 import warwick.sso.UniversityID
 
@@ -13,22 +15,21 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
 
   private val dao = get[ClientSummaryDao]
 
+  val uniID = UniversityID("1234567")
+  val data = ClientSummaryData(
+    highMentalHealthRisk = Some(false),
+    notes = "Some guy doing something\n\ngood for him",
+    alternativeContactNumber = "07777123456",
+    alternativeEmailAddress = "nobody@example.com",
+    riskStatus = Some(ClientRiskStatus.Medium),
+    reasonableAdjustments = Set(ReasonableAdjustment.Exam5, ReasonableAdjustment.ExtendedDeadlines)
+  )
+
   "ClientSummaryDao" should {
 
     "save client summary" in {
       val now = ZonedDateTime.of(2018, 1, 1, 10, 0, 0, 0, JavaTime.timeZone).toInstant
       DateTimeUtils.useMockDateTime(now, () => {
-        val uniID = UniversityID("1234567")
-
-        val data = ClientSummaryData(
-          highMentalHealthRisk = Some(false),
-          notes = "Some guy doing something\n\ngood for him",
-          alternativeContactNumber = "07777123456",
-          alternativeEmailAddress = "nobody@example.com",
-          riskStatus = Some(ClientRiskStatus.Medium),
-          reasonableAdjustments = Set(ReasonableAdjustment.Exam5, ReasonableAdjustment.ExtendedDeadlines)
-        )
-
         val test = for {
           existsBefore <- dao.get(uniID)
           result <- dao.insert(uniID, data)
@@ -55,17 +56,6 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
     }
 
     "update client summary" in {
-      val uniID = UniversityID("1234567")
-
-      val data = ClientSummaryData(
-        highMentalHealthRisk = Some(false),
-        notes = "Some guy doing something\n\ngood for him",
-        alternativeContactNumber = "07777123456",
-        alternativeEmailAddress = "nobody@example.com",
-        riskStatus = Some(ClientRiskStatus.Medium),
-        reasonableAdjustments = Set(ReasonableAdjustment.Exam5, ReasonableAdjustment.ExtendedDeadlines)
-      )
-
       val updatedData = data.copy(
         highMentalHealthRisk = Some(true),
         notes = "Ah okay then.",
@@ -101,6 +91,19 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
 
       exec(test)
       DateTimeUtils.CLOCK_IMPLEMENTATION = Clock.systemDefaultZone
+    }
+
+    "parse optional fields properly" in {
+      // riskStatus was made optional, but the way it's parsed isn't
+      val oldJson = data.getJsonFields.as[JsObject] - "riskStatus"
+      val oldData = PersistedClientSummary(
+        uniID,
+        None,
+        oldJson,
+        JavaTime.offsetDateTime
+      )
+
+      oldData.parsed.data.riskStatus mustBe None
     }
 
   }
