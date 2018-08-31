@@ -57,7 +57,7 @@ object RequestContext {
       flash = Try(request.flash).getOrElse(Flash()),
       userAgent = request.headers.get("User-Agent"),
       ipAddress = request.remoteAddress,
-      timingData = request.attrs(ServerTimingFilter.TimingData)
+      timingData = request.attrs.get(ServerTimingFilter.TimingData).getOrElse(new TimingContext.Data)
     )
   }
 
