@@ -1,7 +1,5 @@
 @import (reference) "id7/less/bootstrap/variables.less";
 @import (reference) "id7/less/bootstrap/mixins.less";
-@import (reference) "id7/less/font-awesome/variables.less";
-@import (reference) "id7/less/font-awesome/mixins.less";
 @import (reference) "id7/less/variables.less";
 @import (reference) "id7/less/mixins.less";
 
@@ -9,10 +7,14 @@
 @icon-font-path: './lib/id7/fonts';
 @fa-font-path: './lib/id7/fonts';
 
-@import "id7/less/id7.less";
-@import "id7-theme.less";
-@import "sysadmin-notices.less";
-@import "error-pages.less";
+
+@import "id7/less/id7-no-fa";
+@import "id7/less/font-awesome-pro";
+@import "id7-theme";
+@import "sysadmin-notices";
+@import "error-pages";
+
+@fa-font-path: './lib/id7/fonts';
 
 .pull-right:first-child {
   & + h1, & + h2, & + h3, & + h4, & + h5, & + h6 {
