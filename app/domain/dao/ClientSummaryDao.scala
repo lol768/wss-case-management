@@ -49,11 +49,11 @@ object ClientSummaryDao {
       updatedDate = version,
       data = ClientSummaryData(
         highMentalHealthRisk = highMentalHealthRisk,
-        notes = data("notes").as[String],
-        alternativeContactNumber = data("alternativeContactNumber").as[String],
-        alternativeEmailAddress = data("alternativeEmailAddress").as[String],
-        riskStatus = data("riskStatus").asOpt[ClientRiskStatus],
-        reasonableAdjustments = data("reasonableAdjustments").as[Set[ReasonableAdjustment]]
+        notes = (data \ "notes").as[String],
+        alternativeContactNumber = (data \ "alternativeContactNumber").as[String],
+        alternativeEmailAddress = (data \ "alternativeEmailAddress").as[String],
+        riskStatus = (data \ "riskStatus").asOpt[ClientRiskStatus],
+        reasonableAdjustments = (data \ "reasonableAdjustments").as[Set[ReasonableAdjustment]]
       )
     )
   }
