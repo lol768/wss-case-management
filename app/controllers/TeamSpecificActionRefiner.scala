@@ -38,7 +38,7 @@ class TeamSpecificActionRefiner @Inject()(
 
       val hasPermissions: ServiceResult[Boolean] =
         if (request.context.user.isEmpty) Right(false)
-        else if (request.context.actualUserHasRole(Sysadmin))
+        else if (request.context.user == request.context.actualUser && request.context.userHasRole(Sysadmin))
           Right(true)
         else
           permissionService.inTeam(request.context.user.get.usercode, request.team)
@@ -62,7 +62,7 @@ class TeamSpecificActionRefiner @Inject()(
 
       val hasPermissions: ServiceResult[Boolean] =
         if (request.context.user.isEmpty) Right(false)
-        else if (request.context.actualUserHasRole(Sysadmin))
+        else if (request.context.user == request.context.actualUser && request.context.userHasRole(Sysadmin))
           Right(true)
         else
           permissionService.inAnyTeam(request.context.user.get.usercode)
