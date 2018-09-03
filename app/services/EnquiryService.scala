@@ -14,7 +14,6 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import warwick.core.timing.TimingContext
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.MappedProjection
 import warwick.sso.UniversityID
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -35,6 +34,10 @@ trait EnquiryService {
     * Reassign an enquiry to another team
     */
   def reassign(enquiry: Enquiry, team: Team, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
+
+  def updateState(enquiry: Enquiry, targetState: IssueState, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
+
+  def updateStateWithMessage(enquiry: Enquiry, targetState: IssueState, message: MessageSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
   def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]]
 
@@ -78,21 +81,13 @@ class EnquiryServiceImpl @Inject() (
   }
 
   override def addMessage(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Message]] = {
-    val messageId = UUID.randomUUID()
     auditService.audit('EnquiryAddMessage, enquiry.id.get.toString, 'Enquiry, Json.obj()) {
       daoRunner.run(
-        messageDao.insert(Message(
-          id = messageId,
-          text = message.text,
-          sender = message.sender,
-          teamMember = message.teamMember,
-          ownerId = enquiry.id.get,
-          ownerType = MessageOwner.Enquiry
-        ), Seq(enquiry.universityID))
+        addMessageDBIO(enquiry, message)
       ).map(Right.apply)
     }.flatMap(_.fold(
       errors => Future.successful(Left(errors)),
-      message => notificationService.enquiryMessage(enquiry, message).map(_.right.map(_ => message))
+      message => notificationService.enquiryMessage(enquiry, message.sender).map(_.right.map(_ => message))
     ))
   }
 
@@ -106,6 +101,27 @@ class EnquiryServiceImpl @Inject() (
       errors => Future.successful(Left(errors)),
       enquiry => notificationService.enquiryReassign(enquiry).map(_.right.map(_ => enquiry))
     ))
+
+  override def updateState(enquiry: Enquiry, targetState: IssueState, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
+    auditService.audit(Symbol(s"Enquiry${targetState.entryName}"), enquiry.id.get.toString, 'Enquiry, Json.obj()) {
+      daoRunner.run(
+        enquiryDao.update(enquiry.copy(state = targetState), version)
+      ).map(Right.apply)
+    }
+  }
+
+  def updateStateWithMessage(enquiry: Enquiry, targetState: IssueState, message: MessageSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
+    auditService.audit(Symbol(s"Enquiry${targetState.entryName}WithMessage"), enquiry.id.get.toString, 'Enquiry, Json.obj()) {
+      daoRunner.run(
+        addMessageDBIO(enquiry, message).andThen(
+          enquiryDao.update(enquiry.copy(state = targetState), version)
+        )
+      ).map(Right.apply)
+    }.flatMap(_.fold(
+      errors => Future.successful(Left(errors)),
+      enquiry => notificationService.enquiryMessage(enquiry, message.sender).map(_.right.map(_ => enquiry))
+    ))
+  }
 
   override def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]] = {
     val query = enquiryDao.findByClientQuery(client).withMessages
@@ -150,6 +166,17 @@ class EnquiryServiceImpl @Inject() (
       implicit def dateOrdering: Ordering[OffsetDateTime] = JavaTime.dateTimeOrdering.reverse
       Right(pairs.sortBy{ case (enquiry, latestMessage) => Seq(enquiry.version, latestMessage.created).min })
     }
+  }
+
+  private def addMessageDBIO(enquiry: Enquiry, message: MessageSave) = {
+    messageDao.insert(Message(
+      id = UUID.randomUUID(),
+      text = message.text,
+      sender = message.sender,
+      teamMember = message.teamMember,
+      ownerId = enquiry.id.get,
+      ownerType = MessageOwner.Enquiry
+    ), Seq(enquiry.universityID))
   }
 }
 
