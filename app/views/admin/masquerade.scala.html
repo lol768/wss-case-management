@@ -33,7 +33,13 @@
 
   @defining(Form(single("usercode" -> nonEmptyText).transform(s => Usercode(s), (u: Usercode) => u.string))) { form: Form[Usercode] =>
     @b3.formCSRF(warwick.sso.routes.MasqueradeController.masquerade()) {
-      @b3.inputWrapped("text", form("usercode"), 'placeholder -> "Type a usercode") { input =>
+      @b3.inputWrapped("text", form("usercode"),
+        'class -> "flexi-picker",
+        Symbol("data-include-groups") -> "false",
+        'placeholder -> "Type a usercode",
+        'autofocus -> true,
+        'autocomplete -> "off"
+      ) { input =>
         <div class="input-group">
           @input
           <div class="input-group-btn">

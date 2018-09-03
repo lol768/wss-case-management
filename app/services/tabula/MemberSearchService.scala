@@ -16,9 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MemberSearchServiceImpl])
 trait MemberSearchService {
-
   def search(query: String): Future[ServiceResult[Seq[TabulaResponseParsers.MemberSearchResult]]]
-
 }
 
 class MemberSearchServiceImpl @Inject()(

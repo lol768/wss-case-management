@@ -15,13 +15,15 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ClientSearchController @Inject()(
-  securityService: SecurityService,
+  teamSpecificActionRefiner: TeamSpecificActionRefiner,
   userLookupService: UserLookupService,
   memberSearchService: MemberSearchService,
   clientSummaryService: ClientSummaryService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  def search(query: String): Action[AnyContent] = securityService.SigninRequiredAction.async { implicit request =>
+  import teamSpecificActionRefiner._
+
+  def search(query: String): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     if (query.safeTrim.length < 3) {
       Future.successful(Ok(Json.toJson(API.Success(data = Json.obj()))))
     } else {

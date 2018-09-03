@@ -44,8 +44,10 @@
     "bootstrap-3-typeahead": "github:bassjobsen/Bootstrap-3-Typeahead#fc2d5dce4a5406d9b924224e395d5647918707c7",
     "core-js": "^2.4.0",
     "id7": "github:UniversityofWarwick/id7#fa5-alpha5",
+    "isomorphic-fetch": "^2.2.1",
     "jquery": "^3.3.1",
     "lodash-es": "^4.17.10",
+    "loglevel": "^1.6.1",
     "moment-timezone": "^0.5.21"
   },
   "scripts": {

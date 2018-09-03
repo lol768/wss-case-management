@@ -1,11 +1,13 @@
 package controllers
 
 import domain.{Team, Teams}
+import helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import play.api.Configuration
 import play.api.mvc._
 import services.{PermissionService, SecurityService}
 import system.ImplicitRequestContext
+import system.Roles.Sysadmin
 import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -34,8 +36,15 @@ class TeamSpecificActionRefiner @Inject()(
     override protected def filter[A](request: TeamSpecificRequest[A]): Future[Option[Result]] = {
       implicit val implicitRequest: AuthenticatedRequest[A] = request
 
+      val hasPermissions: ServiceResult[Boolean] =
+        if (request.context.user.isEmpty) Right(false)
+        else if (request.context.user == request.context.actualUser && request.context.userHasRole(Sysadmin))
+          Right(true)
+        else
+          permissionService.inTeam(request.context.user.get.usercode, request.team)
+
       Future.successful {
-        permissionService.inTeam(request.context.user.get.usercode, request.team).fold(
+        hasPermissions.fold(
           errors => Some(Results.BadRequest(views.html.errors.multiple(errors))),
           inTeam =>
             if (inTeam) None
@@ -51,8 +60,15 @@ class TeamSpecificActionRefiner @Inject()(
     override protected def filter[A](request: AuthenticatedRequest[A]): Future[Option[Result]] = {
       implicit val implicitRequest: AuthenticatedRequest[A] = request
 
+      val hasPermissions: ServiceResult[Boolean] =
+        if (request.context.user.isEmpty) Right(false)
+        else if (request.context.user == request.context.actualUser && request.context.userHasRole(Sysadmin))
+          Right(true)
+        else
+          permissionService.inAnyTeam(request.context.user.get.usercode)
+
       Future.successful {
-        permissionService.inAnyTeam(request.context.user.get.usercode).fold(
+        hasPermissions.fold(
           errors => Some(Results.BadRequest(views.html.errors.multiple(errors))),
           inTeam =>
             if (inTeam) None
