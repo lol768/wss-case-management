@@ -1,5 +1,6 @@
 @import domain.Team
 @import domain.Enquiry.FormData
+@import play.twirl.api._
 @(form: Form[FormData])(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Make an enquiry") {
@@ -7,7 +8,7 @@
    * size if you define more than a single column width, so just defining md *@
   @b3.horizontal.formCSRF(
     controllers.enquiries.routes.EnquiryController.submit(),
-    "col-md-2", "col-md-5",
+    "col-sm-2", "col-sm-5",
     'class -> "dirty-check"
   ) { implicit ifc =>
     @b3.free('_label -> "Name") {
@@ -19,7 +20,7 @@
     )
 
     @b3.textarea(form("text"),
-      '_label -> "Message (please tell us as much as you need to about your enquiry)",
+      '_label -> html"""Message<br /><span class="hint">(please tell us as much as you need to about your enquiry)</span>""",
       'rows -> 10
     )
 
