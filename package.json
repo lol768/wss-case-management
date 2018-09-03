@@ -3,6 +3,7 @@
   "version": "1.0.0-SNAPSHOT",
   "private": true,
   "devDependencies": {
+    "@fortawesome/fontawesome-pro": "^5.3.1",
     "autoprefixer": "^6.7.7",
     "babel-core": "^6.26.3",
     "babel-eslint": "^7.2.3",
@@ -42,7 +43,7 @@
   "dependencies": {
     "bootstrap-3-typeahead": "github:bassjobsen/Bootstrap-3-Typeahead#fc2d5dce4a5406d9b924224e395d5647918707c7",
     "core-js": "^2.4.0",
-    "id7": "github:UniversityofWarwick/id7#v1.5.2",
+    "id7": "github:UniversityofWarwick/id7#fa5-alpha5",
     "isomorphic-fetch": "^2.2.1",
     "jquery": "^3.3.1",
     "lodash-es": "^4.17.10",

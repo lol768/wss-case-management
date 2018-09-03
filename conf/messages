@@ -17,5 +17,7 @@ flash.client.registration.invited=Invitation to register sent to client
 flash.enquiry.received=Your enquiry has been received
 flash.enquiry.reassigned=The enquiry has been reassigned to {0}
 flash.enquiry.owners.updated=Enquiry owners updated
+flash.enquiry.Closed=The enquiry has been closed
+flash.enquiry.Reopened=The enquiry has been reopened
 flash.registration.complete=Registration complete
 flash.registration.updated=Registration updated

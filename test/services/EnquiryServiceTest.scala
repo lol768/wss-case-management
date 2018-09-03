@@ -27,7 +27,7 @@ class EnquiryServiceTest extends AbstractDaoTest {
 
   val uniId1 = UniversityID("1")
 
-  class EnquiriesFixture(addMessages: Boolean) extends DataFixture {
+  class EnquiriesFixture(addMessages: Boolean) extends DataFixture[Unit] {
     override def setup(): Unit = {
       for (_ <- 1 to 10) {
         val enquiryDate = JavaTime.offsetDateTime.minusDays(10L).plusHours(Random.nextInt(24*20).toLong)
@@ -68,7 +68,7 @@ class EnquiryServiceTest extends AbstractDaoTest {
   "querying by client" should {
 
     "sort enquiries by own version if no other messages" in {
-      withData(new EnquiriesFixture(addMessages = false)) {
+      withData(new EnquiriesFixture(addMessages = false)) { _ =>
         val result = enquiryService.findEnquiriesForClient(uniId1).serviceValue
         val enquiries = result.map(_._1)
         val ids = enquiries.map(e => (e.id, e.version)).mkString("\n")
@@ -78,7 +78,7 @@ class EnquiryServiceTest extends AbstractDaoTest {
     }
 
     "sort enquiries by message version if newer" ignore {
-      withData(new EnquiriesFixture(addMessages = true)) {
+      withData(new EnquiriesFixture(addMessages = true)) { _ =>
         val result = enquiryService.findEnquiriesForClient(uniId1).serviceValue
         // TODO check that sorting is as expected (most recent message/enquiry timestamp)
         ???

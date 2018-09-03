@@ -6,7 +6,7 @@ import java.util.UUID
 import warwick.sso.UniversityID
 import slick.jdbc.PostgresProfile.api._
 import CustomJdbcTypes._
-import domain.EnquiryState.{Open, Reopened}
+import domain.IssueState.{Open, Reopened}
 import enumeratum.{EnumEntry, PlayEnum}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -18,7 +18,7 @@ case class Enquiry(
   universityID: UniversityID,
   subject: String,
   team: Team,
-  state: EnquiryState = Open,
+  state: IssueState = Open,
   version: OffsetDateTime = OffsetDateTime.now(),
   created: OffsetDateTime = OffsetDateTime.now(),
 ) extends Versioned[Enquiry] {
@@ -61,7 +61,7 @@ object Enquiry extends Versioning {
     def version = column[OffsetDateTime]("version_utc")
     def universityId = column[UniversityID]("university_id")
     def subject = column[String]("subject")
-    def state = column[EnquiryState]("state")
+    def state = column[IssueState]("state")
     def created = column[OffsetDateTime]("created_utc")
   }
 
@@ -72,7 +72,7 @@ object Enquiry extends Versioning {
 
     def * = (id.?, universityId, subject, team, state, version, created).mapTo[Enquiry]
 
-    def isOpen = state === (Open : EnquiryState) || state === (Reopened : EnquiryState)
+    def isOpen = state === (Open : IssueState) || state === (Reopened : IssueState)
   }
 
   class EnquiryVersions(tag: Tag) extends Table[EnquiryVersion](tag, "enquiry_version") with StoredVersionTable[Enquiry] with EnquiryProperties {
@@ -102,19 +102,13 @@ case class EnquiryVersion(
   universityID: UniversityID,
   subject: String,
   team: Team,
-  state: EnquiryState,
+  state: IssueState,
   version: OffsetDateTime = OffsetDateTime.now(),
   created: OffsetDateTime = OffsetDateTime.now(),
   operation: DatabaseOperation,
   timestamp: OffsetDateTime
 ) extends StoredVersion[Enquiry]
 
-sealed trait EnquiryState extends EnumEntry
-object EnquiryState extends PlayEnum[EnquiryState] {
-  case object Open extends EnquiryState
-  case object Closed extends EnquiryState
-  case object Reopened extends EnquiryState
 
-  val values = findValues
-}
+
 

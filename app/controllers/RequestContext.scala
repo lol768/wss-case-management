@@ -62,7 +62,7 @@ object RequestContext {
       csrfHelper = transformCsrfHelper(csrfHelperFactory, request),
       userAgent = request.headers.get("User-Agent"),
       ipAddress = request.remoteAddress,
-      timingData = request.attrs(ServerTimingFilter.TimingData)
+      timingData = request.attrs.get(ServerTimingFilter.TimingData).getOrElse(new TimingContext.Data)
     )
   }
 
