@@ -8,7 +8,6 @@ error.counsellingType.unknown=Unknown counselling type
 error.previousCounselling.unknown=Unknown previous counselling type
 error.appointmentAvailability.unknown=Unknown appointment availability type
 error.appointmentAvailability.missing=Please select an availability
-error.team.reassign.same=Please select a team to reassign to
 error.optimisticLocking=This has changed since you started editing (it was probably edited by somebody else)
 error.userIds.invalid=These user codes are invalid: {0}
 

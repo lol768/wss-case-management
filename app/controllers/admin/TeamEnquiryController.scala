@@ -25,7 +25,7 @@ object TeamEnquiryController {
 
   def form(enquiry: Enquiry) = Form(
     mapping(
-      "team" -> Teams.formField.verifying("error.team.reassign.same", _ != enquiry.team),
+      "team" -> Teams.formField,
       "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version)
     )(ReassignEnquiryData.apply)(ReassignEnquiryData.unapply)
   )
