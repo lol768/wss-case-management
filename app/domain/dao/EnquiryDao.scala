@@ -3,14 +3,14 @@ package domain.dao
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import domain._
 import com.google.inject.ImplementedBy
+import domain.CustomJdbcTypes._
+import domain._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
-import warwick.sso.UniversityID
-import domain.CustomJdbcTypes._
+import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext
 
@@ -21,6 +21,7 @@ trait EnquiryDao {
   def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findOpenQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq]
+  def findOpenQuery(owner: Usercode): Query[Enquiry.Enquiries, Enquiry, Seq]
 }
 
 @Singleton
@@ -44,8 +45,15 @@ class EnquiryDaoImpl @Inject() (
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table.filter(_.universityId === client)
 
-  def findOpenQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq] =
+  override def findOpenQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table
       .filter(e => e.isOpen && e.team === team)
+
+  override def findOpenQuery(owner: Usercode): Query[Enquiry.Enquiries, Enquiry, Seq] =
+    Enquiry.enquiries.table
+      .join(Owner.owners.table)
+      .on((e, o) => e.id === o.entityId && o.entityType === Owner.EntityTypes.Enquiry)
+      .filter { case (e, o) => e.isOpen && o.userId === owner }
+      .map { case (e, _) => e }
 
 }

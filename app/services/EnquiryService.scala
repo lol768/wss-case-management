@@ -12,9 +12,9 @@ import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import warwick.core.timing.TimingContext
 import slick.jdbc.PostgresProfile.api._
-import warwick.sso.UniversityID
+import warwick.core.timing.TimingContext
+import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,6 +44,8 @@ trait EnquiryService {
   def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
 
   def findEnquiriesNeedingReply(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+
+  def findEnquiriesNeedingReply(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
 }
 
 @Singleton
@@ -153,7 +155,15 @@ class EnquiryServiceImpl @Inject() (
   }
 
   override def findEnquiriesNeedingReply(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
-    val query = enquiryDao.findOpenQuery(team)
+    findEnquiriesNeedingReplyInternal(enquiryDao.findOpenQuery(team))
+  }
+
+  override def findEnquiriesNeedingReply(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
+    findEnquiriesNeedingReplyInternal(enquiryDao.findOpenQuery(owner))
+  }
+
+  private def findEnquiriesNeedingReplyInternal(daoQuery: Query[Enquiry.Enquiries, Enquiry, Seq])(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
+    val query = daoQuery
       .join(Message.messages.table)
       .on((enquiry, message) => {
         message.id in messageDao.latestForEnquiryQuery(enquiry)

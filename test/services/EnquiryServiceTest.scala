@@ -18,8 +18,8 @@ class EnquiryServiceTest extends AbstractDaoTest {
         bind[NotificationService].to[NullNotificationService]
       )
 
-  val enquiryService = get[EnquiryService]
-  val runner = get[DaoRunner]
+  private val enquiryService = get[EnquiryService]
+  private val runner = get[DaoRunner]
 
   import profile.api._
 

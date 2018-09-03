@@ -1,0 +1,42 @@
+@(
+  values: Seq[String],
+  name: String,
+  placeholder: String = "",
+  includeEmail: Boolean = false,
+  includeGroups: Boolean = false,
+  includeUsers: Boolean = true,
+  multiple: Boolean = false,
+  autoMultiple: Boolean = true,
+  deleteExisting: Boolean = true,
+  universityId: Boolean = false,
+)
+
+@if(multiple) {
+  <div class="flexi-picker-collection" data-automatic="@autoMultiple">
+}
+
+@for(value <- values) {
+  <div class="flexi-picker-container">
+    <input type="text" class="flexi-picker form-control" name="@name" placeholder="@placeholder"
+      data-include-users="@includeUsers" data-include-email="@includeEmail"
+      data-include-groups="@includeGroups" data-prefix-groups="webgroup:"
+      data-can-delete="@deleteExisting" value="@value" autocomplete="off"
+      data-universityid="@universityId"
+    />
+  </div>
+}
+
+@if(values.isEmpty || (multiple && autoMultiple)) {
+  <div class="flexi-picker-container">
+    <input type="text" class="flexi-picker form-control" name="@name" placeholder="@placeholder"
+      data-include-users="@includeUsers" data-include-email="@includeEmail"
+      data-include-groups="@includeGroups" data-prefix-groups="webgroup:"
+      data-can-delete="@deleteExisting" autocomplete="off"
+      data-universityid="@universityId"
+    />
+  </div>
+}
+
+@if(multiple) {
+  </div>
+}
