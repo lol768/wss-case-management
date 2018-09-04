@@ -96,7 +96,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       studentProfile.yearOfStudy mustBe Some(YearOfStudy(4, "M2"))
       studentProfile.startDate mustBe Some(LocalDate.parse("2015-10-05"))
       studentProfile.endDate mustBe Some(LocalDate.parse("2019-09-30"))
-      studentProfile.nationality mustBe Some("British (ex. Channel Islands & Isle of Man)")
+      studentProfile.nationality mustBe Some("British")
       studentProfile.dualNationality mustBe None
       studentProfile.tier4VisaRequired mustBe Some(false)
       studentProfile.disability mustBe Some(SitsDisability("I","Unclassified disability","Condition not listed"))
@@ -120,10 +120,10 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       applicantProfile.universityID mustBe UniversityID("1812345")
       applicantProfile.fullName mustBe "Reynard Fox"
       applicantProfile.dateOfBirth mustBe LocalDate.parse("1996-02-08")
-      applicantProfile.phoneNumber mustBe None
+      applicantProfile.phoneNumber mustBe Some("07512345678")
       applicantProfile.warwickEmail mustBe Some("reynard.fox@outlook.com")
       applicantProfile.alternateEmail mustBe Some("reynard.fox@outlook.com")
-      applicantProfile.address mustBe None
+      applicantProfile.address mustBe Some(Address(Some("Heron Tower"), Some("110 Bishopsgate"), None, Some("London"), None, Some("EC2N 4AY")))
       applicantProfile.residence mustBe None
       applicantProfile.department mustBe SitsDepartment("sl", "Student Recruitment")
       applicantProfile.course mustBe None
@@ -135,40 +135,40 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       applicantProfile.yearOfStudy mustBe None
       applicantProfile.startDate mustBe None
       applicantProfile.endDate mustBe None
-      applicantProfile.nationality mustBe None
-      applicantProfile.dualNationality mustBe None
+      applicantProfile.nationality mustBe Some("British")
+      applicantProfile.dualNationality mustBe Some("Zimbabwean")
       applicantProfile.tier4VisaRequired mustBe None
-      applicantProfile.disability mustBe None
+      applicantProfile.disability mustBe Some(SitsDisability("E","Long standing condition","You have a long standing illness or condition"))
       applicantProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/3bba35c1a0c436780cefa97fecac9c5e/1812345")
       applicantProfile.userType mustBe UserType.Applicant
     }
 
     "fetch a staff profile" in withProfileService() { profileService =>
-      val applicantProfile = profileService.getProfile(UniversityID("1170836")).futureValue.value.right.get
-      applicantProfile.universityID mustBe UniversityID("1170836")
-      applicantProfile.fullName mustBe "Ritchie Allen"
-      applicantProfile.dateOfBirth mustBe LocalDate.parse("1986-08-23")
-      applicantProfile.phoneNumber mustBe None
-      applicantProfile.warwickEmail mustBe Some("Ritchie.Allen@warwick.ac.uk")
-      applicantProfile.alternateEmail mustBe None
-      applicantProfile.address mustBe None
-      applicantProfile.residence mustBe None
-      applicantProfile.department mustBe SitsDepartment("in", "IT Services")
-      applicantProfile.course mustBe None
-      applicantProfile.route mustBe None
-      applicantProfile.courseStatus mustBe None
-      applicantProfile.enrolmentStatus mustBe None
-      applicantProfile.attendance mustBe None
-      applicantProfile.group mustBe None
-      applicantProfile.yearOfStudy mustBe None
-      applicantProfile.startDate mustBe None
-      applicantProfile.endDate mustBe None
-      applicantProfile.nationality mustBe None
-      applicantProfile.dualNationality mustBe None
-      applicantProfile.tier4VisaRequired mustBe None
-      applicantProfile.disability mustBe None
-      applicantProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/d462b29afd79000c21bcea89ecea9d71/1170836")
-      applicantProfile.userType mustBe UserType.Staff
+      val staffProfile = profileService.getProfile(UniversityID("1170836")).futureValue.value.right.get
+      staffProfile.universityID mustBe UniversityID("1170836")
+      staffProfile.fullName mustBe "Ritchie Allen"
+      staffProfile.dateOfBirth mustBe LocalDate.parse("1986-08-23")
+      staffProfile.phoneNumber mustBe None
+      staffProfile.warwickEmail mustBe Some("Ritchie.Allen@warwick.ac.uk")
+      staffProfile.alternateEmail mustBe None
+      staffProfile.address mustBe None
+      staffProfile.residence mustBe None
+      staffProfile.department mustBe SitsDepartment("in", "IT Services")
+      staffProfile.course mustBe None
+      staffProfile.route mustBe None
+      staffProfile.courseStatus mustBe None
+      staffProfile.enrolmentStatus mustBe None
+      staffProfile.attendance mustBe None
+      staffProfile.group mustBe None
+      staffProfile.yearOfStudy mustBe None
+      staffProfile.startDate mustBe None
+      staffProfile.endDate mustBe None
+      staffProfile.nationality mustBe None
+      staffProfile.dualNationality mustBe None
+      staffProfile.tier4VisaRequired mustBe None
+      staffProfile.disability mustBe None
+      staffProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/d462b29afd79000c21bcea89ecea9d71/1170836")
+      staffProfile.userType mustBe UserType.Staff
     }
 
     "handle missing profiles" in withProfileService() { profileService =>
