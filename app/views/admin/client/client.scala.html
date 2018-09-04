@@ -51,17 +51,9 @@
   }
 
   @if(inMentalHealthTeam) {
-    @if(clientSummary.flatMap(_.data.highMentalHealthRisk).isEmpty) {
-      <div class="alert alert-info">
-        No mental health risk alert specified (<a href="#high-mental-health-risk">update</a>)
-      </div>
-    } else if (clientSummary.flatMap(_.data.highMentalHealthRisk).contains(true)) {
+    @if(clientSummary.flatMap(_.data.highMentalHealthRisk).contains(true)) {
       <div class="alert alert-warning">
         Client has a high mental health risk alert (<a href="#high-mental-health-risk">update</a>)
-      </div>
-    } else {
-      <div class="alert alert-info">
-        Client does not have a high mental health risk alert (<a href="#high-mental-health-risk">update</a>)
       </div>
     }
   }
