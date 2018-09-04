@@ -50,4 +50,20 @@ $(() => {
     });
 
   $('form.dirty-check').areYouSure();
+
+  $('.toggle-element').each((i, container) => {
+    const $this = $(container);
+    const $target = $($this.data('target'));
+    const shownLabel = $this.data('shownLabel');
+    const hiddenLabel = $this.text();
+    $this.on('click', () => {
+      if ($target.hasClass('hidden')) {
+        $target.removeClass('hidden');
+        $this.html(shownLabel);
+      } else {
+        $target.addClass('hidden');
+        $this.html(hiddenLabel);
+      }
+    });
+  });
 });

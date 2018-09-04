@@ -4,10 +4,16 @@
 @import domain.ClientSummaryData
 @import domain.ReasonableAdjustment
 @import domain.ClientRiskStatus
+@import domain.Enquiry
+@import domain.MessageData
+@import domain.IssueState
+@import helpers.JavaTime
+@import domain.UserType
 @(
   profile: SitsProfile,
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
+  enquiries: Seq[(Enquiry, Seq[MessageData])],
   form: Form[ClientSummaryData],
   inMentalHealthTeam: Boolean,
   success: Option[String] = None
@@ -39,7 +45,9 @@
   </div>
 }
 
-@main(s"${profile.fullName}") {
+@main("Client profile") {
+  <h2>@profile.fullName</h2>
+
   @if(form.hasErrors) {
     <div class="alert alert-danger">
       There were errors in the client summary below. Please correct them and submit again.
@@ -50,24 +58,6 @@
     </div>
   }
 
-  @if(inMentalHealthTeam) {
-    @if(clientSummary.flatMap(_.data.highMentalHealthRisk).isEmpty) {
-      <div class="alert alert-info">
-        No mental health risk alert specified (<a href="#high-mental-health-risk">update</a>)
-      </div>
-    } else if (clientSummary.flatMap(_.data.highMentalHealthRisk).contains(true)) {
-      <div class="alert alert-warning">
-        Client has a high mental health risk alert (<a href="#high-mental-health-risk">update</a>)
-      </div>
-    } else {
-      <div class="alert alert-info">
-        Client does not have a high mental health risk alert (<a href="#high-mental-health-risk">update</a>)
-      </div>
-    }
-  }
-
-  <h2>Profile</h2>
-
   <div class="row">
     @profile.photo.map { photo =>
       <div class="col-md-4 col-lg-3">
@@ -76,107 +66,252 @@
         </div>
       </div>
     }
-    <div class="col-md-4">
-      <strong>University ID: </strong> @profile.universityID.string<br />
-      <strong>Full name: </strong> @profile.fullName<br />
-      <strong>Department: </strong> @profile.department.name<br />
-      <strong>Date of birth: </strong> @profile.dateOfBirth<br />
-      <strong>Phone number: </strong> @profile.phoneNumber<br />
-      <strong>Warwick email address: </strong> @profile.warwickEmail<br />
-      <strong>Alternative email address: </strong> @profile.alternateEmail<br />
-      <strong>Correspondence address: </strong> @profile.address<br />
-      <strong>Residence: </strong> @profile.residence<br />
-      <strong>Nationality: </strong> @profile.nationality<br />
-      <strong>Dual nationality: </strong> @profile.dualNationality<br />
-      <strong>Tier 4 visa required: </strong> @if(profile.tier4VisaRequired.contains(true)) { Yes } else { No }<br />
-      <strong>Disability: </strong> @profile.disability.map(_.description)<br />
-      <strong>User type: </strong> @profile.userType
-    </div>
-    <div class="col-md-4 col-lg-5">
-      <strong>Course: </strong> @profile.course.map(_.name)<br />
-      <strong>Route: </strong> @profile.route.map(_.name)<br />
-      <strong>Course status: </strong> @profile.courseStatus.map(_.description)<br />
-      <strong>Enrolment status: </strong> @profile.enrolmentStatus.map(_.description)<br />
-      <strong>Attendance: </strong> @profile.attendance.map(_.description)<br />
-      <strong>Group: </strong> @profile.group.map(_.description)<br />
-      <strong>Year of study: </strong> @profile.yearOfStudy.map(_.block)<br />
-      <strong>Start date: </strong> @profile.startDate<br />
-      <strong>End date: </strong> @profile.endDate<br />
+    <div class="col-md-8">
+      @profile.userType match {
+        case UserType.Student => {
+          <p>
+            @profile.yearOfStudy.map(_.level) match {
+              case Some("1") => {
+                First year
+              }
+              case Some("2") => {
+                Second year
+              }
+              case Some("3") => {
+                Third year
+              }
+              case Some("4") => {
+                Fourth year
+              }
+              case Some(level) => {
+                @{level}th year
+              }
+              case _ => {}
+            }
+            @profile.group student, @profile.department.name
+          </p>
+        }
+        case _ => {
+          <p>@profile.userType, @profile.department.name</p>
+        }
+      }
+      <p>DoB @JavaTime.dateFullNoDayFormatter.format(profile.dateOfBirth)</p>
+      <p>@profile.disability.map(_.description).getOrElse("No disabilities")</p>
+      @profile.nationality.map { n =>
+        <p>@n</p>
+      }
+      @profile.tier4VisaRequired.map { required =>
+        @if(required) {
+          <p>Tier 4 visa required</p>
+        } else {
+          <p>No Tier 4 visa required</p>
+        }
+      }
+
+      @if(inMentalHealthTeam && clientSummary.exists(_.data.highMentalHealthRisk.contains(true))) {
+        <p><span class="label label-danger">High mental health risk</span></p>
+      }
+      @clientSummary.flatMap(_.data.riskStatus).map {
+        case ClientRiskStatus.Low => {
+          <p><span class="label label-success">Low risk status</span></p>
+        }
+        case ClientRiskStatus.Medium => {
+          <p><span class="label label-warning">Medium risk status</span></p>
+        }
+        case ClientRiskStatus.High => {
+          <p><span class="label label-danger">High risk status</span></p>
+        }
+      }
     </div>
   </div>
 
-  @if(profile.personalTutors.nonEmpty) {
-    @agents("Personal tutor", profile.personalTutors)
-  }
-
-  @if(profile.researchSupervisors.nonEmpty) {
-    @agents("Research supervisor", profile.researchSupervisors)
-  }
-
   <h2>Registration</h2>
 
-  @registration.map { registration =>
-    <dl class="dl-horizontal field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(profile.universityID)">
-      <dt>Registered</dt>
-      <dd>@helpers.JavaTime.Relative(registration.updatedDate)</dd>
-      <dt data-field-history="gp">GP</dt>
-      <dd>@registration.data.gp</dd>
-      <dt data-field-history="tutor">Tutor</dt>
-      <dd>@registration.data.tutor</dd>
-      <dt data-field-history="disabilities">Disabilities</dt>
-      <dd>@registration.data.disabilities.map(_.description).mkString(", ")</dd>
-      <dt data-field-history="medications">Medication</dt>
-      <dd>@registration.data.medications.map(_.description).mkString(", ")</dd>
-      <dt data-field-history="appointmentAdjustments">Appointment adjustments</dt>
-      <dd>@views.utils.nl2br(registration.data.appointmentAdjustments)</dd>
-      <dt data-field-history="referrals">Referrals</dt>
-      <dd>@registration.data.referrals.map(_.description).mkString(", ")</dd>
-    </dl>
-  }.getOrElse {
-    <em>Client is not currently registered</em>
-    @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(profile.universityID)) { implicit ifc =>
-      @b3.submit('class -> "btn btn-default") {
-        Invite to register
+  <section class="indent">
+
+    @registration.map { registration =>
+      <dl class="dl-horizontal field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(profile.universityID)">
+        <dt>Registered</dt>
+        <dd>@helpers.JavaTime.Relative(registration.updatedDate)</dd>
+        <dt data-field-history="gp">GP</dt>
+        <dd>@registration.data.gp</dd>
+        <dt data-field-history="tutor">Tutor</dt>
+        <dd>@registration.data.tutor</dd>
+        <dt data-field-history="disabilities">Disabilities</dt>
+        <dd>@registration.data.disabilities.map(_.description).mkString(", ")</dd>
+        <dt data-field-history="medications">Medication</dt>
+        <dd>@registration.data.medications.map(_.description).mkString(", ")</dd>
+        <dt data-field-history="appointmentAdjustments">Appointment adjustments</dt>
+        <dd>@views.utils.nl2br(registration.data.appointmentAdjustments)</dd>
+        <dt data-field-history="referrals">Referrals</dt>
+        <dd>@registration.data.referrals.map(_.description).mkString(", ")</dd>
+      </dl>
+    }.getOrElse {
+      <em>Client is not currently registered</em>
+      @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(profile.universityID)) { implicit ifc =>
+        @b3.submit('class -> "btn btn-default") {
+          Invite to register
+        }
       }
     }
-  }
+
+  </section>
 
   <h2>Client summary</h2>
 
-  @b3.vertical.formCSRF(controllers.admin.routes.ClientController.updateSummary(profile.universityID)) { implicit ifc =>
-    @b3.textarea(form("notes"),
-      '_label -> "Notes",
-      'rows -> 5
-    )
+  <section class="indent">
 
-    @b3.text(form("alternative-contact-number"),
-      '_label -> "Alternative contact number"
-    )
+    @*TODO CASE-91*@
 
-    @b3.email(form("alternative-email-address"),
-      '_label -> "Alternative email address"
-    )
+    @if(enquiries.isEmpty) {
+      <p>No open or closed enquiries</p>
+    } else {
+      <p>
+        @tags.p(
+          number = enquiries.count { case (e, _) => e.state != IssueState.Closed },
+          singular = "open enquiry"
+        )(
+          plural = "open enquiries",
+          zero = "No"
+        ),
+        @tags.p(
+          number = enquiries.count { case (e, _) => e.state == IssueState.Closed },
+          singular = "closed enquiry"
+        )(
+          plural = "closed enquiries",
+          zero = "no"
+        )
+        <button class="toggle-element btn btn-default btn-xs" data-target="#enquiry-tables" data-shown-label="hide">show</button>
+      </p>
 
-    @b3.select(form("risk-status"),
-      options = ClientRiskStatus.values.map { s => s.entryName -> s.entryName },
-      '_label -> "Risk status",
-      '_default -> ""
-    )
-
-    @b3.checkboxGroup(
-      label = "Reasonable adjustments",
-      items = ReasonableAdjustment.values,
-      form = form,
-      field = "reasonable-adjustments",
-      idPrefix = "reasonable-adjustment"
-    )
-
-    @if(inMentalHealthTeam) {
-      @b3.select(form("high-mental-health-risk"), options = Seq("" -> "Not specified", "true" -> "Yes", "false" -> "No"),
-        '_label -> "High mental health risk"
-      )
+      <div class="hidden" id="enquiry-tables">
+        @if(enquiries.count { case (e, _) => e.state != IssueState.Closed } > 0) {
+          <table class="table table-condensed">
+            <caption>Open enquiries</caption>
+            <thead>
+              <tr>
+                <th>Enquiry ID</th>
+                <th>Subject</th>
+                <th>Team</th>
+                <th>Last updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              @defining(enquiries.filter { case (e, _) => e.state != IssueState.Closed }) { open: Seq[(Enquiry, Seq[MessageData])] =>
+                @open.map { case (enquiry, messages) =>
+                  <tr>
+                    <td>@*TODO CASE-94*@</td>
+                    <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get)" target="_blank">@enquiry.subject</a></td>
+                    <td>@enquiry.team.name</td>
+                    <td>@messages.reverse.headOption.map(m => JavaTime.Relative(m.created.toLocalDate).capitalize)</td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        }
+        @if(enquiries.count { case (e, _) => e.state == IssueState.Closed } > 0) {
+          <table class="table table-condensed">
+            <caption>Closed enquiries</caption>
+            <thead>
+              <tr>
+                <th>Enquiry ID</th>
+                <th>Subject</th>
+                <th>Team</th>
+                <th>Closed</th>
+              </tr>
+            </thead>
+            <tbody>
+            @defining(enquiries.filter { case (e, _) => e.state == IssueState.Closed }) { closed: Seq[(Enquiry, Seq[MessageData])] =>
+              @closed.map { case (enquiry, messages) =>
+              <tr>
+                <td>@*TODO CASE-94*@</td>
+                <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get)" target="_blank">@enquiry.subject</a></td>
+                <td>@enquiry.team.name</td>
+                <td>@JavaTime.Relative(enquiry.version.toLocalDate).capitalize</td>
+              </tr>
+              }
+            }
+            </tbody>
+          </table>
+        }
+      </div>
     }
 
-    @tags.submitOrCancel("Update", controllers.routes.IndexController.home())
-  }
+    @b3.vertical.formCSRF(controllers.admin.routes.ClientController.updateSummary(profile.universityID)) { implicit ifc =>
+      <div class="row">
+        <div class="col-sm-6">
+          @b3.textarea(form("notes"),
+            '_label -> "Notes",
+            'rows -> 5
+          )
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-sm-6">
+          @b3.text(form("alternative-contact-number"),
+            '_label -> "Alternative contact number"
+          )
+        </div>
+        <div class="col-sm-6">
+          @b3.email(form("alternative-email-address"),
+            '_label -> "Alternative email address"
+          )
+        </div>
+      </div>
+
+      @b3.free('_label -> "Reasonable adjustments",
+        '_class -> form("reasonable-adjustments").error.map(_ => "has-error").getOrElse("")
+      ) {
+        @ReasonableAdjustment.partioned.map { case (left, right) =>
+          <div class="row checkbox-condensed">
+            <div class="col-sm-6">
+              @left.map { item =>
+                @b3.checkbox(form(s"reasonable-adjustments[]"),
+                  'id -> s"reasonable-adjustment-${item.id}",
+                  'value -> item.id,
+                  '_text -> item.description,
+                  'checked -> form("reasonable-adjustments").indexes.exists(i => form(s"reasonable-adjustments[$i]").value.contains(item.id))
+                )(b3.clear.fieldConstructorSpecific, messagesProvider)
+              }
+            </div>
+            <div class="col-sm-6">
+              @right.map { item =>
+                @b3.checkbox(form(s"reasonable-adjustments[]"),
+                  'id -> s"reasonable-adjustment-${item.id}",
+                  'value -> item.id,
+                  '_text -> item.description,
+                  'checked -> form("reasonable-adjustments").indexes.exists(i => form(s"reasonable-adjustments[$i]").value.contains(item.id))
+                )(b3.clear.fieldConstructorSpecific, messagesProvider)
+              }
+            </div>
+          </div>
+        }
+
+        @form("reasonable-adjustments").error.map { error =>
+          <span class="help-block">@error.format</span>
+        }
+      }
+
+      <div class="row">
+        <div class="col-sm-3">
+          @b3.select(form("risk-status"),
+            options = ClientRiskStatus.values.map { s => s.entryName -> s.entryName },
+            '_label -> "Risk status",
+            '_default -> ""
+          )
+        </div>
+        <div class="col-sm-3 col-sm-offset-3">
+          @if(inMentalHealthTeam) {
+            @b3.select(form("high-mental-health-risk"), options = Seq("" -> "Not specified", "true" -> "Yes", "false" -> "No"),
+              '_label -> "High mental health risk"
+            )
+          }
+        </div>
+      </div>
+
+      @tags.submitOrCancel("Update", controllers.routes.IndexController.home())
+    }
+  </section>
 }
