@@ -4,14 +4,15 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import domain.CustomJdbcTypes._
+import enumeratum.{EnumEntry, PlayEnum}
 import slick.jdbc.PostgresProfile.api._
 import warwick.sso.Usercode
-
+import scala.collection.immutable
 import scala.language.higherKinds
 
 case class Owner(
   entityId: UUID,
-  entityType: String,
+  entityType: Owner.EntityType,
   userId: Usercode,
   version: OffsetDateTime
 ) extends Versioned[Owner] {
@@ -31,19 +32,22 @@ case class Owner(
 
 object EnquiryOwner {
   def apply(enquiryId: UUID, userId: Usercode, version: OffsetDateTime = OffsetDateTime.now()) =
-    Owner(entityId = enquiryId, entityType = Owner.EntityTypes.Enquiry, userId = userId, version = version)
+    Owner(entityId = enquiryId, entityType = Owner.EntityType.Enquiry, userId = userId, version = version)
 }
 
 object CaseOwner {
   def apply(caseId: UUID, userId: Usercode, version: OffsetDateTime = OffsetDateTime.now()) =
-    Owner(entityId = caseId, entityType = Owner.EntityTypes.Case, userId = userId, version = version)
+    Owner(entityId = caseId, entityType = Owner.EntityType.Case, userId = userId, version = version)
 }
 
 object Owner extends Versioning {
 
-  object EntityTypes {
-    val Case = "case"
-    val Enquiry = "enquiry"
+  sealed trait EntityType extends EnumEntry
+  object EntityType extends PlayEnum[EntityType] {
+    case object Enquiry extends EntityType
+    case object Case extends EntityType
+
+    val values: immutable.IndexedSeq[EntityType] = findValues
   }
 
   def tupled = (Owner.apply _).tupled
@@ -52,7 +56,7 @@ object Owner extends Versioning {
     self: Table[_] =>
 
     def entityId = column[UUID]("entity_id")
-    def entityType = column[String]("entity_type")
+    def entityType = column[Owner.EntityType]("entity_type")
     def userId = column[Usercode]("user_id")
     def version = column[OffsetDateTime]("version_utc")
 
@@ -82,7 +86,7 @@ object Owner extends Versioning {
 
 case class OwnerVersion(
   entityId: UUID,
-  entityType: String,
+  entityType: Owner.EntityType,
   userId: Usercode,
   version: OffsetDateTime = OffsetDateTime.now(),
   operation: DatabaseOperation,

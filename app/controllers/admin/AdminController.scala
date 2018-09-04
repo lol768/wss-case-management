@@ -5,7 +5,7 @@ import domain.{Enquiry, MessageData}
 import helpers.ServiceResults
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent, Result}
-import services.{EnquiryService, OwnerService}
+import services.EnquiryService
 import services.tabula.ProfileService
 import warwick.sso.UserLookupService
 
@@ -15,7 +15,6 @@ class AdminController @Inject()(
   teamSpecificActionRefiner: TeamSpecificActionRefiner,
   enquiries: EnquiryService,
   profileService: ProfileService,
-  ownerService: OwnerService,
   userLookupService: UserLookupService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
@@ -25,7 +24,7 @@ class AdminController @Inject()(
     findEnquiriesNeedingReply { (needsActionOwner, needsActionTeam) =>
       ServiceResults.zip(
         profileService.getProfiles((needsActionOwner ++ needsActionTeam).map { case (e, _) => e.universityID }.toSet),
-        ownerService.getEnquiryOwners((needsActionOwner ++ needsActionTeam).map { case (e, _) => e.id.get }.toSet)
+        enquiries.getOwners((needsActionOwner ++ needsActionTeam).map { case (e, _) => e.id.get }.toSet)
       ).successMap { case (profiles, owners) =>
         val userLookup = userLookupService.getUsers(owners.values.flatten.toSeq).toOption.getOrElse(Map())
         val resolvedOwners = owners.mapValues(_.flatMap(o => userLookup.get(o).filter(_.isFound)))
