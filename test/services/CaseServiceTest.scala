@@ -1,12 +1,14 @@
 package services
 
-import domain.Fixtures
+import domain.{CaseTag, Fixtures}
 import domain.dao.CaseDao.Case
 import domain.dao.{AbstractDaoTest, CaseDao}
 import helpers.DataFixture
 import slick.jdbc.PostgresProfile.api._
 
 class CaseServiceTest extends AbstractDaoTest {
+
+  private val service = get[CaseService]
 
   class CaseFixture extends DataFixture[Case] {
     override def setup(): Case = {
@@ -19,6 +21,8 @@ class CaseServiceTest extends AbstractDaoTest {
       // FIXME this will get tedious to do separately in every DB test.
       // Need one thing to destroy them all
       execWithCommit(
+        CaseDao.caseTags.table.delete andThen
+        CaseDao.caseTags.versionsTable.delete andThen
         CaseDao.cases.table.delete andThen
         CaseDao.cases.versionsTable.delete
       )
@@ -26,11 +30,28 @@ class CaseServiceTest extends AbstractDaoTest {
   }
 
   "CaseServiceTest" should {
-
     "find" in withData(new CaseFixture()) { case1 =>
-      val service = get[CaseService]
       service.find(case1.id.get).serviceValue.id mustBe case1.id
     }
 
+    "get and set tags" in withData(new CaseFixture()) { c =>
+      val caseId = c.id.get
+
+      service.getCaseTags(Set(caseId)).serviceValue mustBe Map.empty
+
+      val tag1 = CaseTag.Antisocial
+      val tag2 = CaseTag.Bullying
+      val tag3 = CaseTag.SexualAssault
+
+      service.setCaseTags(caseId, Set(tag1, tag2)).serviceValue mustBe Set(tag1, tag2)
+      service.getCaseTags(Set(caseId)).serviceValue mustBe Map(
+        caseId -> Set(tag1, tag2)
+      )
+
+      service.setCaseTags(caseId, Set(tag2, tag3)).serviceValue mustBe Set(tag2, tag3)
+      service.getCaseTags(Set(caseId)).serviceValue mustBe Map(
+        caseId -> Set(tag2, tag3)
+      )
+    }
   }
 }

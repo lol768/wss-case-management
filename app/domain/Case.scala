@@ -1,6 +1,5 @@
 package domain
 
-import domain.CaseType.findValues
 import enumeratum.{EnumEntry, PlayEnum}
 
 import scala.collection.immutable
@@ -13,7 +12,7 @@ object CaseStuff {
     */
   case class FullyJoined(
     clientCase: domain.dao.CaseDao.Case,
-//    tags: Set[CaseTag],
+    tags: Set[CaseTag],
 //    notes: Seq[CaseNote],
 //    attachments: Seq[UploadedDocument],
 //    relatedAppointments: Seq[Appointment],
@@ -23,7 +22,7 @@ object CaseStuff {
 
 sealed abstract class CaseTag(description: String) extends EnumEntry
 object CaseTag extends PlayEnum[CaseTag] {
-  object Accomodation extends CaseTag("Accomodation")
+  object Accommodation extends CaseTag("Accommodation")
   object Alcohol extends CaseTag("Alcohol related")
   object Antisocial extends CaseTag("Anti-social behaviour")
   object Bullying extends CaseTag("Bullying")
