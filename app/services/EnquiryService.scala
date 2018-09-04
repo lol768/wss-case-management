@@ -43,6 +43,10 @@ trait EnquiryService {
 
   def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
 
+  def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
+
+  def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
+
   def findEnquiriesNeedingReply(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
 
   def findEnquiriesNeedingReply(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
@@ -51,6 +55,7 @@ trait EnquiryService {
 @Singleton
 class EnquiryServiceImpl @Inject() (
   auditService: AuditService,
+  ownerService: OwnerService,
   enquiryDao: EnquiryDao,
   messageDao: MessageDao,
   daoRunner: DaoRunner,
@@ -153,6 +158,12 @@ class EnquiryServiceImpl @Inject() (
       Right(groupPairs(pairs).head)
     }
   }
+
+  override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]] =
+    ownerService.getEnquiryOwners(ids)
+
+  override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]] =
+    ownerService.setEnquiryOwners(id, owners)
 
   override def findEnquiriesNeedingReply(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
     findEnquiriesNeedingReplyInternal(enquiryDao.findOpenQuery(team))

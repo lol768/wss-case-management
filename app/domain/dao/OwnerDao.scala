@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.Done
 import com.google.inject.ImplementedBy
+import domain.CustomJdbcTypes._
 import domain._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -34,10 +35,10 @@ class OwnerDaoImpl @Inject() (
 
   override def findCaseOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq] =
     Owner.owners.table
-      .filter(o => o.entityId.inSet(ids) && o.entityType === Owner.EntityTypes.Case)
+      .filter(o => o.entityId.inSet(ids) && o.entityType === (Owner.EntityType.Case:Owner.EntityType))
 
   override def findEnquiryOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq] =
     Owner.owners.table
-      .filter(o => o.entityId.inSet(ids) && o.entityType === Owner.EntityTypes.Enquiry)
+      .filter(o => o.entityId.inSet(ids) && o.entityType === (Owner.EntityType.Enquiry:Owner.EntityType))
 
 }

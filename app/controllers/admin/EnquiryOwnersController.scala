@@ -10,7 +10,7 @@ import play.api.data.Forms.{mapping, seq, text}
 import play.api.data.{Form, FormError}
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent}
-import services.OwnerService
+import services.EnquiryService
 import warwick.sso.{UserLookupService, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -18,8 +18,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class EnquiryOwnersController @Inject()(
   enquirySpecificActionRefiner: EnquirySpecificActionRefiner,
-  ownerService: OwnerService,
-  userLookupService: UserLookupService
+  userLookupService: UserLookupService,
+  enquiryService: EnquiryService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   val ownersForm = Form(mapping(
@@ -29,7 +29,7 @@ class EnquiryOwnersController @Inject()(
   import enquirySpecificActionRefiner._
 
   def form(id: UUID): Action[AnyContent] = EnquirySpecificTeamMemberAction(id).async { implicit request =>
-    ownerService.getEnquiryOwners(Set(request.enquiry.id.get)).successMap(owners =>
+    enquiryService.getOwners(Set(request.enquiry.id.get)).successMap(owners =>
       Ok(views.html.admin.enquiry.owners(
         ownersForm.fill(owners.getOrElse(request.enquiry.id.get, Set()).map(_.string).toSeq.sorted),
         request.enquiry
@@ -51,7 +51,7 @@ class EnquiryOwnersController @Inject()(
             .withError(FormError("owners", "error.userId.invalid", invalid.map(_.string).mkString(", ")))
           Future.successful(Ok(views.html.admin.enquiry.owners(formWithErrors, request.enquiry)))
         } else {
-          ownerService.setEnquiryOwners(request.enquiry.id.get, userIds.toSet).successMap(_ =>
+          enquiryService.setOwners(request.enquiry.id.get, userIds.toSet).successMap(_ =>
             Redirect(controllers.admin.routes.AdminController.teamHome(request.enquiry.team.id))
               .flashing("success" -> Messages("flash.enquiry.owners.updated"))
           )

@@ -52,7 +52,7 @@ class EnquiryDaoImpl @Inject() (
   override def findOpenQuery(owner: Usercode): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table
       .join(Owner.owners.table)
-      .on((e, o) => e.id === o.entityId && o.entityType === Owner.EntityTypes.Enquiry)
+      .on((e, o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Enquiry:Owner.EntityType))
       .filter { case (e, o) => e.isOpen && o.userId === owner }
       .map { case (e, _) => e }
 

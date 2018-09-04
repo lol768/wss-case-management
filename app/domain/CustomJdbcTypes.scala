@@ -5,7 +5,6 @@ import java.time.format.DateTimeFormatter
 import java.time.{OffsetDateTime, ZoneOffset}
 import java.util.{Calendar, TimeZone}
 
-import domain.dao.GeneratedId
 import enumeratum.SlickEnumSupport
 import helpers.JavaTime
 import play.api.libs.json.{JsValue, Json}
@@ -67,4 +66,5 @@ object CustomJdbcTypes extends SlickEnumSupport {
   implicit lazy val caseTypeMapper: JdbcType[CaseType] = mappedColumnTypeForEnum(CaseType)
   implicit lazy val caseCauseMapper: JdbcType[CaseCause] = mappedColumnTypeForEnum(CaseCause)
   implicit lazy val caseTagMapper: JdbcType[CaseTag] = mappedColumnTypeForEnum(CaseTag)
+  implicit lazy val ownerEntityTypeMapper: JdbcType[Owner.EntityType] = mappedColumnTypeForEnum(Owner.EntityType)
 }
