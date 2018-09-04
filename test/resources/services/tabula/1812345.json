@@ -6,7 +6,18 @@
         "name": "Student Recruitment"
       }
     ],
+    "currentAddress": {
+      "line1": "Heron Tower",
+      "line2": "110 Bishopsgate",
+      "line4": "London",
+      "postcode": "EC2N 4AY"
+    },
     "dateOfBirth": "1996-02-08",
+    "disability": {
+      "code": "E",
+      "definition": "Long standing condition",
+      "sitsDefinition": "You have a long standing illness or condition"
+    },
     "email": "reynard.fox@outlook.com",
     "firstName": "Reynard",
     "fullName": "Reynard Fox",
@@ -21,6 +32,9 @@
     "inactivationDate": "2118-08-13",
     "jobTitle": "Applicant",
     "lastName": "Fox",
+    "mobileNumber": "07512345678",
+    "nationality": "British",
+    "secondNationality": "Zimbabwean",
     "officialName": "Miss Reynard Fox",
     "title": "Miss",
     "touchedDepartments": [
