@@ -45,7 +45,9 @@ class CaseServiceTest extends AbstractDaoTest {
     }
 
     "find" in withData(new CaseFixture()) { case1 =>
+      // Can find by either UUID or IssueKey
       service.find(case1.id.get).serviceValue.id mustBe case1.id
+      service.find(case1.key.get).serviceValue.id mustBe case1.id
     }
 
     "get and set tags" in withData(new CaseFixture()) { c =>
