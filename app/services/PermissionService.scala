@@ -9,7 +9,7 @@ import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Provider, Singleton}
 import play.api.Configuration
 import warwick.core.timing.{TimingContext, TimingService}
-import warwick.sso.{GroupName, GroupService, User, Usercode}
+import warwick.sso.{GroupName, GroupService, RoleName, RoleService, User, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,6 +29,7 @@ trait PermissionService {
 @Singleton
 class PermissionServiceImpl @Inject() (
   groupService: GroupService,
+  roleService: RoleService,
   enquiryServiceProvider: Provider[EnquiryService],
   caseServiceProvider: Provider[CaseService],
   config: Configuration,
@@ -39,7 +40,8 @@ class PermissionServiceImpl @Inject() (
   private lazy val caseService = caseServiceProvider.get()
 
   private val webgroupPrefix = config.get[String]("app.webgroup.team.prefix")
-  private val adminWebgroup = config.get[String]("app.webgroup.admin")
+
+  private val adminRole = RoleName("admin")
 
   override def inAnyTeam(user: Usercode): ServiceResult[Boolean] =
     ServiceResults.sequence(Seq(isAdmin(user)) ++ Teams.all.map(inTeam(user, _)))
@@ -99,7 +101,7 @@ class PermissionServiceImpl @Inject() (
     )
 
   private def isAdmin(user: Usercode): ServiceResult[Boolean] =
-    groupService.isUserInGroup(user, GroupName(adminWebgroup)).fold(
+    groupService.isUserInGroup(user, roleService.getRole(adminRole).groupName).fold(
       e => ServiceResults.exceptionToServiceResult(e),
       r => Right(r)
     )
