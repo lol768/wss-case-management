@@ -1,0 +1,31 @@
+@import controllers.admin.CaseController.CaseLinkFormData
+@import domain.dao.CaseDao.Case
+@import domain.CaseLink
+@import domain.CaseLinkType
+
+@(
+  c: Case,
+  form: Form[CaseLinkFormData]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"Link ${c.key.get.string} to another case") {
+  @b3.horizontal.formCSRF(
+    controllers.admin.routes.CaseController.link(c.key.get),
+    "col-sm-2", "col-sm-5",
+    'class -> "dirty-check"
+  ) { implicit ifc =>
+    @b3.select(form("linkType"),
+      options = CaseLinkType.values.map { t => t.entryName -> t.outwardDescription },
+      '_label -> "This case",
+      '_default -> "",
+      'required -> true
+    )
+
+    @* TODO Replace this with a Flexipicker once we have Case searching and storing the last n viewed cases *@
+    @b3.text(form("targetID"),
+      '_label -> "Case"
+    )
+
+    @tags.submitOrCancel("Link", controllers.admin.routes.CaseController.view(c.key.get))
+  }
+}

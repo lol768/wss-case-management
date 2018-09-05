@@ -24,3 +24,4 @@ flash.enquiry.Reopened=The enquiry has been reopened
 flash.registration.complete=Registration complete
 flash.registration.updated=Registration updated
 flash.case.created=The case has been opened ({0})
+flash.case.linked=The case link has been created
