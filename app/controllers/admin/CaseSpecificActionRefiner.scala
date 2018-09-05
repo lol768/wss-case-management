@@ -52,9 +52,10 @@ class CaseSpecificActionRefiner @Inject()(
     override protected def executionContext: ExecutionContext = ec
   }
 
-  def CaseSpecificSignInRequiredAction(caseKey: IssueKey): ActionBuilder[CaseSpecificRequest, AnyContent] =
+  private def CaseSpecificSignInRequiredAction(caseKey: IssueKey): ActionBuilder[CaseSpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithCase(caseKey)
 
+  // FIXME to be solved as part of permissions refactor
   def CaseSpecificTeamMemberAction(caseKey: IssueKey): ActionBuilder[CaseSpecificRequest, AnyContent] =
     CaseSpecificSignInRequiredAction(caseKey) andThen TeamMember
 

@@ -6,7 +6,7 @@ import controllers.admin.CaseController._
 import controllers.{BaseController, TeamSpecificActionRefiner}
 import domain._
 import domain.dao.CaseDao.Case
-import helpers.JavaTime
+import helpers.{FormHelpers, JavaTime}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -37,7 +37,7 @@ object CaseController {
 
     Form(mapping(
       "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
-      "incidentDate" -> localDateTime("yyyy-MM-dd'T'HH:mm").transform[OffsetDateTime](_.atZone(JavaTime.timeZone).toOffsetDateTime, _.toLocalDateTime),
+      "incidentDate" -> FormHelpers.offsetDateTime,
       "onCampus" -> boolean,
       "cause" -> CaseCause.formField,
       "caseType" -> optional(CaseType.formField).verifying("error.caseType.invalid", t => (CaseType.valuesFor(team).isEmpty && t.isEmpty) || t.exists(CaseType.valuesFor(team).contains))
@@ -53,8 +53,8 @@ class CaseController @Inject()(
   caseSpecificActionRefiner: CaseSpecificActionRefiner,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import teamSpecificActionRefiner._
   import caseSpecificActionRefiner._
+  import teamSpecificActionRefiner._
 
   def createForm(teamId: String): Action[AnyContent] = TeamSpecificMemberRequiredAction(teamId) { implicit teamRequest =>
     Ok(views.html.admin.cases.create(teamRequest.team, form(teamRequest.team, profiles)))
@@ -84,7 +84,7 @@ class CaseController @Inject()(
 
         cases.create(c, clients).successMap { created =>
           Redirect(controllers.admin.routes.CaseController.view(created.key.get))
-            .flashing("success" -> Messages("flash.case.created", created.key.get))
+            .flashing("success" -> Messages("flash.case.created", created.key.get.string))
         }
       }
     )
