@@ -1,9 +1,35 @@
 @import domain.dao.CaseDao.Case
+@import domain.CaseLink
+@import domain.CaseLinkType
 
 @(
-  c: Case
+  c: Case.FullyJoined
 )(implicit context: RequestContext)
 
-@main(s"Case ${c.key.get.string}") {
+@caseLinks(links: Seq[CaseLink], description: CaseLinkType => String, target: CaseLink => Case) = {
+  @if(links.nonEmpty) {
+    <ul>
+      @links.groupBy(_.linkType).map { case (linkType, l) =>
+        <li>
+          @description(linkType)
+          <ul>
+            @l.map { link =>
+              <li><a href="@controllers.admin.routes.CaseController.view(target(link).key.get)">@target(link).key.get.string</a></li>
+            }
+          </ul>
+        </li>
+      }
+    </ul>
+  }
+}
+
+@main(s"Case ${c.clientCase.key.get.string}") {
   @* TODO *@
+
+  <h2>Case links</h2>
+
+  @caseLinks(c.outgoingCaseLinks, _.outwardDescription, _.incoming)
+  @caseLinks(c.incomingCaseLinks, _.inwardDescription, _.outgoing)
+
+  <p><a href="@controllers.admin.routes.CaseController.linkForm(c.clientCase.key.get)" class="btn btn-default">Create link</a></p>
 }
