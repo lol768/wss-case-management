@@ -79,8 +79,10 @@ class CaseController @Inject()(
   import caseSpecificActionRefiner._
   import teamSpecificActionRefiner._
 
-  def view(caseKey: IssueKey): Action[AnyContent] = CaseSpecificTeamMemberAction(caseKey) { implicit caseRequest =>
-    Ok(views.html.admin.cases.view(caseRequest.`case`))
+  def view(caseKey: IssueKey): Action[AnyContent] = CaseSpecificTeamMemberAction(caseKey).async { implicit caseRequest =>
+    cases.findFull(caseKey).successMap { c =>
+      Ok(views.html.admin.cases.view(c))
+    }
   }
 
   def createForm(teamId: String): Action[AnyContent] = TeamSpecificMemberRequiredAction(teamId) { implicit teamRequest =>
@@ -121,16 +123,16 @@ class CaseController @Inject()(
   }
 
   def linkForm(caseKey: IssueKey): Action[AnyContent] = CaseSpecificTeamMemberAction(caseKey) { implicit caseRequest =>
-    Ok(views.html.admin.cases.link(caseRequest.`case`, caseLinkForm(caseRequest.`case`.clientCase.id.get, cases)))
+    Ok(views.html.admin.cases.link(caseRequest.`case`, caseLinkForm(caseRequest.`case`.id.get, cases)))
   }
 
   def link(caseKey: IssueKey): Action[AnyContent] = CaseSpecificTeamMemberAction(caseKey).async { implicit caseRequest =>
-    caseLinkForm(caseRequest.`case`.clientCase.id.get, cases).bindFromRequest().fold(
+    caseLinkForm(caseRequest.`case`.id.get, cases).bindFromRequest().fold(
       formWithErrors => Future.successful(
         Ok(views.html.admin.cases.link(caseRequest.`case`, formWithErrors))
       ),
       data =>
-        cases.addLink(data.linkType, caseRequest.`case`.clientCase.id.get, data.targetID).successMap { _ =>
+        cases.addLink(data.linkType, caseRequest.`case`.id.get, data.targetID).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.linked"))
         }

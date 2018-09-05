@@ -18,8 +18,10 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[CaseServiceImpl])
 trait CaseService {
   def create(c: Case, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
-  def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
-  def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
+  def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]]
+  def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]]
+  def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
+  def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
   def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]]
   def setCaseTags(caseId: UUID, tags: Set[CaseTag])(implicit ac: AuditLogContext): Future[ServiceResult[Set[CaseTag]]]
   def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]]
@@ -46,6 +48,12 @@ class CaseServiceImpl @Inject() (
     }
   }
 
+  override def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]] =
+    daoRunner.run(dao.find(id)).map(Right(_))
+
+  override def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]] =
+    daoRunner.run(dao.find(caseKey)).map(Right(_))
+
   private def findFullyJoined(find: => DBIO[Case])(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
     daoRunner.run(for {
       clientCase <- find
@@ -60,10 +68,10 @@ class CaseServiceImpl @Inject() (
       incomingCaseLinks
     )).map(Right(_))
 
-  override def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
+  override def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
     findFullyJoined(dao.find(id))
 
-  override def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
+  override def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
     findFullyJoined(dao.find(caseKey))
 
   override def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]] =

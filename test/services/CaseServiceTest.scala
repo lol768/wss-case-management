@@ -48,11 +48,11 @@ class CaseServiceTest extends AbstractDaoTest {
 
     "find" in withData(new CaseFixture()) { case1 =>
       // Can find by either UUID or IssueKey
-      service.find(case1.id.get).serviceValue.clientCase.id mustBe case1.id
-      service.find(case1.key.get).serviceValue.clientCase.id mustBe case1.id
+      service.find(case1.id.get).serviceValue.id mustBe case1.id
+      service.find(case1.key.get).serviceValue.id mustBe case1.id
     }
 
-    "find fully joined" in withData(new CaseFixture()) { c1 =>
+    "findFull" in withData(new CaseFixture()) { c1 =>
       val clients = Set(UniversityID("0672089"), UniversityID("0672088"))
       val clientCase = service.create(Fixtures.cases.newCase().copy(id = None, key = None), clients).serviceValue
       val tags: Set[CaseTag] = Set(CaseTag.Antisocial, CaseTag.Bullying)
@@ -63,7 +63,7 @@ class CaseServiceTest extends AbstractDaoTest {
       service.addLink(CaseLinkType.Related, c1.id.get, clientCase.id.get).serviceValue
       service.addLink(CaseLinkType.Related, clientCase.id.get, c2.id.get).serviceValue
 
-      val fullyJoined = service.find(clientCase.key.get).serviceValue
+      val fullyJoined = service.findFull(clientCase.key.get).serviceValue
       fullyJoined.clientCase mustBe clientCase
       fullyJoined.clients mustBe clients
       fullyJoined.tags mustBe tags

@@ -4,13 +4,13 @@
 @import domain.CaseLinkType
 
 @(
-  c: Case.FullyJoined,
+  c: Case,
   form: Form[CaseLinkFormData]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@main(s"Link ${c.clientCase.key.get.string} to another case") {
+@main(s"Link ${c.key.get.string} to another case") {
   @b3.horizontal.formCSRF(
-    controllers.admin.routes.CaseController.link(c.clientCase.key.get),
+    controllers.admin.routes.CaseController.link(c.key.get),
     "col-sm-2", "col-sm-5",
     'class -> "dirty-check"
   ) { implicit ifc =>
@@ -26,6 +26,6 @@
       '_label -> "Case"
     )
 
-    @tags.submitOrCancel("Link", controllers.admin.routes.CaseController.view(c.clientCase.key.get))
+    @tags.submitOrCancel("Link", controllers.admin.routes.CaseController.view(c.key.get))
   }
 }
