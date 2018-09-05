@@ -38,14 +38,6 @@ object CaseTag extends PlayEnum[CaseTag] {
   val values: immutable.IndexedSeq[CaseTag] = findValues
 }
 
-sealed trait EmergencyService extends EnumEntry
-object EmergencyService extends PlayEnum[EmergencyService] {
-  case object Police extends EmergencyService
-  case object Ambulance extends EmergencyService
-  case object Fire extends EmergencyService
-  val values: immutable.IndexedSeq[EmergencyService] = findValues
-}
-
 sealed abstract class CaseType(val description: String, val applicableTo: Seq[Team]) extends EnumEntry
 abstract class MentalHealthCaseType(description: String) extends CaseType(description, Seq(Teams.MentalHealth))
 object CaseType extends PlayEnum[CaseType] {
