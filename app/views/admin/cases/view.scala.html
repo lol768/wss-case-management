@@ -1,0 +1,9 @@
+@import domain.dao.CaseDao.Case
+
+@(
+  c: Case
+)(implicit context: RequestContext)
+
+@main(s"Case ${c.key.get.string}") {
+  @* TODO *@
+}

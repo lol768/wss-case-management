@@ -19,6 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 trait CaseService {
   def create(c: Case, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]]
+  def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]]
   def setCaseTags(caseId: UUID, tags: Set[CaseTag])(implicit ac: AuditLogContext): Future[ServiceResult[Set[CaseTag]]]
 }
@@ -45,6 +46,9 @@ class CaseServiceImpl @Inject() (
 
   override def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]] =
     daoRunner.run(dao.find(id)).map(Right(_))
+
+  override def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]] =
+    daoRunner.run(dao.find(caseKey)).map(Right(_))
 
   override def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]] =
     daoRunner.run(dao.findTagsQuery(caseIds).result)

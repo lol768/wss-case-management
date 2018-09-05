@@ -22,6 +22,7 @@ import scala.concurrent.ExecutionContext
 trait CaseDao {
   def insert(c: Case): DBIO[Case]
   def find(id: UUID): DBIO[Case]
+  def find(key: IssueKey): DBIO[Case]
   def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag]
   def deleteTag(tag: StoredCaseTag): DBIO[Done]
   def findTagsQuery(caseIds: Set[UUID]): Query[CaseTags, StoredCaseTag, Seq]
@@ -41,6 +42,9 @@ class CaseDaoImpl @Inject()(
 
   override def find(id: UUID): DBIO[Case] =
     cases.table.filter(_.id === id).result.head
+
+  override def find(key: IssueKey): DBIO[Case] =
+    cases.table.filter(_.key === key).result.head
 
   override def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag] =
     caseTags.insert(tag)

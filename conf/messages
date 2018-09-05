@@ -10,7 +10,9 @@ error.appointmentAvailability.unknown=Unknown appointment availability type
 error.appointmentAvailability.missing=Please select an availability
 error.optimisticLocking=This has changed since you started editing (it was probably edited by somebody else)
 error.userIds.invalid=These user codes are invalid: {0}
+error.client.invalid=Please choose a valid client
 error.caseType.invalid=Please select a valid case type
+error.localDateTime=Please enter a valid date/time (dd-MM-yyyy HH:mm:ss)
 
 flash.client.summary.updated=Client summary updated
 flash.client.registration.invited=Invitation to register sent to client
@@ -21,3 +23,4 @@ flash.enquiry.Closed=The enquiry has been closed
 flash.enquiry.Reopened=The enquiry has been reopened
 flash.registration.complete=Registration complete
 flash.registration.updated=Registration updated
+flash.case.created=The case has been opened ({0})

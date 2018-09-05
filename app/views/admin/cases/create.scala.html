@@ -10,8 +10,9 @@
 
 @main(s"Create a ${team.name} case") {
   @b3.vertical.formCSRF(controllers.admin.routes.CaseController.create(team.id), 'class -> "dirty-check") { implicit ifc =>
-    @b3.free('_label -> "Clients") {
-      @tags.flexipicker(values = form.data.values.toSeq, name = "clients[]", placeholder = "Search for clients", multiple = true, universityId = true)
+    @b3.free('_label -> "Clients", '_class -> form.error("clients").map(_ => "has-error")) {
+      @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for clients", multiple = true, universityId = true)
+      @b3.errors(form("clients"))
     }
 
     @if(CaseType.valuesFor(team).nonEmpty) {
@@ -29,7 +30,8 @@
 
     @b3.radio(form("onCampus"),
       options = Seq("true" -> "On-campus", "false" -> "Off-campus"),
-      '_label -> "Where did the incident occur?"
+      '_label -> "Where did the incident occur?",
+      'required -> true
     )
 
     @b3.select(form("cause"),
