@@ -1,6 +1,7 @@
 package controllers.enquiries
 
 import controllers.BaseController
+import controllers.refiners.CanViewEnquiryActionRefiner
 import domain.Enquiry.{FormData => Data}
 import domain._
 import javax.inject.{Inject, Singleton}
@@ -14,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class EnquiryController @Inject()(
-  enquirySpecificActionRefiner: EnquirySpecificActionRefiner,
+  enquirySpecificActionRefiner: CanViewEnquiryActionRefiner,
   securityService: SecurityService,
   service: EnquiryService,
   config: Configuration

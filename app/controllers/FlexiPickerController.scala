@@ -1,6 +1,7 @@
 package controllers
 
 import controllers.FlexiPickerController._
+import controllers.refiners.AnyTeamActionRefiner
 import domain.SitsProfile
 import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
@@ -110,14 +111,14 @@ object FlexiPickerController {
 
 @Singleton
 class FlexiPickerController @Inject()(
-  teamSpecificActionRefiner: TeamSpecificActionRefiner,
+  anyTeamActionRefiner: AnyTeamActionRefiner,
   userLookupService: UserLookupService,
   memberSearchService: MemberSearchService,
   groupService: GroupService,
   profileService: ProfileService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import teamSpecificActionRefiner._
+  import anyTeamActionRefiner._
 
   def queryJson: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     form.bindFromRequest.fold(

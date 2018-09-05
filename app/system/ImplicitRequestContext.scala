@@ -31,6 +31,8 @@ trait ImplicitRequestContext extends LowPriorityRequestContextImplicits {
     case _ => RequestContext.anonymous(ssoClient, request, Nil, csrfPageHelperFactory, configuration)
   }
 
+  implicit val requestContextBuilder: RequestHeader => RequestContext = { request => requestContext(request) }
+
 }
 
 /**

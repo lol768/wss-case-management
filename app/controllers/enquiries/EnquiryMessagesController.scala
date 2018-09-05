@@ -4,6 +4,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import controllers.BaseController
+import controllers.refiners.{CanAddMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
 import domain.{Enquiry, IssueState, MessageData, MessageSender}
 import helpers.JavaTime
 import helpers.StringUtils._
@@ -25,7 +26,9 @@ object EnquiryMessagesController {
 
 @Singleton
 class EnquiryMessagesController @Inject()(
-  enquirySpecificActionRefiner: EnquirySpecificActionRefiner,
+  canViewEnquiryActionRefiner: CanViewEnquiryActionRefiner,
+  canAddMessageToEnquiryActionRefiner: CanAddMessageToEnquiryActionRefiner,
+  canEditEnquiryActionRefiner: CanEditEnquiryActionRefiner,
   securityService: SecurityService,
   service: EnquiryService
 )(implicit executionContext: ExecutionContext) extends BaseController {
@@ -37,12 +40,14 @@ class EnquiryMessagesController @Inject()(
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version)
   )(StateChangeForm.apply)(StateChangeForm.unapply))
 
-  import enquirySpecificActionRefiner._
+  import canAddMessageToEnquiryActionRefiner._
+  import canEditEnquiryActionRefiner._
+  import canViewEnquiryActionRefiner._
 
   private def renderMessages(enquiry: Enquiry, messages: Seq[MessageData], f: Form[StateChangeForm])(implicit request: EnquirySpecificRequest[_]) =
     Ok(views.html.enquiry.messages(enquiry, messages, f, messageSender(request)))
 
-  def messages(id: UUID): Action[AnyContent] = EnquirySpecificMessagesAction(id) { implicit request =>
+  def messages(id: UUID): Action[AnyContent] = CanViewEnquiryAction(id) { implicit request =>
     renderMessages(request.enquiry, request.messages, stateChangeForm(request.enquiry, messageSender(request)).fill(StateChangeForm("", request.enquiry.version)))
   }
 
@@ -50,7 +55,7 @@ class EnquiryMessagesController @Inject()(
     Redirect(routes.EnquiryMessagesController.messages(id))
   }
 
-  def addMessage(id: UUID): Action[AnyContent] = EnquirySpecificMessagesAction(id).async { implicit request =>
+  def addMessage(id: UUID): Action[AnyContent] = CanAddMessageToEnquiryAction(id).async { implicit request =>
     Form(single("text" -> nonEmptyText)).bindFromRequest().fold(
       formWithErrors => {
         val form = stateChangeForm(request.enquiry, messageSender(request))
@@ -67,11 +72,11 @@ class EnquiryMessagesController @Inject()(
     )
   }
 
-  def close(id: UUID): Action[AnyContent] = EnquirySpecificTeamMemberAction(id).async { implicit request =>
+  def close(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id).async { implicit request =>
     updateStateAndMessage(IssueState.Closed)
   }
 
-  def reopen(id: UUID): Action[AnyContent] = EnquirySpecificMessagesAction(id).async { implicit request =>
+  def reopen(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id).async { implicit request =>
     updateStateAndMessage(IssueState.Reopened)
   }
 

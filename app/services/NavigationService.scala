@@ -59,7 +59,7 @@ class NavigationServiceImpl @Inject() (
   }
 
   private def sysadminLinks(loginContext: LoginContext): Seq[Navigation] = {
-    loginContext.user.map { user =>
+    loginContext.user.map { _ =>
 
       val links: Seq[NavigationPage] = Seq(
         masquerade.filter(_ => loginContext.actualUserHasRole(Sysadmin) || loginContext.actualUserHasRole(Masquerader)).toSeq
@@ -83,10 +83,10 @@ class NavigationServiceImpl @Inject() (
     login.user.map(_.usercode).map(teamLinksForUser).getOrElse(Nil)
 
   def teamLinksForUser(usercode: Usercode): Seq[NavigationPage] =
-    teams.filter { case (team, page) =>
-      permission.inTeam(usercode, team).getOrElse(false)
+    teams.filter { case (team, _) =>
+      permission.canViewTeam(usercode, team).getOrElse(false)
     }.map {
-      case (team, page) => page
+      case (_, page) => page
     }
 
   override def getNavigation(loginContext: LoginContext): Seq[Navigation] =

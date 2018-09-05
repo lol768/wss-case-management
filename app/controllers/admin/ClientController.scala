@@ -1,6 +1,7 @@
 package controllers.admin
 
-import controllers.{BaseController, TeamSpecificActionRefiner}
+import controllers.BaseController
+import controllers.refiners.AnyTeamActionRefiner
 import domain._
 import helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
@@ -24,10 +25,10 @@ class ClientController @Inject()(
   notificationService: NotificationService,
   permissionService: PermissionService,
   enquiryService: EnquiryService,
-  teamSpecificActionRefiner: TeamSpecificActionRefiner,
+  anyTeamActionRefiner: AnyTeamActionRefiner,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import teamSpecificActionRefiner._
+  import anyTeamActionRefiner._
 
   val form = Form(mapping(
     "high-mental-health-risk" -> optional(boolean),
@@ -91,7 +92,7 @@ class ClientController @Inject()(
 
   private def inMentalHealthTeam(implicit request: AuthenticatedRequest[_]): Boolean =
     logErrors(
-      permissionService.inTeam(request.context.user.get.usercode, Teams.MentalHealth),
+      permissionService.canViewTeam(request.context.user.get.usercode, Teams.MentalHealth),
       logger,
       false,
       _ => Some(s"Could not determine if ${request.context.user.get.usercode.string} was in ${Teams.MentalHealth.id}; returning false")

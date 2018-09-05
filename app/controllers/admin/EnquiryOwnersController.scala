@@ -3,7 +3,7 @@ package controllers.admin
 import java.util.UUID
 
 import controllers.BaseController
-import controllers.enquiries.EnquirySpecificActionRefiner
+import controllers.refiners.CanEditEnquiryActionRefiner
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Forms.{mapping, seq, text}
@@ -17,7 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class EnquiryOwnersController @Inject()(
-  enquirySpecificActionRefiner: EnquirySpecificActionRefiner,
+  canEditEnquiryActionRefiner: CanEditEnquiryActionRefiner,
   userLookupService: UserLookupService,
   enquiryService: EnquiryService
 )(implicit executionContext: ExecutionContext) extends BaseController {
@@ -26,9 +26,9 @@ class EnquiryOwnersController @Inject()(
     "owners" -> seq(text)
   )(s => s)(s => Option(s)))
 
-  import enquirySpecificActionRefiner._
+  import canEditEnquiryActionRefiner._
 
-  def form(id: UUID): Action[AnyContent] = EnquirySpecificTeamMemberAction(id).async { implicit request =>
+  def form(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id).async { implicit request =>
     enquiryService.getOwners(Set(request.enquiry.id.get)).successMap(owners =>
       Ok(views.html.admin.enquiry.owners(
         ownersForm.fill(owners.getOrElse(request.enquiry.id.get, Set()).map(_.string).toSeq.sorted),
@@ -37,7 +37,7 @@ class EnquiryOwnersController @Inject()(
     )
   }
 
-  def submit(id: UUID): Action[AnyContent] = EnquirySpecificTeamMemberAction(id).async { implicit request =>
+  def submit(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id).async { implicit request =>
     ownersForm.bindFromRequest.fold(
       formWithErrors => {
         Future.successful(Ok(views.html.admin.enquiry.owners(formWithErrors, request.enquiry)))
