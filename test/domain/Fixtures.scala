@@ -62,7 +62,10 @@ object Fixtures {
       Teams.MentalHealth,
       JavaTime.offsetDateTime,
       IssueState.Open,
-      None,
+      onCampus = false,
+      notifiedPolice = false,
+      notifiedAmbulance = false,
+      notifiedFire = false,
       None,
       Some(CaseType.MentalHealthAssessment),
       CaseCause.New

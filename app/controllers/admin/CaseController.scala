@@ -26,6 +26,9 @@ object CaseController {
     clients: Set[UniversityID],
     incidentDate: OffsetDateTime,
     onCampus: Boolean,
+    notifiedPolice: Boolean,
+    notifiedAmbulance: Boolean,
+    notifiedFire: Boolean,
     cause: CaseCause,
     caseType: Option[CaseType],
   )
@@ -39,6 +42,9 @@ object CaseController {
       "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
       "incidentDate" -> FormHelpers.offsetDateTime,
       "onCampus" -> boolean,
+      "notifiedPolice" -> boolean,
+      "notifiedAmbulance" -> boolean,
+      "notifiedFire" -> boolean,
       "cause" -> CaseCause.formField,
       "caseType" -> optional(CaseType.formField).verifying("error.caseType.invalid", t => (CaseType.valuesFor(team).isEmpty && t.isEmpty) || t.exists(CaseType.valuesFor(team).contains))
     )(CaseFormData.apply)(CaseFormData.unapply))
@@ -74,7 +80,10 @@ class CaseController @Inject()(
           team = teamRequest.team,
           version = JavaTime.offsetDateTime,
           state = IssueState.Open,
-          onCampus = Some(data.onCampus),
+          onCampus = data.onCampus,
+          notifiedPolice = data.notifiedPolice,
+          notifiedAmbulance = data.notifiedAmbulance,
+          notifiedFire = data.notifiedFire,
           originalEnquiry = None, // TODO
           caseType = data.caseType,
           cause = data.cause

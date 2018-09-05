@@ -89,7 +89,10 @@ object CaseDao {
     team: Team,
     version: OffsetDateTime,
     state: IssueState,
-    onCampus: Option[Boolean],
+    onCampus: Boolean,
+    notifiedPolice: Boolean,
+    notifiedAmbulance: Boolean,
+    notifiedFire: Boolean,
     originalEnquiry: Option[UUID],
     caseType: Option[CaseType],
     cause: CaseCause
@@ -105,6 +108,9 @@ object CaseDao {
         version,
         state,
         onCampus,
+        notifiedPolice,
+        notifiedAmbulance,
+        notifiedFire,
         originalEnquiry,
         caseType,
         cause,
@@ -121,7 +127,10 @@ object CaseDao {
     team: Team,
     version: OffsetDateTime,
     state: IssueState,
-    onCampus: Option[Boolean],
+    onCampus: Boolean,
+    notifiedPolice: Boolean,
+    notifiedAmbulance: Boolean,
+    notifiedFire: Boolean,
     originalEnquiry: Option[UUID],
     caseType: Option[CaseType],
     cause: CaseCause,
@@ -137,7 +146,10 @@ object CaseDao {
     def team = column[Team]("team_id")
     def version = column[OffsetDateTime]("version_utc")
     def state = column[IssueState]("state")
-    def onCampus = column[Option[Boolean]]("on_campus")
+    def onCampus = column[Boolean]("on_campus")
+    def notifiedPolice = column[Boolean]("notified_police")
+    def notifiedAmbulance = column[Boolean]("notified_ambulance")
+    def notifiedFire = column[Boolean]("notified_fire")
     def originalEnquiry = column[Option[UUID]]("enquiry_id")
     def caseType = column[Option[CaseType]]("case_type")
     def cause = column[CaseCause]("cause")
@@ -152,7 +164,7 @@ object CaseDao {
     def isOpen = state === (Open : IssueState) || state === (Reopened : IssueState)
 
     override def * : ProvenShape[Case] =
-      (id.?, key.?, created, incidentDate, team, version, state, onCampus, originalEnquiry, caseType, cause).mapTo[Case]
+      (id.?, key.?, created, incidentDate, team, version, state, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause).mapTo[Case]
     def idx = index("idx_client_case_key", key, unique = true)
   }
 
@@ -164,7 +176,7 @@ object CaseDao {
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
     override def * : ProvenShape[CaseVersion] =
-      (id, key, created, incidentDate, team, version, state, onCampus, originalEnquiry, caseType, cause, operation, timestamp).mapTo[CaseVersion]
+      (id, key, created, incidentDate, team, version, state, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, operation, timestamp).mapTo[CaseVersion]
   }
 
   case class StoredCaseTag(
