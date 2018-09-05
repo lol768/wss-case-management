@@ -33,6 +33,17 @@ object ReasonableAdjustment extends Enum[ReasonableAdjustment] {
 
   val values: immutable.IndexedSeq[ReasonableAdjustment] = findValues
 
+  // Used to display in two columns in a view
+  val partioned: Seq[(Option[ReasonableAdjustment], Option[ReasonableAdjustment])] = {
+    val leftQuantity = Math.ceil(values.size.toDouble / 2).toInt
+    val rightQuantity = values.size - leftQuantity
+    values.take(leftQuantity).map(Option.apply).zipAll(
+      values.takeRight(rightQuantity).map(Option.apply),
+      None,
+      None
+    )
+  }
+
   object Formatter extends Formatter[ReasonableAdjustment] {
     override def bind(key: String, data: Map[String, String]): Either[Seq[FormError], ReasonableAdjustment] = {
       data.get(key).map(id =>
