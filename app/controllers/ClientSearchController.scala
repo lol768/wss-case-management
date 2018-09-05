@@ -1,27 +1,28 @@
 package controllers
 
+import controllers.refiners.AnyTeamActionRefiner
 import helpers.ServiceResults
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
+import services.ClientSummaryService
 import services.tabula.MemberSearchService
 import services.tabula.TabulaResponseParsers.MemberSearchResult
-import services.{ClientSummaryService, SecurityService}
 import warwick.sso.{User, UserLookupService, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ClientSearchController @Inject()(
-  teamSpecificActionRefiner: TeamSpecificActionRefiner,
+  anyTeamActionRefiner: AnyTeamActionRefiner,
   userLookupService: UserLookupService,
   memberSearchService: MemberSearchService,
   clientSummaryService: ClientSummaryService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import teamSpecificActionRefiner._
+  import anyTeamActionRefiner._
 
   def search(query: String): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     if (query.safeTrim.length < 3) {

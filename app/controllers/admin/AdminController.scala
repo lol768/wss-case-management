@@ -1,6 +1,7 @@
 package controllers.admin
 
-import controllers.{BaseController, TeamSpecificActionRefiner, TeamSpecificRequest}
+import controllers.BaseController
+import controllers.refiners.{CanViewTeamActionRefiner, TeamSpecificRequest}
 import domain.{Enquiry, MessageData}
 import helpers.ServiceResults
 import javax.inject.Inject
@@ -12,15 +13,15 @@ import warwick.sso.UserLookupService
 import scala.concurrent.{ExecutionContext, Future}
 
 class AdminController @Inject()(
-  teamSpecificActionRefiner: TeamSpecificActionRefiner,
+  canViewTeamActionRefiner: CanViewTeamActionRefiner,
   enquiries: EnquiryService,
   profileService: ProfileService,
   userLookupService: UserLookupService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import teamSpecificActionRefiner._
+  import canViewTeamActionRefiner._
 
-  def teamHome(teamId: String): Action[AnyContent] = TeamSpecificMemberRequiredAction(teamId).async { implicit teamRequest => {
+  def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest => {
     findEnquiriesNeedingReply { (needsActionOwner, needsActionTeam) =>
       ServiceResults.zip(
         profileService.getProfiles((needsActionOwner ++ needsActionTeam).map { case (e, _) => e.universityID }.toSet),

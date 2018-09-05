@@ -3,8 +3,9 @@ package controllers.admin
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import controllers.BaseController
 import controllers.admin.CaseController._
-import controllers.{BaseController, TeamSpecificActionRefiner}
+import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CanViewTeamActionRefiner}
 import domain._
 import domain.dao.CaseDao.Case
 import helpers.{FormHelpers, JavaTime}
@@ -72,24 +73,26 @@ object CaseController {
 class CaseController @Inject()(
   profiles: ProfileService,
   cases: CaseService,
-  teamSpecificActionRefiner: TeamSpecificActionRefiner,
-  caseSpecificActionRefiner: CaseSpecificActionRefiner,
+  canViewTeamActionRefiner: CanViewTeamActionRefiner,
+  canViewCaseActionRefiner: CanViewCaseActionRefiner,
+  canEditCaseActionRefiner: CanEditCaseActionRefiner
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import caseSpecificActionRefiner._
-  import teamSpecificActionRefiner._
+  import canViewCaseActionRefiner._
+  import canViewTeamActionRefiner._
+  import canEditCaseActionRefiner._
 
-  def view(caseKey: IssueKey): Action[AnyContent] = CaseSpecificTeamMemberAction(caseKey).async { implicit caseRequest =>
+  def view(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
     cases.findFull(caseKey).successMap { c =>
       Ok(views.html.admin.cases.view(c))
     }
   }
 
-  def createForm(teamId: String): Action[AnyContent] = TeamSpecificMemberRequiredAction(teamId) { implicit teamRequest =>
+  def createForm(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId) { implicit teamRequest =>
     Ok(views.html.admin.cases.create(teamRequest.team, form(teamRequest.team, profiles)))
   }
 
-  def create(teamId: String): Action[AnyContent] = TeamSpecificMemberRequiredAction(teamId).async { implicit teamRequest =>
+  def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     form(teamRequest.team, profiles).bindFromRequest().fold(
       formWithErrors => Future.successful(
         Ok(views.html.admin.cases.create(teamRequest.team, formWithErrors))
@@ -122,11 +125,11 @@ class CaseController @Inject()(
     )
   }
 
-  def linkForm(caseKey: IssueKey): Action[AnyContent] = CaseSpecificTeamMemberAction(caseKey) { implicit caseRequest =>
+  def linkForm(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey) { implicit caseRequest =>
     Ok(views.html.admin.cases.link(caseRequest.`case`, caseLinkForm(caseRequest.`case`.id.get, cases)))
   }
 
-  def link(caseKey: IssueKey): Action[AnyContent] = CaseSpecificTeamMemberAction(caseKey).async { implicit caseRequest =>
+  def link(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     caseLinkForm(caseRequest.`case`.id.get, cases).bindFromRequest().fold(
       formWithErrors => Future.successful(
         Ok(views.html.admin.cases.link(caseRequest.`case`, formWithErrors))
