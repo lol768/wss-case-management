@@ -1,24 +1,11 @@
 package domain
 
+import java.time.OffsetDateTime
+
+import domain.dao.CaseDao.Case
 import enumeratum.{EnumEntry, PlayEnum}
 
 import scala.collection.immutable
-
-object CaseStuff {
-
-  /**
-    * This might not be a way we should do things, but if we did want a service to return
-    * everything we need to display
-    */
-  case class FullyJoined(
-    clientCase: domain.dao.CaseDao.Case,
-    tags: Set[CaseTag],
-//    notes: Seq[CaseNote],
-//    attachments: Seq[UploadedDocument],
-//    relatedAppointments: Seq[Appointment],
-    relatedCases: Seq[domain.dao.CaseDao.Case]
-  )
-}
 
 sealed abstract class CaseTag(description: String) extends EnumEntry
 object CaseTag extends PlayEnum[CaseTag] {
@@ -63,6 +50,13 @@ object CaseCause extends PlayEnum[CaseCause] {
 
   override def values: immutable.IndexedSeq[CaseCause] = findValues
 }
+
+case class CaseLink(
+  linkType: CaseLinkType,
+  outgoing: Case,
+  incoming: Case,
+  updatedDate: OffsetDateTime
+)
 
 sealed abstract class CaseLinkType(val outwardDescription: String, val inwardDescription: String) extends EnumEntry
 object CaseLinkType extends PlayEnum[CaseLinkType] {

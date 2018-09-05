@@ -40,7 +40,7 @@ class CaseSpecificActionRefiner @Inject()(
       implicit val implicitRequest: AuthenticatedRequest[A] = request
 
       Future.successful {
-        permissionService.inTeam(request.context.user.get.usercode, request.`case`.team).fold(
+        permissionService.inTeam(request.context.user.get.usercode, request.`case`.clientCase.team).fold(
           errors => Some(Results.BadRequest(views.html.errors.multiple(errors))),
           inTeam =>
             if (inTeam) None
@@ -61,5 +61,5 @@ class CaseSpecificActionRefiner @Inject()(
 
 }
 
-class CaseSpecificRequest[A](val `case`: Case, request: AuthenticatedRequest[A])
+class CaseSpecificRequest[A](val `case`: Case.FullyJoined, request: AuthenticatedRequest[A])
   extends AuthenticatedRequest[A](request.context, request.request)
