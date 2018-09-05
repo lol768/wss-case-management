@@ -52,6 +52,10 @@ POST        /team/enquiry/:id/reassign              @controllers.admin.TeamEnqui
 GET         /team/enquiry/:id/owners                @controllers.admin.EnquiryOwnersController.form(id: java.util.UUID)
 POST        /team/enquiry/:id/owners                @controllers.admin.EnquiryOwnersController.submit(id: java.util.UUID)
 
+GET         /team/case/create/:teamId               @controllers.admin.CaseController.createForm(teamId: String)
+POST        /team/case/create/:teamId               @controllers.admin.CaseController.create(teamId: String)
+GET         /team/case/:caseKey                     @controllers.admin.CaseController.view(caseKey: domain.IssueKey)
+
 ## Admins/Sysadmins ##
 
 GET         /sysadmin/masquerade                    @controllers.sysadmin.MasqueradeController.masquerade

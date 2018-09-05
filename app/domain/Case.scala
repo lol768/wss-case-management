@@ -22,37 +22,37 @@ object CaseStuff {
 
 sealed abstract class CaseTag(description: String) extends EnumEntry
 object CaseTag extends PlayEnum[CaseTag] {
-  object Accommodation extends CaseTag("Accommodation")
-  object Alcohol extends CaseTag("Alcohol related")
-  object Antisocial extends CaseTag("Anti-social behaviour")
-  object Bullying extends CaseTag("Bullying")
-  object Burglary extends CaseTag("Burglary / Break In")
-  object Disability extends CaseTag("Disability")
-  object DomesticViolence extends CaseTag("Domestic Violence")
-  object Drugs extends CaseTag("Drugs")
-  object HomeSickness extends CaseTag("Home Sickness")
-  object LegalHighs extends CaseTag("Legal Highs")
-  object MentalHealth  extends CaseTag("Mental Health Issue")
-  object Racism extends CaseTag("Racism")
-  object SexualAssault extends CaseTag("Sexual Assault")
+  case object Accommodation extends CaseTag("Accommodation")
+  case object Alcohol extends CaseTag("Alcohol related")
+  case object Antisocial extends CaseTag("Anti-social behaviour")
+  case object Bullying extends CaseTag("Bullying")
+  case object Burglary extends CaseTag("Burglary / Break In")
+  case object Disability extends CaseTag("Disability")
+  case object DomesticViolence extends CaseTag("Domestic Violence")
+  case object Drugs extends CaseTag("Drugs")
+  case object HomeSickness extends CaseTag("Home Sickness")
+  case object LegalHighs extends CaseTag("Legal Highs")
+  case object MentalHealth  extends CaseTag("Mental Health Issue")
+  case object Racism extends CaseTag("Racism")
+  case object SexualAssault extends CaseTag("Sexual Assault")
   val values: immutable.IndexedSeq[CaseTag] = findValues
 }
 
 sealed trait EmergencyService extends EnumEntry
 object EmergencyService extends PlayEnum[EmergencyService] {
-  object Police extends EmergencyService
-  object Ambulance extends EmergencyService
-  object Fire extends EmergencyService
+  case object Police extends EmergencyService
+  case object Ambulance extends EmergencyService
+  case object Fire extends EmergencyService
   val values: immutable.IndexedSeq[EmergencyService] = findValues
 }
 
-sealed abstract class CaseType(val applicableTo: Seq[Team]) extends EnumEntry
-abstract class MentalHealthCaseType extends CaseType(Seq(Teams.MentalHealth))
+sealed abstract class CaseType(val description: String, val applicableTo: Seq[Team]) extends EnumEntry
+abstract class MentalHealthCaseType(description: String) extends CaseType(description, Seq(Teams.MentalHealth))
 object CaseType extends PlayEnum[CaseType] {
-  object MentalHealthAssessment extends MentalHealthCaseType
-  object MentalHealthCrisis extends MentalHealthCaseType
-  object MentalHealthWellbeing extends MentalHealthCaseType
-  object MentalHealthMentoring extends MentalHealthCaseType
+  case object MentalHealthAssessment extends MentalHealthCaseType("Mental Health Assessment")
+  case object MentalHealthCrisis extends MentalHealthCaseType("Mental Health Crisis")
+  case object MentalHealthWellbeing extends MentalHealthCaseType("Mental Health Mentoring")
+  case object MentalHealthMentoring extends MentalHealthCaseType("Mental Health Wellbeing")
 
   override def values: immutable.IndexedSeq[CaseType] = findValues
 
@@ -61,13 +61,13 @@ object CaseType extends PlayEnum[CaseType] {
   }
 }
 
-sealed trait CaseCause extends EnumEntry
+sealed abstract class CaseCause(val description: String) extends EnumEntry
 object CaseCause extends PlayEnum[CaseCause] {
-  object New extends CaseCause
-  object Recurring extends CaseCause
-  object Ongoing extends CaseCause
-  object Referred extends CaseCause
-  object SelfReferred extends CaseCause
+  case object New extends CaseCause("New issue")
+  case object Recurring extends CaseCause("Recurring issue")
+  case object Ongoing extends CaseCause("Ongoing issue")
+  case object Referred extends CaseCause("Referred")
+  case object SelfReferred extends CaseCause("Self-referred")
 
   override def values: immutable.IndexedSeq[CaseCause] = findValues
 }

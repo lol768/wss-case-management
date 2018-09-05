@@ -1,0 +1,45 @@
+@import controllers.admin.CaseController.CaseFormData
+@import domain.Team
+@import domain.CaseCause
+@import domain.CaseType
+
+@(
+  team: Team,
+  form: Form[CaseFormData]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"Create a ${team.name} case") {
+  @b3.vertical.formCSRF(controllers.admin.routes.CaseController.create(team.id), 'class -> "dirty-check") { implicit ifc =>
+    @b3.free('_label -> "Clients", '_class -> form.error("clients").map(_ => "has-error")) {
+      @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for clients", multiple = true, universityId = true)
+      @b3.errors(form("clients"))
+    }
+
+    @if(CaseType.valuesFor(team).nonEmpty) {
+      @b3.select(form("caseType"),
+        options = CaseType.valuesFor(team).map { t => t.entryName -> t.entryName },
+        '_label -> "Case type",
+        '_default -> "",
+        'required -> true
+      )
+    }
+
+    @b3.datetimeLocal(form("incidentDate"),
+      '_label -> "Incident date"
+    )
+
+    @b3.radio(form("onCampus"),
+      options = Seq("true" -> "On-campus", "false" -> "Off-campus"),
+      '_label -> "Where did the incident occur?",
+      'required -> true
+    )
+
+    @b3.select(form("cause"),
+      options = CaseCause.values.map { c => c.entryName -> c.description },
+      '_label -> "Cause",
+      '_default -> ""
+    )
+
+    @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id))
+  }
+}

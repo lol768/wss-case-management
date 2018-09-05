@@ -1,0 +1,7 @@
+@(field: Field, args: (Symbol,Any)*)(implicit fc: b3.B3FieldConstructor, messages: MessagesProvider)
+
+@defining(B3FieldInfo(field, withFeedback = false, withLabelFor = false, args, messages)) { fieldInfo =>
+  @fieldInfo.errorsAndInfos.map { case (id, text) =>
+    <span id="@id" class="help-block">@text</span>
+  }
+}

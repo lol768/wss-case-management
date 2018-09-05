@@ -5,24 +5,31 @@ import java.util.UUID
 
 import akka.Done
 import com.google.inject.ImplementedBy
-import domain._
-import javax.inject.{Inject, Singleton}
-import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import slick.jdbc.{JdbcProfile, PostgresProfile}
-import slick.jdbc.PostgresProfile.api._
 import domain.CustomJdbcTypes._
 import domain.IssueState._
+import domain._
 import domain.dao.CaseDao._
+import javax.inject.{Inject, Singleton}
+import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import slick.jdbc.JdbcProfile
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.ProvenShape
+import warwick.sso.UniversityID
 
 import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[CaseDaoImpl])
 trait CaseDao {
+  def insert(c: Case): DBIO[Case]
   def find(id: UUID): DBIO[Case]
+  def find(key: IssueKey): DBIO[Case]
   def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag]
   def deleteTag(tag: StoredCaseTag): DBIO[Done]
   def findTagsQuery(caseIds: Set[UUID]): Query[CaseTags, StoredCaseTag, Seq]
+  def insertClients(clients: Set[CaseClient]): DBIO[Seq[CaseClient]]
+  def insertClient(client: CaseClient): DBIO[CaseClient]
+  def deleteClient(client: CaseClient): DBIO[Done]
+  def findClientsQuery(caseIds: Set[UUID]): Query[CaseClients, CaseClient, Seq]
 }
 
 @Singleton
@@ -30,8 +37,14 @@ class CaseDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) extends CaseDao with HasDatabaseConfigProvider[JdbcProfile] {
 
+  override def insert(c: Case): DBIO[Case] =
+    cases.insert(c)
+
   override def find(id: UUID): DBIO[Case] =
     cases.table.filter(_.id === id).result.head
+
+  override def find(key: IssueKey): DBIO[Case] =
+    cases.table.filter(_.key === key).result.head
 
   override def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag] =
     caseTags.insert(tag)
@@ -41,6 +54,19 @@ class CaseDaoImpl @Inject()(
 
   override def findTagsQuery(caseIds: Set[UUID]): Query[CaseTags, StoredCaseTag, Seq] =
     caseTags.table
+      .filter(_.caseId.inSet(caseIds))
+
+  override def insertClients(clients: Set[CaseClient]): DBIO[Seq[CaseClient]] =
+    caseClients.insertAll(clients.toSeq)
+
+  override def insertClient(client: CaseClient): DBIO[CaseClient] =
+    caseClients.insert(client)
+
+  override def deleteClient(client: CaseClient): DBIO[Done] =
+    caseClients.delete(client)
+
+  override def findClientsQuery(caseIds: Set[UUID]): Query[CaseClients, CaseClient, Seq] =
+    caseClients.table
       .filter(_.caseId.inSet(caseIds))
 }
 
@@ -52,8 +78,12 @@ object CaseDao {
   val caseTags: VersionedTableQuery[StoredCaseTag, StoredCaseTagVersion, CaseTags, CaseTagVersions] =
     VersionedTableQuery(TableQuery[CaseTags], TableQuery[CaseTagVersions])
 
+  val caseClients: VersionedTableQuery[CaseClient, CaseClientVersion, CaseClients, CaseClientVersions] =
+    VersionedTableQuery(TableQuery[CaseClients], TableQuery[CaseClientVersions])
+
   case class Case(
     id: Option[UUID],
+    key: Option[IssueKey],
     created: OffsetDateTime,
     incidentDate: OffsetDateTime,
     team: Team,
@@ -68,6 +98,7 @@ object CaseDao {
     override def storedVersion[B <: StoredVersion[Case]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
       CaseVersion(
         id.get,
+        key.get,
         created,
         incidentDate,
         team,
@@ -84,6 +115,7 @@ object CaseDao {
 
   case class CaseVersion(
     id: UUID,
+    key: IssueKey,
     created: OffsetDateTime,
     incidentDate: OffsetDateTime,
     team: Team,
@@ -99,6 +131,7 @@ object CaseDao {
   ) extends StoredVersion[Case]
 
   trait CommonProperties { self: Table[_] =>
+    def key = column[IssueKey]("case_key")
     def created = column[OffsetDateTime]("created_utc")
     def incidentDate = column[OffsetDateTime]("incident_date_utc")
     def team = column[Team]("team_id")
@@ -114,12 +147,13 @@ object CaseDao {
     with VersionedTable[Case]
     with CommonProperties {
     override def matchesPrimaryKey(other: Case): Rep[Boolean] = id === other.id.orNull
-    def id = column[UUID]("id", O.PrimaryKey/*, O.AutoInc*/)
+    def id = column[UUID]("id", O.PrimaryKey)
 
     def isOpen = state === (Open : IssueState) || state === (Reopened : IssueState)
 
     override def * : ProvenShape[Case] =
-      (id.?, created, incidentDate, team, version, state, onCampus, originalEnquiry, caseType, cause).mapTo[Case]
+      (id.?, key.?, created, incidentDate, team, version, state, onCampus, originalEnquiry, caseType, cause).mapTo[Case]
+    def idx = index("idx_client_case_key", key, unique = true)
   }
 
   class CaseVersions(tag: Tag) extends Table[CaseVersion](tag, "client_case_version")
@@ -130,7 +164,7 @@ object CaseDao {
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
     override def * : ProvenShape[CaseVersion] =
-      (id, created, incidentDate, team, version, state, onCampus, originalEnquiry, caseType, cause, operation, timestamp).mapTo[CaseVersion]
+      (id, key, created, incidentDate, team, version, state, onCampus, originalEnquiry, caseType, cause, operation, timestamp).mapTo[CaseVersion]
   }
 
   case class StoredCaseTag(
@@ -186,5 +220,61 @@ object CaseDao {
       (caseId, caseTag, version, operation, timestamp).mapTo[StoredCaseTagVersion]
     def pk = primaryKey("pk_case_tag_version", (caseId, caseTag, timestamp))
     def idx = index("idx_case_tag_version", (caseId, caseTag, version))
+  }
+
+  case class CaseClient(
+    caseId: UUID,
+    client: UniversityID,
+    version: OffsetDateTime = OffsetDateTime.now()
+  ) extends Versioned[CaseClient] {
+    override def atVersion(at: OffsetDateTime): CaseClient = copy(version = at)
+    override def storedVersion[B <: StoredVersion[CaseClient]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+      CaseClientVersion(
+        caseId,
+        client,
+        version,
+        operation,
+        timestamp
+      ).asInstanceOf[B]
+  }
+
+  case class CaseClientVersion(
+    caseId: UUID,
+    client: UniversityID,
+    version: OffsetDateTime = OffsetDateTime.now(),
+    operation: DatabaseOperation,
+    timestamp: OffsetDateTime
+  ) extends StoredVersion[CaseClient]
+
+  trait CommonClientProperties { self: Table[_] =>
+    def caseId = column[UUID]("case_id")
+    def client = column[UniversityID]("university_id")
+    def version = column[OffsetDateTime]("version_utc")
+  }
+
+  class CaseClients(tag: Tag) extends Table[CaseClient](tag, "client_case_client")
+    with VersionedTable[CaseClient]
+    with CommonClientProperties {
+    override def matchesPrimaryKey(other: CaseClient): Rep[Boolean] =
+      caseId === other.caseId && client === other.client
+
+    override def * : ProvenShape[CaseClient] =
+      (caseId, client, version).mapTo[CaseClient]
+    def pk = primaryKey("pk_case_client", (caseId, client))
+    def fk = foreignKey("fk_case_client", caseId, cases.table)(_.id)
+    def caseIndex = index("idx_case_client", caseId)
+    def clientIndex = index("idx_case_client_university_id", client)
+  }
+
+  class CaseClientVersions(tag: Tag) extends Table[CaseClientVersion](tag, "client_case_client_version")
+    with StoredVersionTable[CaseClient]
+    with CommonClientProperties {
+    def operation = column[DatabaseOperation]("version_operation")
+    def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+
+    override def * : ProvenShape[CaseClientVersion] =
+      (caseId, client, version, operation, timestamp).mapTo[CaseClientVersion]
+    def pk = primaryKey("pk_case_client_version", (caseId, client, timestamp))
+    def idx = index("idx_case_client_version", (caseId, client, version))
   }
 }

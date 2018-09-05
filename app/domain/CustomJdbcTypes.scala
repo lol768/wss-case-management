@@ -36,6 +36,11 @@ object CustomJdbcTypes extends SlickEnumSupport {
     s => Teams.fromId(s)
   )
 
+  implicit val issueKeyMapper: JdbcType[IssueKey] = MappedColumnType.base[IssueKey, String](
+    k => k.string,
+    s => IssueKey(s)
+  )
+
   implicit val offsetDateTimeTypeMapper: JdbcType[OffsetDateTime] = new DriverJdbcType[OffsetDateTime]() {
     private[this] val referenceCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
     private[this] val literalDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
