@@ -56,6 +56,7 @@ object Fixtures {
   object cases {
     def newCase(): Case = Case(
       Some(UUID.randomUUID()),
+      Some(IssueKey(IssueKeyType.Case, 1234)),
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
       Teams.MentalHealth,

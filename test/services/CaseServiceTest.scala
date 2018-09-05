@@ -1,10 +1,11 @@
 package services
 
-import domain.{CaseTag, Fixtures}
 import domain.dao.CaseDao.Case
 import domain.dao.{AbstractDaoTest, CaseDao}
+import domain.{CaseTag, Fixtures}
 import helpers.DataFixture
 import slick.jdbc.PostgresProfile.api._
+import warwick.sso.UniversityID
 
 class CaseServiceTest extends AbstractDaoTest {
 
@@ -23,13 +24,26 @@ class CaseServiceTest extends AbstractDaoTest {
       execWithCommit(
         CaseDao.caseTags.table.delete andThen
         CaseDao.caseTags.versionsTable.delete andThen
+        CaseDao.caseClients.table.delete andThen
+        CaseDao.caseClients.versionsTable.delete andThen
         CaseDao.cases.table.delete andThen
-        CaseDao.cases.versionsTable.delete
+        CaseDao.cases.versionsTable.delete andThen
+        sql"ALTER SEQUENCE SEQ_CASE_ID RESTART WITH 1000".asUpdate
       )
     }
   }
 
   "CaseServiceTest" should {
+    "create" in withData(new CaseFixture()) { _ =>
+      val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"))).serviceValue
+      created.id must not be 'empty
+      created.key.map(_.string) mustBe Some("CAS-1000")
+
+      val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088"))).serviceValue
+      created2.id must not be 'empty
+      created2.key.map(_.string) mustBe Some("CAS-1001")
+    }
+
     "find" in withData(new CaseFixture()) { case1 =>
       service.find(case1.id.get).serviceValue.id mustBe case1.id
     }

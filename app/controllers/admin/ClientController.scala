@@ -1,6 +1,6 @@
 package controllers.admin
 
-import controllers.{BaseController, RequestContext, TeamSpecificActionRefiner}
+import controllers.{BaseController, TeamSpecificActionRefiner}
 import domain._
 import helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
@@ -9,8 +9,8 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
-import services.tabula.ProfileService
 import services._
+import services.tabula.ProfileService
 import warwick.core.timing.TimingContext
 import warwick.sso._
 
