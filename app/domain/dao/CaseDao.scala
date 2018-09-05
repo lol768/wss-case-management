@@ -81,6 +81,9 @@ object CaseDao {
   val caseClients: VersionedTableQuery[CaseClient, CaseClientVersion, CaseClients, CaseClientVersions] =
     VersionedTableQuery(TableQuery[CaseClients], TableQuery[CaseClientVersions])
 
+  val caseLinks: VersionedTableQuery[CaseLink, CaseLinkVersion, CaseLinks, CaseLinkVersions] =
+    VersionedTableQuery(TableQuery[CaseLinks], TableQuery[CaseLinkVersions])
+
   case class Case(
     id: Option[UUID],
     key: Option[IssueKey],
@@ -276,5 +279,67 @@ object CaseDao {
       (caseId, client, version, operation, timestamp).mapTo[CaseClientVersion]
     def pk = primaryKey("pk_case_client_version", (caseId, client, timestamp))
     def idx = index("idx_case_client_version", (caseId, client, version))
+  }
+
+  case class CaseLink(
+    linkType: CaseLinkType,
+    outgoingCaseID: UUID,
+    incomingCaseID: UUID,
+    version: OffsetDateTime = OffsetDateTime.now()
+  ) extends Versioned[CaseLink] {
+    override def atVersion(at: OffsetDateTime): CaseLink = copy(version = at)
+
+    override def storedVersion[B <: StoredVersion[CaseLink]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+      CaseLinkVersion(
+        linkType,
+        outgoingCaseID,
+        incomingCaseID,
+        version,
+        operation,
+        timestamp
+      ).asInstanceOf[B]
+  }
+
+  case class CaseLinkVersion(
+    linkType: CaseLinkType,
+    outgoingCaseID: UUID,
+    incomingCaseID: UUID,
+    version: OffsetDateTime = OffsetDateTime.now(),
+    operation: DatabaseOperation,
+    timestamp: OffsetDateTime
+  ) extends StoredVersion[CaseLink]
+
+  trait CommonLinkProperties { self: Table[_] =>
+    def linkType = column[CaseLinkType]("link_type")
+    def outgoingCaseID = column[UUID]("outgoing_case_id")
+    def incomingCaseID = column[UUID]("incoming_case_id")
+    def version = column[OffsetDateTime]("version_utc")
+  }
+
+  class CaseLinks(tag: Tag) extends Table[CaseLink](tag, "client_case_link")
+    with VersionedTable[CaseLink]
+    with CommonLinkProperties {
+    override def matchesPrimaryKey(other: CaseLink): Rep[Boolean] =
+      linkType === other.linkType && outgoingCaseID === other.outgoingCaseID && incomingCaseID === other.incomingCaseID
+
+    override def * : ProvenShape[CaseLink] =
+      (linkType, outgoingCaseID, incomingCaseID, version).mapTo[CaseLink]
+    def pk = primaryKey("pk_case_link", (linkType, outgoingCaseID, incomingCaseID))
+    def outgoingFK = foreignKey("fk_case_link_outgoing", outgoingCaseID, cases.table)(_.id)
+    def incomingFK = foreignKey("fk_case_link_incoming", incomingCaseID, cases.table)(_.id)
+    def outgoingCaseIndex = index("idx_case_link_outgoing", outgoingCaseID)
+    def incomingCaseIndex = index("idx_case_link_incoming", incomingCaseID)
+  }
+
+  class CaseLinkVersions(tag: Tag) extends Table[CaseLinkVersion](tag, "client_case_link_version")
+    with StoredVersionTable[CaseLink]
+    with CommonLinkProperties {
+    def operation = column[DatabaseOperation]("version_operation")
+    def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+
+    override def * : ProvenShape[CaseLinkVersion] =
+      (linkType, outgoingCaseID, incomingCaseID, version, operation, timestamp).mapTo[CaseLinkVersion]
+    def pk = primaryKey("pk_case_link_version", (linkType, outgoingCaseID, incomingCaseID, timestamp))
+    def idx = index("idx_case_link_version", (linkType, outgoingCaseID, incomingCaseID, version))
   }
 }
