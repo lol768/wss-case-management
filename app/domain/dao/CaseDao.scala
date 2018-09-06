@@ -6,18 +6,18 @@ import java.util.UUID
 import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
-import domain.IssueState._
 import domain._
 import domain.dao.CaseDao._
+import enumeratum.{EnumEntry, PlayEnum}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import services.CaseService.CaseStateFilter
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.ProvenShape
 import warwick.sso.Usercode
 import warwick.sso.UniversityID
 
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[CaseDaoImpl])
@@ -225,7 +225,7 @@ object CaseDao {
     override def matchesPrimaryKey(other: Case): Rep[Boolean] = id === other.id.orNull
     def id = column[UUID]("id", O.PrimaryKey)
 
-    def isOpen = state === (Open : IssueState) || state === (Reopened : IssueState)
+    def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 
     override def * : ProvenShape[Case] =
       (id.?, key.?, created, incidentDate, team, version, state, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause).mapTo[Case]
@@ -414,5 +414,14 @@ object CaseDao {
       (linkType, outgoingCaseID, incomingCaseID, version, operation, timestamp).mapTo[StoredCaseLinkVersion]
     def pk = primaryKey("pk_case_link_version", (linkType, outgoingCaseID, incomingCaseID, timestamp))
     def idx = index("idx_case_link_version", (linkType, outgoingCaseID, incomingCaseID, version))
+  }
+
+  sealed trait CaseStateFilter extends EnumEntry
+  object CaseStateFilter extends PlayEnum[CaseStateFilter] {
+    case object Open extends CaseStateFilter
+    case object Closed extends CaseStateFilter
+    case object All extends CaseStateFilter
+
+    val values: immutable.IndexedSeq[CaseStateFilter] = findValues
   }
 }

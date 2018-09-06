@@ -37,19 +37,6 @@ trait CaseService {
   def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]]
 }
 
-//  rather than using a tri-state Option[Boolean]
-object CaseService {
-
-  sealed trait CaseStateFilter extends EnumEntry
-  object CaseStateFilter extends PlayEnum[CaseStateFilter] {
-    case object Open extends CaseStateFilter
-    case object Closed extends CaseStateFilter
-    case object All extends CaseStateFilter
-
-    val values: immutable.IndexedSeq[CaseStateFilter] = findValues
-  }
-}
-
 class CaseServiceImpl @Inject() (
   auditService: AuditService,
   ownerService: OwnerService,
