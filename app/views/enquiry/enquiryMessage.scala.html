@@ -1,0 +1,18 @@
+@import domain.MessageData
+@import domain.MessageSender
+@import helpers.JavaTime
+@import domain.Enquiry
+@(enquiry: Enquiry, message: MessageData, clientName: String, teamName: String)
+@if(message.sender == MessageSender.Client) {
+  <div class="message message-client">
+    <div class="date pull-right">@JavaTime.Relative(message.created, printToday = true)</div>
+    <div class="message--author">@clientName</div>
+    @views.utils.nl2br(message.text)
+  </div>
+} else {
+  <div class="message message-team">
+    <div class="date pull-right">@JavaTime.Relative(message.created, printToday = true)</div>
+    <div class="message--author">@teamName</div>
+    @views.utils.nl2br(message.text)
+  </div>
+}

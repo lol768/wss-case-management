@@ -38,7 +38,10 @@ export function fetchWithCredentials(url, options = {}) {
 }
 
 export function postJsonWithCredentials(url, body, options = {}) {
-  const defaultHeaders = { 'Content-Type': 'application/json' };
+  const defaultHeaders = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  };
   const headers = 'headers' in options ? [...options.headers, defaultHeaders] : defaultHeaders;
 
   headers[getCsrfHeaderName()] = getCsrfToken();
