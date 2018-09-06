@@ -42,6 +42,7 @@ trait EnquiryService {
   def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]]
 
   def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
+  def get(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
 
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
 
@@ -66,12 +67,14 @@ class EnquiryServiceImpl @Inject() (
   
   override def save(enquiry: Enquiry, message: MessageSave)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
     require(enquiry.id.isEmpty, "Enquiry must not have an existing ID before being saved")
+    require(enquiry.key.isEmpty, "Enquiry must not have an existing key before being saved")
     require(message.sender == MessageSender.Client, "Initial message must be from the Client")
     val id = UUID.randomUUID()
     val messageId = UUID.randomUUID()
     auditService.audit('EnquirySave, id.toString, 'Enquiry, Json.obj()) {
       daoRunner.run(for {
-        e <- enquiryDao.insert(enquiry.copy(id = Some(id)))
+        nextId <- sql"SELECT nextval('SEQ_ENQUIRY_KEY')".as[Int].head
+        e <- enquiryDao.insert(enquiry.copy(id = Some(id), key = Some(IssueKey(IssueKeyType.Enquiry, nextId))))
         _ <- messageDao.insert(Message(
           id = messageId,
           text = message.text,
@@ -148,11 +151,19 @@ class EnquiryServiceImpl @Inject() (
     }
   }
 
+  private def getWithMessagesQuery(query: Query[Enquiry.Enquiries, Enquiry, Seq]) =
+    query.withMessages.map { case (e, m) => (e, m.map(_.messageData)) }
+
   override def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]] = {
-    val query = enquiryDao.findByIDQuery(id).withMessages
-      .map {
-        case (e, m) => (e, m.map(_.messageData))
-      }
+    val query = getWithMessagesQuery(enquiryDao.findByIDQuery(id))
+
+    daoRunner.run(query.result).map { pairs =>
+      Right(groupPairs(pairs).head)
+    }
+  }
+
+  override def get(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]] = {
+    val query = getWithMessagesQuery(enquiryDao.findByKeyQuery(enquiryKey))
 
     daoRunner.run(query.result).map { pairs =>
       Right(groupPairs(pairs).head)

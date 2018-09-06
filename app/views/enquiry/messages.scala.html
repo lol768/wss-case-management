@@ -26,7 +26,7 @@
       }
 
       @if(enquiry.state != IssueState.Closed) {
-        @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.id.get)) { implicit ifc =>
+        @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get)) { implicit ifc =>
           @b3.textarea(stateChangeForm("text"),
             '_label -> "Add a message",
             'rows -> 3
@@ -35,13 +35,13 @@
           @b3.free('_class -> "spaced-buttons") {
             <button type="submit" class="btn btn-primary">Add message</button>
             @if(messageSender == MessageSender.Team) {
-              <button type="submit" formaction="@controllers.enquiries.routes.EnquiryMessagesController.close(enquiry.id.get)" class="btn btn-primary"> Close enquiry</button>
+              <button type="submit" formaction="@controllers.enquiries.routes.EnquiryMessagesController.close(enquiry.key.get)" class="btn btn-primary"> Close enquiry</button>
               @b3.validatedHidden(stateChangeForm, "version")
             }
           }
         }
       } else {
-        @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.reopen(enquiry.id.get)) { implicit ifc =>
+        @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.reopen(enquiry.key.get)) { implicit ifc =>
 
           @b3.validatedHidden(stateChangeForm, "version")
 

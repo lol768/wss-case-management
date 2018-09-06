@@ -15,6 +15,7 @@ import scala.language.higherKinds
 
 case class Enquiry(
   id: Option[UUID] = None,
+  key: Option[IssueKey] = None,
   universityID: UniversityID,
   subject: String,
   team: Team,
@@ -27,6 +28,7 @@ case class Enquiry(
   override def storedVersion[B <: StoredVersion[Enquiry]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
     EnquiryVersion(
       id.get,
+      key.get,
       universityID,
       subject,
       team,
@@ -57,6 +59,7 @@ object Enquiry extends Versioning {
   sealed trait EnquiryProperties {
     self: Table[_] =>
 
+    def key = column[IssueKey]("enquiry_key")
     def team = column[Team]("team_id")
     def version = column[OffsetDateTime]("version_utc")
     def universityId = column[UniversityID]("university_id")
@@ -70,7 +73,8 @@ object Enquiry extends Versioning {
 
     def id = column[UUID]("id", O.PrimaryKey)
 
-    def * = (id.?, universityId, subject, team, state, version, created).mapTo[Enquiry]
+    def * = (id.?, key.?, universityId, subject, team, state, version, created).mapTo[Enquiry]
+    def idx = index("idx_enquiry_key", key, unique = true)
 
     def isOpen = state === (Open : IssueState) || state === (Reopened : IssueState)
   }
@@ -80,7 +84,7 @@ object Enquiry extends Versioning {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
-    def * = (id, universityId, subject, team, state, version, created, operation, timestamp).mapTo[EnquiryVersion]
+    def * = (id, key, universityId, subject, team, state, version, created, operation, timestamp).mapTo[EnquiryVersion]
     def pk = primaryKey("pk_enquiryversions", (id, timestamp))
     def idx = index("idx_enquiryversions", (id, version))
   }
@@ -99,6 +103,7 @@ object Enquiry extends Versioning {
 
 case class EnquiryVersion(
   id: UUID,
+  key: IssueKey,
   universityID: UniversityID,
   subject: String,
   team: Team,

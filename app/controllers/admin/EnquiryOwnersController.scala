@@ -1,9 +1,8 @@
 package controllers.admin
 
-import java.util.UUID
-
 import controllers.BaseController
 import controllers.refiners.CanEditEnquiryActionRefiner
+import domain.IssueKey
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Forms.{mapping, seq, text}
@@ -28,7 +27,7 @@ class EnquiryOwnersController @Inject()(
 
   import canEditEnquiryActionRefiner._
 
-  def form(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id).async { implicit request =>
+  def form(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
     enquiryService.getOwners(Set(request.enquiry.id.get)).successMap(owners =>
       Ok(views.html.admin.enquiry.owners(
         ownersForm.fill(owners.getOrElse(request.enquiry.id.get, Set()).map(_.string).toSeq.sorted),
@@ -37,7 +36,7 @@ class EnquiryOwnersController @Inject()(
     )
   }
 
-  def submit(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id).async { implicit request =>
+  def submit(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
     ownersForm.bindFromRequest.fold(
       formWithErrors => {
         Future.successful(Ok(views.html.admin.enquiry.owners(formWithErrors, request.enquiry)))

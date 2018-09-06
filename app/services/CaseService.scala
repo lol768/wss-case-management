@@ -9,7 +9,6 @@ import domain._
 import domain.dao.CaseDao.{Case, _}
 import domain.dao.{CaseDao, DaoRunner}
 import helpers.JavaTime
-import enumeratum.{EnumEntry, PlayEnum}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import play.api.libs.json.Json
@@ -17,7 +16,6 @@ import slick.jdbc.PostgresProfile.api._
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
 
-import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[CaseServiceImpl])

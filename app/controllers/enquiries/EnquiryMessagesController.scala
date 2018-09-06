@@ -1,11 +1,10 @@
 package controllers.enquiries
 
 import java.time.OffsetDateTime
-import java.util.UUID
 
 import controllers.BaseController
 import controllers.refiners.{CanAddMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
-import domain.{Enquiry, IssueState, MessageData, MessageSender}
+import domain._
 import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
@@ -47,15 +46,15 @@ class EnquiryMessagesController @Inject()(
   private def renderMessages(enquiry: Enquiry, messages: Seq[MessageData], f: Form[StateChangeForm])(implicit request: EnquirySpecificRequest[_]) =
     Ok(views.html.enquiry.messages(enquiry, messages, f, messageSender(request)))
 
-  def messages(id: UUID): Action[AnyContent] = CanViewEnquiryAction(id) { implicit request =>
+  def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey) { implicit request =>
     renderMessages(request.enquiry, request.messages, stateChangeForm(request.enquiry, messageSender(request)).fill(StateChangeForm("", request.enquiry.version)))
   }
 
-  def redirectToMessages(id: UUID): Action[AnyContent] = Action {
-    Redirect(routes.EnquiryMessagesController.messages(id))
+  def redirectToMessages(enquiryKey: IssueKey): Action[AnyContent] = Action {
+    Redirect(routes.EnquiryMessagesController.messages(enquiryKey))
   }
 
-  def addMessage(id: UUID): Action[AnyContent] = CanAddMessageToEnquiryAction(id).async { implicit request =>
+  def addMessage(enquiryKey: IssueKey): Action[AnyContent] = CanAddMessageToEnquiryAction(enquiryKey).async { implicit request =>
     Form(single("text" -> nonEmptyText)).bindFromRequest().fold(
       formWithErrors => {
         val form = stateChangeForm(request.enquiry, messageSender(request))
@@ -72,11 +71,11 @@ class EnquiryMessagesController @Inject()(
     )
   }
 
-  def close(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id).async { implicit request =>
+  def close(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
     updateStateAndMessage(IssueState.Closed)
   }
 
-  def reopen(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id).async { implicit request =>
+  def reopen(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
     updateStateAndMessage(IssueState.Reopened)
   }
 
@@ -92,7 +91,7 @@ class EnquiryMessagesController @Inject()(
         }
 
         action.successMap { enquiry =>
-          Redirect(routes.EnquiryMessagesController.messages(enquiry.id.get))
+          Redirect(routes.EnquiryMessagesController.messages(enquiry.key.get))
             .flashing("success" -> Messages(s"flash.enquiry.$newState"))
         }
       }

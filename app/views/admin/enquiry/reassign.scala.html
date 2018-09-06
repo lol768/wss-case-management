@@ -8,7 +8,7 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("Reassign enquiry") {
-  @b3.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.reassign(enquiry.id.get)) { implicit ifc =>
+  @b3.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.reassign(enquiry.key.get)) { implicit ifc =>
     @b3.validatedHidden(form, "version")
 
     @b3.radio(form("team"),

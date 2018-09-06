@@ -1,7 +1,6 @@
 package controllers.refiners
 
-import java.util.UUID
-
+import domain.IssueKey
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.mvc._
@@ -36,7 +35,7 @@ class CanEditEnquiryActionRefiner @Inject()(
     override protected def executionContext: ExecutionContext = ec
   }
 
-  def CanEditEnquiryAction(enquiryId: UUID): ActionBuilder[EnquirySpecificRequest, AnyContent] =
-    securityService.SigninRequiredAction andThen WithEnquiry(enquiryId) andThen CanEditEnquiry
+  def CanEditEnquiryAction(enquiryKey: IssueKey): ActionBuilder[EnquirySpecificRequest, AnyContent] =
+    securityService.SigninRequiredAction andThen WithEnquiry(enquiryKey) andThen CanEditEnquiry
 
 }
