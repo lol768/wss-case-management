@@ -28,7 +28,7 @@ trait CaseService {
   def setCaseTags(caseId: UUID, tags: Set[CaseTag])(implicit ac: AuditLogContext): Future[ServiceResult[Set[CaseTag]]]
   def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]]
   def getLinks(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[(Seq[CaseLink], Seq[CaseLink])]]
-  def addNote(caseID: UUID, noteType: CaseNoteType, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
+  def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]]
 }
 
@@ -137,9 +137,9 @@ class CaseServiceImpl @Inject() (
       )
     )
 
-  override def addNote(caseID: UUID, noteType: CaseNoteType, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]] =
-    auditService.audit('CaseAddNote, caseID.toString, 'Case, Json.obj("noteType" -> noteType)) {
-      daoRunner.run(addNoteDBIO(caseID, noteType, note)).map { n => Right(n.asCaseNote) }
+  override def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]] =
+    auditService.audit('CaseAddGeneralNote, caseID.toString, 'Case, Json.obj()) {
+      daoRunner.run(addNoteDBIO(caseID, CaseNoteType.GeneralNote, note)).map { n => Right(n.asCaseNote) }
     }
 
   private def getNotesDBIO(caseID: UUID): DBIO[Seq[StoredCaseNote]] =

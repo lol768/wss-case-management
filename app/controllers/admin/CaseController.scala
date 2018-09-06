@@ -159,7 +159,7 @@ class CaseController @Inject()(
     caseNoteForm.bindFromRequest().fold(
       formWithErrors => renderCase(caseKey, formWithErrors),
       text =>
-        cases.addNote(caseRequest.`case`.id.get, CaseNoteType.GeneralNote, CaseNoteSave(text, caseRequest.context.user.get.usercode)).successMap { _ =>
+        cases.addGeneralNote(caseRequest.`case`.id.get, CaseNoteSave(text, caseRequest.context.user.get.usercode)).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.noteAdded"))
         }

@@ -130,12 +130,12 @@ class CaseServiceTest extends AbstractDaoTest {
     "get and set case notes" in withData(new CaseFixture()) { c =>
       service.getNotes(c.id.get).serviceValue mustBe 'empty
 
-      val n1 = service.addNote(c.id.get, CaseNoteType.GeneralNote, CaseNoteSave(
+      val n1 = service.addGeneralNote(c.id.get, CaseNoteSave(
         text = "I just called to say I love you",
         teamMember = Usercode("cuscav")
       )).serviceValue
 
-      val n2 = service.addNote(c.id.get, CaseNoteType.Referral, CaseNoteSave(
+      val n2 = service.addGeneralNote(c.id.get, CaseNoteSave(
         text = "Jim came in to tell me that Peter needed a chat",
         teamMember = Usercode("cusebr")
       )).serviceValue
