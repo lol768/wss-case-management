@@ -27,7 +27,7 @@
         <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>
       }.getOrElse { @enquiry.universityID }
     </td>
-    <td>@enquiry.subject</td>
+    <td>@enquiry.key.get.string @enquiry.subject</td>
     <td>@helpers.JavaTime.Relative(enquiry.created)</td>
     <td>@helpers.JavaTime.Relative(message.created)</td>
     <td>

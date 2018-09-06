@@ -37,7 +37,7 @@
 
           <div class="panel-heading" role="tab" id="heading-@enquiry.key.get.string">
             <h4 class="panel-title">
-                <a class="@if(enquiries.head._1 != enquiry){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@enquiry.key.get.string" aria-expanded="true" aria-controls="collapse-@enquiry.id.get.toString">
+                <a class="@if(enquiries.head._1 != enquiry){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@enquiry.key.get.string" aria-expanded="true" aria-controls="collapse-@enquiry.key.get.string">
                 <div class="pull-right">
                   @if(enquiry.version.isAfter(messages.last.created)) {
                     @JavaTime.Relative(enquiry.version, printToday = true)
