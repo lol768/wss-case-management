@@ -27,14 +27,15 @@ class EnquiryDaoTest extends AbstractDaoTest {
     }
 
     "save enquiry objects" in {
-      val enquiryWithId = newEnquiry.copy(id = Some(UUID.randomUUID()))
+      val enquiryWithIdAndKey = newEnquiry.copy(id = Some(UUID.randomUUID()), key = Some(IssueKey(IssueKeyType.Enquiry, 1234)))
 
       val test = for {
-        inserted <- dao.insert(enquiryWithId)
+        inserted <- dao.insert(enquiryWithIdAndKey)
         tableSize <- Enquiry.enquiries.table.length.result
         versionTableSize <- Enquiry.enquiries.versionsTable.length.result
         _ <- DBIOAction.from(Future {
-          inserted.id mustBe enquiryWithId.id
+          inserted.id mustBe enquiryWithIdAndKey.id
+          inserted.key mustBe enquiryWithIdAndKey.key
           tableSize mustBe 1
           versionTableSize mustBe 1
         })
