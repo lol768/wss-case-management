@@ -1,10 +1,14 @@
 @import domain.dao.CaseDao.Case
 @import domain.CaseLink
 @import domain.CaseLinkType
+@import domain.CaseNote
+@import warwick.sso.User
 
 @(
-  c: Case.FullyJoined
-)(implicit context: RequestContext)
+  c: Case.FullyJoined,
+  caseNotes: Seq[(CaseNote, Option[User])],
+  noteForm: Form[String]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @caseLinks(links: Seq[CaseLink], description: CaseLinkType => String, target: CaseLink => Case) = {
   @if(links.nonEmpty) {
@@ -32,4 +36,35 @@
   @caseLinks(c.incomingCaseLinks, _.inwardDescription, _.outgoing)
 
   <p><a href="@controllers.admin.routes.CaseController.linkForm(c.clientCase.key.get)" class="btn btn-default">Create link</a></p>
+
+  <h2>Case notes</h2>
+
+  @caseNotes.map { case (note, user) =>
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">@{note.noteType.description}</h3>
+      </div>
+      <div class="panel-body">
+        @views.utils.nl2br(note.text)
+      </div>
+      <div class="panel-footer">
+        <div class="date pull-right">@helpers.JavaTime.Relative(note.created)</div>
+        <div class="author">@user.flatMap(_.name.full).getOrElse(s"[unknown user ${note.teamMember.string}]")</div>
+      </div>
+    </div>
+  }
+
+  @b3.vertical.formCSRF(controllers.admin.routes.CaseController.addNote(c.clientCase.key.get)) { implicit ifc =>
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">Add a case note</h3>
+      </div>
+      <div class="panel-body">
+        @b3.textarea(noteForm("text"), 'rows -> 5)
+      </div>
+      <div class="panel-footer">
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  }
 }

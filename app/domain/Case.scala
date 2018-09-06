@@ -1,9 +1,11 @@
 package domain
 
 import java.time.OffsetDateTime
+import java.util.UUID
 
 import domain.dao.CaseDao.Case
 import enumeratum.{EnumEntry, PlayEnum}
+import warwick.sso.Usercode
 
 import scala.collection.immutable
 
@@ -64,4 +66,34 @@ object CaseLinkType extends PlayEnum[CaseLinkType] {
   case object Merge extends CaseLinkType("merged to", "merged from")
 
   override def values: immutable.IndexedSeq[CaseLinkType] = findValues
+}
+
+case class CaseNote(
+  id: UUID,
+  noteType: CaseNoteType,
+  text: String,
+  teamMember: Usercode,
+  created: OffsetDateTime = OffsetDateTime.now(),
+  lastUpdated: OffsetDateTime = OffsetDateTime.now()
+)
+
+/**
+  * Just the data of a case note required to save it. Other properties
+  * are derived from other objects passed in to the service method.
+  */
+case class CaseNoteSave(
+  text: String,
+  teamMember: Usercode
+)
+
+sealed abstract class CaseNoteType(val description: String) extends EnumEntry
+object CaseNoteType extends PlayEnum[CaseNoteType] {
+  case object AppointmentNote extends CaseNoteType("Appointment note")
+  case object AssociatedCase extends CaseNoteType("Associated case")
+  case object CaseClosed extends CaseNoteType("Case closed")
+  case object CaseReopened extends CaseNoteType("Case reopened")
+  case object GeneralNote extends CaseNoteType("General note")
+  case object Referral extends CaseNoteType("Referral")
+
+  override def values: immutable.IndexedSeq[CaseNoteType] = findValues
 }
