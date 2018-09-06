@@ -9,13 +9,15 @@ import domain._
 import domain.dao.CaseDao.{Case, _}
 import domain.dao.{CaseDao, DaoRunner}
 import helpers.JavaTime
+import enumeratum.{EnumEntry, PlayEnum}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import play.api.libs.json.Json
 import slick.jdbc.PostgresProfile.api._
 import warwick.core.timing.TimingContext
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, Usercode}
 
+import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[CaseServiceImpl])
@@ -32,10 +34,16 @@ trait CaseService {
   def getLinks(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[(Seq[CaseLink], Seq[CaseLink])]]
   def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]]
+  def listOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
+  def listOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
+  def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
+  def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
+  def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]]
 }
 
 class CaseServiceImpl @Inject() (
   auditService: AuditService,
+  ownerService: OwnerService,
   daoRunner: DaoRunner,
   dao: CaseDao
 )(implicit ec: ExecutionContext) extends CaseService {
@@ -165,4 +173,22 @@ class CaseServiceImpl @Inject() (
 
   override def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]] =
     daoRunner.run(getNotesDBIO(caseID)).map { notes => Right(notes.map(_.asCaseNote)) }
+
+  override def listOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
+    daoRunner.run(dao.listQuery(Some(team), None, CaseStateFilter.Open).result).map(Right.apply)
+
+  override def listOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
+    daoRunner.run(dao.listQuery(None, Some(owner), CaseStateFilter.Open).result).map(Right.apply)
+
+  override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]] =
+    ownerService.getCaseOwners(ids)
+
+  override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]] =
+    ownerService.setCaseOwners(id, owners)
+
+  override def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]] = {
+    daoRunner.run(dao.findClientsQuery(ids).result)
+      .map(_.groupBy(_.caseId).mapValues(_.map(_.client).toSet))
+      .map(Right.apply)
+  }
 }

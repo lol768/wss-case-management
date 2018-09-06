@@ -6,9 +6,9 @@ import java.util.UUID
 import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
-import domain.IssueState._
 import domain._
 import domain.dao.CaseDao._
+import enumeratum.{EnumEntry, PlayEnum}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
@@ -16,6 +16,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
 
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[CaseDaoImpl])
@@ -37,6 +38,7 @@ trait CaseDao {
   def insertNote(note: StoredCaseNote): DBIO[StoredCaseNote]
   def deleteNote(note: StoredCaseNote): DBIO[Done]
   def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq]
+  def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq]
 }
 
 @Singleton
@@ -96,6 +98,24 @@ class CaseDaoImpl @Inject()(
 
   override def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq] =
     caseNotes.table.filter(_.caseId === caseID)
+
+  override def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq] = {
+    owner.fold(cases.table.subquery)(u =>
+      cases.table
+        .join(Owner.owners.table)
+        .on((c, o) => c.id === o.entityId && o.entityType === (Owner.EntityType.Case : Owner.EntityType))
+        .filter { case (_, o) => o.userId === u }
+        .map { case (e, _) => e }
+    ).filter(c => {
+      val teamFilter = team.fold(true.bind)(c.team === _)
+      val stateFilter = state match {
+        case CaseStateFilter.Open => c.isOpen
+        case CaseStateFilter.Closed => !c.isOpen
+        case CaseStateFilter.All => true.bind
+      }
+      teamFilter && stateFilter
+    })
+  }
 }
 
 object CaseDao {
@@ -214,7 +234,7 @@ object CaseDao {
     override def matchesPrimaryKey(other: Case): Rep[Boolean] = id === other.id.orNull
     def id = column[UUID]("id", O.PrimaryKey)
 
-    def isOpen = state === (Open : IssueState) || state === (Reopened : IssueState)
+    def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 
     override def * : ProvenShape[Case] =
       (id.?, key.?, created, incidentDate, team, version, state, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause).mapTo[Case]
@@ -483,5 +503,14 @@ object CaseDao {
       (id, caseId, noteType, text, teamMember, created, version, operation, timestamp).mapTo[StoredCaseNoteVersion]
     def pk = primaryKey("pk_case_note_version", (id, timestamp))
     def idx = index("idx_case_note_version", (id, version))
+  }
+
+  sealed trait CaseStateFilter extends EnumEntry
+  object CaseStateFilter extends PlayEnum[CaseStateFilter] {
+    case object Open extends CaseStateFilter
+    case object Closed extends CaseStateFilter
+    case object All extends CaseStateFilter
+
+    val values: immutable.IndexedSeq[CaseStateFilter] = findValues
   }
 }
