@@ -1,5 +1,6 @@
 package services
 
+import akka.Done
 import domain.dao.CaseDao.Case
 import domain.dao.{AbstractDaoTest, CaseDao}
 import domain._
@@ -141,6 +142,17 @@ class CaseServiceTest extends AbstractDaoTest {
       )).serviceValue
 
       service.getNotes(c.id.get).serviceValue mustBe Seq(n2, n1) // Newest first
+
+      val n1Updated = service.updateNote(c.id.get, n1.id, CaseNoteSave(
+        text = "Jim's not really bothered",
+        teamMember = Usercode("cusebr")
+      ), n1.lastUpdated).serviceValue
+
+      service.getNotes(c.id.get).serviceValue mustBe Seq(n2, n1Updated)
+
+      service.deleteNote(c.id.get, n2.id, n2.lastUpdated).serviceValue mustBe Done
+
+      service.getNotes(c.id.get).serviceValue mustBe Seq(n1Updated)
     }
 
     "update state" in withData(new CaseFixture()) { c1 =>
