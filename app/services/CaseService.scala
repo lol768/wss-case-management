@@ -1,5 +1,6 @@
 package services
 
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
@@ -24,6 +25,7 @@ trait CaseService {
   def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
   def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
+  def updateState(caseID: UUID, targetState: IssueState, version: OffsetDateTime, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]]
   def setCaseTags(caseId: UUID, tags: Set[CaseTag])(implicit ac: AuditLogContext): Future[ServiceResult[Set[CaseTag]]]
   def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]]
@@ -79,6 +81,22 @@ class CaseServiceImpl @Inject() (
 
   override def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
     findFullyJoined(dao.find(caseKey))
+
+  override def updateState(caseID: UUID, targetState: IssueState, version: OffsetDateTime, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
+    val noteType = targetState match {
+      case IssueState.Closed => CaseNoteType.CaseClosed
+      case IssueState.Reopened => CaseNoteType.CaseReopened
+      case _ => throw new IllegalArgumentException(s"Invalid target state $targetState")
+    }
+
+    auditService.audit(Symbol(s"Case${targetState.entryName}"), caseID.toString, 'Case, Json.obj()) {
+      daoRunner.run(for {
+        clientCase <- dao.find(caseID)
+        updated <- dao.update(clientCase.copy(state = targetState), version)
+        _ <- addNoteDBIO(caseID, noteType, caseNote)
+      } yield updated).map(Right.apply)
+    }
+  }
 
   override def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]] =
     daoRunner.run(dao.findTagsQuery(caseIds).result)

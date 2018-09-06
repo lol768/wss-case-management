@@ -68,7 +68,15 @@ object CaseController {
     )(CaseLinkFormData.apply)(CaseLinkFormData.unapply))
   }
 
-  val caseNoteForm: Form[String] = Form(single("text" -> nonEmptyText))
+  case class CaseNoteFormData(
+    text: String,
+    version: OffsetDateTime
+  )
+
+  def caseNoteForm(clientCase: Case): Form[CaseNoteFormData] = Form(mapping(
+    "text" -> nonEmptyText,
+    "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == clientCase.version)
+  )(CaseNoteFormData.apply)(CaseNoteFormData.unapply))
 }
 
 @Singleton
@@ -85,7 +93,7 @@ class CaseController @Inject()(
   import canViewTeamActionRefiner._
   import canEditCaseActionRefiner._
 
-  private def renderCase(caseKey: IssueKey, caseNoteForm: Form[String])(implicit request: CaseSpecificRequest[AnyContent]): Future[Result] =
+  private def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData])(implicit request: CaseSpecificRequest[AnyContent]): Future[Result] =
     cases.findFull(caseKey).successMap { c =>
       val usercodes = c.notes.map(_.teamMember).distinct
       val userLookup = userLookupService.getUsers(usercodes).toOption.getOrElse(Map())
@@ -95,7 +103,7 @@ class CaseController @Inject()(
     }
 
   def view(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
-    renderCase(caseKey, caseNoteForm)
+    renderCase(caseKey, caseNoteForm(caseRequest.`case`).fill(CaseNoteFormData("", caseRequest.`case`.version)))
   }
 
   def createForm(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId) { implicit teamRequest =>
@@ -156,13 +164,42 @@ class CaseController @Inject()(
   }
 
   def addNote(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    caseNoteForm.bindFromRequest().fold(
-      formWithErrors => renderCase(caseKey, formWithErrors),
-      text =>
-        cases.addGeneralNote(caseRequest.`case`.id.get, CaseNoteSave(text, caseRequest.context.user.get.usercode)).successMap { _ =>
+    caseNoteForm(caseRequest.`case`).bindFromRequest().fold(
+      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
+      data =>
+        // We don't do anything with data.version here, it's validated but we don't lock the case when adding a general note
+        cases.addGeneralNote(caseRequest.`case`.id.get, CaseNoteSave(data.text, caseRequest.context.user.get.usercode)).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.noteAdded"))
         }
+    )
+  }
+
+  def close(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
+    caseNoteForm(caseRequest.`case`).bindFromRequest().fold(
+      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
+      data => {
+        val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
+
+        cases.updateState(caseRequest.`case`.id.get, IssueState.Closed, data.version, caseNote).successMap { _ =>
+          Redirect(controllers.admin.routes.CaseController.view(caseKey))
+            .flashing("success" -> Messages("flash.case.closed"))
+        }
+      }
+    )
+  }
+
+  def reopen(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
+    caseNoteForm(caseRequest.`case`).bindFromRequest().fold(
+      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
+      data => {
+        val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
+
+        cases.updateState(caseRequest.`case`.id.get, IssueState.Reopened, data.version, caseNote).successMap { _ =>
+          Redirect(controllers.admin.routes.CaseController.view(caseKey))
+            .flashing("success" -> Messages("flash.case.reopened"))
+        }
+      }
     )
   }
 

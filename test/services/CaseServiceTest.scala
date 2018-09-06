@@ -142,5 +142,15 @@ class CaseServiceTest extends AbstractDaoTest {
 
       service.getNotes(c.id.get).serviceValue mustBe Seq(n2, n1) // Newest first
     }
+
+    "update state" in withData(new CaseFixture()) { c1 =>
+      c1.state mustBe IssueState.Open
+
+      val c2 = service.updateState(c1.id.get, IssueState.Closed, c1.version, CaseNoteSave("Case closed", Usercode("cuscav"))).serviceValue
+      c2.state mustBe IssueState.Closed
+
+      val c3 = service.updateState(c1.id.get, IssueState.Reopened, c2.version, CaseNoteSave("Case reopened", Usercode("cuscav"))).serviceValue
+      c3.state mustBe IssueState.Reopened
+    }
   }
 }

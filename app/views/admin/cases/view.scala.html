@@ -1,13 +1,15 @@
+@import controllers.admin.CaseController.CaseNoteFormData
 @import domain.dao.CaseDao.Case
 @import domain.CaseLink
 @import domain.CaseLinkType
 @import domain.CaseNote
 @import warwick.sso.User
+@import domain.IssueState
 
 @(
   c: Case.FullyJoined,
   caseNotes: Seq[(CaseNote, Option[User])],
-  noteForm: Form[String]
+  noteForm: Form[CaseNoteFormData]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @caseLinks(links: Seq[CaseLink], description: CaseLinkType => String, target: CaseLink => Case) = {
@@ -55,15 +57,21 @@
   }
 
   @b3.vertical.formCSRF(controllers.admin.routes.CaseController.addNote(c.clientCase.key.get)) { implicit ifc =>
-    <div class="panel panel-default">
+    <div class="panel panel-default panel-form">
       <div class="panel-heading">
         <h3 class="panel-title">Add a case note</h3>
       </div>
       <div class="panel-body">
+        @b3.validatedHidden(noteForm, "version")
         @b3.textarea(noteForm("text"), 'rows -> 5)
       </div>
-      <div class="panel-footer">
-        <button type="submit" class="btn btn-primary">Save</button>
+      <div class="panel-footer spaced-buttons">
+        @if(c.clientCase.state != IssueState.Closed) {
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="submit" formaction="@controllers.admin.routes.CaseController.close(c.clientCase.key.get)" class="btn btn-primary"> Close case</button>
+        } else {
+          <button type="submit" formaction="@controllers.admin.routes.CaseController.reopen(c.clientCase.key.get)" class="btn btn-primary"> Reopen case</button>
+        }
       </div>
     </div>
   }
