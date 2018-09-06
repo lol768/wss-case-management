@@ -57,6 +57,7 @@ POST        /team/case/create/:teamId               @controllers.admin.CaseContr
 GET         /team/case/:caseKey                     @controllers.admin.CaseController.view(caseKey: domain.IssueKey)
 GET         /team/case/:caseKey/link                @controllers.admin.CaseController.linkForm(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/link                @controllers.admin.CaseController.link(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/note                @controllers.admin.CaseController.addNote(caseKey: domain.IssueKey)
 
 ## Admins/Sysadmins ##
 

@@ -3,9 +3,11 @@ package services
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
-import domain.dao.CaseDao.{Case, CaseClient, StoredCaseLink, StoredCaseTag}
-import domain.dao.{CaseDao, DaoRunner}
+import domain.CustomJdbcTypes._
 import domain._
+import domain.dao.CaseDao.{Case, _}
+import domain.dao.{CaseDao, DaoRunner}
+import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import play.api.libs.json.Json
@@ -24,8 +26,10 @@ trait CaseService {
   def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
   def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]]
   def setCaseTags(caseId: UUID, tags: Set[CaseTag])(implicit ac: AuditLogContext): Future[ServiceResult[Set[CaseTag]]]
-  def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]]
+  def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]]
   def getLinks(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[(Seq[CaseLink], Seq[CaseLink])]]
+  def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
+  def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]]
 }
 
 class CaseServiceImpl @Inject() (
@@ -59,11 +63,13 @@ class CaseServiceImpl @Inject() (
       clientCase <- find
       clients <- dao.findClientsQuery(Set(clientCase.id.get)).result
       tags <- dao.findTagsQuery(Set(clientCase.id.get)).result
-      (outgoingCaseLinks, incomingCaseLinks) <- dao.findLinks(clientCase.id.get)
+      notes <- getNotesDBIO(clientCase.id.get)
+      (outgoingCaseLinks, incomingCaseLinks) <- getLinksDBIO(clientCase.id.get)
     } yield Case.FullyJoined(
       clientCase,
       clients.map(_.client).toSet,
       tags.map(_.caseTag).toSet,
+      notes.map(_.asCaseNote),
       outgoingCaseLinks,
       incomingCaseLinks
     )).map(Right(_))
@@ -95,12 +101,50 @@ class CaseServiceImpl @Inject() (
         .map(_ => Right(tags))
     }
 
-  override def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]] =
-    auditService.audit('CaseLinkSave, outgoingID.toString, 'Case, Json.obj("to" -> incomingID.toString)) {
-      daoRunner.run(dao.insertLink(StoredCaseLink(linkType, outgoingID, incomingID)))
-        .map(Right.apply)
+  override def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]] =
+    auditService.audit('CaseLinkSave, outgoingID.toString, 'Case, Json.obj("to" -> incomingID.toString, "note" -> caseNote.text)) {
+      daoRunner.run(for {
+        link <- dao.insertLink(StoredCaseLink(linkType, outgoingID, incomingID))
+        _ <- addNoteDBIO(outgoingID, CaseNoteType.AssociatedCase, caseNote)
+        _ <- addNoteDBIO(incomingID, CaseNoteType.AssociatedCase, caseNote)
+      } yield link).map(Right.apply)
     }
 
+  private def getLinksDBIO(caseID: UUID): DBIO[(Seq[CaseLink], Seq[CaseLink])] =
+    dao.findLinksQuery(caseID)
+      .join(CaseDao.cases.table).on(_.outgoingCaseID === _.id)
+      .join(CaseDao.cases.table).on(_._1.incomingCaseID === _.id)
+      .result
+      .map { results =>
+        results.map { case ((link, outgoing), incoming) =>
+          CaseLink(link.linkType, outgoing, incoming, link.version)
+        }.partition(_.outgoing.id.get == caseID)
+      }
+
   override def getLinks(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[(Seq[CaseLink], Seq[CaseLink])]] =
-    daoRunner.run(dao.findLinks(caseID)).map(Right.apply)
+    daoRunner.run(getLinksDBIO(caseID)).map(Right.apply)
+
+  private def addNoteDBIO(caseID: UUID, noteType: CaseNoteType, note: CaseNoteSave): DBIO[StoredCaseNote] =
+    dao.insertNote(
+      StoredCaseNote(
+        id = UUID.randomUUID(),
+        caseId = caseID,
+        noteType = noteType,
+        text = note.text,
+        teamMember = note.teamMember,
+        created = JavaTime.offsetDateTime,
+        version = JavaTime.offsetDateTime
+      )
+    )
+
+  override def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]] =
+    auditService.audit('CaseAddGeneralNote, caseID.toString, 'Case, Json.obj()) {
+      daoRunner.run(addNoteDBIO(caseID, CaseNoteType.GeneralNote, note)).map { n => Right(n.asCaseNote) }
+    }
+
+  private def getNotesDBIO(caseID: UUID): DBIO[Seq[StoredCaseNote]] =
+    dao.findNotesQuery(caseID).sortBy(_.created.desc).result
+
+  override def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]] =
+    daoRunner.run(getNotesDBIO(caseID)).map { notes => Right(notes.map(_.asCaseNote)) }
 }
