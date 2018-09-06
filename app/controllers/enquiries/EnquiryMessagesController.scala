@@ -64,33 +64,35 @@ class EnquiryMessagesController @Inject()(
         val form = stateChangeForm(request.enquiry, messageSender(request))
           .fill(StateChangeForm(formWithErrors.value.getOrElse(""), request.enquiry.version))
           .copy(errors = formWithErrors.errors)
-        if (requestContext.isAjax) {
-          Future.successful(BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
-            form.errors.map(error => API.Error(error.getClass.getSimpleName, error.message))
-          ))))
-        } else {
-          Future.successful(renderMessages(request.enquiry, request.messages, form))
-        }
+        Future.successful(render {
+          case Accepts.Json() =>
+            BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
+              form.errors.map(error => API.Error(error.getClass.getSimpleName, error.message))
+            )))
+          case _ =>
+            renderMessages(request.enquiry, request.messages, form)
+        })
       },
       messageText => {
         val message = messageData(messageText, request)
         service.addMessage(request.enquiry, message).successMap { m =>
           val messageData = MessageData(m.text, m.sender, m.created, m.teamMember)
           val sender = messageSender(request)
-          if (requestContext.isAjax) {
-            val clientName = sender match {
-              case MessageSender.Team => "Client"
-              case MessageSender.Client => "You"
-            }
-            val teamName = sender match {
-              case MessageSender.Team => message.teamMember.flatMap(usercode => userLookupService.getUser(usercode).toOption.filter(_.isFound).flatMap(_.name.full)).getOrElse(request.enquiry.team.name)
-              case MessageSender.Client => request.enquiry.team.name
-            }
-            Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
-              "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, clientName, teamName).toString()
-            ))))
-          } else {
-            renderMessages(request.enquiry, request.messages :+ messageData, stateChangeForm(request.enquiry, messageSender(request)))
+          render {
+            case Accepts.Json() =>
+              val clientName = sender match {
+                case MessageSender.Team => "Client"
+                case MessageSender.Client => "You"
+              }
+              val teamName = sender match {
+                case MessageSender.Team => message.teamMember.flatMap(usercode => userLookupService.getUser(usercode).toOption.filter(_.isFound).flatMap(_.name.full)).getOrElse(request.enquiry.team.name)
+                case MessageSender.Client => request.enquiry.team.name
+              }
+              Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
+                "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, clientName, teamName).toString()
+              ))))
+            case _ =>
+              renderMessages(request.enquiry, request.messages :+ messageData, stateChangeForm(request.enquiry, messageSender(request)))
           }
         }
       }
