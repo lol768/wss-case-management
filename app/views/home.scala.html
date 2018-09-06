@@ -2,11 +2,13 @@
 @import domain.Enquiry
 @import domain.MessageSender
 @import domain.Registration
+@import helpers.JavaTime
+@import domain.IssueState
 @(
   teams: Seq[domain.Team],
   enquiries: Seq[(Enquiry, Seq[MessageData])],
   registration: Option[Registration]
-)(implicit context: RequestContext)
+)(implicit context: RequestContext, req: RequestHeader)
 
 @main("Home") {
   @registration.map { r =>
@@ -18,20 +20,67 @@
   }
 
   <p>If you have a question or would like to arrange to speak to somebody about an issue:</p>
-  <a class="btn btn-primary" href="@controllers.enquiries.routes.EnquiryController.form()">Make an enquiry</a>
+  <a class="btn btn-primary" href="@controllers.enquiries.routes.EnquiryController.form()">
+    @if(enquiries.isEmpty) {
+      Make an enquiry
+    } else {
+      Make another enquiry
+    }
+  </a>
 
   @if(enquiries.nonEmpty) {
     <h2>Your enquiries</h2>
 
-    @enquiries.map { case (enquiry, messages) =>
-      <div class="enquiry panel panel-default">
-        <div class="panel-body">
-          @*<span class="badge pull-right">@helpers.JavaTime.Relative(enquiry.version)</span>*@
-          <strong>Enquiry with @enquiry.team.name</strong>
-          @tags.conversation(messages, clientName = "You")
-        </div>
-      </div>
-    }
+    <div class="panel-group enquiries" id="enquiries-accordion" role="tablist" aria-multiselectable="true">
+      @enquiries.map { case (enquiry, messages) =>
+        <div class="panel panel-default enquiry state-@enquiry.state.entryName">
 
+          <div class="panel-heading" role="tab" id="heading-@enquiry.key.get.string">
+            <h4 class="panel-title">
+                <a class="@if(enquiries.head._1 != enquiry){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@enquiry.key.get.string" aria-expanded="true" aria-controls="collapse-@enquiry.id.get.toString">
+                <div class="pull-right">
+                  @if(enquiry.version.isAfter(messages.last.created)) {
+                    @JavaTime.Relative(enquiry.version, printToday = true)
+                  } else {
+                    @JavaTime.Relative(messages.last.created, printToday = true)
+                  }
+                  <i class="fas fa-fw fa-angle-down"></i>
+                  <i class="fas fa-fw fa-angle-up"></i>
+                </div>
+                @if(enquiry.state != IssueState.Closed) {
+                  <i class="fal fa-fw fa-comment-dots"></i>
+                } else {
+                  <i class="fal fa-fw fa-comment-check"></i>
+                }
+                @enquiry.subject
+              </a>
+            </h4>
+          </div>
+
+          <div id="collapse-@enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head._1 == enquiry){in}" role="tabpanel" aria-labelledby="heading-@enquiry.key.get.string">
+            <div class="panel-body">
+              @messages.map { message =>
+                @views.html.enquiry.enquiryMessage(enquiry, message, clientName = "You", enquiry.team.name)
+              }
+            </div>
+              <div class="panel-footer">
+                @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get)) { implicit ifc =>
+                  <div class="form-group">
+                    <label for="textarea-@enquiry.key.get.string">
+                      Add a message
+                    </label>
+                    <textarea id="textarea-@enquiry.key.get.string" class="form-control" rows="1" name="text"></textarea>
+
+                    <button type="submit" class="btn btn-link">
+                      <i class="far fa-share-square fa-2x"></i>
+                    </button>
+                  </div>
+                  <div class="alert alert-danger hidden"></div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
   }
 }
