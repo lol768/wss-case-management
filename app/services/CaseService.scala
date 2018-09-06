@@ -6,13 +6,17 @@ import com.google.inject.ImplementedBy
 import domain.dao.CaseDao.{Case, CaseClient, StoredCaseLink, StoredCaseTag}
 import domain.dao.{CaseDao, DaoRunner}
 import domain._
+import enumeratum.{EnumEntry, PlayEnum}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import play.api.libs.json.Json
+import services.CaseService.CaseStateFilter
 import slick.jdbc.PostgresProfile.api._
 import warwick.core.timing.TimingContext
 import warwick.sso.UniversityID
+import warwick.sso.Usercode
 
+import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[CaseServiceImpl])
@@ -26,10 +30,29 @@ trait CaseService {
   def setCaseTags(caseId: UUID, tags: Set[CaseTag])(implicit ac: AuditLogContext): Future[ServiceResult[Set[CaseTag]]]
   def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]]
   def getLinks(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[(Seq[CaseLink], Seq[CaseLink])]]
+  def listOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
+  def listOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
+  def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
+  def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
+  def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]]
+}
+
+//  rather than using a tri-state Option[Boolean]
+object CaseService {
+
+  sealed trait CaseStateFilter extends EnumEntry
+  object CaseStateFilter extends PlayEnum[CaseStateFilter] {
+    case object Open extends CaseStateFilter
+    case object Closed extends CaseStateFilter
+    case object All extends CaseStateFilter
+
+    val values: immutable.IndexedSeq[CaseStateFilter] = findValues
+  }
 }
 
 class CaseServiceImpl @Inject() (
   auditService: AuditService,
+  ownerService: OwnerService,
   daoRunner: DaoRunner,
   dao: CaseDao
 )(implicit ec: ExecutionContext) extends CaseService {
@@ -103,4 +126,23 @@ class CaseServiceImpl @Inject() (
 
   override def getLinks(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[(Seq[CaseLink], Seq[CaseLink])]] =
     daoRunner.run(dao.findLinks(caseID)).map(Right.apply)
+
+  override def listOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
+    daoRunner.run(dao.listQuery(Some(team), None, CaseStateFilter.Open).result).map(Right.apply)
+
+  override def listOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
+    daoRunner.run(dao.listQuery(None, Some(owner), CaseStateFilter.Open).result).map(Right.apply)
+
+  override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]] =
+    ownerService.getCaseOwners(ids)
+
+  override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]] =
+    ownerService.setCaseOwners(id, owners)
+
+  override def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]] = {
+    daoRunner.run(dao.findClientsQuery(ids).result)
+      .map(_.groupBy(_.caseId).mapValues(_.map(_.client).toSet))
+      .map(Right.apply)
+  }
+
 }

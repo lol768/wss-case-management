@@ -1,4 +1,5 @@
 @import controllers.RequestContext
+@import domain.dao.CaseDao.Case
 @import domain.Team
 @import domain.Enquiry
 @import domain.MessageData
@@ -13,14 +14,16 @@
 @(team: Team,
   ownerEnquiries: Seq[(Enquiry, MessageData)],
   teamEnquiries: Seq[(Enquiry, MessageData)],
-  profiles: Map[UniversityID, SitsProfile],
+  ownerCases: Seq[Case],
+  teamCases: Seq[Case],
+  clients: Map[UUID, Set[SitsProfile]],
   owners: Map[UUID, Set[User]]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @enquiryRow(enquiry: Enquiry, message: MessageData) = {
   <tr>
     <td>
-      @profiles.get(enquiry.universityID).map { p: SitsProfile =>
+      @clients.get(enquiry.id.get).flatMap(_.headOption).map { p: SitsProfile =>
         <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>
       }.getOrElse { @enquiry.universityID }
     </td>
@@ -47,6 +50,32 @@
       </button>
     </td>
     <td><a class="btn btn-default" href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get)">View</a></td>
+  </tr>
+}
+
+@caseRow(clientCase: Case) = {
+  <tr>
+    <td>
+      @clients.get(clientCase.id.get).map { profiles =>
+        @profiles.toSeq.map { p =>  <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a> }
+      }
+    </td>
+    <td>@helpers.JavaTime.Relative(clientCase.created)</td>
+    <td>@clientCase.team.name</td>
+    <td>
+      <button
+        class="btn btn-link user-list-popover"
+        data-users="@Json.stringify(JsArray(owners.getOrElse(clientCase.id.get, Set()).map(u => Json.obj(
+          "universityID" -> u.universityId.get.string,
+          "name" -> JsString(u.name.full.getOrElse("[Unknown user]"))
+        )).toSeq))"
+        type="button"
+      >
+        <i class="fa fa-users"></i>
+        @owners.getOrElse(clientCase.id.get, Set()).size
+      </button>
+    </td>
+    <td><a class="btn btn-default" href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">View</a></td>
   </tr>
 }
 
@@ -95,6 +124,46 @@
         @teamEnquiries.map { case (enquiry, message) =>
           @enquiryRow(enquiry, message)
         }
+      </tbody>
+    </table>
+  }
+
+  @if(ownerCases.nonEmpty) {
+    <h2>Open cases assigned to me</h2>
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Created</th>
+          <th>Team assigned</th>
+          <th>Owners</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      @ownerCases.map { clientCase =>
+        @caseRow(clientCase)
+      }
+      </tbody>
+    </table>
+  }
+
+  @if(teamCases.nonEmpty) {
+    <h2>Open cases assigned to @team.name</h2>
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Created</th>
+          <th>Team assigned</th>
+          <th>Owners</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      @teamCases.map { clientCase =>
+        @caseRow(clientCase)
+      }
       </tbody>
     </table>
   }

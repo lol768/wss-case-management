@@ -11,9 +11,11 @@ import domain._
 import domain.dao.CaseDao._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import services.CaseService.CaseStateFilter
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.ProvenShape
+import warwick.sso.Usercode
 import warwick.sso.UniversityID
 
 import scala.concurrent.ExecutionContext
@@ -33,6 +35,7 @@ trait CaseDao {
   def insertLink(link: StoredCaseLink): DBIO[StoredCaseLink]
   def deleteLink(link: StoredCaseLink): DBIO[Done]
   def findLinks(caseID: UUID): DBIO[(Seq[CaseLink], Seq[CaseLink])] // (Outgoing, Incoming)
+  def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq]
 }
 
 @Singleton
@@ -89,6 +92,24 @@ class CaseDaoImpl @Inject()(
           CaseLink(link.linkType, outgoing, incoming, link.version)
         }.partition(_.outgoing.id.get == caseID)
       }
+
+  override def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq] = {
+    owner.fold(cases.table.subquery)(u =>
+      cases.table
+        .join(Owner.owners.table)
+        .on((c, o) => c.id === o.entityId && o.entityType === (Owner.EntityType.Case : Owner.EntityType))
+        .filter { case (_, o) => o.userId === u }
+        .map { case (e, _) => e }
+    ).filter(c => {
+      val teamFilter = team.fold(true.bind)(c.team === _)
+      val stateFilter = state match {
+        case CaseStateFilter.Open => c.isOpen
+        case CaseStateFilter.Closed => !c.isOpen
+        case CaseStateFilter.All => true.bind
+      }
+      teamFilter && stateFilter
+    })
+  }
 }
 
 object CaseDao {
