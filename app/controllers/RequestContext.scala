@@ -24,12 +24,18 @@ case class RequestContext(
   csrfHelper: CSRFPageHelper,
   userAgent: Option[String],
   ipAddress: String,
-  timingData: TimingContext.Data
+  timingData: TimingContext.Data,
+  isAjax: Boolean,
 ) extends TimingContext {
   def isMasquerading: Boolean = user != actualUser
 }
 
 object RequestContext {
+
+  val requestWithHeader = "X-Requested-With"
+  val requestWithHeaderValueForAjax = "XMLHttpRequest"
+  val acceptHeader = "Accept"
+  val acceptHeaderValueForAjax = "application/json"
 
   def authenticated(sso: SSOClient, request: AuthenticatedRequest[_], navigation: Seq[Navigation], csrfHelperFactory: CSRFPageHelperFactory, configuration: Configuration): RequestContext =
     RequestContext(sso, request, request.context.user, request.context.actualUser, navigation, csrfHelperFactory, configuration)
@@ -49,6 +55,8 @@ object RequestContext {
     val target = (if (request.secure) "https://" else "http://") + request.host + request.path
     val linkGenerator = sso.linkGenerator(request)
     linkGenerator.setTarget(target)
+    val isAjax = request.headers.get(requestWithHeader).contains(requestWithHeaderValueForAjax) ||
+      request.headers.get(acceptHeader).contains(acceptHeaderValueForAjax)
 
     RequestContext(
       path = request.path,
@@ -62,7 +70,8 @@ object RequestContext {
       csrfHelper = transformCsrfHelper(csrfHelperFactory, request),
       userAgent = request.headers.get("User-Agent"),
       ipAddress = request.remoteAddress,
-      timingData = request.attrs.get(ServerTimingFilter.TimingData).getOrElse(new TimingContext.Data)
+      timingData = request.attrs.get(ServerTimingFilter.TimingData).getOrElse(new TimingContext.Data),
+      isAjax = isAjax
     )
   }
 

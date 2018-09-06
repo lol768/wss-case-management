@@ -3,7 +3,7 @@ package controllers.enquiries
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import controllers.BaseController
+import controllers.{API, BaseController}
 import controllers.refiners.{CanAddMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
 import domain.{Enquiry, IssueState, MessageData, MessageSender}
 import helpers.JavaTime
@@ -12,8 +12,10 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
+import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, Result}
 import services.{EnquiryService, SecurityService}
+import warwick.sso.UserLookupService
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -30,7 +32,8 @@ class EnquiryMessagesController @Inject()(
   canAddMessageToEnquiryActionRefiner: CanAddMessageToEnquiryActionRefiner,
   canEditEnquiryActionRefiner: CanEditEnquiryActionRefiner,
   securityService: SecurityService,
-  service: EnquiryService
+  service: EnquiryService,
+  userLookupService: UserLookupService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import EnquiryMessagesController.StateChangeForm
@@ -45,7 +48,7 @@ class EnquiryMessagesController @Inject()(
   import canViewEnquiryActionRefiner._
 
   private def renderMessages(enquiry: Enquiry, messages: Seq[MessageData], f: Form[StateChangeForm])(implicit request: EnquirySpecificRequest[_]) =
-    Ok(views.html.enquiry.messages(enquiry, messages, f, messageSender(request)))
+    Ok(views.html.enquiry.messages(enquiry, messages, f, messageSender(request), userLookupService.getUsers(messages.flatMap(_.teamMember)).toOption.getOrElse(Map())))
 
   def messages(id: UUID): Action[AnyContent] = CanViewEnquiryAction(id) { implicit request =>
     renderMessages(request.enquiry, request.messages, stateChangeForm(request.enquiry, messageSender(request)).fill(StateChangeForm("", request.enquiry.version)))
@@ -61,12 +64,34 @@ class EnquiryMessagesController @Inject()(
         val form = stateChangeForm(request.enquiry, messageSender(request))
           .fill(StateChangeForm(formWithErrors.value.getOrElse(""), request.enquiry.version))
           .copy(errors = formWithErrors.errors)
-        Future.successful(renderMessages(request.enquiry, request.messages, form))
+        if (requestContext.isAjax) {
+          Future.successful(BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
+            form.errors.map(error => API.Error(error.getClass.getSimpleName, error.message))
+          ))))
+        } else {
+          Future.successful(renderMessages(request.enquiry, request.messages, form))
+        }
       },
       messageText => {
         val message = messageData(messageText, request)
         service.addMessage(request.enquiry, message).successMap { m =>
-          renderMessages(request.enquiry, request.messages :+ MessageData(m.text, m.sender, m.created), stateChangeForm(request.enquiry, messageSender(request)))
+          val messageData = MessageData(m.text, m.sender, m.created, m.teamMember)
+          val sender = messageSender(request)
+          if (requestContext.isAjax) {
+            val clientName = sender match {
+              case MessageSender.Team => "Client"
+              case MessageSender.Client => "You"
+            }
+            val teamName = sender match {
+              case MessageSender.Team => message.teamMember.flatMap(usercode => userLookupService.getUser(usercode).toOption.filter(_.isFound).flatMap(_.name.full)).getOrElse(request.enquiry.team.name)
+              case MessageSender.Client => request.enquiry.team.name
+            }
+            Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
+              "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, clientName, teamName).toString()
+            ))))
+          } else {
+            renderMessages(request.enquiry, request.messages :+ messageData, stateChangeForm(request.enquiry, messageSender(request)))
+          }
         }
       }
     )

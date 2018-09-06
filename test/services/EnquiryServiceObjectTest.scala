@@ -1,8 +1,7 @@
 package services
 
-import domain.{Enquiry, Fixtures, MessageData, MessageSender}
+import domain.{Enquiry, MessageData, MessageSender}
 import helpers.JavaTime
-import org.scalatest.FunSuite
 import org.scalatestplus.play.PlaySpec
 
 class EnquiryServiceObjectTest extends PlaySpec {
@@ -12,11 +11,11 @@ class EnquiryServiceObjectTest extends PlaySpec {
   type Item = (Enquiry, Seq[MessageData])
 
   val enquiryToday = Enquiry(universityID = null, subject = "Enquiry", team = null)
-  val enquiryLastWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.minusWeeks(1))
-  val enquiryNextWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.plusWeeks(1))
+  private val enquiryLastWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.minusWeeks(1))
+  private val enquiryNextWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.plusWeeks(1))
 
-  val messageTomorrow = MessageData("hello", MessageSender.Client, JavaTime.offsetDateTime.plusDays(1))
-  val messageLastWeek = MessageData("hello", MessageSender.Client, JavaTime.offsetDateTime.minusWeeks(1))
+  val messageTomorrow = MessageData("hello", MessageSender.Client, JavaTime.offsetDateTime.plusDays(1), None)
+  val messageLastWeek = MessageData("hello", MessageSender.Client, JavaTime.offsetDateTime.minusWeeks(1), None)
 
   "lastModified" should {
 

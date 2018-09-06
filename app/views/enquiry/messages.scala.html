@@ -4,40 +4,80 @@
 @import domain.MessageData
 @import domain.Message.FormData
 @import domain.MessageSender
+@import helpers.JavaTime
+@import warwick.sso.Usercode
+@import warwick.sso.User
 @(
   enquiry: Enquiry,
   messages: Seq[MessageData],
   stateChangeForm: Form[StateChangeForm],
-  messageSender: MessageSender
+  messageSender: MessageSender,
+  userLookup: Map[Usercode, User]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"${enquiry.team.name} enquiry from ${enquiry.universityID.string}") {
+  <h2>
+    <div class="pull-right">
+      @if(enquiry.version.isAfter(messages.last.created)) {
+        @JavaTime.Relative(enquiry.version, printToday = true)
+      } else {
+        @JavaTime.Relative(messages.last.created, printToday = true)
+      }
+    </div>
+    @if(enquiry.state != IssueState.Closed) {
+      <i class="fal fa-fw fa-comment-dots"></i>
+    } else {
+      <i class="fal fa-fw fa-comment-check"></i>
+    }
+    @enquiry.subject
+  </h2>
   <div class="enquiry panel panel-default">
     <div class="panel-body">
-      <span class="badge pull-right">@helpers.JavaTime.Relative(enquiry.created)</span>
-      <strong>Enquiry with @enquiry.team.name</strong>
-
       @{
         val clientName = messageSender match {
           case MessageSender.Team => "Client"
           case MessageSender.Client => "You"
         }
-        tags.conversation(messages, clientName = clientName)
+        messages.map { message =>
+          val teamName = messageSender match {
+            case MessageSender.Team => message.teamMember.flatMap(usercode => userLookup.get(usercode).filter(_.isFound).flatMap(_.name.full)).getOrElse(enquiry.team.name)
+            case MessageSender.Client => enquiry.team.name
+          }
+          views.html.enquiry.enquiryMessage(enquiry, message, clientName, teamName)
+        }
       }
-
+    </div>
+    <div class="panel-footer">
       @if(enquiry.state != IssueState.Closed) {
-        @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.id.get)) { implicit ifc =>
-          @b3.textarea(stateChangeForm("text"),
-            '_label -> "Add a message",
-            'rows -> 3
-          )
-
-          @b3.free('_class -> "spaced-buttons") {
-            <button type="submit" class="btn btn-primary">Add message</button>
-            @if(messageSender == MessageSender.Team) {
-              <button type="submit" formaction="@controllers.enquiries.routes.EnquiryMessagesController.close(enquiry.id.get)" class="btn btn-primary"> Close enquiry</button>
-              @b3.validatedHidden(stateChangeForm, "version")
+        @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.id.get)) { implicit ifc =>
+          @if(stateChangeForm("text").hasErrors) {
+            <div class="has-error">
+          }
+          @b3.free('_label -> "Add a message") {
+            @b3.textarea(stateChangeForm("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
+            <button type="submit" class="btn btn-link">
+              <i class="far fa-share-square fa-2x"></i>
+            </button>
+            @if(stateChangeForm("text").hasErrors) {
+              <div class="help-block">
+                @stateChangeForm("text").errors.map { error =>
+                  @error.format
+                }
+              </div>
             }
+          }
+
+          @if(messageSender == MessageSender.Team) {
+            <div class="spaced-buttons">
+              <button
+                type="submit"
+                formaction="@controllers.enquiries.routes.EnquiryMessagesController.close(enquiry.id.get)"
+                class="btn btn-primary"
+              >
+                Close enquiry
+              </button>
+              @b3.validatedHidden(stateChangeForm, "version")
+            </div>
           }
         }
       } else {
@@ -47,12 +87,12 @@
 
           @b3.textarea(stateChangeForm("text"),
             '_label -> "Add a message",
-            'rows -> 3
+            'rows -> 5
           )
 
-          @b3.free() {
+          <div class="spaced-buttons">
             <button type="submit" class="btn btn-primary">Reopen enquiry</button>
-          }
+          </div>
         }
       }
     </div>

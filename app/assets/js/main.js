@@ -7,6 +7,7 @@ import FieldHistory from './field-history';
 import './flexi-picker';
 import ClientSearch from './client-search';
 import UserListPopovers from './user-list-popovers';
+import MessageThreads from './message-threads';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -26,6 +27,10 @@ $(() => {
 
   $('.client-search').each((i, container) => {
     ClientSearch(container);
+  });
+
+  $('.panel-group.enquiries').each((i, container) => {
+    MessageThreads(container);
   });
 
   $('html')

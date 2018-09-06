@@ -73,7 +73,7 @@ object Message extends Versioning {
 
     def * = (id, text, sender, teamMember, ownerId, ownerType, created, version).mapTo[Message]
 
-    def messageData = (text, sender, created).mapTo[MessageData]
+    def messageData = (text, sender, created, teamMember).mapTo[MessageData]
   }
 
   class MessageVersions(tag: Tag) extends Table[MessageVersion](tag, "message_version") with StoredVersionTable[Message] with CommonProperties {
@@ -133,7 +133,8 @@ case class MessageSave (
 case class MessageData (
   text: String,
   sender: MessageSender,
-  created: OffsetDateTime
+  created: OffsetDateTime,
+  teamMember: Option[Usercode]
 )
 
 object MessageData {
