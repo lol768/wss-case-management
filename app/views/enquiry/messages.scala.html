@@ -49,7 +49,7 @@
     </div>
     <div class="panel-footer">
       @if(enquiry.state != IssueState.Closed) {
-        @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.id.get)) { implicit ifc =>
+        @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get)) { implicit ifc =>
           @if(stateChangeForm("text").hasErrors) {
             <div class="has-error">
           }
@@ -71,7 +71,7 @@
             <div class="spaced-buttons">
               <button
                 type="submit"
-                formaction="@controllers.enquiries.routes.EnquiryMessagesController.close(enquiry.id.get)"
+                formaction="@controllers.enquiries.routes.EnquiryMessagesController.close(enquiry.key.get)"
                 class="btn btn-primary"
               >
                 Close enquiry
@@ -81,7 +81,7 @@
           }
         }
       } else {
-        @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.reopen(enquiry.id.get)) { implicit ifc =>
+        @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.reopen(enquiry.key.get)) { implicit ifc =>
 
           @b3.validatedHidden(stateChangeForm, "version")
 
