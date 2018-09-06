@@ -14,8 +14,7 @@ import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.ProvenShape
-import warwick.sso.Usercode
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, Usercode}
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext
@@ -25,6 +24,7 @@ trait CaseDao {
   def insert(c: Case): DBIO[Case]
   def find(id: UUID): DBIO[Case]
   def find(key: IssueKey): DBIO[Case]
+  def update(c: Case, version: OffsetDateTime): DBIO[Case]
   def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag]
   def deleteTag(tag: StoredCaseTag): DBIO[Done]
   def findTagsQuery(caseIds: Set[UUID]): Query[CaseTags, StoredCaseTag, Seq]
@@ -34,7 +34,10 @@ trait CaseDao {
   def findClientsQuery(caseIds: Set[UUID]): Query[CaseClients, CaseClient, Seq]
   def insertLink(link: StoredCaseLink): DBIO[StoredCaseLink]
   def deleteLink(link: StoredCaseLink): DBIO[Done]
-  def findLinks(caseID: UUID): DBIO[(Seq[CaseLink], Seq[CaseLink])] // (Outgoing, Incoming)
+  def findLinksQuery(caseID: UUID): Query[CaseLinks, StoredCaseLink, Seq]
+  def insertNote(note: StoredCaseNote): DBIO[StoredCaseNote]
+  def deleteNote(note: StoredCaseNote): DBIO[Done]
+  def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq]
   def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq]
 }
 
@@ -51,6 +54,9 @@ class CaseDaoImpl @Inject()(
 
   override def find(key: IssueKey): DBIO[Case] =
     cases.table.filter(_.key === key).result.head
+
+  override def update(c: Case, version: OffsetDateTime): DBIO[Case] =
+    cases.update(c.copy(version = version))
 
   override def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag] =
     caseTags.insert(tag)
@@ -81,17 +87,17 @@ class CaseDaoImpl @Inject()(
   override def deleteLink(link: StoredCaseLink): DBIO[Done] =
     caseLinks.delete(link)
 
-  override def findLinks(caseID: UUID): DBIO[(Seq[CaseLink], Seq[CaseLink])] =
-    caseLinks.table
-      .join(cases.table).on(_.outgoingCaseID === _.id)
-      .join(cases.table).on(_._1.incomingCaseID === _.id)
-      .filter { case ((l, _), _) => l.outgoingCaseID === caseID || l.incomingCaseID === caseID }
-      .result
-      .map { results =>
-        results.map { case ((link, outgoing), incoming) =>
-          CaseLink(link.linkType, outgoing, incoming, link.version)
-        }.partition(_.outgoing.id.get == caseID)
-      }
+  override def findLinksQuery(caseID: UUID): Query[CaseLinks, StoredCaseLink, Seq] =
+    caseLinks.table.filter { l => l.outgoingCaseID === caseID || l.incomingCaseID === caseID }
+
+  override def insertNote(note: StoredCaseNote): DBIO[StoredCaseNote] =
+    caseNotes.insert(note)
+
+  override def deleteNote(note: StoredCaseNote): DBIO[Done] =
+    caseNotes.delete(note)
+
+  override def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq] =
+    caseNotes.table.filter(_.caseId === caseID)
 
   override def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq] = {
     owner.fold(cases.table.subquery)(u =>
@@ -125,6 +131,9 @@ object CaseDao {
 
   val caseLinks: VersionedTableQuery[StoredCaseLink, StoredCaseLinkVersion, CaseLinks, CaseLinkVersions] =
     VersionedTableQuery(TableQuery[CaseLinks], TableQuery[CaseLinkVersions])
+
+  val caseNotes: VersionedTableQuery[StoredCaseNote, StoredCaseNoteVersion, CaseNotes, CaseNoteVersions] =
+    VersionedTableQuery(TableQuery[CaseNotes], TableQuery[CaseNoteVersions])
 
   case class Case(
     id: Option[UUID],
@@ -175,7 +184,7 @@ object CaseDao {
       clientCase: Case,
       clients: Set[UniversityID],
       tags: Set[CaseTag],
-      //    notes: Seq[CaseNote],
+      notes: Seq[CaseNote],
       //    attachments: Seq[UploadedDocument],
       //    relatedAppointments: Seq[Appointment],
       outgoingCaseLinks: Seq[CaseLink],
@@ -414,6 +423,86 @@ object CaseDao {
       (linkType, outgoingCaseID, incomingCaseID, version, operation, timestamp).mapTo[StoredCaseLinkVersion]
     def pk = primaryKey("pk_case_link_version", (linkType, outgoingCaseID, incomingCaseID, timestamp))
     def idx = index("idx_case_link_version", (linkType, outgoingCaseID, incomingCaseID, version))
+  }
+
+  case class StoredCaseNote(
+    id: UUID,
+    caseId: UUID,
+    noteType: CaseNoteType,
+    text: String,
+    teamMember: Usercode,
+    created: OffsetDateTime,
+    version: OffsetDateTime
+  ) extends Versioned[StoredCaseNote] {
+    def asCaseNote = CaseNote(
+      id,
+      noteType,
+      text,
+      teamMember,
+      created,
+      version
+    )
+
+    override def atVersion(at: OffsetDateTime): StoredCaseNote = copy(version = at)
+
+    override def storedVersion[B <: StoredVersion[StoredCaseNote]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+      StoredCaseNoteVersion(
+        id,
+        caseId,
+        noteType,
+        text,
+        teamMember,
+        created,
+        version,
+        operation,
+        timestamp
+      ).asInstanceOf[B]
+  }
+
+  case class StoredCaseNoteVersion(
+    id: UUID,
+    caseId: UUID,
+    noteType: CaseNoteType,
+    text: String,
+    teamMember: Usercode,
+    created: OffsetDateTime,
+    version: OffsetDateTime,
+    operation: DatabaseOperation,
+    timestamp: OffsetDateTime
+  ) extends StoredVersion[StoredCaseNote]
+
+  trait CommonNoteProperties { self: Table[_] =>
+    def caseId = column[UUID]("case_id")
+    def noteType = column[CaseNoteType]("note_type")
+    def text = column[String]("text")
+    def teamMember = column[Usercode]("team_member")
+    def created = column[OffsetDateTime]("created_utc")
+    def version = column[OffsetDateTime]("version_utc")
+  }
+
+  class CaseNotes(tag: Tag) extends Table[StoredCaseNote](tag, "client_case_note")
+    with VersionedTable[StoredCaseNote]
+    with CommonNoteProperties {
+    override def matchesPrimaryKey(other: StoredCaseNote): Rep[Boolean] = id === other.id
+    def id = column[UUID]("id", O.PrimaryKey)
+
+    override def * : ProvenShape[StoredCaseNote] =
+      (id, caseId, noteType, text, teamMember, created, version).mapTo[StoredCaseNote]
+    def fk = foreignKey("fk_case_note", caseId, cases.table)(_.id)
+    def idx = index("idx_case_note", caseId)
+  }
+
+  class CaseNoteVersions(tag: Tag) extends Table[StoredCaseNoteVersion](tag, "client_case_note_version")
+    with StoredVersionTable[StoredCaseNote]
+    with CommonNoteProperties {
+    def id = column[UUID]("id")
+    def operation = column[DatabaseOperation]("version_operation")
+    def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+
+    override def * : ProvenShape[StoredCaseNoteVersion] =
+      (id, caseId, noteType, text, teamMember, created, version, operation, timestamp).mapTo[StoredCaseNoteVersion]
+    def pk = primaryKey("pk_case_note_version", (id, timestamp))
+    def idx = index("idx_case_note_version", (id, version))
   }
 
   sealed trait CaseStateFilter extends EnumEntry

@@ -5,7 +5,7 @@ import java.util.UUID
 
 import controllers.BaseController
 import controllers.admin.CaseController._
-import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CanViewTeamActionRefiner}
+import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CanViewTeamActionRefiner, CaseSpecificRequest}
 import domain._
 import domain.dao.CaseDao.Case
 import helpers.{FormHelpers, JavaTime}
@@ -13,7 +13,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, Result}
 import services.CaseService
 import services.tabula.ProfileService
 import warwick.core.timing.TimingContext
@@ -67,12 +67,23 @@ object CaseController {
       "targetID" -> uuid.verifying("error.linkTarget.same", _ != sourceID).verifying("error.required", id => isValid(id))
     )(CaseLinkFormData.apply)(CaseLinkFormData.unapply))
   }
+
+  case class CaseNoteFormData(
+    text: String,
+    version: OffsetDateTime
+  )
+
+  def caseNoteForm(clientCase: Case): Form[CaseNoteFormData] = Form(mapping(
+    "text" -> nonEmptyText,
+    "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == clientCase.version)
+  )(CaseNoteFormData.apply)(CaseNoteFormData.unapply))
 }
 
 @Singleton
 class CaseController @Inject()(
   profiles: ProfileService,
   cases: CaseService,
+  userLookupService: UserLookupService,
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   canViewCaseActionRefiner: CanViewCaseActionRefiner,
   canEditCaseActionRefiner: CanEditCaseActionRefiner
@@ -82,10 +93,17 @@ class CaseController @Inject()(
   import canViewTeamActionRefiner._
   import canEditCaseActionRefiner._
 
-  def view(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+  private def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData])(implicit request: CaseSpecificRequest[AnyContent]): Future[Result] =
     cases.findFull(caseKey).successMap { c =>
-      Ok(views.html.admin.cases.view(c))
+      val usercodes = c.notes.map(_.teamMember).distinct
+      val userLookup = userLookupService.getUsers(usercodes).toOption.getOrElse(Map())
+      val caseNotes = c.notes.map { note => (note, userLookup.get(note.teamMember)) }
+
+      Ok(views.html.admin.cases.view(c, caseNotes, caseNoteForm))
     }
+
+  def view(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+    renderCase(caseKey, caseNoteForm(caseRequest.`case`).fill(CaseNoteFormData("", caseRequest.`case`.version)))
   }
 
   def createForm(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId) { implicit teamRequest =>
@@ -134,11 +152,54 @@ class CaseController @Inject()(
       formWithErrors => Future.successful(
         Ok(views.html.admin.cases.link(caseRequest.`case`, formWithErrors))
       ),
-      data =>
-        cases.addLink(data.linkType, caseRequest.`case`.id.get, data.targetID).successMap { _ =>
+      data => cases.find(data.targetID).successFlatMap { targetCase =>
+        val caseNote = CaseNoteSave(s"${caseKey.string} ${data.linkType.outwardDescription} ${targetCase.key.get.string}", caseRequest.context.user.get.usercode)
+
+        cases.addLink(data.linkType, caseRequest.`case`.id.get, data.targetID, caseNote).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.linked"))
         }
+      }
+    )
+  }
+
+  def addNote(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
+    caseNoteForm(caseRequest.`case`).bindFromRequest().fold(
+      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
+      data =>
+        // We don't do anything with data.version here, it's validated but we don't lock the case when adding a general note
+        cases.addGeneralNote(caseRequest.`case`.id.get, CaseNoteSave(data.text, caseRequest.context.user.get.usercode)).successMap { _ =>
+          Redirect(controllers.admin.routes.CaseController.view(caseKey))
+            .flashing("success" -> Messages("flash.case.noteAdded"))
+        }
+    )
+  }
+
+  def close(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
+    caseNoteForm(caseRequest.`case`).bindFromRequest().fold(
+      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
+      data => {
+        val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
+
+        cases.updateState(caseRequest.`case`.id.get, IssueState.Closed, data.version, caseNote).successMap { _ =>
+          Redirect(controllers.admin.routes.CaseController.view(caseKey))
+            .flashing("success" -> Messages("flash.case.closed"))
+        }
+      }
+    )
+  }
+
+  def reopen(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
+    caseNoteForm(caseRequest.`case`).bindFromRequest().fold(
+      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
+      data => {
+        val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
+
+        cases.updateState(caseRequest.`case`.id.get, IssueState.Reopened, data.version, caseNote).successMap { _ =>
+          Redirect(controllers.admin.routes.CaseController.view(caseKey))
+            .flashing("success" -> Messages("flash.case.reopened"))
+        }
+      }
     )
   }
 
