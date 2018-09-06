@@ -1,9 +1,8 @@
 package domain.dao
 
 import domain._
-import domain.dao.CaseDao.{Case, Cases}
+import domain.dao.CaseDao.{Case, CaseStateFilter, Cases}
 import helpers.DataFixture
-import services.CaseService.CaseStateFilter
 import warwick.sso.Usercode
 import slick.jdbc.PostgresProfile.api._
 
