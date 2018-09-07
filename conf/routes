@@ -47,10 +47,10 @@ POST        /team/client/:universityID                          @controllers.adm
 POST        /team/client/:universityID/invite                   @controllers.admin.ClientController.invite(universityID: warwick.sso.UniversityID)
 GET         /team/client/:universityID/registration-history     @controllers.admin.ClientController.registrationHistory(universityID: warwick.sso.UniversityID)
 
-GET         /team/enquiry/:enquiryKey/reassign              @controllers.admin.TeamEnquiryController.reassignForm(id: java.util.UUID)
-POST        /team/enquiry/:enquiryKey/reassign              @controllers.admin.TeamEnquiryController.reassign(id: java.util.UUID)
-GET         /team/enquiry/:enquiryKey/owners                @controllers.admin.OwnersController.enquiryForm(enquiryKey: domain.IssueKey)
-POST        /team/enquiry/:enquiryKey/owners                @controllers.admin.OwnersController.enquirySubmit(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/reassign                  @controllers.admin.TeamEnquiryController.reassignForm(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey/reassign                  @controllers.admin.TeamEnquiryController.reassign(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquiryForm(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquirySubmit(enquiryKey: domain.IssueKey)
 
 GET         /team/case/create/:teamId               @controllers.admin.CaseController.createForm(teamId: String)
 POST        /team/case/create/:teamId               @controllers.admin.CaseController.create(teamId: String)

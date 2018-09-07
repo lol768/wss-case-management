@@ -1,7 +1,5 @@
 package controllers.admin
 
-import java.util.UUID
-
 import controllers.BaseController
 import controllers.refiners.{CanEditCaseActionRefiner, CanEditEnquiryActionRefiner}
 import domain.IssueKey
@@ -30,10 +28,10 @@ class OwnersController @Inject()(
     "owners" -> seq(text)
   )(s => s)(s => Option(s)))
 
-  import canEditEnquiryActionRefiner._
   import canEditCaseActionRefiner._
+  import canEditEnquiryActionRefiner._
 
-  def enquiryForm(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id).async { implicit request =>
+  def enquiryForm(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
     enquiryService.getOwners(Set(request.enquiry.id.get)).successMap(owners =>
       Ok(views.html.admin.enquiry.owners(
         ownersForm.fill(owners.getOrElse(request.enquiry.id.get, Set()).map(_.string).toSeq.sorted),
@@ -51,7 +49,7 @@ class OwnersController @Inject()(
     )
   }
 
-  def enquirySubmit(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id).async { implicit request =>
+  def enquirySubmit(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
     ownersForm.bindFromRequest.fold(
       formWithErrors => {
         Future.successful(Ok(views.html.admin.enquiry.owners(formWithErrors, request.enquiry)))
