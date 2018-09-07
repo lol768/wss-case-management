@@ -18,12 +18,14 @@ import warwick.sso.{UniversityID, Usercode}
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext
+import scala.language.higherKinds
 
 @ImplementedBy(classOf[CaseDaoImpl])
 trait CaseDao {
   def insert(c: Case): DBIO[Case]
   def find(id: UUID): DBIO[Case]
   def find(key: IssueKey): DBIO[Case]
+  def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq]
   def update(c: Case, version: OffsetDateTime): DBIO[Case]
   def insertTags(tags: Set[StoredCaseTag]): DBIO[Seq[StoredCaseTag]]
   def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag]
@@ -56,6 +58,12 @@ class CaseDaoImpl @Inject()(
 
   override def find(key: IssueKey): DBIO[Case] =
     cases.table.filter(_.key === key).result.head
+
+  def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq] =
+    cases.table
+      .withClients
+      .filter { case (_, client) => client.client === universityID }
+      .map { case (c, _) => c }
 
   override def update(c: Case, version: OffsetDateTime): DBIO[Case] =
     cases.update(c.copy(version = version))
@@ -264,6 +272,12 @@ object CaseDao {
 
     override def * : ProvenShape[CaseVersion] =
       (id, key, subject, created, incidentDate, team, version, state, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, operation, timestamp).mapTo[CaseVersion]
+  }
+
+  implicit class CaseExtensions[C[_]](q: Query[Cases, Case, C]) {
+    def withClients = q
+      .join(caseClients.table)
+      .on(_.id === _.caseId)
   }
 
   case class StoredCaseTag(

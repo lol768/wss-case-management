@@ -9,11 +9,13 @@
 @import domain.IssueState
 @import helpers.JavaTime
 @import domain.UserType
+@import domain.dao.CaseDao.Case
 @(
   profile: SitsProfile,
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
   enquiries: Seq[(Enquiry, Seq[MessageData])],
+  cases: Seq[Case],
   form: Form[ClientSummaryData],
   inMentalHealthTeam: Boolean,
   success: Option[String] = None
@@ -29,7 +31,7 @@
           @profile.photo.map { photo =>
             <div class="col-sm-4">
               <div class="photo">
-                <img src="@photo" class="img-thumbnail">
+                <img src="@photo" class="img-thumbnail img-circle">
               </div>
             </div>
           }
@@ -62,7 +64,7 @@
     @profile.photo.map { photo =>
       <div class="col-md-4 col-lg-3">
         <div class="photo">
-          <img src="@photo" class="img-thumbnail">
+          <img src="@photo" class="img-thumbnail img-circle">
         </div>
       </div>
     }
@@ -160,8 +162,80 @@
   <h2>Client summary</h2>
 
   <section class="indent">
+    @if(cases.isEmpty) {
+      <p>No open or closed cases</p>
+    } else {
+      <p>
+        @tags.p(
+          number = cases.count(_.state != IssueState.Closed),
+          singular = "open case"
+        )(
+          plural = "open cases",
+          zero = "No"
+        ),
+        @tags.p(
+          number = cases.count(_.state == IssueState.Closed),
+          singular = "closed case"
+        )(
+          plural = "closed cases",
+          zero = "no"
+        )
+        <button class="toggle-element btn btn-default btn-xs" data-target="#case-tables" data-shown-label="hide">show</button>
+      </p>
 
-    @*TODO CASE-91*@
+      <div class="hidden" id="case-tables">
+        @if(cases.exists(_.state != IssueState.Closed)) {
+          <table class="table table-condensed">
+            <caption>Open cases</caption>
+            <thead>
+              <tr>
+                <th>Case ID</th>
+                <th>Subject</th>
+                <th>Team</th>
+                <th>Last updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              @defining(cases.filter(_.state != IssueState.Closed)) { open: Seq[Case] =>
+                @open.map { c =>
+                  <tr>
+                    <td><a href="@controllers.admin.routes.CaseController.view(c.key.get)" target="_blank">@c.key.get.string</a></td>
+                    <td><a href="@controllers.admin.routes.CaseController.view(c.key.get)" target="_blank">@c.subject</a></td>
+                    <td>@c.team.name</td>
+                    <td>@JavaTime.Relative(c.version.toLocalDate).capitalize</td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        }
+        @if(cases.exists(_.state == IssueState.Closed)) {
+          <table class="table table-condensed">
+            <caption>Closed cases</caption>
+            <thead>
+              <tr>
+                <th>Case ID</th>
+                <th>Subject</th>
+                <th>Team</th>
+                <th>Closed</th>
+              </tr>
+            </thead>
+            <tbody>
+            @defining(cases.filter(_.state == IssueState.Closed)) { closed: Seq[Case] =>
+              @closed.map { c =>
+                <tr>
+                  <td><a href="@controllers.admin.routes.CaseController.view(c.key.get)" target="_blank">@c.key.get.string</a></td>
+                  <td><a href="@controllers.admin.routes.CaseController.view(c.key.get)" target="_blank">@c.subject</a></td>
+                  <td>@c.team.name</td>
+                  <td>@JavaTime.Relative(c.version.toLocalDate).capitalize</td>
+                </tr>
+              }
+            }
+            </tbody>
+          </table>
+        }
+      </div>
+    }
 
     @if(enquiries.isEmpty) {
       <p>No open or closed enquiries</p>
@@ -185,7 +259,7 @@
       </p>
 
       <div class="hidden" id="enquiry-tables">
-        @if(enquiries.count { case (e, _) => e.state != IssueState.Closed } > 0) {
+        @if(enquiries.exists { case (e, _) => e.state != IssueState.Closed }) {
           <table class="table table-condensed">
             <caption>Open enquiries</caption>
             <thead>
@@ -210,7 +284,7 @@
             </tbody>
           </table>
         }
-        @if(enquiries.count { case (e, _) => e.state == IssueState.Closed } > 0) {
+        @if(enquiries.exists { case (e, _) => e.state == IssueState.Closed }) {
           <table class="table table-condensed">
             <caption>Closed enquiries</caption>
             <thead>
@@ -224,12 +298,12 @@
             <tbody>
             @defining(enquiries.filter { case (e, _) => e.state == IssueState.Closed }) { closed: Seq[(Enquiry, Seq[MessageData])] =>
               @closed.map { case (enquiry, messages) =>
-              <tr>
-                <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)" target="_blank">@enquiry.key.get.string</a></td>
-                <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)" target="_blank">@enquiry.subject</a></td>
-                <td>@enquiry.team.name</td>
-                <td>@JavaTime.Relative(enquiry.version.toLocalDate).capitalize</td>
-              </tr>
+                <tr>
+                  <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)" target="_blank">@enquiry.key.get.string</a></td>
+                  <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)" target="_blank">@enquiry.subject</a></td>
+                  <td>@enquiry.team.name</td>
+                  <td>@JavaTime.Relative(enquiry.version.toLocalDate).capitalize</td>
+                </tr>
               }
             }
             </tbody>
