@@ -21,7 +21,7 @@
           @description(linkType)
           <ul>
             @l.map { link =>
-              <li><a href="@controllers.admin.routes.CaseController.view(target(link).key.get)">@target(link).key.get.string</a></li>
+              <li><a href="@controllers.admin.routes.CaseController.view(target(link).key.get)">@target(link).key.get.string</a> @target(link).subject</li>
             }
           </ul>
         </li>
@@ -32,6 +32,8 @@
 
 @main(s"Case ${c.clientCase.key.get.string}") {
   @* TODO *@
+
+  <p><a class="btn btn-default" href="@controllers.admin.routes.CaseController.editForm(c.clientCase.key.get)">Edit case</a></p>
 
   <h2>Case links</h2>
 

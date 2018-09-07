@@ -142,6 +142,7 @@ object CaseDao {
   case class Case(
     id: Option[UUID],
     key: Option[IssueKey],
+    subject: String,
     created: OffsetDateTime,
     incidentDate: OffsetDateTime,
     team: Team,
@@ -160,6 +161,7 @@ object CaseDao {
       CaseVersion(
         id.get,
         key.get,
+        subject,
         created,
         incidentDate,
         team,
@@ -180,6 +182,8 @@ object CaseDao {
   object Case {
     def tupled = (apply _).tupled
 
+    val SubjectMaxLength = 200
+
     /**
       * This might not be a way we should do things, but if we did want a service to return
       * everything we need to display
@@ -199,6 +203,7 @@ object CaseDao {
   case class CaseVersion(
     id: UUID,
     key: IssueKey,
+    subject: String,
     created: OffsetDateTime,
     incidentDate: OffsetDateTime,
     team: Team,
@@ -218,6 +223,7 @@ object CaseDao {
 
   trait CommonProperties { self: Table[_] =>
     def key = column[IssueKey]("case_key")
+    def subject = column[String]("subject")
     def created = column[OffsetDateTime]("created_utc")
     def incidentDate = column[OffsetDateTime]("incident_date_utc")
     def team = column[Team]("team_id")
@@ -241,7 +247,7 @@ object CaseDao {
     def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 
     override def * : ProvenShape[Case] =
-      (id.?, key.?, created, incidentDate, team, version, state, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause).mapTo[Case]
+      (id.?, key.?, subject, created, incidentDate, team, version, state, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause).mapTo[Case]
     def idx = index("idx_client_case_key", key, unique = true)
   }
 
@@ -253,7 +259,7 @@ object CaseDao {
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
     override def * : ProvenShape[CaseVersion] =
-      (id, key, created, incidentDate, team, version, state, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, operation, timestamp).mapTo[CaseVersion]
+      (id, key, subject, created, incidentDate, team, version, state, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, operation, timestamp).mapTo[CaseVersion]
   }
 
   case class StoredCaseTag(

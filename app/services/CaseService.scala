@@ -26,6 +26,7 @@ trait CaseService {
   def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
   def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
+  def update(c: Case, clients: Set[UniversityID], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def updateState(caseID: UUID, targetState: IssueState, version: OffsetDateTime, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]]
   def setCaseTags(caseId: UUID, tags: Set[CaseTag])(implicit ac: AuditLogContext): Future[ServiceResult[Set[CaseTag]]]
@@ -40,6 +41,7 @@ trait CaseService {
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
   def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
   def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]]
+  def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[UniversityID]]]
 }
 
 class CaseServiceImpl @Inject() (
@@ -90,6 +92,25 @@ class CaseServiceImpl @Inject() (
 
   override def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
     findFullyJoined(dao.find(caseKey))
+
+  override def update(c: Case, clients: Set[UniversityID], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
+    auditService.audit('CaseUpdate, c.id.get.toString, 'Case, Json.obj()) {
+      val existing = dao.findClientsQuery(Set(c.id.get)).result
+
+      val needsRemoving = existing.map(_.filterNot(e => clients.contains(e.client)))
+      val removals = needsRemoving.flatMap(r => DBIO.sequence(r.map(dao.deleteClient)))
+
+      val needsAdding = existing.map(e => clients.toSeq.filterNot(e.map(_.client).contains))
+      val additions = needsAdding.flatMap(a => DBIO.sequence(a.map(universityId =>
+        dao.insertClient(CaseClient(c.id.get, universityId))
+      )))
+
+      daoRunner.run(for {
+        updated <- dao.update(c, version)
+        _ <- DBIO.seq(removals, additions)
+      } yield updated).map(Right.apply)
+    }
+  }
 
   override def updateState(caseID: UUID, targetState: IssueState, version: OffsetDateTime, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
     val noteType = targetState match {
@@ -207,5 +228,9 @@ class CaseServiceImpl @Inject() (
     daoRunner.run(dao.findClientsQuery(ids).result)
       .map(_.groupBy(_.caseId).mapValues(_.map(_.client).toSet))
       .map(Right.apply)
+  }
+
+  override def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[UniversityID]]] = {
+    getClients(Set(id)).map(_.right.map(_.getOrElse(id, Set.empty)))
   }
 }
