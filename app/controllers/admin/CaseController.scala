@@ -199,13 +199,20 @@ class CaseController @Inject()(
         )
       ),
       data => {
-        val c = clientCase.copy(
+        val c = Case(
+          id = clientCase.id,
+          key = clientCase.key,
           subject = data.subject,
+          created = clientCase.created,
           incidentDate = data.incidentDate,
+          team = clientCase.team,
+          version = JavaTime.offsetDateTime,
+          state = clientCase.state,
           onCampus = data.onCampus,
           notifiedPolice = data.notifiedPolice,
           notifiedAmbulance = data.notifiedAmbulance,
           notifiedFire = data.notifiedFire,
+          originalEnquiry = data.originalEnquiry,
           caseType = data.caseType,
           cause = data.cause
         )
