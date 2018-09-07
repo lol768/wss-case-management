@@ -49,8 +49,8 @@ GET         /team/client/:universityID/registration-history     @controllers.adm
 
 GET         /team/enquiry/:id/reassign              @controllers.admin.TeamEnquiryController.reassignForm(id: java.util.UUID)
 POST        /team/enquiry/:id/reassign              @controllers.admin.TeamEnquiryController.reassign(id: java.util.UUID)
-GET         /team/enquiry/:id/owners                @controllers.admin.EnquiryOwnersController.form(id: java.util.UUID)
-POST        /team/enquiry/:id/owners                @controllers.admin.EnquiryOwnersController.submit(id: java.util.UUID)
+GET         /team/enquiry/:id/owners                @controllers.admin.OwnersController.enquiryForm(id: java.util.UUID)
+POST        /team/enquiry/:id/owners                @controllers.admin.OwnersController.enquirySubmit(id: java.util.UUID)
 
 GET         /team/case/create/:teamId               @controllers.admin.CaseController.createForm(teamId: String)
 POST        /team/case/create/:teamId               @controllers.admin.CaseController.create(teamId: String)
@@ -60,6 +60,8 @@ POST        /team/case/:caseKey/link                @controllers.admin.CaseContr
 POST        /team/case/:caseKey/note                @controllers.admin.CaseController.addNote(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/close               @controllers.admin.CaseController.close(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/reopen              @controllers.admin.CaseController.reopen(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/owners              @controllers.admin.OwnersController.caseForm(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/owners              @controllers.admin.OwnersController.caseSubmit(caseKey: domain.IssueKey)
 
 ## Admins/Sysadmins ##
 

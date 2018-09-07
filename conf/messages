@@ -28,3 +28,4 @@ flash.case.linked=The case link has been created
 flash.case.noteAdded=The case note has been saved
 flash.case.closed=The case has been closed
 flash.case.reopened=The case has been reopened
+flash.case.owners.updated=Case owners updated

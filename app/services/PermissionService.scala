@@ -91,12 +91,15 @@ class PermissionServiceImpl @Inject() (
   override def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(
       Future.successful(isAdmin(user)),
-      isCaseTeam(user, id)
-      // TODO Case owner
+      isCaseTeam(user, id),
+      isCaseOwner(user, id)
     )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
 
   private def isCaseTeam(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     caseService.find(id).map(_.flatMap(c => inTeam(user, c.team)))
+
+  private def isCaseOwner(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    caseService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).contains(user)))
 
   override def webgroupFor(team: Team): GroupName =
     GroupName(s"$webgroupPrefix${team.id}")

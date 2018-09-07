@@ -2,6 +2,7 @@ package services
 
 import com.google.inject.ImplementedBy
 import domain._
+import domain.dao.CaseDao.Case
 import helpers.ServiceResults
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.Inject
@@ -23,6 +24,7 @@ trait NotificationService {
   def newEnquiry(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]]
   def enquiryMessage(enquiry: Enquiry, sender: MessageSender)(implicit t: TimingContext): Future[ServiceResult[Activity]]
   def enquiryReassign(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]]
+  def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit t: TimingContext): Future[ServiceResult[Activity]]
 }
 
 class NotificationServiceImpl @Inject()(
@@ -194,6 +196,35 @@ class NotificationServiceImpl @Inject()(
       }
     }
 
+  override def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
+    if(newOwners.isEmpty) {
+      Future.successful(Right(new Activity()))
+    } else {
+      withUsers(newOwners) { users =>
+        val url = s"https://$domain${controllers.admin.routes.CaseController.view(clientCase.key.get).url}"
+
+        emailService.queue(
+          Email(
+            subject = "Case Management: New case owner",
+            from = "no-reply@warwick.ac.uk",
+            bodyText = Some(views.txt.emails.newcaseowner(url).toString.trim)
+          ),
+          users.toSeq
+        ).flatMap {
+          case Left(errors) => Future.successful(Left(errors))
+          case _ =>
+            val activity = new Activity(
+              newOwners.map(_.string).asJava,
+              "New case owner",
+              url,
+              null,
+              "case-owner-assigned"
+            )
+            sendAndHandleResponse(activity)
+        }
+      }
+    }
+
   private def sendAndHandleResponse(activity: Activity)(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     FutureConverters.toScala(myWarwickService.sendAsNotification(activity)).map { resultList =>
       val results = resultList.asScala
@@ -231,6 +262,20 @@ class NotificationServiceImpl @Inject()(
       userMap => userMap.get(universityID).map(f).getOrElse(
         Future.successful(Left(List(ServiceError(s"Cannot find user with university ID ${universityID.string}"))))
       )
+    )
+  }
+
+  private def withUsers(usercodes: Set[Usercode])(f: Set[User] => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
+    userLookupService.getUsers(usercodes.toSeq).fold(
+      e => Future.successful(ServiceResults.exceptionToServiceResult(e)),
+      userMap => {
+        val (valid, invalid) = usercodes.partition(userMap.get(_).exists(_.isFound))
+        if (invalid.nonEmpty) {
+          Future.successful(Left(List(ServiceError(s"Cannot find users with usercodes: ${invalid.map(_.string).mkString(", ")}"))))
+        } else {
+          f(valid.map(userMap))
+        }
+      }
     )
   }
 
