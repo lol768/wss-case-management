@@ -155,6 +155,23 @@ class CaseServiceTest extends AbstractDaoTest {
       service.getNotes(c.id.get).serviceValue mustBe Seq(n1Updated)
     }
 
+    "update" in withData(new CaseFixture()) { c1 =>
+      service.getClients(c1.id.get).serviceValue mustBe 'empty
+
+      // Just add some clients, it's all the same except with a new version
+      val c2 = service.update(c1, Set(UniversityID("0672089"), UniversityID("0672088")), c1.version).serviceValue
+      c2 mustBe c1.copy(version = c2.version)
+
+      service.getClients(c1.id.get).serviceValue mustBe Set(UniversityID("0672089"), UniversityID("0672088"))
+
+      // Replace a client and update the subject
+      val c3 = service.update(c2.copy(subject = "Here's an updated subject"), Set(UniversityID("0672089"), UniversityID("1234567")), c2.version).serviceValue
+      c3.subject mustBe "Here's an updated subject"
+      c3 mustBe c2.copy(version = c3.version, subject = c3.subject)
+
+      service.getClients(c1.id.get).serviceValue mustBe Set(UniversityID("0672089"), UniversityID("1234567"))
+    }
+
     "update state" in withData(new CaseFixture()) { c1 =>
       c1.state mustBe IssueState.Open
 

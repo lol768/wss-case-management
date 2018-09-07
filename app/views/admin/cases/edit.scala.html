@@ -1,0 +1,17 @@
+@import controllers.admin.CaseController.CaseFormData
+@import domain.dao.CaseDao.Case
+
+@(
+  clientCase: Case,
+  form: Form[CaseFormData]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"Edit case ${clientCase.key.get.string}") {
+  @b3.vertical.formCSRF(controllers.admin.routes.CaseController.edit(clientCase.key.get), 'class -> "dirty-check") { implicit ifc =>
+    @b3.validatedHidden(form, "version")
+
+    @caseFields(clientCase.team, form)
+
+    @tags.submitOrCancel("Update", controllers.admin.routes.CaseController.view(clientCase.key.get))
+  }
+}
