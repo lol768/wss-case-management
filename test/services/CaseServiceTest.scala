@@ -40,11 +40,11 @@ class CaseServiceTest extends AbstractDaoTest {
 
   "CaseServiceTest" should {
     "create" in withData(new CaseFixture()) { _ =>
-      val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"))).serviceValue
+      val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty).serviceValue
       created.id must not be 'empty
       created.key.map(_.string) mustBe Some("CAS-1000")
 
-      val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088"))).serviceValue
+      val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness)).serviceValue
       created2.id must not be 'empty
       created2.key.map(_.string) mustBe Some("CAS-1001")
     }
@@ -57,10 +57,11 @@ class CaseServiceTest extends AbstractDaoTest {
 
     "findFull" in withData(new CaseFixture()) { c1 =>
       val clients = Set(UniversityID("0672089"), UniversityID("0672088"))
-      val clientCase = service.create(Fixtures.cases.newCase().copy(id = None, key = None), clients).serviceValue
       val tags: Set[CaseTag] = Set(CaseTag.Antisocial, CaseTag.Bullying)
 
-      val c2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088"))).serviceValue
+      val clientCase = service.create(Fixtures.cases.newCase().copy(id = None, key = None), clients, tags).serviceValue
+
+      val c2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set.empty).serviceValue
 
       service.setCaseTags(clientCase.id.get, tags).serviceValue
       service.addLink(CaseLinkType.Related, c1.id.get, clientCase.id.get, CaseNoteSave("c1 is related to clientCase", Usercode("cuscav"))).serviceValue
@@ -100,8 +101,8 @@ class CaseServiceTest extends AbstractDaoTest {
     }
 
     "get and set links" in withData(new CaseFixture()) { c1 =>
-      val c2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"))).serviceValue
-      val c3 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088"))).serviceValue
+      val c2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty).serviceValue
+      val c3 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set.empty).serviceValue
 
       service.getLinks(c1.id.get).serviceValue mustBe ((Nil, Nil))
 
@@ -157,19 +158,22 @@ class CaseServiceTest extends AbstractDaoTest {
 
     "update" in withData(new CaseFixture()) { c1 =>
       service.getClients(c1.id.get).serviceValue mustBe 'empty
+      service.getCaseTags(c1.id.get).serviceValue mustBe 'empty
 
-      // Just add some clients, it's all the same except with a new version
-      val c2 = service.update(c1, Set(UniversityID("0672089"), UniversityID("0672088")), c1.version).serviceValue
+      // Just add some clients and tags, it's all the same except with a new version
+      val c2 = service.update(c1, Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Accommodation, CaseTag.DomesticViolence), c1.version).serviceValue
       c2 mustBe c1.copy(version = c2.version)
 
       service.getClients(c1.id.get).serviceValue mustBe Set(UniversityID("0672089"), UniversityID("0672088"))
+      service.getCaseTags(c1.id.get).serviceValue mustBe Set(CaseTag.Accommodation, CaseTag.DomesticViolence)
 
-      // Replace a client and update the subject
-      val c3 = service.update(c2.copy(subject = "Here's an updated subject"), Set(UniversityID("0672089"), UniversityID("1234567")), c2.version).serviceValue
+      // Replace a client and a tag and update the subject
+      val c3 = service.update(c2.copy(subject = "Here's an updated subject"), Set(UniversityID("0672089"), UniversityID("1234567")), Set(CaseTag.Accommodation, CaseTag.HomeSickness), c2.version).serviceValue
       c3.subject mustBe "Here's an updated subject"
       c3 mustBe c2.copy(version = c3.version, subject = c3.subject)
 
       service.getClients(c1.id.get).serviceValue mustBe Set(UniversityID("0672089"), UniversityID("1234567"))
+      service.getCaseTags(c1.id.get).serviceValue mustBe Set(CaseTag.Accommodation, CaseTag.HomeSickness)
     }
 
     "update state" in withData(new CaseFixture()) { c1 =>

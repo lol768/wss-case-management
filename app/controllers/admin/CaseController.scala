@@ -9,7 +9,7 @@ import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner,
 import domain._
 import domain.dao.CaseDao.Case
 import helpers.ServiceResults.ServiceError
-import helpers.{FormHelpers, JavaTime}
+import helpers.{FormHelpers, JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -35,6 +35,7 @@ object CaseController {
     notifiedFire: Boolean,
     cause: CaseCause,
     caseType: Option[CaseType],
+    tags: Set[CaseTag],
     originalEnquiry: Option[UUID],
     version: Option[OffsetDateTime]
   )
@@ -58,6 +59,7 @@ object CaseController {
       "notifiedFire" -> boolean,
       "cause" -> CaseCause.formField,
       "caseType" -> optional(CaseType.formField).verifying("error.caseType.invalid", t => (CaseType.valuesFor(team).isEmpty && t.isEmpty) || t.exists(CaseType.valuesFor(team).contains)),
+      "tags" -> set(CaseTag.formField),
       "originalEnquiry" -> optional(uuid.verifying("error.required", id => isValidEnquiry(id))),
       "version" -> optional(JavaTime.offsetDateTimeFormField).verifying("error.optimisticLocking", _ == existingVersion)
     )(CaseFormData.apply)(CaseFormData.unapply))
@@ -152,7 +154,7 @@ class CaseController @Inject()(
 
         val clients = data.clients.filter(_.string.nonEmpty)
 
-        cases.create(c, clients).successMap { created =>
+        cases.create(c, clients, data.tags).successMap { created =>
           Redirect(controllers.admin.routes.CaseController.view(created.key.get))
             .flashing("success" -> Messages("flash.case.created", created.key.get.string))
         }
@@ -163,7 +165,10 @@ class CaseController @Inject()(
   def editForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     val clientCase = caseRequest.`case`
 
-    cases.getClients(clientCase.id.get).successMap { clients =>
+    ServiceResults.zip(
+      cases.getClients(clientCase.id.get),
+      cases.getCaseTags(clientCase.id.get)
+    ).successMap { case (clients, tags) =>
       Ok(
         views.html.admin.cases.edit(
           clientCase,
@@ -178,6 +183,7 @@ class CaseController @Inject()(
               clientCase.notifiedFire,
               clientCase.cause,
               clientCase.caseType,
+              tags,
               clientCase.originalEnquiry,
               Some(clientCase.version)
             ))
@@ -219,7 +225,7 @@ class CaseController @Inject()(
 
         val clients = data.clients.filter(_.string.nonEmpty)
 
-        cases.update(c, clients, clientCase.version).successMap { updated =>
+        cases.update(c, clients, data.tags, clientCase.version).successMap { updated =>
           Redirect(controllers.admin.routes.CaseController.view(updated.key.get))
             .flashing("success" -> Messages("flash.case.updated"))
         }

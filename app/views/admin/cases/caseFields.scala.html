@@ -4,6 +4,7 @@
 @import domain.CaseCause
 @import views.html.b3.B3FieldConstructor
 
+@import domain.CaseTag
 @(
   team: Team,
   form: Form[CaseFormData]
@@ -22,7 +23,7 @@
 
 @if(CaseType.valuesFor(team).nonEmpty) {
   @b3.select(form("caseType"),
-    options = CaseType.valuesFor(team).map { t => t.entryName -> t.entryName },
+    options = CaseType.valuesFor(team).map { t => t.entryName -> t.description },
     '_label -> "Case type",
     '_default -> "",
     'required -> true
@@ -49,4 +50,12 @@
 
 @b3.datetimeLocal(form("incidentDate"),
   '_label -> "Date of incident"
+)
+
+@b3.checkboxGroup(
+  label = "Case tags",
+  items = CaseTag.values,
+  form = form,
+  field = "tags",
+  idPrefix = "tag"
 )
