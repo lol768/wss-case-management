@@ -8,6 +8,7 @@ import controllers.admin.CaseController._
 import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CanViewTeamActionRefiner, CaseSpecificRequest}
 import domain._
 import domain.dao.CaseDao.Case
+import helpers.ServiceResults.ServiceError
 import helpers.{FormHelpers, JavaTime}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -73,10 +74,14 @@ object CaseController {
     version: OffsetDateTime
   )
 
-  def caseNoteForm(clientCase: Case): Form[CaseNoteFormData] = Form(mapping(
+  def caseNoteForm(version: OffsetDateTime): Form[CaseNoteFormData] = Form(mapping(
     "text" -> nonEmptyText,
-    "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == clientCase.version)
+    "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
   )(CaseNoteFormData.apply)(CaseNoteFormData.unapply))
+
+  def deleteNoteForm(version: OffsetDateTime): Form[OffsetDateTime] = Form(single(
+    "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
+  ))
 }
 
 @Singleton
@@ -103,7 +108,7 @@ class CaseController @Inject()(
     }
 
   def view(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
-    renderCase(caseKey, caseNoteForm(caseRequest.`case`).fill(CaseNoteFormData("", caseRequest.`case`.version)))
+    renderCase(caseKey, caseNoteForm(caseRequest.`case`.version).fill(CaseNoteFormData("", caseRequest.`case`.version)))
   }
 
   def createForm(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId) { implicit teamRequest =>
@@ -164,7 +169,7 @@ class CaseController @Inject()(
   }
 
   def addNote(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    caseNoteForm(caseRequest.`case`).bindFromRequest().fold(
+    caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
       formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
       data =>
         // We don't do anything with data.version here, it's validated but we don't lock the case when adding a general note
@@ -176,7 +181,7 @@ class CaseController @Inject()(
   }
 
   def close(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    caseNoteForm(caseRequest.`case`).bindFromRequest().fold(
+    caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
       formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
       data => {
         val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
@@ -190,7 +195,7 @@ class CaseController @Inject()(
   }
 
   def reopen(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    caseNoteForm(caseRequest.`case`).bindFromRequest().fold(
+    caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
       formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
       data => {
         val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
@@ -202,5 +207,62 @@ class CaseController @Inject()(
       }
     )
   }
+
+  def editNoteForm(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
+    withCaseNote(id) { note =>
+      Future.successful(
+        Ok(
+          views.html.admin.cases.editNote(
+            caseKey,
+            note,
+            caseNoteForm(note.lastUpdated).fill(CaseNoteFormData(note.text, note.lastUpdated))
+          )
+        )
+      )
+    }
+  }
+
+  def editNote(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
+    withCaseNote(id) { note =>
+      caseNoteForm(note.lastUpdated).bindFromRequest().fold(
+        formWithErrors => Future.successful(
+          Ok(
+            views.html.admin.cases.editNote(
+              caseKey,
+              note,
+              formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", note.lastUpdated))
+            )
+          )
+        ),
+        data =>
+          cases.updateNote(caseRequest.`case`.id.get, note.id, CaseNoteSave(data.text, caseRequest.context.user.get.usercode), data.version).successMap { _ =>
+            Redirect(controllers.admin.routes.CaseController.view(caseKey))
+              .flashing("success" -> Messages("flash.case.noteUpdated"))
+          }
+      )
+    }
+  }
+
+  def deleteNote(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
+    withCaseNote(id) { note =>
+      deleteNoteForm(note.lastUpdated).bindFromRequest().fold(
+        formWithErrors => Future.successful(
+          // Nowhere to show a validation error so just fall back to an error page
+          showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
+        ),
+        version =>
+          cases.deleteNote(caseRequest.`case`.id.get, note.id, version).successMap { _ =>
+            Redirect(controllers.admin.routes.CaseController.view(caseKey))
+              .flashing("success" -> Messages("flash.case.noteDeleted"))
+          }
+      )
+    }
+  }
+
+  private def withCaseNote(id: UUID)(f: CaseNote => Future[Result])(implicit caseRequest: CaseSpecificRequest[AnyContent]): Future[Result] =
+    cases.getNotes(caseRequest.`case`.id.get).successFlatMap { notes =>
+      notes.find(_.id == id).map(f)
+        .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
+    }
 
 }

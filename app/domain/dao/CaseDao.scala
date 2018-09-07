@@ -33,10 +33,11 @@ trait CaseDao {
   def deleteClient(client: CaseClient): DBIO[Done]
   def findClientsQuery(caseIds: Set[UUID]): Query[CaseClients, CaseClient, Seq]
   def insertLink(link: StoredCaseLink): DBIO[StoredCaseLink]
-  def deleteLink(link: StoredCaseLink): DBIO[Done]
+  def deleteLink(link: StoredCaseLink, version: OffsetDateTime): DBIO[Done]
   def findLinksQuery(caseID: UUID): Query[CaseLinks, StoredCaseLink, Seq]
   def insertNote(note: StoredCaseNote): DBIO[StoredCaseNote]
-  def deleteNote(note: StoredCaseNote): DBIO[Done]
+  def updateNote(note: StoredCaseNote, version: OffsetDateTime): DBIO[StoredCaseNote]
+  def deleteNote(note: StoredCaseNote, version: OffsetDateTime): DBIO[Done]
   def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq]
   def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq]
 }
@@ -84,8 +85,8 @@ class CaseDaoImpl @Inject()(
   override def insertLink(link: StoredCaseLink): DBIO[StoredCaseLink] =
     caseLinks.insert(link)
 
-  override def deleteLink(link: StoredCaseLink): DBIO[Done] =
-    caseLinks.delete(link)
+  override def deleteLink(link: StoredCaseLink, version: OffsetDateTime): DBIO[Done] =
+    caseLinks.delete(link.copy(version = version))
 
   override def findLinksQuery(caseID: UUID): Query[CaseLinks, StoredCaseLink, Seq] =
     caseLinks.table.filter { l => l.outgoingCaseID === caseID || l.incomingCaseID === caseID }
@@ -93,8 +94,11 @@ class CaseDaoImpl @Inject()(
   override def insertNote(note: StoredCaseNote): DBIO[StoredCaseNote] =
     caseNotes.insert(note)
 
-  override def deleteNote(note: StoredCaseNote): DBIO[Done] =
-    caseNotes.delete(note)
+  override def updateNote(note: StoredCaseNote, version: OffsetDateTime): DBIO[StoredCaseNote] =
+    caseNotes.update(note.copy(version = version))
+
+  override def deleteNote(note: StoredCaseNote, version: OffsetDateTime): DBIO[Done] =
+    caseNotes.delete(note.copy(version = version))
 
   override def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq] =
     caseNotes.table.filter(_.caseId === caseID)
