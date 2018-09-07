@@ -1,0 +1,18 @@
+@import controllers.admin.CaseController.CaseNoteFormData
+@import domain.CaseNote
+@import domain.IssueKey
+
+@(
+  caseKey: IssueKey,
+  note: CaseNote,
+  form: Form[CaseNoteFormData]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main("Edit case note") {
+  @b3.vertical.formCSRF(controllers.admin.routes.CaseController.editNote(caseKey, note.id)) { implicit ifc =>
+    @b3.validatedHidden(form, "version")
+    @b3.textarea(form("text"), 'rows -> 5)
+
+    @tags.submitOrCancel("Update", controllers.admin.routes.CaseController.view(caseKey))
+  }
+}

@@ -35,9 +35,9 @@
       @enquiries.map { case (enquiry, messages) =>
         <div class="panel panel-default enquiry state-@enquiry.state.entryName">
 
-          <div class="panel-heading" role="tab" id="heading-@enquiry.id.get.toString">
+          <div class="panel-heading" role="tab" id="heading-@enquiry.key.get.string">
             <h4 class="panel-title">
-                <a class="@if(enquiries.head._1 != enquiry){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@enquiry.id.get.toString" aria-expanded="true" aria-controls="collapse-@enquiry.id.get.toString">
+                <a class="@if(enquiries.head._1 != enquiry){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@enquiry.key.get.string" aria-expanded="true" aria-controls="collapse-@enquiry.key.get.string">
                 <div class="pull-right">
                   @if(enquiry.version.isAfter(messages.last.created)) {
                     @JavaTime.Relative(enquiry.version, printToday = true)
@@ -57,23 +57,25 @@
             </h4>
           </div>
 
-          <div id="collapse-@enquiry.id.get.toString" class="panel-collapse collapse @if(enquiries.head._1 == enquiry){in}" role="tabpanel" aria-labelledby="heading-@enquiry.id.get.toString">
+          <div id="collapse-@enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head._1 == enquiry){in}" role="tabpanel" aria-labelledby="heading-@enquiry.key.get.string">
             <div class="panel-body">
               @messages.map { message =>
                 @views.html.enquiry.enquiryMessage(enquiry, message, clientName = "You", enquiry.team.name)
               }
             </div>
               <div class="panel-footer">
-                @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.id.get)) { implicit ifc =>
+                @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get)) { implicit ifc =>
                   <div class="form-group">
-                    <label for="textarea-@enquiry.id.get.toString">
+                    <label for="textarea-@enquiry.key.get.string">
                       Add a message
                     </label>
-                    <textarea id="textarea-@enquiry.id.get.toString" class="form-control" rows="1" name="text"></textarea>
+                    <div class="flex">
+                      <textarea id="textarea-@enquiry.key.get.string" class="form-control" rows="1" name="text"></textarea>
 
-                    <button type="submit" class="btn btn-link">
-                      <i class="far fa-share-square fa-2x"></i>
-                    </button>
+                      <button type="submit" class="btn btn-link">
+                        <i class="far fa-share-square fa-2x"></i>
+                      </button>
+                    </div>
                   </div>
                   <div class="alert alert-danger hidden"></div>
               </div>

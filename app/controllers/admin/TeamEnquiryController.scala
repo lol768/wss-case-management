@@ -1,7 +1,6 @@
 package controllers.admin
 
 import java.time.OffsetDateTime
-import java.util.UUID
 
 import controllers.BaseController
 import controllers.admin.TeamEnquiryController._
@@ -39,11 +38,11 @@ class TeamEnquiryController @Inject()(
 
   import canEditEnquiryActionRefiner._
 
-  def reassignForm(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id) { implicit request =>
+  def reassignForm(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey) { implicit request =>
     Ok(views.html.admin.enquiry.reassign(request.enquiry, form(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version))))
   }
 
-  def reassign(id: UUID): Action[AnyContent] = CanEditEnquiryAction(id).async { implicit request =>
+  def reassign(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
     form(request.enquiry).bindFromRequest().fold(
       formWithErrors => Future.successful(
         // TODO submitted team is lost here

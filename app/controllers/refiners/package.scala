@@ -1,7 +1,5 @@
 package controllers
 
-import java.util.UUID
-
 import domain.{IssueKey, Teams}
 import play.api.mvc.{ActionRefiner, RequestHeader, Result, Results}
 import services.{CaseService, EnquiryService}
@@ -12,12 +10,12 @@ import scala.util.Try
 
 package object refiners {
 
-  def WithEnquiry(enquiryId: UUID)(implicit enquiryService: EnquiryService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, EnquirySpecificRequest] =
+  def WithEnquiry(enquiryKey: IssueKey)(implicit enquiryService: EnquiryService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, EnquirySpecificRequest] =
     new ActionRefiner[AuthenticatedRequest, EnquirySpecificRequest] {
       override protected def refine[A](request: AuthenticatedRequest[A]): Future[Either[Result, EnquirySpecificRequest[A]]] = {
         implicit val requestContext: RequestContext = requestContextBuilder(request)
 
-        enquiryService.get(enquiryId).map {
+        enquiryService.get(enquiryKey).map {
           case Right((enquiry, messages)) =>
             Right(new EnquirySpecificRequest[A](enquiry, messages, request))
 

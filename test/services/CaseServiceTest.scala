@@ -1,5 +1,6 @@
 package services
 
+import akka.Done
 import domain.dao.CaseDao.Case
 import domain.dao.{AbstractDaoTest, CaseDao}
 import domain._
@@ -141,6 +142,34 @@ class CaseServiceTest extends AbstractDaoTest {
       )).serviceValue
 
       service.getNotes(c.id.get).serviceValue mustBe Seq(n2, n1) // Newest first
+
+      val n1Updated = service.updateNote(c.id.get, n1.id, CaseNoteSave(
+        text = "Jim's not really bothered",
+        teamMember = Usercode("cusebr")
+      ), n1.lastUpdated).serviceValue
+
+      service.getNotes(c.id.get).serviceValue mustBe Seq(n2, n1Updated)
+
+      service.deleteNote(c.id.get, n2.id, n2.lastUpdated).serviceValue mustBe Done
+
+      service.getNotes(c.id.get).serviceValue mustBe Seq(n1Updated)
+    }
+
+    "update" in withData(new CaseFixture()) { c1 =>
+      service.getClients(c1.id.get).serviceValue mustBe 'empty
+
+      // Just add some clients, it's all the same except with a new version
+      val c2 = service.update(c1, Set(UniversityID("0672089"), UniversityID("0672088")), c1.version).serviceValue
+      c2 mustBe c1.copy(version = c2.version)
+
+      service.getClients(c1.id.get).serviceValue mustBe Set(UniversityID("0672089"), UniversityID("0672088"))
+
+      // Replace a client and update the subject
+      val c3 = service.update(c2.copy(subject = "Here's an updated subject"), Set(UniversityID("0672089"), UniversityID("1234567")), c2.version).serviceValue
+      c3.subject mustBe "Here's an updated subject"
+      c3 mustBe c2.copy(version = c3.version, subject = c3.subject)
+
+      service.getClients(c1.id.get).serviceValue mustBe Set(UniversityID("0672089"), UniversityID("1234567"))
     }
 
     "update state" in withData(new CaseFixture()) { c1 =>

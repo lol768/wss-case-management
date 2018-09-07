@@ -30,13 +30,13 @@ POST        /register                               @controllers.registration.Re
 GET         /enquiry                                @controllers.enquiries.EnquiryController.form()
 POST        /enquiry                                @controllers.enquiries.EnquiryController.submit()
 
-GET         /enquiry/:id                            @controllers.enquiries.EnquiryMessagesController.messages(id: java.util.UUID)
-POST        /enquiry/:id                            @controllers.enquiries.EnquiryMessagesController.addMessage(id: java.util.UUID)
+GET         /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.messages(enquiryKey: domain.IssueKey)
+POST        /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.addMessage(enquiryKey: domain.IssueKey)
 
-GET         /enquiry/:id/close                      @controllers.enquiries.EnquiryMessagesController.redirectToMessages(id: java.util.UUID)
-POST        /enquiry/:id/close                      @controllers.enquiries.EnquiryMessagesController.close(id: java.util.UUID)
-GET         /enquiry/:id/reopen                     @controllers.enquiries.EnquiryMessagesController.redirectToMessages(id: java.util.UUID)
-POST        /enquiry/:id/reopen                     @controllers.enquiries.EnquiryMessagesController.reopen(id: java.util.UUID)
+GET         /enquiry/:enquiryKey/close              @controllers.enquiries.EnquiryMessagesController.redirectToMessages(enquiryKey: domain.IssueKey)
+POST        /enquiry/:enquiryKey/close              @controllers.enquiries.EnquiryMessagesController.close(enquiryKey: domain.IssueKey)
+GET         /enquiry/:enquiryKey/reopen             @controllers.enquiries.EnquiryMessagesController.redirectToMessages(enquiryKey: domain.IssueKey)
+POST        /enquiry/:enquiryKey/reopen             @controllers.enquiries.EnquiryMessagesController.reopen(enquiryKey: domain.IssueKey)
 
 ## Teams ##
 
@@ -47,17 +47,23 @@ POST        /team/client/:universityID                          @controllers.adm
 POST        /team/client/:universityID/invite                   @controllers.admin.ClientController.invite(universityID: warwick.sso.UniversityID)
 GET         /team/client/:universityID/registration-history     @controllers.admin.ClientController.registrationHistory(universityID: warwick.sso.UniversityID)
 
-GET         /team/enquiry/:id/reassign              @controllers.admin.TeamEnquiryController.reassignForm(id: java.util.UUID)
-POST        /team/enquiry/:id/reassign              @controllers.admin.TeamEnquiryController.reassign(id: java.util.UUID)
-GET         /team/enquiry/:id/owners                @controllers.admin.OwnersController.enquiryForm(id: java.util.UUID)
-POST        /team/enquiry/:id/owners                @controllers.admin.OwnersController.enquirySubmit(id: java.util.UUID)
+GET         /team/enquiry/:enquiryKey/reassign              @controllers.admin.TeamEnquiryController.reassignForm(id: java.util.UUID)
+POST        /team/enquiry/:enquiryKey/reassign              @controllers.admin.TeamEnquiryController.reassign(id: java.util.UUID)
+GET         /team/enquiry/:enquiryKey/owners                @controllers.admin.OwnersController.enquiryForm(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey/owners                @controllers.admin.OwnersController.enquirySubmit(enquiryKey: domain.IssueKey)
 
 GET         /team/case/create/:teamId               @controllers.admin.CaseController.createForm(teamId: String)
 POST        /team/case/create/:teamId               @controllers.admin.CaseController.create(teamId: String)
 GET         /team/case/:caseKey                     @controllers.admin.CaseController.view(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/edit                @controllers.admin.CaseController.editForm(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey                     @controllers.admin.CaseController.edit(caseKey: domain.IssueKey)
 GET         /team/case/:caseKey/link                @controllers.admin.CaseController.linkForm(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/link                @controllers.admin.CaseController.link(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/note                @controllers.admin.CaseController.addNote(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/note/:id            @controllers.admin.CaseController.editNoteForm(caseKey: domain.IssueKey, id: java.util.UUID)
+POST        /team/case/:caseKey/note/:id            @controllers.admin.CaseController.editNote(caseKey: domain.IssueKey, id: java.util.UUID)
+POST        /team/case/:caseKey/note/:id/delete     @controllers.admin.CaseController.deleteNote(caseKey: domain.IssueKey, id: java.util.UUID)
+DELETE      /team/case/:caseKey/note/:id            @controllers.admin.CaseController.deleteNote(caseKey: domain.IssueKey, id: java.util.UUID)
 POST        /team/case/:caseKey/close               @controllers.admin.CaseController.close(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/reopen              @controllers.admin.CaseController.reopen(caseKey: domain.IssueKey)
 GET         /team/case/:caseKey/owners              @controllers.admin.OwnersController.caseForm(caseKey: domain.IssueKey)

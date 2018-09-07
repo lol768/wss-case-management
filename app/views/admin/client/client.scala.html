@@ -200,8 +200,8 @@
               @defining(enquiries.filter { case (e, _) => e.state != IssueState.Closed }) { open: Seq[(Enquiry, Seq[MessageData])] =>
                 @open.map { case (enquiry, messages) =>
                   <tr>
-                    <td>@*TODO CASE-94*@</td>
-                    <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get)" target="_blank">@enquiry.subject</a></td>
+                    <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)" target="_blank">@enquiry.key.get.string</a></td>
+                    <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)" target="_blank">@enquiry.subject</a></td>
                     <td>@enquiry.team.name</td>
                     <td>@messages.reverse.headOption.map(m => JavaTime.Relative(m.created.toLocalDate).capitalize)</td>
                   </tr>
@@ -225,8 +225,8 @@
             @defining(enquiries.filter { case (e, _) => e.state == IssueState.Closed }) { closed: Seq[(Enquiry, Seq[MessageData])] =>
               @closed.map { case (enquiry, messages) =>
               <tr>
-                <td>@*TODO CASE-94*@</td>
-                <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.id.get)" target="_blank">@enquiry.subject</a></td>
+                <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)" target="_blank">@enquiry.key.get.string</a></td>
+                <td><a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)" target="_blank">@enquiry.subject</a></td>
                 <td>@enquiry.team.name</td>
                 <td>@JavaTime.Relative(enquiry.version.toLocalDate).capitalize</td>
               </tr>

@@ -19,6 +19,7 @@ trait EnquiryDao {
   def insert(enquiry: Enquiry): DBIO[Enquiry]
   def update(enquiry: Enquiry, version: OffsetDateTime): DBIO[Enquiry]
   def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq]
+  def findByKeyQuery(key: IssueKey): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findOpenQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findOpenQuery(owner: Usercode): Query[Enquiry.Enquiries, Enquiry, Seq]
@@ -41,6 +42,9 @@ class EnquiryDaoImpl @Inject() (
 
   def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table.filter(_.id === id)
+
+  def findByKeyQuery(key: IssueKey): Query[Enquiry.Enquiries, Enquiry, Seq] =
+    Enquiry.enquiries.table.filter(_.key === key)
 
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table.filter(_.universityId === client)
