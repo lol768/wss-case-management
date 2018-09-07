@@ -1,9 +1,18 @@
 @import domain.Owner
 @import domain.Enquiry
-@(form: Form[Seq[String]], enquiry: Enquiry)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+@import warwick.sso.Usercode
+@(form: Form[Seq[Usercode]], enquiry: Enquiry)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("Edit owners") {
   @b3.vertical.formCSRF(controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key.get), 'class -> "dirty-check") { implicit ifc =>
+
+    @if(form.hasErrors) {
+      <div class="alert alert-danger">
+        There @tags.p(form.errors.size, "is")(plural = "are", showNumber = false) @tags.p(form.errors.size, "error")()
+        that prevented the owners from being changed: <br/>
+        @form.errors.map(_.format).mkString(", ")
+      </div>
+    }
 
     @b3.free('_label -> "Owners") {
       @tags.flexipicker(values = form.data.values.toSeq, name = "owners[]", placeholder = "Search for users", multiple = true)
