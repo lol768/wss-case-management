@@ -41,7 +41,7 @@
           "universityID" -> u.universityId.get.string,
           "name" -> JsString(u.name.full.getOrElse("[Unknown user]"))
         )).toSeq))"
-        data-more-link="@controllers.admin.routes.EnquiryOwnersController.form(enquiry.key.get)"
+        data-more-link="@controllers.admin.routes.OwnersController.enquiryForm(enquiry.key.get)"
         data-more-caption="Edit owners"
         type="button"
       >
@@ -69,6 +69,8 @@
           "universityID" -> u.universityId.get.string,
           "name" -> JsString(u.name.full.getOrElse("[Unknown user]"))
         )).toSeq))"
+        data-more-link="@controllers.admin.routes.OwnersController.caseSubmit(clientCase.key.get)"
+        data-more-caption="Edit owners"
         type="button"
       >
         <i class="fa fa-users"></i>
