@@ -25,6 +25,7 @@ trait CaseDao {
   def find(id: UUID): DBIO[Case]
   def find(key: IssueKey): DBIO[Case]
   def update(c: Case, version: OffsetDateTime): DBIO[Case]
+  def insertTags(tags: Set[StoredCaseTag]): DBIO[Seq[StoredCaseTag]]
   def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag]
   def deleteTag(tag: StoredCaseTag): DBIO[Done]
   def findTagsQuery(caseIds: Set[UUID]): Query[CaseTags, StoredCaseTag, Seq]
@@ -58,6 +59,9 @@ class CaseDaoImpl @Inject()(
 
   override def update(c: Case, version: OffsetDateTime): DBIO[Case] =
     cases.update(c.copy(version = version))
+
+  override def insertTags(tags: Set[StoredCaseTag]): DBIO[Seq[StoredCaseTag]] =
+    caseTags.insertAll(tags.toSeq)
 
   override def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag] =
     caseTags.insert(tag)

@@ -9,7 +9,9 @@ import warwick.sso.Usercode
 
 import scala.collection.immutable
 
-sealed abstract class CaseTag(description: String) extends EnumEntry
+sealed abstract class CaseTag(val description: String) extends EnumEntry with IdAndDescription {
+  override val id: String = entryName
+}
 object CaseTag extends PlayEnum[CaseTag] {
   case object Accommodation extends CaseTag("Accommodation")
   case object Alcohol extends CaseTag("Alcohol related")
