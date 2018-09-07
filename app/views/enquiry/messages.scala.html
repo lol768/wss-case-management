@@ -7,15 +7,17 @@
 @import helpers.JavaTime
 @import warwick.sso.Usercode
 @import warwick.sso.User
+@import warwick.sso.UniversityID
 @(
   enquiry: Enquiry,
   messages: Seq[MessageData],
   stateChangeForm: Form[StateChangeForm],
   messageSender: MessageSender,
-  userLookup: Map[Usercode, User]
+  userLookup: Map[Usercode, User],
+  universityIDLookup: Map[UniversityID, User]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@main(s"${enquiry.team.name} enquiry from ${enquiry.universityID.string}") {
+@main(s"${enquiry.team.name} enquiry from ${universityIDLookup.get(enquiry.universityID).flatMap(_.name.full).getOrElse("[Unknown user]")} (${enquiry.universityID.string})") {
   <h2>
     <div class="pull-right">
       @if(enquiry.version.isAfter(messages.last.created)) {
@@ -54,10 +56,12 @@
             <div class="has-error">
           }
           @b3.free('_label -> "Add a message") {
-            @b3.textarea(stateChangeForm("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
-            <button type="submit" class="btn btn-link">
-              <i class="far fa-share-square fa-2x"></i>
-            </button>
+            <div class="flex">
+              @b3.textarea(stateChangeForm("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
+              <button type="submit" class="btn btn-link">
+                <i class="far fa-share-square fa-2x"></i>
+              </button>
+            </div>
             @if(stateChangeForm("text").hasErrors) {
               <div class="help-block">
                 @stateChangeForm("text").errors.map { error =>

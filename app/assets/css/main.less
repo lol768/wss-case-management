@@ -22,6 +22,10 @@
   }
 }
 
+.flex {
+  display: flex;
+}
+
 @media (min-width: @grid-float-breakpoint) {
   @dl-horizontal-offset: 220px;
   .dl-horizontal.field-history dt {
@@ -148,6 +152,7 @@ section.indent {
     box-shadow: 5px 5px 10px 0 rgba(0,0,0,0.3);
     padding: @panel-heading-padding;
     margin-bottom: @panel-body-padding;
+    word-break: break-word;
     .date {
       color: #5e5e5f;
     }
@@ -176,7 +181,7 @@ section.indent {
     }
 
     textarea.form-control {
-      width: ~"calc(100% - 36px - @{grid-gutter-width} - @{grid-gutter-width} - 4px)";
+      width: 100%;
       border-radius: 10px;
     }
 

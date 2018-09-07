@@ -47,7 +47,14 @@ class EnquiryMessagesController @Inject()(
   import canViewEnquiryActionRefiner._
 
   private def renderMessages(enquiry: Enquiry, messages: Seq[MessageData], f: Form[StateChangeForm])(implicit request: EnquirySpecificRequest[_]) =
-    Ok(views.html.enquiry.messages(enquiry, messages, f, messageSender(request), userLookupService.getUsers(messages.flatMap(_.teamMember)).toOption.getOrElse(Map())))
+    Ok(views.html.enquiry.messages(
+      enquiry,
+      messages,
+      f,
+      messageSender(request),
+      userLookupService.getUsers(messages.flatMap(_.teamMember)).toOption.getOrElse(Map()),
+      userLookupService.getUsers(Seq(enquiry.universityID)).toOption.getOrElse(Map())
+    ))
 
   def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey) { implicit request =>
     renderMessages(request.enquiry, request.messages, stateChangeForm(request.enquiry, messageSender(request)).fill(StateChangeForm("", request.enquiry.version)))
