@@ -42,6 +42,8 @@ trait CaseDao {
   def updateNote(note: StoredCaseNote, version: OffsetDateTime): DBIO[StoredCaseNote]
   def deleteNote(note: StoredCaseNote, version: OffsetDateTime): DBIO[Done]
   def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq]
+  def insertDocument(document: StoredCaseDocument): DBIO[StoredCaseDocument]
+  def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq]
   def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq]
 }
 
@@ -115,6 +117,12 @@ class CaseDaoImpl @Inject()(
   override def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq] =
     caseNotes.table.filter(_.caseId === caseID)
 
+  override def insertDocument(document: StoredCaseDocument): DBIO[StoredCaseDocument] =
+    caseDocuments.insert(document)
+
+  override def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq] =
+    caseDocuments.table.filter(_.caseId === caseID)
+
   override def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq] = {
     owner.fold(cases.table.subquery)(u =>
       cases.table
@@ -150,6 +158,9 @@ object CaseDao {
 
   val caseNotes: VersionedTableQuery[StoredCaseNote, StoredCaseNoteVersion, CaseNotes, CaseNoteVersions] =
     VersionedTableQuery(TableQuery[CaseNotes], TableQuery[CaseNoteVersions])
+
+  val caseDocuments: VersionedTableQuery[StoredCaseDocument, StoredCaseDocumentVersion, CaseDocuments, CaseDocumentVersions] =
+    VersionedTableQuery(TableQuery[CaseDocuments], TableQuery[CaseDocumentVersions])
 
   case class Case(
     id: Option[UUID],
@@ -544,6 +555,88 @@ object CaseDao {
       (id, caseId, noteType, text, teamMember, created, version, operation, timestamp).mapTo[StoredCaseNoteVersion]
     def pk = primaryKey("pk_case_note_version", (id, timestamp))
     def idx = index("idx_case_note_version", (id, version))
+  }
+
+  case class StoredCaseDocument(
+    id: UUID,
+    caseId: UUID,
+    documentType: CaseDocumentType,
+    fileId: UUID,
+    teamMember: Usercode,
+    created: OffsetDateTime,
+    version: OffsetDateTime
+  ) extends Versioned[StoredCaseDocument] {
+    def asCaseDocument(file: UploadedFile) = CaseDocument(
+      id,
+      documentType,
+      file,
+      teamMember,
+      created,
+      version
+    )
+
+    override def atVersion(at: OffsetDateTime): StoredCaseDocument = copy(version = at)
+
+    override def storedVersion[B <: StoredVersion[StoredCaseDocument]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+      StoredCaseDocumentVersion(
+        id,
+        caseId,
+        documentType,
+        fileId,
+        teamMember,
+        created,
+        version,
+        operation,
+        timestamp
+      ).asInstanceOf[B]
+  }
+
+  case class StoredCaseDocumentVersion(
+    id: UUID,
+    caseId: UUID,
+    documentType: CaseDocumentType,
+    fileId: UUID,
+    teamMember: Usercode,
+    created: OffsetDateTime,
+    version: OffsetDateTime,
+    operation: DatabaseOperation,
+    timestamp: OffsetDateTime
+  ) extends StoredVersion[StoredCaseDocument]
+
+  trait CommonDocumentProperties { self: Table[_] =>
+    def caseId = column[UUID]("case_id")
+    def documentType = column[CaseDocumentType]("document_type")
+    def fileId = column[UUID]("file_id")
+    def teamMember = column[Usercode]("team_member")
+    def created = column[OffsetDateTime]("created_utc")
+    def version = column[OffsetDateTime]("version_utc")
+  }
+
+  class CaseDocuments(tag: Tag) extends Table[StoredCaseDocument](tag, "client_case_document")
+    with VersionedTable[StoredCaseDocument]
+    with CommonDocumentProperties {
+    override def matchesPrimaryKey(other: StoredCaseDocument): Rep[Boolean] = id === other.id
+    def id = column[UUID]("id", O.PrimaryKey)
+
+    override def * : ProvenShape[StoredCaseDocument] =
+      (id, caseId, documentType, fileId, teamMember, created, version).mapTo[StoredCaseDocument]
+    def caseFK = foreignKey("fk_case_document_case", caseId, cases.table)(_.id)
+    def fileFK = foreignKey("fk_case_document_file", fileId, UploadedFileDao.uploadedFiles.table)(_.id)
+    def caseIndex = index("idx_case_document_case", caseId)
+    def fileIndex = index("idx_case_document_file", fileId)
+  }
+
+  class CaseDocumentVersions(tag: Tag) extends Table[StoredCaseDocumentVersion](tag, "client_case_document_version")
+    with StoredVersionTable[StoredCaseDocument]
+    with CommonDocumentProperties {
+    def id = column[UUID]("id")
+    def operation = column[DatabaseOperation]("version_operation")
+    def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+
+    override def * : ProvenShape[StoredCaseDocumentVersion] =
+      (id, caseId, documentType, fileId, teamMember, created, version, operation, timestamp).mapTo[StoredCaseDocumentVersion]
+    def pk = primaryKey("pk_case_document_version", (id, timestamp))
+    def idx = index("idx_case_document_version", (id, version))
   }
 
   sealed trait CaseStateFilter extends EnumEntry

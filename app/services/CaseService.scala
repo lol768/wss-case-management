@@ -4,6 +4,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import akka.Done
+import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain._
@@ -11,7 +12,7 @@ import domain.dao.CaseDao.{Case, _}
 import domain.dao.{CaseDao, DaoRunner}
 import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import services.CaseService._
 import slick.jdbc.PostgresProfile.api._
@@ -45,11 +46,14 @@ trait CaseService {
   def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
   def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]]
   def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[UniversityID]]]
+  def addCaseDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]]
 }
 
+@Singleton
 class CaseServiceImpl @Inject() (
   auditService: AuditService,
   ownerService: OwnerService,
+  uploadedFileService: UploadedFileService,
   daoRunner: DaoRunner,
   dao: CaseDao
 )(implicit ec: ExecutionContext) extends CaseService {
@@ -265,6 +269,23 @@ class CaseServiceImpl @Inject() (
   override def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[UniversityID]]] = {
     getClients(Set(id)).map(_.right.map(_.getOrElse(id, Set.empty)))
   }
+
+  override def addCaseDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]] =
+    auditService.audit('CaseAddDocument, caseID.toString, 'Case, Json.obj()) {
+      val documentID = UUID.randomUUID()
+      daoRunner.run(for {
+        f <- uploadedFileService.storeDBIO(in, file)
+        doc <- dao.insertDocument(StoredCaseDocument(
+          documentID,
+          caseID,
+          document.documentType,
+          f.id,
+          document.teamMember,
+          JavaTime.offsetDateTime,
+          JavaTime.offsetDateTime
+        ))
+      } yield doc.asCaseDocument(f)).map(Right.apply)
+    }
 }
 
 object CaseService {
