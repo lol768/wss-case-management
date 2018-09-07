@@ -13,6 +13,7 @@ import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import play.api.libs.json.Json
+import services.CaseService._
 import slick.jdbc.PostgresProfile.api._
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
@@ -26,7 +27,7 @@ trait CaseService {
   def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
   def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
-  def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
+  def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, Seq[MessageData], Seq[CaseNote])]]]
   def update(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def updateState(caseID: UUID, targetState: IssueState, version: OffsetDateTime, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]]
@@ -96,8 +97,16 @@ class CaseServiceImpl @Inject() (
   override def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
     findFullyJoined(dao.find(caseKey))
 
-  override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
-    daoRunner.run(dao.findByClientQuery(universityID).sortBy(_.version.desc).result).map(Right(_))
+  override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, Seq[MessageData], Seq[CaseNote])]]] =
+    daoRunner.run(
+      dao.findByClientQuery(universityID)
+        .withMessagesAndNotes
+        .sortBy { case (c, m, n) => (c.version.reverse, m.map(_.created), n.map(_.created)) }
+        .map { case (c, m, n) => (c, m.map(_.messageData), n) }
+        .result
+    ).map { tuples => // Seq[(Case, Option[MessageData], Option[StoredCaseNote])]
+      Right(groupTuples(tuples))
+    }
 
   private def updateDifferencesDBIO[A, B](items: Set[B], query: Query[Table[A], A, Seq], map: A => B, comap: B => A, insert: A => DBIO[A], delete: A => DBIO[Done]): DBIO[Unit] = {
     val existing = query.result
@@ -255,5 +264,29 @@ class CaseServiceImpl @Inject() (
 
   override def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[UniversityID]]] = {
     getClients(Set(id)).map(_.right.map(_.getOrElse(id, Set.empty)))
+  }
+}
+
+object CaseService {
+  def groupTuples(tuples: Seq[(Case, Option[MessageData], Option[StoredCaseNote])]): Seq[(Case, Seq[MessageData], Seq[CaseNote])] = {
+    val casesAndMessages =
+      OneToMany.leftJoin(tuples.map { case (c, m, _) => (c, m) })(MessageData.dateOrdering)
+    val casesAndNotes =
+      OneToMany.leftJoin(tuples.map { case (c, _, n) => (c, n.map(_.asCaseNote)) })(CaseNote.dateOrdering).toMap
+
+    sortByRecent(casesAndMessages.map { case (c, m) => (c, m, casesAndNotes.getOrElse(c, Nil)) })
+  }
+
+  /**
+    * Sort by the most recently updated, either by newest message, newest case note or when the case was last
+    * updated (perhaps from its state changing)
+    */
+  def sortByRecent(data: Seq[(Case, Seq[MessageData], Seq[CaseNote])]): Seq[(Case, Seq[MessageData], Seq[CaseNote])] =
+    data.sortBy(lastModified)(JavaTime.dateTimeOrdering.reverse)
+
+  def lastModified(entry: (Case, Seq[MessageData], Seq[CaseNote])): OffsetDateTime = {
+    import JavaTime.dateTimeOrdering
+    val (c, messages, notes) = entry
+    (c.version #:: messages.toStream.map(_.created) #::: notes.toStream.map(_.created)).max
   }
 }

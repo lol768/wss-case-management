@@ -278,6 +278,19 @@ object CaseDao {
     def withClients = q
       .join(caseClients.table)
       .on(_.id === _.caseId)
+    def withNotes = q
+      .joinLeft(caseNotes.table)
+      .on(_.id === _.caseId)
+    def withMessages = q
+      .joinLeft(Message.messages.table)
+      .on { (c, m) =>
+        c.id === m.ownerId && m.ownerType === (MessageOwner.Case: MessageOwner)
+      }
+    def withMessagesAndNotes =
+      withMessages
+        .joinLeft(caseNotes.table)
+        .on { case ((c, _), n) => c.id === n.caseId }
+        .map { case ((c, m), n) => (c, m, n) }
   }
 
   case class StoredCaseTag(

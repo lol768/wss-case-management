@@ -5,6 +5,7 @@ import java.util.UUID
 
 import domain.dao.CaseDao.Case
 import enumeratum.{EnumEntry, PlayEnum}
+import helpers.JavaTime
 import warwick.sso.Usercode
 
 import scala.collection.immutable
@@ -78,6 +79,11 @@ case class CaseNote(
   created: OffsetDateTime = OffsetDateTime.now(),
   lastUpdated: OffsetDateTime = OffsetDateTime.now()
 )
+
+object CaseNote {
+  // oldest first
+  val dateOrdering: Ordering[CaseNote] = Ordering.by[CaseNote, OffsetDateTime](_.created)(JavaTime.dateTimeOrdering)
+}
 
 /**
   * Just the data of a case note required to save it. Other properties

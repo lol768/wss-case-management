@@ -84,8 +84,8 @@ class CaseServiceTest extends AbstractDaoTest {
       val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty).serviceValue
       val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness)).serviceValue
 
-      service.findForClient(UniversityID("0672089")).serviceValue mustBe Seq(created2, created)
-      service.findForClient(UniversityID("0672088")).serviceValue mustBe Seq(created2)
+      service.findForClient(UniversityID("0672089")).serviceValue.map { case (c, _, _) => c } mustBe Seq(created2, created)
+      service.findForClient(UniversityID("0672088")).serviceValue.map { case (c, _, _) => c } mustBe Seq(created2)
       service.findForClient(UniversityID("1234567")).serviceValue mustBe 'empty
     }
 
