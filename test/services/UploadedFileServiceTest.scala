@@ -3,6 +3,7 @@ package services
 import java.io.{IOException, InputStream}
 import java.nio.charset.StandardCharsets
 
+import akka.Done
 import com.google.common.io.ByteSource
 import domain.UploadedFileSave
 import domain.dao.{AbstractDaoTest, DaoRunner, UploadedFileDao}
@@ -81,6 +82,22 @@ class UploadedFileServiceTest extends AbstractDaoTest {
 
       exec(UploadedFileDao.uploadedFiles.table.length.result) mustBe 0
       exec(UploadedFileDao.uploadedFiles.versionsTable.length.result) mustBe 0
+    }
+
+    "delete but keep object in object store" in withData(new TestFixture) { case (service, objectStorageService) =>
+      val saved = service.store(
+        ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
+        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+      ).serviceValue
+
+      objectStorageService.keyExists(saved.id.toString) mustBe true
+
+      service.delete(saved.id).serviceValue mustBe Done
+
+      exec(UploadedFileDao.uploadedFiles.table.length.result) mustBe 0
+      exec(UploadedFileDao.uploadedFiles.versionsTable.length.result) mustBe 2
+
+      objectStorageService.keyExists(saved.id.toString) mustBe true
     }
   }
 

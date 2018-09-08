@@ -1,4 +1,4 @@
-@import controllers.admin.CaseController
+@import controllers.admin.{CaseController, CaseDocumentController}
 @import controllers.admin.CaseController.CaseNoteFormData
 @import domain.dao.CaseDao.Case
 @import domain.CaseLink
@@ -51,6 +51,7 @@
           <th>Document type</th>
           <th>File</th>
           <th>Created</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -61,6 +62,14 @@
               <a href="@controllers.admin.routes.CaseDocumentController.download(c.clientCase.key.get, doc.id)">@doc.file.fileName</a>
             </td>
             <td>@helpers.JavaTime.Relative(doc.created)</td>
+            <td>
+              @defining(CaseDocumentController.deleteForm(doc.lastUpdated).fill(doc.lastUpdated)) { form =>
+                @b3.inline.formCSRF(controllers.admin.routes.CaseDocumentController.delete(c.clientCase.key.get, doc.id), 'class -> "inline-form") { implicit ifc =>
+                  @b3.validatedHidden(form, "version")
+                  <button type="submit" class="btn btn-default btn-xs">Delete</button>
+                }
+              }
+            </td>
           </tr>
         }
       </tbody>

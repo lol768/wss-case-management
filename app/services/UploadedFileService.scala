@@ -2,11 +2,12 @@ package services
 
 import java.util.UUID
 
+import akka.Done
 import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
-import domain.{UploadedFile, UploadedFileSave}
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{DaoRunner, UploadedFileDao}
+import domain.{UploadedFile, UploadedFileSave}
 import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
@@ -20,6 +21,9 @@ import scala.concurrent.{ExecutionContext, Future}
 trait UploadedFileService {
   def storeDBIO(in: ByteSource, metadata: UploadedFileSave): DBIO[UploadedFile]
   def store(in: ByteSource, metadata: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]]
+
+  def deleteDBIO(id: UUID): DBIO[Done]
+  def delete(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 }
 
 @Singleton
@@ -61,5 +65,16 @@ class UploadedFileServiceImpl @Inject()(
       daoRunner.run(storeDBIO(id, in, metadata)).map(Right.apply)
     }
   }
+
+  override def deleteDBIO(id: UUID): DBIO[Done] =
+    for {
+      existing <- dao.find(id)
+      done <- dao.delete(existing)
+    } yield done
+
+  override def delete(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
+    auditService.audit('UploadedFileDelete, id.toString, 'UploadedFile, Json.obj()) {
+      daoRunner.run(deleteDBIO(id)).map(Right.apply)
+    }
 
 }
