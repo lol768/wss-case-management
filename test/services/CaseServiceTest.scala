@@ -2,7 +2,7 @@ package services
 
 import akka.Done
 import domain.dao.CaseDao.Case
-import domain.dao.{AbstractDaoTest, CaseDao}
+import domain.dao.{AbstractDaoTest, CaseDao, UploadedFileDao}
 import domain._
 import helpers.DataFixture
 import slick.jdbc.PostgresProfile.api._
@@ -31,6 +31,10 @@ class CaseServiceTest extends AbstractDaoTest {
         CaseDao.caseLinks.versionsTable.delete andThen
         CaseDao.caseNotes.table.delete andThen
         CaseDao.caseNotes.versionsTable.delete andThen
+        CaseDao.caseDocuments.table.delete andThen
+        CaseDao.caseDocuments.versionsTable.delete andThen
+        UploadedFileDao.uploadedFiles.table.delete andThen
+        UploadedFileDao.uploadedFiles.versionsTable.delete andThen
         CaseDao.cases.table.delete andThen
         CaseDao.cases.versionsTable.delete andThen
         sql"ALTER SEQUENCE SEQ_CASE_ID RESTART WITH 1000".asUpdate

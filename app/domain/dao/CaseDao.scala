@@ -216,7 +216,7 @@ object CaseDao {
       clients: Set[UniversityID],
       tags: Set[CaseTag],
       notes: Seq[CaseNote],
-      //    attachments: Seq[UploadedDocument],
+      documents: Seq[CaseDocument],
       //    relatedAppointments: Seq[Appointment],
       outgoingCaseLinks: Seq[CaseLink],
       incomingCaseLinks: Seq[CaseLink]

@@ -9,7 +9,8 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain._
 import domain.dao.CaseDao.{Case, _}
-import domain.dao.{CaseDao, DaoRunner}
+import domain.dao.UploadedFileDao.StoredUploadedFile
+import domain.dao.{CaseDao, DaoRunner, UploadedFileDao}
 import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
@@ -20,6 +21,7 @@ import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.language.higherKinds
 
 @ImplementedBy(classOf[CaseServiceImpl])
 trait CaseService {
@@ -46,7 +48,8 @@ trait CaseService {
   def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
   def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]]
   def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[UniversityID]]]
-  def addCaseDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]]
+  def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]]
+  def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]]
 }
 
 @Singleton
@@ -85,12 +88,14 @@ class CaseServiceImpl @Inject() (
       clients <- dao.findClientsQuery(Set(clientCase.id.get)).result
       tags <- dao.findTagsQuery(Set(clientCase.id.get)).result
       notes <- getNotesDBIO(clientCase.id.get)
+      docs <- getDocumentsDBIO(clientCase.id.get)
       (outgoingCaseLinks, incomingCaseLinks) <- getLinksDBIO(clientCase.id.get)
     } yield Case.FullyJoined(
       clientCase,
       clients.map(_.client).toSet,
       tags.map(_.caseTag).toSet,
       notes.map(_.asCaseNote),
+      docs.map { case (d, f) => d.asCaseDocument(f.asUploadedFile) },
       outgoingCaseLinks,
       incomingCaseLinks
     )).map(Right(_))
@@ -270,7 +275,7 @@ class CaseServiceImpl @Inject() (
     getClients(Set(id)).map(_.right.map(_.getOrElse(id, Set.empty)))
   }
 
-  override def addCaseDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]] =
+  override def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]] =
     auditService.audit('CaseAddDocument, caseID.toString, 'Case, Json.obj()) {
       val documentID = UUID.randomUUID()
       daoRunner.run(for {
@@ -286,6 +291,17 @@ class CaseServiceImpl @Inject() (
         ))
       } yield doc.asCaseDocument(f)).map(Right.apply)
     }
+
+  private def getDocumentsDBIO(caseID: UUID): DBIO[Seq[(StoredCaseDocument, StoredUploadedFile)]] =
+    dao.findDocumentsQuery(caseID)
+      .join(UploadedFileDao.uploadedFiles.table).on(_.fileId === _.id)
+      .sortBy { case (d, _) => d.created.desc }
+      .result
+
+  override def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]] = {
+    daoRunner.run(getDocumentsDBIO(caseID))
+      .map { docs => Right(docs.map { case (d, f) => d.asCaseDocument(f.asUploadedFile) }) }
+  }
 }
 
 object CaseService {

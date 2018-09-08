@@ -31,3 +31,4 @@ flash.case.noteUpdated=The case note has been updated
 flash.case.noteDeleted=The case note has been deleted
 flash.case.closed=The case has been closed
 flash.case.reopened=The case has been reopened
+flash.case.documentAdded=The case document has been uploaded

@@ -42,6 +42,33 @@
 
   <p><a href="@controllers.admin.routes.CaseController.linkForm(c.clientCase.key.get)" class="btn btn-default">Create link</a></p>
 
+  <h2>Case documents</h2>
+
+  @if(c.documents.nonEmpty) {
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th>Document type</th>
+          <th>File</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        @c.documents.map { doc =>
+          <tr>
+            <td>@doc.documentType.description</td>
+            <td>
+              <a href="@controllers.admin.routes.CaseDocumentController.download(c.clientCase.key.get, doc.id)">@doc.file.fileName</a>
+            </td>
+            <td>@helpers.JavaTime.Relative(doc.created)</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  <p><a href="@controllers.admin.routes.CaseDocumentController.addDocumentForm(c.clientCase.key.get)" class="btn btn-default">Add document</a></p>
+
   <h2>Case notes</h2>
 
   @caseNotes.map { case (note, user) =>

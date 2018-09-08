@@ -123,7 +123,7 @@ case class CaseDocumentSave(
   teamMember: Usercode
 )
 
-sealed abstract class CaseDocumentType(description: String) extends EnumEntry
+sealed abstract class CaseDocumentType(val description: String) extends EnumEntry
 object CaseDocumentType extends PlayEnum[CaseDocumentType] {
   case object DisabilityNeedsAssessmentReport extends CaseDocumentType("Disability Needs Assessment Report")
   case object DSAEntitlementLetter extends CaseDocumentType("DSA Entitlement Letter")
