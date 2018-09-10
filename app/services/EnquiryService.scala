@@ -222,7 +222,8 @@ object EnquiryService {
     * updated (perhaps from its state changing)
     */
   def sortByRecent(data: Seq[(Enquiry, Seq[MessageData])]): Seq[(Enquiry, Seq[MessageData])] = {
-    data.sortBy(lastModified)(JavaTime.dateTimeOrdering.reverse)
+    val (open, closed) = data.partition { case (e, _) => e.state != IssueState.Closed }
+    open.sortBy(lastModified)(JavaTime.dateTimeOrdering.reverse) ++ closed.sortBy(lastModified)(JavaTime.dateTimeOrdering.reverse)
   }
 
   def lastModified(entry: (Enquiry, Seq[MessageData])): OffsetDateTime = {
