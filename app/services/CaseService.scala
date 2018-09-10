@@ -83,9 +83,14 @@ class CaseServiceImpl @Inject() (
   override def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]] =
     daoRunner.run(dao.find(caseKey)).map(Right(_))
 
-  private def findFullyJoined(find: => DBIO[Case])(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
+  private def findFullyJoined(query: Query[Cases, Case, Seq])(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
     daoRunner.run(for {
-      clientCase <- find
+      (clientCase, messages) <-
+        query.withMessages
+          .sortBy { case (_, m) => m.map(_.created) }
+          .map { case (c, m) => (c, m.map(_.messageData)) }
+          .result
+          .map { results => OneToMany.leftJoin(results)(MessageData.dateOrdering).head }
       clients <- dao.findClientsQuery(Set(clientCase.id.get)).result
       tags <- dao.findTagsQuery(Set(clientCase.id.get)).result
       notes <- getNotesDBIO(clientCase.id.get)
@@ -98,14 +103,15 @@ class CaseServiceImpl @Inject() (
       notes.map(_.asCaseNote),
       docs.map { case (d, f) => d.asCaseDocument(f.asUploadedFile) },
       outgoingCaseLinks,
-      incomingCaseLinks
+      incomingCaseLinks,
+      messages
     )).map(Right(_))
 
   override def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
-    findFullyJoined(dao.find(id))
+    findFullyJoined(dao.findByIDQuery(id))
 
   override def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
-    findFullyJoined(dao.find(caseKey))
+    findFullyJoined(dao.findByKeyQuery(caseKey))
 
   override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, Seq[MessageData], Seq[CaseNote])]]] =
     daoRunner.run(

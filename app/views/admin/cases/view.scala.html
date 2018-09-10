@@ -1,15 +1,16 @@
 @import controllers.admin.{CaseController, CaseDocumentController}
 @import controllers.admin.CaseController.CaseNoteFormData
 @import domain.dao.CaseDao.Case
-@import domain.CaseLink
-@import domain.CaseLinkType
-@import domain.CaseNote
-@import warwick.sso.User
-@import domain.IssueState
+@import domain._
+@import warwick.sso._
 
 @(
   c: Case.FullyJoined,
+  clients: Seq[SitsProfile],
+  owners: Seq[User],
   caseNotes: Seq[(CaseNote, Option[User])],
+  originalEnquiry: Option[(Enquiry, Seq[MessageData])],
+  userLookup: Map[Usercode, User],
   noteForm: Form[CaseNoteFormData]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
@@ -30,10 +31,97 @@
   }
 }
 
-@main(s"Case ${c.clientCase.key.get.string}") {
-  @* TODO *@
+@main(s"${c.clientCase.key.get.string} ${c.clientCase.subject}") {
+  <div class="row">
+    <div class="col-md-4 col-md-push-8">
+      @clients.map { profile =>
+        <div class="row">
+          @profile.photo.map { photo =>
+            <div class="col-sm-4">
+              <p class="photo">
+                <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">
+                  <img src="@photo" class="img-thumbnail img-circle">
+                </a>
+              </p>
+            </div>
+          }
+          <div class="col-sm-8">
+            <p>
+              <strong>University ID: </strong> <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.universityID.string</a><br />
+              <strong>Full name: </strong> @profile.fullName<br />
+              <strong>Department: </strong> @profile.department.name<br />
+              <strong>Warwick email address: </strong> @profile.warwickEmail
+            </p>
+          </div>
+        </div>
+      }
+    </div>
+    <div class="col-md-8 col-md-pull-4">
+      @* TODO history? *@
+      <dl class="dl-horizontal">
+        <dt>Team</dt>
+        <dd>@c.clientCase.team.name @* TODO CASE-80 Reassign button *@</dd>
 
-  <p><a class="btn btn-default" href="@controllers.admin.routes.CaseController.editForm(c.clientCase.key.get)">Edit case</a></p>
+        <dt>Date raised</dt>
+        <dd>@helpers.JavaTime.Relative(c.clientCase.created)</dd>
+
+        <dt>State</dt>
+        <dd>@c.clientCase.state @* TODO Transition buttons *@</dd>
+
+        <dt>Incident</dt>
+        <dd>
+          @helpers.JavaTime.Relative(c.clientCase.incidentDate)
+          @if(c.clientCase.onCampus) { On-campus } else { Off-campus }
+          @if(c.clientCase.notifiedPolice) { <span class="label label-info">Police notified</span> }
+          @if(c.clientCase.notifiedAmbulance) { <span class="label label-info">Ambulance called</span> }
+          @if(c.clientCase.notifiedFire) { <span class="label label-info">Fire service called</span> }
+        </dd>
+
+        @originalEnquiry.map { case (enquiry, messages) =>
+          <dt>Original enquiry</dt>
+          <dd>
+            <a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)">
+              @enquiry.key.get.string
+              @enquiry.subject
+            </a>
+            -
+            @helpers.JavaTime.Relative(enquiry.created)
+          </dd>
+        }
+
+        <dt>Cause</dt>
+        <dd>@c.clientCase.cause.description</dd>
+
+        @c.clientCase.caseType.map { caseType =>
+          <dt>Case type</dt>
+          <dd>@caseType.description</dd>
+        }
+
+        @if(c.tags.nonEmpty) {
+          <dt>Tags</dt>
+          <dd>@c.tags.toSeq.map(_.description).sorted.mkString(", ")</dd>
+        }
+
+        <dt>Owners</dt>
+        <dd>
+          @if(owners.nonEmpty) {
+            <ul class="list-unstyled">
+              @owners.map { owner =>
+                <li>@owner.name.full.getOrElse(owner.usercode.string)</li>
+              }
+            </ul>
+          } else {
+            None
+          }
+          <a href="@controllers.admin.routes.OwnersController.caseForm(c.clientCase.key.get)" class="btn btn-default">Edit owners</a>
+        </dd>
+      </dl>
+
+      <p>
+        <a class="btn btn-default" href="@controllers.admin.routes.CaseController.editForm(c.clientCase.key.get)">Edit case</a>
+      </p>
+    </div>
+  </div>
 
   <h2>Case links</h2>
 
@@ -130,4 +218,30 @@
       </div>
     </div>
   }
+
+  <h2>Appointments</h2>
+
+  @* TODO *@
+
+  <h2>Messages</h2>
+
+  <div class="panel panel-default">
+    <div class="panel-body">
+      @c.messages.map { message =>
+        @if(message.sender == MessageSender.Client) {
+          <div class="message message-client">
+            <div class="date pull-right">@helpers.JavaTime.Relative(message.created, printToday = true)</div>
+            <div class="message--author">Client @* TODO *@</div>
+            @views.utils.nl2br(message.text)
+          </div>
+        } else {
+          <div class="message message-team">
+            <div class="date pull-right">@helpers.JavaTime.Relative(message.created, printToday = true)</div>
+            <div class="message--author">@message.teamMember.flatMap(usercode => userLookup.get(usercode).filter(_.isFound).flatMap(_.name.full)).getOrElse("Team member")</div>
+            @views.utils.nl2br(message.text)
+          </div>
+        }
+      }
+    </div>
+  </div>
 }

@@ -111,14 +111,27 @@ class CaseController @Inject()(
   import canViewTeamActionRefiner._
   import canEditCaseActionRefiner._
 
-  private def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData])(implicit request: CaseSpecificRequest[AnyContent]): Future[Result] =
-    cases.findFull(caseKey).successMap { c =>
-      val usercodes = c.notes.map(_.teamMember).distinct
+  private def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData])(implicit request: CaseSpecificRequest[AnyContent]): Future[Result] = {
+    val fetchOriginalEnquiry: Future[ServiceResult[Option[(Enquiry, Seq[MessageData])]]] =
+      request.`case`.originalEnquiry.map { enquiryId =>
+        enquiries.get(enquiryId).map(_.right.map(Some(_)))
+      }.getOrElse(Future.successful(Right(None)))
+
+    ServiceResults.zip(
+      cases.findFull(caseKey),
+      cases.getOwners(Set(request.`case`.id.get)).map(_.right.map(_.getOrElse(request.`case`.id.get, Set.empty))),
+      fetchOriginalEnquiry
+    ).successFlatMap { case (c, owners, originalEnquiry) =>
+      val usercodes = (c.notes.map(_.teamMember) ++ owners ++ c.messages.flatMap(_.teamMember.toSeq)).distinct
       val userLookup = userLookupService.getUsers(usercodes).toOption.getOrElse(Map())
       val caseNotes = c.notes.map { note => (note, userLookup.get(note.teamMember)) }
+      val ownerUsers = userLookup.filterKeys(owners.contains).values.toSeq.sortBy { u => (u.name.last, u.name.first) }
 
-      Ok(views.html.admin.cases.view(c, caseNotes, caseNoteForm))
+      profiles.getProfiles(c.clients).successMap { clientProfiles =>
+        Ok(views.html.admin.cases.view(c, clientProfiles.values.toSeq.sortBy(_.fullName), ownerUsers, caseNotes, originalEnquiry, userLookup, caseNoteForm))
+      }
     }
+  }
 
   def view(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
     renderCase(caseKey, caseNoteForm(caseRequest.`case`.version).fill(CaseNoteFormData("", caseRequest.`case`.version)))

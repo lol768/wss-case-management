@@ -25,6 +25,8 @@ trait CaseDao {
   def insert(c: Case): DBIO[Case]
   def find(id: UUID): DBIO[Case]
   def find(key: IssueKey): DBIO[Case]
+  def findByIDQuery(id: UUID): Query[Cases, Case, Seq]
+  def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq]
   def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq]
   def update(c: Case, version: OffsetDateTime): DBIO[Case]
   def insertTags(tags: Set[StoredCaseTag]): DBIO[Seq[StoredCaseTag]]
@@ -57,10 +59,16 @@ class CaseDaoImpl @Inject()(
     cases.insert(c)
 
   override def find(id: UUID): DBIO[Case] =
-    cases.table.filter(_.id === id).result.head
+    findByIDQuery(id).result.head
 
   override def find(key: IssueKey): DBIO[Case] =
-    cases.table.filter(_.key === key).result.head
+    findByKeyQuery(key).result.head
+
+  def findByIDQuery(id: UUID): Query[Cases, Case, Seq] =
+    cases.table.filter(_.id === id)
+
+  def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq] =
+    cases.table.filter(_.key === key)
 
   def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq] =
     cases.table
@@ -223,7 +231,8 @@ object CaseDao {
       documents: Seq[CaseDocument],
       //    relatedAppointments: Seq[Appointment],
       outgoingCaseLinks: Seq[CaseLink],
-      incomingCaseLinks: Seq[CaseLink]
+      incomingCaseLinks: Seq[CaseLink],
+      messages: Seq[MessageData]
     )
   }
 
