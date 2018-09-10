@@ -8,7 +8,7 @@ import controllers.admin.CaseController._
 import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CanViewTeamActionRefiner, CaseSpecificRequest}
 import domain._
 import domain.dao.CaseDao.Case
-import helpers.ServiceResults.ServiceError
+import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{FormHelpers, JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -124,8 +124,24 @@ class CaseController @Inject()(
     renderCase(caseKey, caseNoteForm(caseRequest.`case`.version).fill(CaseNoteFormData("", caseRequest.`case`.version)))
   }
 
-  def createForm(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId) { implicit teamRequest =>
-    Ok(views.html.admin.cases.create(teamRequest.team, form(teamRequest.team, profiles, enquiries)))
+  def createForm(teamId: String, fromEnquiry: Option[IssueKey]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    val baseForm = form(teamRequest.team, profiles, enquiries)
+
+    fromEnquiry match {
+      case Some(enquiryKey) => enquiries.get(enquiryKey).successMap { case (enquiry, _) =>
+        Ok(views.html.admin.cases.create(
+          teamRequest.team,
+          baseForm.bind(Map(
+            "clients[0]" -> enquiry.universityID.string,
+            "originalEnquiry" -> enquiry.id.get.toString
+          )).discardingErrors
+        ))
+      }
+
+      case _ => Future.successful(
+        Ok(views.html.admin.cases.create(teamRequest.team, baseForm))
+      )
+    }
   }
 
   def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
@@ -154,9 +170,33 @@ class CaseController @Inject()(
 
         val clients = data.clients.filter(_.string.nonEmpty)
 
-        cases.create(c, clients, data.tags).successMap { created =>
-          Redirect(controllers.admin.routes.CaseController.view(created.key.get))
-            .flashing("success" -> Messages("flash.case.created", created.key.get.string))
+        val updateOriginalEnquiry: Future[ServiceResult[Option[Enquiry]]] = data.originalEnquiry.map { enquiryId =>
+          enquiries.get(enquiryId).flatMap(_.fold(
+            errors => Future.successful(Left(errors)),
+            { case (enquiry, _) =>
+              enquiries.updateState(enquiry, IssueState.Closed, enquiry.version).map(_.right.map(Some(_)))
+            }
+          ))
+        }.getOrElse(Future.successful(Right(None)))
+
+        ServiceResults.zip(
+          cases.create(c, clients, data.tags),
+          updateOriginalEnquiry
+        ).successFlatMap { case (createdCase, originalEnquiry) =>
+          val copyEnquiryOwners: Future[ServiceResult[Set[Usercode]]] =
+            originalEnquiry.map { enquiry =>
+              enquiries.getOwners(Set(enquiry.id.get)).flatMap(_.fold(
+                errors => Future.successful(Left(errors)),
+                ownerMap => ownerMap.get(enquiry.id.get).filter(_.nonEmpty).map { owners =>
+                  cases.setOwners(createdCase.id.get, owners)
+                }.getOrElse(Future.successful(Right(Set.empty[Usercode])))
+              ))
+            }.getOrElse(Future.successful(Right(Set.empty[Usercode])))
+
+          copyEnquiryOwners.successMap { _ =>
+            Redirect(controllers.admin.routes.CaseController.view(createdCase.key.get))
+              .flashing("success" -> Messages("flash.case.created", createdCase.key.get.string))
+          }
         }
       }
     )

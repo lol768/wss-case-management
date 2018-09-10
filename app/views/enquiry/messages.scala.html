@@ -80,6 +80,11 @@
               >
                 Close enquiry
               </button>
+
+              <a class="btn btn-default" href="@controllers.admin.routes.CaseController.createForm(enquiry.team.id, Some(enquiry.key.get))">
+                Create case from enquiry
+              </a>
+
               @b3.validatedHidden(stateChangeForm, "version")
             </div>
           }
