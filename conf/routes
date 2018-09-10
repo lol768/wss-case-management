@@ -71,6 +71,8 @@ POST        /team/case/:caseKey/owners              @controllers.admin.OwnersCon
 GET         /team/case/:caseKey/document            @controllers.admin.CaseDocumentController.addDocumentForm(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/document            @controllers.admin.CaseDocumentController.addDocument(caseKey: domain.IssueKey)
 GET         /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.download(caseKey: domain.IssueKey, id: java.util.UUID)
+POST        /team/case/:caseKey/document/:id/delete @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
+DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 
 ## Admins/Sysadmins ##
 

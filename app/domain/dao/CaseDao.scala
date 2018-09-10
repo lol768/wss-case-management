@@ -43,6 +43,7 @@ trait CaseDao {
   def deleteNote(note: StoredCaseNote, version: OffsetDateTime): DBIO[Done]
   def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq]
   def insertDocument(document: StoredCaseDocument): DBIO[StoredCaseDocument]
+  def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime): DBIO[Done]
   def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq]
   def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq]
 }
@@ -119,6 +120,9 @@ class CaseDaoImpl @Inject()(
 
   override def insertDocument(document: StoredCaseDocument): DBIO[StoredCaseDocument] =
     caseDocuments.insert(document)
+
+  override def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime): DBIO[Done] =
+    caseDocuments.delete(document.copy(version = version))
 
   override def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq] =
     caseDocuments.table.filter(_.caseId === caseID)

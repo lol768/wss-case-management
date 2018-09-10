@@ -235,6 +235,16 @@ class CaseServiceTest extends AbstractDaoTest {
       byteSource.asCharSource(StandardCharsets.UTF_8).read() mustBe "I love lamp"
 
       service.getDocuments(c.id.get).serviceValue mustBe Seq(saved)
+
+      service.deleteDocument(c.id.get, saved.id, saved.lastUpdated).serviceValue mustBe Done
+      service.getDocuments(c.id.get).serviceValue mustBe Nil
+
+      // Check that the UploadedFile has been deleted as well
+      exec(UploadedFileDao.uploadedFiles.table.length.result) mustBe 0
+      exec(UploadedFileDao.uploadedFiles.versionsTable.length.result) mustBe 2 // I, D
+
+      // But the file must still exist in the object store
+      objectStorageService.keyExists(saved.file.id.toString) mustBe true
     }
   }
 }

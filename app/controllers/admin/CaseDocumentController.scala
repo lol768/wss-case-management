@@ -1,6 +1,7 @@
 package controllers.admin
 
 import java.io.InputStream
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import com.google.common.io.{ByteSource, Files}
@@ -8,6 +9,8 @@ import controllers.BaseController
 import controllers.admin.CaseDocumentController._
 import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CaseSpecificRequest}
 import domain._
+import helpers.JavaTime
+import helpers.ServiceResults.ServiceError
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -23,6 +26,10 @@ object CaseDocumentController {
   val form = Form(single(
     "documentType" -> CaseDocumentType.formField,
   ))
+
+  def deleteForm(version: OffsetDateTime): Form[OffsetDateTime] = Form(single(
+    "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
+  ))
 }
 
 @Singleton
@@ -36,6 +43,23 @@ class CaseDocumentController @Inject()(
 
   import canEditCaseActionRefiner._
   import canViewCaseActionRefiner._
+
+  def download(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+    withCaseDocument(id) { doc =>
+      val source = new ByteSource {
+        override def openStream(): InputStream = objectStorageService.fetch(doc.file.id.toString).orNull
+      }
+
+      Future {
+        val temporaryFile = temporaryFileCreator.create(prefix = doc.file.fileName, suffix = caseRequest.context.actualUser.get.usercode.string)
+        val file = temporaryFile.path.toFile
+        source.copyTo(Files.asByteSink(file))
+
+        Ok.sendFile(content = file, fileName = _ => doc.file.fileName, onClose = () => temporaryFileCreator.delete(temporaryFile))
+          .as(doc.file.contentType)
+      }
+    }
+  }
 
   def addDocumentForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
     Ok(views.html.admin.cases.addDocument(caseKey, form))
@@ -72,20 +96,19 @@ class CaseDocumentController @Inject()(
     )
   }
 
-  def download(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+  def delete(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     withCaseDocument(id) { doc =>
-      val source = new ByteSource {
-        override def openStream(): InputStream = objectStorageService.fetch(doc.file.id.toString).orNull
-      }
-
-      Future {
-        val temporaryFile = temporaryFileCreator.create(prefix = doc.file.fileName, suffix = caseRequest.context.actualUser.get.usercode.string)
-        val file = temporaryFile.path.toFile
-        source.copyTo(Files.asByteSink(file))
-
-        Ok.sendFile(content = file, fileName = _ => doc.file.fileName, onClose = () => temporaryFileCreator.delete(temporaryFile))
-          .as(doc.file.contentType)
-      }
+      deleteForm(doc.lastUpdated).bindFromRequest().fold(
+        formWithErrors => Future.successful(
+          // Nowhere to show a validation error so just fall back to an error page
+          showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
+        ),
+        version =>
+          cases.deleteDocument(caseRequest.`case`.id.get, doc.id, version).successMap { _ =>
+            Redirect(controllers.admin.routes.CaseController.view(caseKey))
+              .flashing("success" -> Messages("flash.case.documentDeleted"))
+          }
+      )
     }
   }
 

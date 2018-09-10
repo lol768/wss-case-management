@@ -50,6 +50,7 @@ trait CaseService {
   def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[UniversityID]]]
   def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]]
   def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]]
+  def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 }
 
 @Singleton
@@ -302,6 +303,15 @@ class CaseServiceImpl @Inject() (
     daoRunner.run(getDocumentsDBIO(caseID))
       .map { docs => Right(docs.map { case (d, f) => d.asCaseDocument(f.asUploadedFile) }) }
   }
+
+  override def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
+    auditService.audit('CaseDocumentDelete, caseID.toString, 'Case, Json.obj("documentID" -> documentID.toString)) {
+      daoRunner.run(for {
+        existing <- dao.findDocumentsQuery(caseID).filter(_.id === documentID).result.head
+        done <- dao.deleteDocument(existing, version)
+        _ <- uploadedFileService.deleteDBIO(existing.fileId)
+      } yield done).map(Right.apply)
+    }
 }
 
 object CaseService {

@@ -3,6 +3,7 @@ package domain.dao
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain._
@@ -18,8 +19,9 @@ import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[UploadedFileDaoImpl])
 trait UploadedFileDao {
-  def insert(file: StoredUploadedFile): DBIO[StoredUploadedFile]
   def find(id: UUID): DBIO[StoredUploadedFile]
+  def insert(file: StoredUploadedFile): DBIO[StoredUploadedFile]
+  def delete(file: StoredUploadedFile): DBIO[Done]
 }
 
 @Singleton
@@ -27,11 +29,14 @@ class UploadedFileDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) extends UploadedFileDao with HasDatabaseConfigProvider[JdbcProfile] {
 
+  override def find(id: UUID): DBIO[StoredUploadedFile] =
+    uploadedFiles.table.filter(_.id === id).result.head
+
   override def insert(file: StoredUploadedFile): DBIO[StoredUploadedFile] =
     uploadedFiles.insert(file)
 
-  override def find(id: UUID): DBIO[StoredUploadedFile] =
-    uploadedFiles.table.filter(_.id === id).result.head
+  override def delete(file: StoredUploadedFile): DBIO[Done] =
+    uploadedFiles.delete(file)
 
 }
 
