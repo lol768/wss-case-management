@@ -143,9 +143,9 @@
         </tr>
       </thead>
       <tbody>
-      @ownerCases.map { clientCase =>
-        @caseRow(clientCase)
-      }
+        @ownerCases.map { clientCase =>
+          @caseRow(clientCase)
+        }
       </tbody>
     </table>
   }
@@ -163,10 +163,12 @@
         </tr>
       </thead>
       <tbody>
-      @teamCases.map { clientCase =>
-        @caseRow(clientCase)
-      }
+        @teamCases.map { clientCase =>
+          @caseRow(clientCase)
+        }
       </tbody>
     </table>
   }
+
+  <p><a href="@controllers.admin.routes.CaseController.createForm(team.id, None)" class="btn btn-default">Create a case</a></p>
 }
