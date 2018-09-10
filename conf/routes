@@ -52,7 +52,7 @@ POST        /team/enquiry/:enquiryKey/reassign                  @controllers.adm
 GET         /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquiryForm(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquirySubmit(enquiryKey: domain.IssueKey)
 
-GET         /team/case/create/:teamId               @controllers.admin.CaseController.createForm(teamId: String)
+GET         /team/case/create/:teamId               @controllers.admin.CaseController.createForm(teamId: String, fromEnquiry: Option[domain.IssueKey] ?= None)
 POST        /team/case/create/:teamId               @controllers.admin.CaseController.create(teamId: String)
 GET         /team/case/:caseKey                     @controllers.admin.CaseController.view(caseKey: domain.IssueKey)
 GET         /team/case/:caseKey/edit                @controllers.admin.CaseController.editForm(caseKey: domain.IssueKey)
