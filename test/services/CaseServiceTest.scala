@@ -80,6 +80,15 @@ class CaseServiceTest extends AbstractDaoTest {
       fullyJoined.notes(1).text mustBe "c1 is related to clientCase"
     }
 
+    "find by client" in withData(new CaseFixture()) { _ =>
+      val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty).serviceValue
+      val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness)).serviceValue
+
+      service.findForClient(UniversityID("0672089")).serviceValue.map { case (c, _, _) => c } mustBe Seq(created2, created)
+      service.findForClient(UniversityID("0672088")).serviceValue.map { case (c, _, _) => c } mustBe Seq(created2)
+      service.findForClient(UniversityID("1234567")).serviceValue mustBe 'empty
+    }
+
     "get and set tags" in withData(new CaseFixture()) { c =>
       val caseId = c.id.get
 
