@@ -47,8 +47,8 @@ class AdminController @Inject()(
     ServiceResults.zip(
       enquiries.findEnquiriesNeedingReply(currentUser.usercode),
       enquiries.findEnquiriesNeedingReply(teamRequest.team),
-      cases.listOpenCases(teamRequest.team),
-      cases.listOpenCases(currentUser.usercode)
+      cases.listOpenCases(currentUser.usercode),
+      cases.listOpenCases(teamRequest.team)
     ).map(_.right.map { case (userEnquiries, teamEnquiriesWithDupes, userCases, teamCasesWithDupes) =>
        val teamEnquiries = teamEnquiriesWithDupes.filterNot { case (teamEnquiry, _) =>
          userEnquiries.exists { case (ownerEnquiry, _) => ownerEnquiry.id.get == teamEnquiry.id.get }
