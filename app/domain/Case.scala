@@ -105,3 +105,41 @@ object CaseNoteType extends PlayEnum[CaseNoteType] {
 
   override def values: immutable.IndexedSeq[CaseNoteType] = findValues
 }
+
+case class CaseDocument(
+  id: UUID,
+  documentType: CaseDocumentType,
+  file: UploadedFile,
+  teamMember: Usercode,
+  created: OffsetDateTime = OffsetDateTime.now(),
+  lastUpdated: OffsetDateTime = OffsetDateTime.now()
+)
+
+/**
+  * Just the metadata of the document required to save it
+  */
+case class CaseDocumentSave(
+  documentType: CaseDocumentType,
+  teamMember: Usercode
+)
+
+sealed abstract class CaseDocumentType(val description: String) extends EnumEntry
+object CaseDocumentType extends PlayEnum[CaseDocumentType] {
+  case object DisabilityNeedsAssessmentReport extends CaseDocumentType("Disability Needs Assessment Report")
+  case object DSAEntitlementLetter extends CaseDocumentType("DSA Entitlement Letter")
+  case object MedicalEvidenceDocuments extends CaseDocumentType("Medical Evidence Documents")
+  case object MitigatingCircumstancesForm extends CaseDocumentType("Mitigating Circumstances Form")
+  case object SelectedEmails extends CaseDocumentType("Selected Emails")
+  case object StudentSupportInternalDocuments extends CaseDocumentType("Student Support Internal Documents")
+  case object SecurityReport extends CaseDocumentType("Security Report")
+  case object UIRForm extends CaseDocumentType("UIR Form")
+  case object PoliceIncidentDocument extends CaseDocumentType("Police Incident Document")
+  case object SpecificLearningDifficultyDocument extends CaseDocumentType("Specific Learning Difficulty Document")
+  case object StudentSupportInformationForm extends CaseDocumentType("Student Support Information Form")
+  case object MentalHealthServicesOther extends CaseDocumentType("Mental Health Services - Other Documents")
+  case object ReleaseOfInformationConsentForm extends CaseDocumentType("Release Of Information Consent Form")
+  case object Photos extends CaseDocumentType("Photos")
+  case object KeyLog extends CaseDocumentType("Key Log")
+
+  override def values: immutable.IndexedSeq[CaseDocumentType] = findValues
+}

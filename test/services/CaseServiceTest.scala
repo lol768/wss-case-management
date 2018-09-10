@@ -1,16 +1,22 @@
 package services
 
+import java.io.InputStream
+import java.nio.charset.StandardCharsets
+
 import akka.Done
+import com.google.common.io.ByteSource
 import domain.dao.CaseDao.Case
-import domain.dao.{AbstractDaoTest, CaseDao}
+import domain.dao.{AbstractDaoTest, CaseDao, UploadedFileDao}
 import domain._
 import helpers.DataFixture
 import slick.jdbc.PostgresProfile.api._
+import warwick.objectstore.ObjectStorageService
 import warwick.sso.{UniversityID, Usercode}
 
 class CaseServiceTest extends AbstractDaoTest {
 
   private val service = get[CaseService]
+  private val objectStorageService = get[ObjectStorageService]
 
   class CaseFixture extends DataFixture[Case] {
     override def setup(): Case = {
@@ -31,6 +37,10 @@ class CaseServiceTest extends AbstractDaoTest {
         CaseDao.caseLinks.versionsTable.delete andThen
         CaseDao.caseNotes.table.delete andThen
         CaseDao.caseNotes.versionsTable.delete andThen
+        CaseDao.caseDocuments.table.delete andThen
+        CaseDao.caseDocuments.versionsTable.delete andThen
+        UploadedFileDao.uploadedFiles.table.delete andThen
+        UploadedFileDao.uploadedFiles.versionsTable.delete andThen
         CaseDao.cases.table.delete andThen
         CaseDao.cases.versionsTable.delete andThen
         sql"ALTER SEQUENCE SEQ_CASE_ID RESTART WITH 1000".asUpdate
@@ -67,6 +77,13 @@ class CaseServiceTest extends AbstractDaoTest {
       service.addLink(CaseLinkType.Related, c1.id.get, clientCase.id.get, CaseNoteSave("c1 is related to clientCase", Usercode("cuscav"))).serviceValue
       service.addLink(CaseLinkType.Related, clientCase.id.get, c2.id.get, CaseNoteSave("clientCase is related to c2", Usercode("cuscav"))).serviceValue
 
+      service.addDocument(
+        clientCase.id.get,
+        CaseDocumentSave(CaseDocumentType.SpecificLearningDifficultyDocument, Usercode("cuscav")),
+        ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
+        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+      ).serviceValue
+
       val fullyJoined = service.findFull(clientCase.key.get).serviceValue
       fullyJoined.clientCase mustBe clientCase
       fullyJoined.clients mustBe clients
@@ -78,6 +95,8 @@ class CaseServiceTest extends AbstractDaoTest {
       fullyJoined.notes.size mustBe 2
       fullyJoined.notes(0).text mustBe "clientCase is related to c2"
       fullyJoined.notes(1).text mustBe "c1 is related to clientCase"
+      fullyJoined.documents.size mustBe 1
+      fullyJoined.documents.head.documentType mustBe CaseDocumentType.SpecificLearningDifficultyDocument
     }
 
     "find by client" in withData(new CaseFixture()) { _ =>
@@ -193,6 +212,29 @@ class CaseServiceTest extends AbstractDaoTest {
 
       val c3 = service.updateState(c1.id.get, IssueState.Reopened, c2.version, CaseNoteSave("Case reopened", Usercode("cuscav"))).serviceValue
       c3.state mustBe IssueState.Reopened
+    }
+
+    "get and set documents" in withData(new CaseFixture()) { c =>
+      val saved = service.addDocument(
+        c.id.get,
+        CaseDocumentSave(CaseDocumentType.SpecificLearningDifficultyDocument, Usercode("cuscav")),
+        ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
+        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+      ).serviceValue
+      saved.documentType mustBe CaseDocumentType.SpecificLearningDifficultyDocument
+      saved.file.fileName mustBe "problem.txt"
+      saved.file.contentLength mustBe 11
+      saved.file.contentType mustBe "text/plain"
+
+      objectStorageService.keyExists(saved.file.id.toString) mustBe true
+      val byteSource = new ByteSource {
+        override def openStream(): InputStream = objectStorageService.fetch(saved.file.id.toString).orNull
+      }
+      byteSource.isEmpty mustBe false
+      byteSource.size() mustBe 11
+      byteSource.asCharSource(StandardCharsets.UTF_8).read() mustBe "I love lamp"
+
+      service.getDocuments(c.id.get).serviceValue mustBe Seq(saved)
     }
   }
 }
