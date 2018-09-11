@@ -19,6 +19,7 @@ trait EnquiryDao {
   def insert(enquiry: Enquiry): DBIO[Enquiry]
   def update(enquiry: Enquiry, version: OffsetDateTime): DBIO[Enquiry]
   def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq]
+  def findByIDsQuery(ids: Set[UUID]): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findByKeyQuery(key: IssueKey): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findOpenQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq]
@@ -38,15 +39,16 @@ class EnquiryDaoImpl @Inject() (
   override def update(enquiry: Enquiry, version: OffsetDateTime): DBIO[Enquiry] =
     Enquiry.enquiries.update(enquiry.copy(version = version))
 
-  def getById(id: UUID): DBIO[Enquiry] = Enquiry.enquiries.table.filter(_.id === id).take(1).result.head
-
-  def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq] =
+  override def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table.filter(_.id === id)
 
-  def findByKeyQuery(key: IssueKey): Query[Enquiry.Enquiries, Enquiry, Seq] =
+  override def findByIDsQuery(ids: Set[UUID]): Query[Enquiry.Enquiries, Enquiry, Seq] =
+    Enquiry.enquiries.table.filter(_.id.inSet(ids))
+
+  override def findByKeyQuery(key: IssueKey): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table.filter(_.key === key)
 
-  def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq] =
+  override def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table.filter(_.universityId === client)
 
   override def findOpenQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq] =

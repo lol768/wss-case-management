@@ -9,7 +9,7 @@
   clients: Seq[SitsProfile],
   owners: Seq[User],
   caseNotes: Seq[(CaseNote, Option[User])],
-  originalEnquiry: Option[(Enquiry, Seq[MessageData])],
+  originalEnquiry: Option[Enquiry],
   userLookup: Map[Usercode, User],
   noteForm: Form[CaseNoteFormData]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
@@ -77,7 +77,7 @@
           @if(c.clientCase.notifiedFire) { <span class="label label-info">Fire service called</span> }
         </dd>
 
-        @originalEnquiry.map { case (enquiry, messages) =>
+        @originalEnquiry.map { enquiry =>
           <dt>Original enquiry</dt>
           <dd>
             <a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)">

@@ -246,5 +246,16 @@ class CaseServiceTest extends AbstractDaoTest {
       // But the file must still exist in the object store
       objectStorageService.keyExists(saved.file.id.toString) mustBe true
     }
+
+    "find recently viewed" in withData(new CaseFixture) { c =>
+      implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
+
+      service.findFull(c.id.get).serviceValue
+      service.findFull(c.id.get).serviceValue
+      service.findFull(c.id.get).serviceValue
+      service.findFull(c.id.get).serviceValue
+
+      service.findRecentlyViewed(Usercode("cuscav"), 5).serviceValue mustBe Seq(c)
+    }
   }
 }

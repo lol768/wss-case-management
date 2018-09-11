@@ -1,0 +1,5 @@
+@(url: String)
+
+@email() {
+  A case has been assigned to your team: @url
+}

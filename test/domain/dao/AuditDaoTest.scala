@@ -1,12 +1,13 @@
 package domain.dao
 
+import java.util.UUID
+
 import domain._
-import helpers.{DaoPatience, OneAppPerSuite}
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
+import slick.dbio.DBIOAction
 import warwick.sso.Usercode
+
+import scala.concurrent.Future
 
 class AuditDaoTest extends AbstractDaoTest {
 
@@ -15,18 +16,24 @@ class AuditDaoTest extends AbstractDaoTest {
   "AuditDao" should {
     "save and fetch audit events" in {
       val event = AuditEvent(
-        operation = "create",
+        id = UUID.randomUUID(),
+        operation = 'create,
         usercode = Some(Usercode("cuscav")),
         data = Json.obj("yes" -> true),
         targetId = "steven",
-        targetType = "thing"
+        targetType = 'thing
       )
 
-      val savedEvent = dao.insert(event).futureValue
-      savedEvent mustBe event.copy(id = savedEvent.id)
+      val test = for {
+        savedEvent <- dao.insert(event)
+        fetchedEvent <- dao.getById(savedEvent.id)
+        _ <- DBIOAction.from(Future {
+          savedEvent mustBe event.copy(id = savedEvent.id)
+          fetchedEvent mustBe Some(savedEvent)
+        })
+      } yield savedEvent
 
-      dao.getById(savedEvent.id.get).futureValue mustBe Some(savedEvent)
+      exec(test)
     }
-
   }
 }

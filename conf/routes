@@ -66,6 +66,8 @@ POST        /team/case/:caseKey/note/:id/delete     @controllers.admin.CaseContr
 DELETE      /team/case/:caseKey/note/:id            @controllers.admin.CaseController.deleteNote(caseKey: domain.IssueKey, id: java.util.UUID)
 POST        /team/case/:caseKey/close               @controllers.admin.CaseController.close(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/reopen              @controllers.admin.CaseController.reopen(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/reassign            @controllers.admin.CaseController.reassignForm(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/reassign            @controllers.admin.CaseController.reassign(caseKey: domain.IssueKey)
 GET         /team/case/:caseKey/owners              @controllers.admin.OwnersController.caseForm(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/owners              @controllers.admin.OwnersController.caseSubmit(caseKey: domain.IssueKey)
 GET         /team/case/:caseKey/document            @controllers.admin.CaseDocumentController.addDocumentForm(caseKey: domain.IssueKey)

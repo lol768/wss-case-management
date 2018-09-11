@@ -1,0 +1,28 @@
+@import domain.Team
+@import domain.Enquiry
+@import domain.Teams
+@import controllers.admin.TeamEnquiryController.ReassignEnquiryData
+@import domain.dao.CaseDao.Case
+@import controllers.admin.CaseController.ReassignCaseData
+@import domain.CaseType
+@(
+  clientCase: Case,
+  form: Form[ReassignCaseData]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main("Reassign case") {
+  @b3.vertical.formCSRF(controllers.admin.routes.CaseController.reassign(clientCase.key.get)) { implicit ifc =>
+    @b3.validatedHidden(form, "version")
+
+    @b3.radio(form("team"),
+      options = Teams.all.map { t => t.id -> t.name }
+    )
+
+    @b3.select(form("caseType"),
+      options = Seq("" -> "") ++ CaseType.values.map { t => t.entryName -> t.description },
+      '_label -> "Case type"
+    )
+
+    @tags.submitOrCancel("Reassign", controllers.admin.routes.AdminController.teamHome(clientCase.team.id))
+  }
+}

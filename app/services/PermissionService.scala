@@ -90,7 +90,7 @@ class PermissionServiceImpl @Inject() (
     )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
 
   private def isEnquiryTeam(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    enquiryService.get(id).map(_.flatMap { case (enquiry, _) => inTeam(user, enquiry.team) } )
+    enquiryService.get(id).map(_.flatMap { enquiry => inTeam(user, enquiry.team) } )
 
   private def isEnquiryOwner(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     inAnyTeamImpl(user).fold(
@@ -103,7 +103,7 @@ class PermissionServiceImpl @Inject() (
     )
 
   private def isEnquiryClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    enquiryService.get(id).map(_.map { case (enquiry, _) => enquiry.universityID == user.universityId.get } )
+    enquiryService.get(id).map(_.map { enquiry => enquiry.universityID == user.universityId.get } )
 
   override def canViewCase(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.successful(ServiceResults.sequence(Seq(
