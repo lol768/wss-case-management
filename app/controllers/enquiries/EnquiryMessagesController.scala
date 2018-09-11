@@ -98,7 +98,7 @@ class EnquiryMessagesController @Inject()(
                 "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, clientName, teamName).toString()
               ))))
             case _ =>
-              renderMessages(request.enquiry, request.messages :+ messageData, stateChangeForm(request.enquiry, messageSender(request)))
+              Redirect(routes.EnquiryMessagesController.messages(enquiryKey))
           }
         }
       }
