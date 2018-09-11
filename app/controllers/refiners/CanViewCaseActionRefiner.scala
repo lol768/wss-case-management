@@ -6,9 +6,8 @@ import play.api.Configuration
 import play.api.mvc._
 import services.{CaseService, PermissionService, SecurityService}
 import system.ImplicitRequestContext
-import warwick.sso.AuthenticatedRequest
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class CanViewCaseActionRefiner @Inject()(
@@ -20,22 +19,10 @@ class CanViewCaseActionRefiner @Inject()(
 
   implicit val implicitCaseService: CaseService = caseService
 
-  private def CanViewCase = new ActionFilter[CaseSpecificRequest] {
-    override protected def filter[A](request: CaseSpecificRequest[A]): Future[Option[Result]] = {
-      implicit val implicitRequest: AuthenticatedRequest[A] = request
-
-      permissionService.canViewCase(request.context.user.get.usercode).map(_.fold(
-        errors => Some(Results.BadRequest(views.html.errors.multiple(errors))),
-        canViewCase =>
-          if (canViewCase) None
-          else Some(Results.NotFound(views.html.errors.notFound()))
-      ))
-    }
-
-    override protected def executionContext: ExecutionContext = ec
+  private def CanViewCase[A] = PermissionsFilter[CaseSpecificRequest] { implicit request =>
+    permissionService.canViewCase(request.context.user.get.usercode)
   }
 
-  // FIXME to be solved as part of permissions refactor
   def CanViewCaseAction(caseKey: IssueKey): ActionBuilder[CaseSpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithCase(caseKey) andThen CanViewCase
 

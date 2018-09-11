@@ -15,9 +15,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[PermissionServiceImpl])
 trait PermissionService {
-  def inAnyTeam(user: Usercode): ServiceResult[Boolean]
+  def inAnyTeam(user: Usercode): Future[ServiceResult[Boolean]]
   def inAnyTeam(users: Set[Usercode]): ServiceResult[Map[Usercode, Boolean]]
   def canViewTeam(user: Usercode, team: Team): ServiceResult[Boolean]
+  def canViewTeamFuture(user: Usercode, team: Team): Future[ServiceResult[Boolean]]
   def canViewEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canAddMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canEditEnquiry(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
@@ -44,12 +45,16 @@ class PermissionServiceImpl @Inject() (
 
   private val adminRole = RoleName("admin")
 
-  override def inAnyTeam(user: Usercode): ServiceResult[Boolean] =
-    ServiceResults.sequence(Seq(isAdmin(user)) ++ Teams.all.map(inTeam(user, _)))
-      .right.map(_.contains(true))
+  override def inAnyTeam(user: Usercode): Future[ServiceResult[Boolean]] =
+    Future.successful(inAnyTeamImpl(user))
+
+  private def inAnyTeamImpl(user: Usercode): ServiceResult[Boolean] =
+      ServiceResults.sequence(Seq(isAdmin(user)) ++ Teams.all.map(inTeam(user, _)))
+        .right.map(_.contains(true)
+    )
 
   override def inAnyTeam(users: Set[Usercode]): ServiceResult[Map[Usercode, Boolean]] = {
-    users.toSeq.map(user => user -> inAnyTeam(user)).partition { case (_, result) => result.isLeft } match {
+    users.toSeq.map(user => user -> inAnyTeamImpl(user)).partition { case (_, result) => result.isLeft } match {
       case (Nil, results) => Right(results.collect { case (user, Right(x)) => user -> x }.toMap)
       case (errors, _) => Left(errors.toList.collect { case (_, Left(x)) => x }.flatten)
     }
@@ -59,10 +64,13 @@ class PermissionServiceImpl @Inject() (
     ServiceResults.sequence(Seq(isAdmin(user), inTeam(user, team)))
       .right.map(_.contains(true))
 
+  override def canViewTeamFuture(user: Usercode, team: Team): Future[ServiceResult[Boolean]] =
+    Future.successful(canViewTeam(user, team))
+
   override def canViewEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(
       Future.successful(isAdmin(user.usercode)),
-      Future.successful(inAnyTeam(user.usercode)),
+      Future.successful(inAnyTeamImpl(user.usercode)),
       isEnquiryClient(user, id)
     )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
 
@@ -85,7 +93,14 @@ class PermissionServiceImpl @Inject() (
     enquiryService.get(id).map(_.flatMap { case (enquiry, _) => inTeam(user, enquiry.team) } )
 
   private def isEnquiryOwner(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    enquiryService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).contains(user)))
+    inAnyTeamImpl(user).fold(
+      errors => Future.successful(Left(errors)),
+      isInAnyTeam => if (!isInAnyTeam) {
+        Future.successful(Right(false))
+      } else {
+        enquiryService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).contains(user)))
+      }
+    )
 
   private def isEnquiryClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     enquiryService.get(id).map(_.map { case (enquiry, _) => enquiry.universityID == user.universityId.get } )
@@ -93,7 +108,7 @@ class PermissionServiceImpl @Inject() (
   override def canViewCase(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.successful(ServiceResults.sequence(Seq(
       isAdmin(user),
-      inAnyTeam(user)
+      inAnyTeamImpl(user)
     )).right.map(_.contains(true)))
 
   override def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
@@ -107,7 +122,14 @@ class PermissionServiceImpl @Inject() (
     caseService.find(id).map(_.flatMap(c => inTeam(user, c.team)))
 
   private def isCaseOwner(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    caseService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).contains(user)))
+    inAnyTeamImpl(user).fold(
+      errors => Future.successful(Left(errors)),
+      isInAnyTeam => if (!isInAnyTeam) {
+        Future.successful(Right(false))
+      } else {
+        caseService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).contains(user)))
+      }
+    )
 
   override def webgroupFor(team: Team): GroupName =
     GroupName(s"$webgroupPrefix${team.id}")
