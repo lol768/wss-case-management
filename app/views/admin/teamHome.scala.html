@@ -61,7 +61,10 @@
       }
     </td>
     <td>@helpers.JavaTime.Relative(clientCase.created)</td>
-    <td>@clientCase.team.name</td>
+    <td>
+      @clientCase.team.name
+      <a class="btn btn-default" href="@controllers.admin.routes.CaseController.reassignForm(clientCase.key.get)">Reassign</a>
+    </td>
     <td>
       <button
         class="btn btn-link user-list-popover"

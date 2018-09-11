@@ -25,6 +25,7 @@ trait NotificationService {
   def enquiryMessage(enquiry: Enquiry, sender: MessageSender)(implicit t: TimingContext): Future[ServiceResult[Activity]]
   def enquiryReassign(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]]
   def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit t: TimingContext): Future[ServiceResult[Activity]]
+  def caseReassign(clientCase: Case)(implicit t: TimingContext): Future[ServiceResult[Activity]]
 }
 
 class NotificationServiceImpl @Inject()(
@@ -222,6 +223,32 @@ class NotificationServiceImpl @Inject()(
             )
             sendAndHandleResponse(activity)
         }
+      }
+    }
+
+  override def caseReassign(clientCase: Case)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
+    withTeamUsers(clientCase.team) { users =>
+      val url = s"https://$domain${controllers.admin.routes.CaseController.view(clientCase.key.get).url}"
+
+      emailService.queue(
+        Email(
+          subject = "Case Management: Case assigned",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.casereassigned(url).toString.trim)
+        ),
+        users
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            Set[String]().asJava,
+            Set(permissionService.webgroupFor(clientCase.team).string).asJava,
+            "Case assigned",
+            url,
+            null,
+            "case-assigned"
+          )
+          sendAndHandleResponse(activity)
       }
     }
 
