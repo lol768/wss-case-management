@@ -12,7 +12,7 @@ import enumeratum.{EnumEntry, PlayEnum}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
-import slick.jdbc.PostgresProfile.api._
+import ExtendedPostgresProfile.api._
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
 
@@ -28,6 +28,7 @@ trait CaseDao {
   def findByIDQuery(id: UUID): Query[Cases, Case, Seq]
   def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq]
   def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq]
+  def searchQuery(query: String): Query[Cases, Case, Seq]
   def update(c: Case, version: OffsetDateTime): DBIO[Case]
   def insertTags(tags: Set[StoredCaseTag]): DBIO[Seq[StoredCaseTag]]
   def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag]
@@ -75,6 +76,19 @@ class CaseDaoImpl @Inject()(
       .withClients
       .filter { case (_, client) => client.client === universityID }
       .map { case (c, _) => c }
+
+  override def searchQuery(queryStr: String): Query[Cases, Case, Seq] = {
+    val query = toTsQuery(queryStr.bind, Some("english"))
+
+    cases.table
+      .withNotes
+      .filter { case (c, n) =>
+        c.searchableSubject @@ query ||
+        n.map(_.searchableText @@ query)
+      }
+      .map { case (c, _) => c }
+      .distinct
+  }
 
   override def update(c: Case, version: OffsetDateTime): DBIO[Case] =
     cases.update(c.copy(version = version))
@@ -260,6 +274,7 @@ object CaseDao {
   trait CommonProperties { self: Table[_] =>
     def key = column[IssueKey]("case_key")
     def subject = column[String]("subject")
+    def searchableSubject = toTsVector(subject, Some("english"))
     def created = column[OffsetDateTime]("created_utc")
     def incidentDate = column[OffsetDateTime]("incident_date_utc")
     def team = column[Team]("team_id")
@@ -540,6 +555,7 @@ object CaseDao {
     def caseId = column[UUID]("case_id")
     def noteType = column[CaseNoteType]("note_type")
     def text = column[String]("text")
+    def searchableText = toTsVector(text, Some("english"))
     def teamMember = column[Usercode]("team_member")
     def created = column[OffsetDateTime]("created_utc")
     def version = column[OffsetDateTime]("version_utc")

@@ -31,6 +31,7 @@ trait CaseService {
   def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
   def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
   def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, Seq[MessageData], Seq[CaseNote])]]]
+  def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def update(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def updateState(caseID: UUID, targetState: IssueState, version: OffsetDateTime, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]]
@@ -123,6 +124,9 @@ class CaseServiceImpl @Inject() (
     ).map { tuples => // Seq[(Case, Option[MessageData], Option[StoredCaseNote])]
       Right(groupTuples(tuples))
     }
+
+  override def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Case]] =
+    daoRunner.run(dao.searchQuery(query).take(10).result).map(Right.apply)
 
   private def updateDifferencesDBIO[A, B](items: Set[B], query: Query[Table[A], A, Seq], map: A => B, comap: B => A, insert: A => DBIO[A], delete: A => DBIO[Done]): DBIO[Unit] = {
     val existing = query.result
