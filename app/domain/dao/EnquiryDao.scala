@@ -39,8 +39,6 @@ class EnquiryDaoImpl @Inject() (
   override def update(enquiry: Enquiry, version: OffsetDateTime): DBIO[Enquiry] =
     Enquiry.enquiries.update(enquiry.copy(version = version))
 
-  override def getById(id: UUID): DBIO[Enquiry] = Enquiry.enquiries.table.filter(_.id === id).take(1).result.head
-
   override def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table.filter(_.id === id)
 
