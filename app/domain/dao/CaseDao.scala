@@ -24,8 +24,10 @@ import scala.language.higherKinds
 trait CaseDao {
   def insert(c: Case): DBIO[Case]
   def find(id: UUID): DBIO[Case]
+  def find(ids: Set[UUID]): DBIO[Seq[Case]]
   def find(key: IssueKey): DBIO[Case]
   def findByIDQuery(id: UUID): Query[Cases, Case, Seq]
+  def findByIDsQuery(ids: Set[UUID]): Query[Cases, Case, Seq]
   def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq]
   def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq]
   def update(c: Case, version: OffsetDateTime): DBIO[Case]
@@ -61,16 +63,22 @@ class CaseDaoImpl @Inject()(
   override def find(id: UUID): DBIO[Case] =
     findByIDQuery(id).result.head
 
+  override def find(ids: Set[UUID]): DBIO[Seq[Case]] =
+    findByIDsQuery(ids).result
+
   override def find(key: IssueKey): DBIO[Case] =
     findByKeyQuery(key).result.head
 
-  def findByIDQuery(id: UUID): Query[Cases, Case, Seq] =
+  override def findByIDQuery(id: UUID): Query[Cases, Case, Seq] =
     cases.table.filter(_.id === id)
 
-  def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq] =
+  override def findByIDsQuery(ids: Set[UUID]): Query[Cases, Case, Seq] =
+    cases.table.filter(_.id.inSet(ids))
+
+  override def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq] =
     cases.table.filter(_.key === key)
 
-  def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq] =
+  override def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq] =
     cases.table
       .withClients
       .filter { case (_, client) => client.client === universityID }

@@ -16,8 +16,8 @@ package object refiners {
         implicit val requestContext: RequestContext = requestContextBuilder(request)
 
         enquiryService.get(enquiryKey).map {
-          case Right((enquiry, messages)) =>
-            Right(new EnquirySpecificRequest[A](enquiry, messages, request))
+          case Right(enquiry) =>
+            Right(new EnquirySpecificRequest[A](enquiry, request))
 
           case _ =>
             Left(Results.NotFound(views.html.errors.notFound()))

@@ -9,7 +9,7 @@ import domain.MessageSender.Client
 import domain._
 import domain.dao.{DaoRunner, EnquiryDao, MessageDao}
 import helpers.JavaTime
-import helpers.ServiceResults.ServiceResult
+import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import slick.jdbc.PostgresProfile.api._
@@ -41,8 +41,14 @@ trait EnquiryService {
 
   def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, Seq[MessageData])]]]
 
-  def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
-  def get(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
+  def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Enquiry]]
+  def get(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]]
+  def get(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Enquiry]]
+
+  def getForRender(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
+  def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
+
+  def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]]
 
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
 
@@ -151,24 +157,48 @@ class EnquiryServiceImpl @Inject() (
     }
   }
 
+  override def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Enquiry]] =
+    daoRunner.run(enquiryDao.findByIDQuery(id).result.head).map(Right.apply)
+
+  override def get(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]] =
+    daoRunner.run(enquiryDao.findByIDsQuery(ids.toSet).result).map { enquiries =>
+      val lookup = enquiries.groupBy(_.id.get).mapValues(_.head)
+
+      if (ids.forall(lookup.contains))
+        Right(ids.map(lookup.apply))
+      else
+        Left(ids.filterNot(lookup.contains).toList.map { id => ServiceError(s"Could not find an Enquiry with ID $id") })
+    }
+
+  override def get(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Enquiry]] =
+    daoRunner.run(enquiryDao.findByKeyQuery(enquiryKey).result.head).map(Right.apply)
+
   private def getWithMessagesQuery(query: Query[Enquiry.Enquiries, Enquiry, Seq]) =
     query.withMessages.map { case (e, m) => (e, m.map(_.messageData)) }
 
-  override def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]] = {
-    val query = getWithMessagesQuery(enquiryDao.findByIDQuery(id))
+  override def getForRender(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]] =
+    auditService.audit('EnquiryView, id.toString, 'Enquiry, Json.obj()) {
+      val query = getWithMessagesQuery(enquiryDao.findByIDQuery(id))
 
-    daoRunner.run(query.result).map { pairs =>
-      Right(groupPairs(pairs).head)
+      daoRunner.run(query.result).map { pairs =>
+        Right(groupPairs(pairs).head)
+      }
     }
-  }
 
-  override def get(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]] = {
-    val query = getWithMessagesQuery(enquiryDao.findByKeyQuery(enquiryKey))
+  override def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]] =
+    auditService.audit[(Enquiry, Seq[MessageData])]('EnquiryView, (pair: (Enquiry, Seq[MessageData])) => pair._1.id.get.toString, 'Enquiry, Json.obj()) {
+      val query = getWithMessagesQuery(enquiryDao.findByKeyQuery(enquiryKey))
 
-    daoRunner.run(query.result).map { pairs =>
-      Right(groupPairs(pairs).head)
+      daoRunner.run(query.result).map { pairs =>
+        Right(groupPairs(pairs).head)
+      }
     }
-  }
+
+  override def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]] =
+    auditService.findRecentTargetIDsByOperation('EnquiryView, teamMember, limit).flatMap(_.fold(
+      errors => Future.successful(Left(errors)),
+      ids => get(ids.map(UUID.fromString))
+    ))
 
   override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]] =
     ownerService.getEnquiryOwners(ids)
