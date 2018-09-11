@@ -6,9 +6,8 @@ import play.api.Configuration
 import play.api.mvc._
 import services.{EnquiryService, PermissionService, SecurityService}
 import system.ImplicitRequestContext
-import warwick.sso.AuthenticatedRequest
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class CanAddMessageToEnquiryActionRefiner @Inject()(
@@ -20,19 +19,8 @@ class CanAddMessageToEnquiryActionRefiner @Inject()(
 
   private implicit val implicitEnquiryService: EnquiryService = enquiryService
 
-  private def CanAddMessage = new ActionFilter[EnquirySpecificRequest] {
-    override protected def filter[A](request: EnquirySpecificRequest[A]): Future[Option[Result]] = {
-      implicit val implicitRequest: AuthenticatedRequest[A] = request
-
-      permissionService.canAddMessageToEnquiry(request.context.user.get, request.enquiry.id.get).map(_.fold(
-        errors => Some(Results.BadRequest(views.html.errors.multiple(errors))),
-        canViewCase =>
-          if (canViewCase) None
-          else Some(Results.NotFound(views.html.errors.notFound()))
-      ))
-    }
-
-    override protected def executionContext: ExecutionContext = ec
+  private def CanAddMessage[A] = PermissionsFilter[EnquirySpecificRequest] { implicit request =>
+    permissionService.canAddMessageToEnquiry(request.context.user.get, request.enquiry.id.get)
   }
 
   def CanAddMessageToEnquiryAction(enquiryKey: IssueKey): ActionBuilder[EnquirySpecificRequest, AnyContent] =
