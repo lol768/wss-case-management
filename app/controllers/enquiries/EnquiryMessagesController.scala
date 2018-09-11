@@ -46,18 +46,20 @@ class EnquiryMessagesController @Inject()(
   import canEditEnquiryActionRefiner._
   import canViewEnquiryActionRefiner._
 
-  private def renderMessages(enquiry: Enquiry, messages: Seq[MessageData], f: Form[StateChangeForm])(implicit request: EnquirySpecificRequest[_]) =
-    Ok(views.html.enquiry.messages(
-      enquiry,
-      messages,
-      f,
-      messageSender(request),
-      userLookupService.getUsers(messages.flatMap(_.teamMember)).toOption.getOrElse(Map()),
-      userLookupService.getUsers(Seq(enquiry.universityID)).toOption.getOrElse(Map())
-    ))
+  private def renderMessages(enquiry: Enquiry, f: Form[StateChangeForm])(implicit request: EnquirySpecificRequest[_]): Future[Result] =
+    service.getForRender(enquiry.id.get).successMap { case (e, messages) =>
+      Ok(views.html.enquiry.messages(
+        e,
+        messages,
+        f,
+        messageSender(request),
+        userLookupService.getUsers(messages.flatMap(_.teamMember)).toOption.getOrElse(Map()),
+        userLookupService.getUsers(Seq(e.universityID)).toOption.getOrElse(Map())
+      ))
+    }
 
-  def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey) { implicit request =>
-    renderMessages(request.enquiry, request.messages, stateChangeForm(request.enquiry, messageSender(request)).fill(StateChangeForm("", request.enquiry.version)))
+  def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
+    renderMessages(request.enquiry, stateChangeForm(request.enquiry, messageSender(request)).fill(StateChangeForm("", request.enquiry.version)))
   }
 
   def redirectToMessages(enquiryKey: IssueKey): Action[AnyContent] = Action {
@@ -70,14 +72,17 @@ class EnquiryMessagesController @Inject()(
         val form = stateChangeForm(request.enquiry, messageSender(request))
           .fill(StateChangeForm(formWithErrors.value.getOrElse(""), request.enquiry.version))
           .copy(errors = formWithErrors.errors)
-        Future.successful(render {
+
+        render.async {
           case Accepts.Json() =>
-            BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
-              form.errors.map(error => API.Error(error.getClass.getSimpleName, error.message))
-            )))
+            Future.successful(
+              BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
+                form.errors.map(error => API.Error(error.getClass.getSimpleName, error.message))
+              )))
+            )
           case _ =>
-            renderMessages(request.enquiry, request.messages, form)
-        })
+            renderMessages(request.enquiry, form)
+        }
       },
       messageText => {
         val message = messageData(messageText, request)
@@ -115,7 +120,7 @@ class EnquiryMessagesController @Inject()(
 
   private def updateStateAndMessage(newState: IssueState)(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
     stateChangeForm(request.enquiry, messageSender(request)).bindFromRequest().fold(
-      formWithErrors => Future.successful(renderMessages(request.enquiry, request.messages, formWithErrors)),
+      formWithErrors => renderMessages(request.enquiry, formWithErrors),
       formData => {
         val action = if(formData.text.hasText) {
           val message = messageData(formData.text, request)

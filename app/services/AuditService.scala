@@ -1,17 +1,20 @@
 package services
 
 import java.math.MathContext
+import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import domain.AuditEvent
-import domain.dao.AuditDao
+import domain.CustomJdbcTypes._
+import domain.dao.{AuditDao, DaoRunner}
 import helpers.ConditionalChain._
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
-import warwick.core.timing.TimingContext
+import slick.jdbc.PostgresProfile.api._
 import uk.ac.warwick.util.logging.AuditLogger
 import uk.ac.warwick.util.logging.AuditLogger.RequestInformation
+import warwick.core.timing.TimingContext
 import warwick.sso.Usercode
 
 import scala.collection.JavaConverters._
@@ -32,11 +35,13 @@ object AuditLogContext {
 trait AuditService {
   def audit[A](operation: Symbol, targetId: String, targetType: Symbol, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]]
   def audit[A](operation: Symbol, targetIdTransform: A => String, targetType: Symbol, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]]
+  def findRecentTargetIDsByOperation(operation: Symbol, usercode: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[String]]]
 }
 
 @Singleton
 class AuditServiceImpl @Inject()(
-  dao: AuditDao
+  dao: AuditDao,
+  daoRunner: DaoRunner
 )(implicit ec: ExecutionContext) extends AuditService {
 
   lazy val AUDIT_LOGGER: AuditLogger = AuditLogger.getAuditLogger("casemanagement")
@@ -73,13 +78,16 @@ class AuditServiceImpl @Inject()(
         Future.successful(Left(errors))
       case Right(result) =>
         val targetId = targetIdTransform(result)
-        dao.insert(AuditEvent(
-          operation = operation.name,
-          usercode = context.usercode,
-          data = data,
-          targetId = targetId,
-          targetType = targetType.name
-        )).map { _ =>
+        daoRunner.run(
+          dao.insert(AuditEvent(
+            id = UUID.randomUUID(),
+            operation = operation,
+            usercode = context.usercode,
+            data = data,
+            targetId = targetId,
+            targetType = targetType
+          ))
+        ).map { _ =>
           doAudit(operation, targetId, targetType, data)
           Right(result)
         }
@@ -90,16 +98,35 @@ class AuditServiceImpl @Inject()(
       case Left(errors) =>
         Future.successful(Left(errors))
       case Right(result) =>
-        dao.insert(AuditEvent(
-          operation = operation.name,
-          usercode = context.usercode,
-          data = data,
-          targetId = targetId,
-          targetType = targetType.name
-        )).map { _ =>
+        daoRunner.run(
+          dao.insert(AuditEvent(
+            id = UUID.randomUUID(),
+            operation = operation,
+            usercode = context.usercode,
+            data = data,
+            targetId = targetId,
+            targetType = targetType
+          ))
+        ).map { _ =>
           doAudit(operation, targetId, targetType, data)
           Right(result)
         }
     }
+
+  private val asUUID = SimpleExpression.unary[String, UUID] { (id, qb) =>
+    qb.expr(id)
+    qb.sqlBuilder += "::uuid"
+  }
+
+  override def findRecentTargetIDsByOperation(operation: Symbol, usercode: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[String]]] =
+    daoRunner.run(
+      dao.findByOperationAndUsercodeQuery(operation, usercode)
+        .groupBy(_.targetId)
+        .map { case (targetId, q) => (targetId, q.map(_.date).max) }
+        .sortBy { case (_, maxDate) => maxDate.desc }
+        .take(limit)
+        .map { case (targetId, _) => targetId }
+        .result
+    ).map(Right.apply)
 
 }

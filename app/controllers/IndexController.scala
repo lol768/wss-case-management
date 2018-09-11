@@ -1,8 +1,10 @@
 package controllers
 
 import domain.Teams
+import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
-import services.{EnquiryService, RegistrationService, SecurityService}
+import play.api.mvc.{Action, AnyContent}
+import services.{CaseService, EnquiryService, RegistrationService, SecurityService}
 
 import scala.concurrent.ExecutionContext
 
@@ -10,17 +12,20 @@ import scala.concurrent.ExecutionContext
 class IndexController @Inject()(
   securityService: SecurityService,
   enquiries: EnquiryService,
-  registrationService: RegistrationService
+  registrationService: RegistrationService,
+  cases: CaseService
 )(implicit executionContext: ExecutionContext) extends BaseController {
   import securityService._
 
-  def home = SigninRequiredAction.async { implicit request =>
+  def home: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
     val client = request.context.user.get.universityId.get
-    enquiries.findEnquiriesForClient(client).successFlatMap(enquiries =>
-      registrationService.get(client).successMap(registration =>
-        Ok(views.html.home(Teams.all, enquiries, registration))
-      )
-    )
+
+    ServiceResults.zip(
+      enquiries.findEnquiriesForClient(client),
+      registrationService.get(client)
+    ).successMap { case (e, registration) =>
+      Ok(views.html.home(Teams.all, e, registration))
+    }
   }
 
   def redirectToPath(path: String, status: Int = MOVED_PERMANENTLY) = Action {

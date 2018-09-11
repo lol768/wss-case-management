@@ -12,7 +12,7 @@ import domain.dao.CaseDao.{Case, _}
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{CaseDao, DaoRunner, UploadedFileDao}
 import helpers.JavaTime
-import helpers.ServiceResults.ServiceResult
+import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import services.CaseService._
@@ -27,10 +27,12 @@ import scala.language.higherKinds
 trait CaseService {
   def create(c: Case, clients: Set[UniversityID], tags: Set[CaseTag])(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]]
+  def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]]
-  def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
-  def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]]
+  def findFull(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]]
+  def findFull(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]]
   def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, Seq[MessageData], Seq[CaseNote])]]]
+  def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def update(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def updateState(caseID: UUID, targetState: IssueState, version: OffsetDateTime, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]]
@@ -82,6 +84,16 @@ class CaseServiceImpl @Inject() (
   override def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]] =
     daoRunner.run(dao.find(id)).map(Right(_))
 
+  def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
+    daoRunner.run(dao.find(ids.toSet)).map { cases =>
+      val lookup = cases.groupBy(_.id.get).mapValues(_.head)
+
+      if (ids.forall(lookup.contains))
+        Right(ids.map(lookup.apply))
+      else
+        Left(ids.filterNot(lookup.contains).toList.map { id => ServiceError(s"Could not find a Case with ID $id") })
+    }
+
   override def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]] =
     daoRunner.run(dao.find(caseKey)).map(Right(_))
 
@@ -109,11 +121,15 @@ class CaseServiceImpl @Inject() (
       messages
     )).map(Right(_))
 
-  override def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
-    findFullyJoined(dao.findByIDQuery(id))
+  override def findFull(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]] =
+    auditService.audit('CaseView, id.toString, 'Case, Json.obj()) {
+      findFullyJoined(dao.findByIDQuery(id))
+    }
 
-  override def findFull(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
-    findFullyJoined(dao.findByKeyQuery(caseKey))
+  override def findFull(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]] =
+    auditService.audit('CaseView, (c: Case.FullyJoined) => c.clientCase.id.get.toString, 'Case, Json.obj()) {
+      findFullyJoined(dao.findByKeyQuery(caseKey))
+    }
 
   override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, Seq[MessageData], Seq[CaseNote])]]] =
     daoRunner.run(
@@ -125,6 +141,12 @@ class CaseServiceImpl @Inject() (
     ).map { tuples => // Seq[(Case, Option[MessageData], Option[StoredCaseNote])]
       Right(groupTuples(tuples))
     }
+
+  override def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
+    auditService.findRecentTargetIDsByOperation('CaseView, teamMember, limit).flatMap(_.fold(
+      errors => Future.successful(Left(errors)),
+      ids => find(ids.map(UUID.fromString))
+    ))
 
   private def updateDifferencesDBIO[A, B](items: Set[B], query: Query[Table[A], A, Seq], map: A => B, comap: B => A, insert: A => DBIO[A], delete: A => DBIO[Done]): DBIO[Unit] = {
     val existing = query.result

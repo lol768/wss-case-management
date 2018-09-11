@@ -126,7 +126,7 @@ class CaseController @Inject()(
   import canEditCaseActionRefiner._
 
   private def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData])(implicit request: CaseSpecificRequest[AnyContent]): Future[Result] = {
-    val fetchOriginalEnquiry: Future[ServiceResult[Option[(Enquiry, Seq[MessageData])]]] =
+    val fetchOriginalEnquiry: Future[ServiceResult[Option[Enquiry]]] =
       request.`case`.originalEnquiry.map { enquiryId =>
         enquiries.get(enquiryId).map(_.right.map(Some(_)))
       }.getOrElse(Future.successful(Right(None)))
@@ -155,7 +155,7 @@ class CaseController @Inject()(
     val baseForm = form(teamRequest.team, profiles, enquiries)
 
     fromEnquiry match {
-      case Some(enquiryKey) => enquiries.get(enquiryKey).successMap { case (enquiry, _) =>
+      case Some(enquiryKey) => enquiries.get(enquiryKey).successMap { enquiry =>
         Ok(views.html.admin.cases.create(
           teamRequest.team,
           baseForm.bind(Map(
@@ -200,9 +200,8 @@ class CaseController @Inject()(
         val updateOriginalEnquiry: Future[ServiceResult[Option[Enquiry]]] = data.originalEnquiry.map { enquiryId =>
           enquiries.get(enquiryId).flatMap(_.fold(
             errors => Future.successful(Left(errors)),
-            { case (enquiry, _) =>
+            enquiry =>
               enquiries.updateState(enquiry, IssueState.Closed, enquiry.version).map(_.right.map(Some(_)))
-            }
           ))
         }.getOrElse(Future.successful(Right(None)))
 
