@@ -19,4 +19,5 @@ class NullNotificationService extends NotificationService {
   override def enquiryMessage(enquiry: Enquiry, sender: MessageSender)(implicit t: TimingContext): Future[ServiceResult[Activity]] = result
   override def enquiryReassign(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]] = result
   override def newCaseOwner(newOwners: Set[Usercode], clientCase: CaseDao.Case)(implicit t: TimingContext): Future[ServiceResult[Activity]] = result
+  override def caseReassign(clientCase: CaseDao.Case)(implicit t: TimingContext): Future[ServiceResult[Activity]] = result
 }

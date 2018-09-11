@@ -51,6 +51,7 @@ trait CaseService {
   def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]]
   def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]]
   def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
+  def reassign(c: Case, team: Team, caseType: Option[CaseType], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
 }
 
 @Singleton
@@ -58,6 +59,7 @@ class CaseServiceImpl @Inject() (
   auditService: AuditService,
   ownerService: OwnerService,
   uploadedFileService: UploadedFileService,
+  notificationService: NotificationService,
   daoRunner: DaoRunner,
   dao: CaseDao
 )(implicit ec: ExecutionContext) extends CaseService {
@@ -318,6 +320,16 @@ class CaseServiceImpl @Inject() (
         _ <- uploadedFileService.deleteDBIO(existing.fileId)
       } yield done).map(Right.apply)
     }
+
+  override def reassign(c: Case, team: Team, caseType: Option[CaseType], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] =
+    auditService.audit('CaseReassign, c.id.get.toString, 'Case, Json.obj("team" -> team.id, "caseType" -> caseType.map(_.entryName).orNull[String])) {
+      daoRunner.run(
+        dao.update(c.copy(team = team, caseType = caseType), version)
+      ).map(Right.apply)
+    }.flatMap(_.fold(
+      errors => Future.successful(Left(errors)),
+      clientCase => notificationService.caseReassign(clientCase).map(_.right.map(_ => clientCase))
+    ))
 }
 
 object CaseService {

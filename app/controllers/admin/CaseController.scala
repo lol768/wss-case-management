@@ -94,6 +94,20 @@ object CaseController {
   def deleteNoteForm(version: OffsetDateTime): Form[OffsetDateTime] = Form(single(
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
   ))
+
+  case class ReassignCaseData(
+    team: Team,
+    caseType: Option[CaseType],
+    version: OffsetDateTime
+  )
+
+  def caseReassignForm(clientCase: Case) = Form(
+    mapping(
+      "team" -> Teams.formField,
+      "caseType" -> optional(CaseType.formField),
+      "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == clientCase.version)
+    )(ReassignCaseData.apply)(ReassignCaseData.unapply)
+  )
 }
 
 @Singleton
@@ -402,5 +416,38 @@ class CaseController @Inject()(
       notes.find(_.id == id).map(f)
         .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
     }
+
+  def reassignForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
+    Ok(views.html.admin.cases.reassign(caseRequest.`case`, caseReassignForm(caseRequest.`case`).fill(ReassignCaseData(
+      team = caseRequest.`case`.team,
+      caseType = caseRequest.`case`.caseType,
+      version = caseRequest.`case`.version
+    ))))
+  }
+
+  def reassign(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
+    caseReassignForm(caseRequest.`case`).bindFromRequest().fold(
+      formWithErrors => Future.successful(
+        Ok(views.html.admin.cases.reassign(caseRequest.`case`, formWithErrors))
+      ),
+      data =>
+        if (!(CaseType.valuesFor(data.team).isEmpty && data.caseType.isEmpty) && !data.caseType.exists(CaseType.valuesFor(data.team).contains)) {
+          Future.successful(
+            Ok(views.html.admin.cases.reassign(
+              caseRequest.`case`,
+              caseReassignForm(caseRequest.`case`).fill(data).withError("caseType", "error.caseType.invalid")
+            ))
+          )
+        } else {
+          if (data.team == caseRequest.`case`.team) // No change
+            Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(data.team.id)))
+          else
+            cases.reassign(caseRequest.`case`, data.team, data.caseType, data.version).successMap { _ =>
+              Redirect(controllers.admin.routes.AdminController.teamHome(caseRequest.`case`.team.id))
+                .flashing("success" -> Messages("flash.case.reassigned", data.team.name))
+            }
+        }
+    )
+  }
 
 }
