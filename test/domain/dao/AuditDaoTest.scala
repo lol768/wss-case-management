@@ -4,7 +4,10 @@ import java.util.UUID
 
 import domain._
 import play.api.libs.json.Json
+import slick.dbio.DBIOAction
 import warwick.sso.Usercode
+
+import scala.concurrent.Future
 
 class AuditDaoTest extends AbstractDaoTest {
 
@@ -21,10 +24,16 @@ class AuditDaoTest extends AbstractDaoTest {
         targetType = 'thing
       )
 
-      val savedEvent = exec(dao.insert(event))
-      savedEvent mustBe event.copy(id = savedEvent.id)
+      val test = for {
+        savedEvent <- dao.insert(event)
+        fetchedEvent <- dao.getById(savedEvent.id)
+        _ <- DBIOAction.from(Future {
+          savedEvent mustBe event.copy(id = savedEvent.id)
+          fetchedEvent mustBe Some(savedEvent)
+        })
+      } yield savedEvent
 
-      exec(dao.getById(savedEvent.id)) mustBe Some(savedEvent)
+      exec(test)
     }
   }
 }
