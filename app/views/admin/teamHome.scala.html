@@ -57,9 +57,14 @@
   <tr>
     <td>
       @clients.get(clientCase.id.get).map { profiles =>
-        @profiles.toSeq.map { p =>  <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a> }
+        <ul class="list-unstyled">
+          @profiles.toSeq.map { p =>
+            <li><a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a></li>
+          }
+        </ul>
       }
     </td>
+    <td>@clientCase.key.get.string @clientCase.subject</td>
     <td>@helpers.JavaTime.Relative(clientCase.created)</td>
     <td>
       @clientCase.team.name
@@ -91,16 +96,16 @@
 
   @if(ownerEnquiries.nonEmpty) {
     <h2>Enquiries assigned to me requiring action</h2>
-    <table class="table table-bordered table-striped">
+    <table class="table table-default">
       <thead>
         <tr>
-          <th>Client</th>
-          <th>Subject</th>
-          <th>Created</th>
-          <th>Last message</th>
-          <th>Team assigned</th>
-          <th>Owners</th>
-          <th></th>
+          <th class="col-sm-2">Client</th>
+          <th class="col-sm-2">Subject</th>
+          <th class="col-sm-2">Created</th>
+          <th class="col-sm-2">Last message</th>
+          <th class="col-sm-2">Team assigned</th>
+          <th class="col-sm-1">Owners</th>
+          <th class="col-sm-1"></th>
         </tr>
       </thead>
       <tbody>
@@ -113,16 +118,16 @@
 
   @if(teamEnquiries.nonEmpty) {
     <h2>Enquiries assigned to @team.name requiring action</h2>
-    <table class="table table-bordered table-striped">
+    <table class="table table-default">
       <thead>
         <tr>
-          <th>Client</th>
-          <th>Subject</th>
-          <th>Created</th>
-          <th>Last message</th>
-          <th>Team assigned</th>
-          <th>Owners</th>
-          <th></th>
+          <th class="col-sm-2">Client</th>
+          <th class="col-sm-2">Subject</th>
+          <th class="col-sm-2">Created</th>
+          <th class="col-sm-2">Last message</th>
+          <th class="col-sm-2">Team assigned</th>
+          <th class="col-sm-1">Owners</th>
+          <th class="col-sm-1"></th>
         </tr>
       </thead>
       <tbody>
@@ -135,14 +140,15 @@
 
   @if(ownerCases.nonEmpty) {
     <h2>Open cases assigned to me</h2>
-    <table class="table table-bordered table-striped">
+    <table class="table table-default">
       <thead>
         <tr>
-          <th>Client</th>
-          <th>Created</th>
-          <th>Team assigned</th>
-          <th>Owners</th>
-          <th></th>
+          <th class="col-sm-2">Client</th>
+          <th class="col-sm-3">Subject</th>
+          <th class="col-sm-2">Created</th>
+          <th class="col-sm-3">Team assigned</th>
+          <th class="col-sm-1">Owners</th>
+          <th class="col-sm-1"></th>
         </tr>
       </thead>
       <tbody>
@@ -155,14 +161,15 @@
 
   @if(teamCases.nonEmpty) {
     <h2>Open cases assigned to @team.name</h2>
-    <table class="table table-bordered table-striped">
+    <table class="table table-default">
       <thead>
         <tr>
-          <th>Client</th>
-          <th>Created</th>
-          <th>Team assigned</th>
-          <th>Owners</th>
-          <th></th>
+          <th class="col-sm-2">Client</th>
+          <th class="col-sm-3">Subject</th>
+          <th class="col-sm-2">Created</th>
+          <th class="col-sm-3">Team assigned</th>
+          <th class="col-sm-1">Owners</th>
+          <th class="col-sm-1"></th>
         </tr>
       </thead>
       <tbody>
