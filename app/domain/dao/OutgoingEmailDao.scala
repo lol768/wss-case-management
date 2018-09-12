@@ -12,7 +12,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.mailer.Email
-import slick.jdbc.{JdbcProfile, PostgresProfile}
+import slick.jdbc.JdbcProfile
 import ExtendedPostgresProfile.api._
 import warwick.sso.Usercode
 
@@ -149,7 +149,7 @@ class OutgoingEmailDaoImpl @Inject()(
     ))
 
 
-  override def insertAll(emails: Seq[OutgoingEmail]): PostgresProfile.api.DBIO[Seq[PersistedOutgoingEmail]] =
+  override def insertAll(emails: Seq[OutgoingEmail]): DBIO[Seq[PersistedOutgoingEmail]] =
     outgoingEmails.insertAll(emails.map { email =>
       PersistedOutgoingEmail(
         UUID.randomUUID(),
@@ -179,7 +179,7 @@ class OutgoingEmailDaoImpl @Inject()(
   override def get(id: UUID): DBIO[Option[PersistedOutgoingEmail]] =
     outgoingEmails.table.filter(_.id === id).take(1).result.headOption
 
-  override def countUnsentEmails(): PostgresProfile.api.DBIO[Int] =
+  override def countUnsentEmails(): DBIO[Int] =
     outgoingEmails.table.filter { e => e.sent.?.isEmpty && (e.lastSendAttempt.?.nonEmpty || e.failureReason.?.isEmpty) }.length.result
 
 }

@@ -9,11 +9,11 @@ import enumeratum.SlickEnumSupport
 import helpers.JavaTime
 import play.api.libs.json.{JsValue, Json}
 import ExtendedPostgresProfile.api._
-import slick.jdbc.{JdbcProfile, JdbcType, PostgresProfile}
+import slick.jdbc.{JdbcProfile, JdbcType}
 import warwick.sso.{GroupName, UniversityID, Usercode}
 
 object CustomJdbcTypes extends SlickEnumSupport {
-  override val profile: JdbcProfile = PostgresProfile
+  override val profile: JdbcProfile = ExtendedPostgresProfile
   import profile._
 
   implicit val usercodeTypeMapper: JdbcType[Usercode] = MappedColumnType.base[Usercode, String](

@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 
 import akka.Done
 import com.google.common.io.ByteSource
-import domain.dao.CaseDao.Case
+import domain.dao.CaseDao.{Case, CaseSearchQuery}
 import domain.dao.{AbstractDaoTest, CaseDao, UploadedFileDao}
 import domain._
 import helpers.DataFixture
@@ -256,6 +256,11 @@ class CaseServiceTest extends AbstractDaoTest {
       service.findFull(c.id.get).serviceValue
 
       service.findRecentlyViewed(Usercode("cuscav"), 5).serviceValue mustBe Seq(c)
+    }
+
+    "search" ignore withData(new CaseFixture) { c =>
+      // TODO Find a way to test this. Replace H2 with embedded PgSQL?
+      service.search(CaseSearchQuery(query = Some("assessment")), 5).serviceValue mustBe Seq(c)
     }
   }
 }

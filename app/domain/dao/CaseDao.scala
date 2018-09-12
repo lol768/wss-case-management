@@ -1,6 +1,8 @@
 package domain.dao
 
-import java.time.OffsetDateTime
+import java.time.{LocalDate, OffsetDateTime}
+
+import helpers.StringUtils._
 import java.util.UUID
 
 import akka.Done
@@ -13,6 +15,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import ExtendedPostgresProfile.api._
+import helpers.JavaTime
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
 
@@ -30,7 +33,7 @@ trait CaseDao {
   def findByIDsQuery(ids: Set[UUID]): Query[Cases, Case, Seq]
   def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq]
   def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq]
-  def textSearchQuery(query: String): Query[Cases, Case, Seq]
+  def searchQuery(query: CaseSearchQuery): Query[Cases, Case, Seq]
   def update(c: Case, version: OffsetDateTime): DBIO[Case]
   def insertTags(tags: Set[StoredCaseTag]): DBIO[Seq[StoredCaseTag]]
   def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag]
@@ -85,14 +88,26 @@ class CaseDaoImpl @Inject()(
       .filter { case (_, client) => client.client === universityID }
       .map { case (c, _) => c }
 
-  override def textSearchQuery(queryStr: String): Query[Cases, Case, Seq] = {
-    val query = plainToTsQuery(queryStr.bind, Some("english"))
+  override def searchQuery(q: CaseSearchQuery): Query[Cases, Case, Seq] = {
+    def queries(c: Cases, n: Rep[Option[CaseNotes]]): Seq[Rep[Option[Boolean]]] =
+      Seq[Option[Rep[Option[Boolean]]]](
+        q.query.filter(_.nonEmpty).map { queryStr =>
+          (c.searchableKey @+ c.searchableSubject @+ n.map(_.searchableText)) @@  plainToTsQuery(queryStr.bind, Some("english"))
+        },
+        q.createdAfter.map { d => c.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
+        q.createdBefore.map { d => c.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
+        q.team.map { team => c.team.? === team },
+        q.caseType.map { caseType => c.caseType === caseType },
+        q.state.flatMap {
+          case CaseStateFilter.All => None
+          case CaseStateFilter.Open => Some(c.state.? =!= (IssueState.Closed: IssueState))
+          case CaseStateFilter.Closed => Some(c.state.? === (IssueState.Closed: IssueState))
+        }
+      ).flatten
 
     cases.table
       .withNotes
-      .filter { case (c, n) =>
-        (c.searchableKey @+ c.searchableSubject @+ n.map(_.searchableText)) @@ query
-      }
+      .filter { case (c, n) => queries(c, n).reduce(_ && _) }
       .map { case (c, _) => c }
       .distinct
   }
@@ -683,5 +698,23 @@ object CaseDao {
     case object All extends CaseStateFilter
 
     val values: immutable.IndexedSeq[CaseStateFilter] = findValues
+  }
+
+  case class CaseSearchQuery(
+    query: Option[String] = None,
+    createdAfter: Option[LocalDate] = None,
+    createdBefore: Option[LocalDate] = None,
+    team: Option[Team] = None,
+    caseType: Option[CaseType] = None,
+    state: Option[CaseStateFilter] = None
+  ) {
+    def isEmpty: Boolean = !nonEmpty
+    def nonEmpty: Boolean =
+      query.exists(_.hasText) ||
+      createdAfter.nonEmpty ||
+      createdBefore.nonEmpty ||
+      team.nonEmpty ||
+      caseType.nonEmpty ||
+      state.nonEmpty
   }
 }

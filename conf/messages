@@ -14,6 +14,7 @@ error.owners.invalid=These user codes are not in any WSS team: {0}
 error.client.invalid=Please choose a valid client
 error.caseType.invalid=Please select a valid case type
 error.localDateTime=Please enter a valid date/time (dd-MM-yyyy HH:mm:ss)
+error.linkTarget.same=You can't link a case to itself
 
 flash.client.summary.updated=Client summary updated
 flash.client.registration.invited=Invitation to register sent to client
