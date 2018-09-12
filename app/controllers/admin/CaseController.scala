@@ -25,14 +25,18 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Try
 
 object CaseController {
-  case class CaseFormData(
-    clients: Set[UniversityID],
-    subject: String,
+  case class CaseIncidentFormData(
     incidentDate: OffsetDateTime,
     onCampus: Boolean,
     notifiedPolice: Boolean,
     notifiedAmbulance: Boolean,
     notifiedFire: Boolean,
+  )
+
+  case class CaseFormData(
+    clients: Set[UniversityID],
+    subject: String,
+    incident: Option[CaseIncidentFormData],
     cause: CaseCause,
     caseType: Option[CaseType],
     tags: Set[CaseTag],
@@ -49,20 +53,24 @@ object CaseController {
       Try(Await.result(enquiryService.get(id), 5.seconds))
         .toOption.exists(_.isRight)
 
-    Form(mapping(
-      "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
-      "subject" -> nonEmptyText(maxLength = Case.SubjectMaxLength),
-      "incidentDate" -> FormHelpers.offsetDateTime,
-      "onCampus" -> boolean,
-      "notifiedPolice" -> boolean,
-      "notifiedAmbulance" -> boolean,
-      "notifiedFire" -> boolean,
-      "cause" -> CaseCause.formField,
-      "caseType" -> optional(CaseType.formField).verifying("error.caseType.invalid", t => (CaseType.valuesFor(team).isEmpty && t.isEmpty) || t.exists(CaseType.valuesFor(team).contains)),
-      "tags" -> set(CaseTag.formField),
-      "originalEnquiry" -> optional(uuid.verifying("error.required", id => isValidEnquiry(id))),
-      "version" -> optional(JavaTime.offsetDateTimeFormField).verifying("error.optimisticLocking", _ == existingVersion)
-    )(CaseFormData.apply)(CaseFormData.unapply))
+    Form(
+      mapping(
+        "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
+        "subject" -> nonEmptyText(maxLength = Case.SubjectMaxLength),
+        "incident" -> optional(mapping(
+          "incidentDate" -> FormHelpers.offsetDateTime,
+          "onCampus" -> boolean,
+          "notifiedPolice" -> boolean,
+          "notifiedAmbulance" -> boolean,
+          "notifiedFire" -> boolean,
+        )(CaseIncidentFormData.apply)(CaseIncidentFormData.unapply)),
+        "cause" -> CaseCause.formField,
+        "caseType" -> optional(CaseType.formField).verifying("error.caseType.invalid", t => (CaseType.valuesFor(team).isEmpty && t.isEmpty) || t.exists(CaseType.valuesFor(team).contains)),
+        "tags" -> set(CaseTag.formField),
+        "originalEnquiry" -> optional(uuid.verifying("error.required", id => isValidEnquiry(id))),
+        "version" -> optional(JavaTime.offsetDateTimeFormField).verifying("error.optimisticLocking", _ == existingVersion)
+      )(CaseFormData.apply)(CaseFormData.unapply)
+    )
   }
 
   case class CaseLinkFormData(
@@ -182,14 +190,14 @@ class CaseController @Inject()(
           key = None, // Set by service
           subject = data.subject,
           created = JavaTime.offsetDateTime,
-          incidentDate = data.incidentDate,
           team = teamRequest.team,
           version = JavaTime.offsetDateTime,
           state = IssueState.Open,
-          onCampus = data.onCampus,
-          notifiedPolice = data.notifiedPolice,
-          notifiedAmbulance = data.notifiedAmbulance,
-          notifiedFire = data.notifiedFire,
+          incidentDate = data.incident.map(_.incidentDate),
+          onCampus = data.incident.map(_.onCampus),
+          notifiedPolice = data.incident.map(_.notifiedPolice),
+          notifiedAmbulance = data.incident.map(_.notifiedAmbulance),
+          notifiedFire = data.incident.map(_.notifiedFire),
           originalEnquiry = data.originalEnquiry,
           caseType = data.caseType,
           cause = data.cause
@@ -242,11 +250,15 @@ class CaseController @Inject()(
             .fill(CaseFormData(
               clients,
               clientCase.subject,
-              clientCase.incidentDate,
-              clientCase.onCampus,
-              clientCase.notifiedPolice,
-              clientCase.notifiedAmbulance,
-              clientCase.notifiedFire,
+              clientCase.incidentDate.map { incidentDate =>
+                CaseIncidentFormData(
+                  incidentDate,
+                  clientCase.onCampus.get,
+                  clientCase.notifiedPolice.get,
+                  clientCase.notifiedAmbulance.get,
+                  clientCase.notifiedFire.get,
+                )
+              },
               clientCase.cause,
               clientCase.caseType,
               tags,
@@ -276,14 +288,14 @@ class CaseController @Inject()(
           key = clientCase.key,
           subject = data.subject,
           created = clientCase.created,
-          incidentDate = data.incidentDate,
           team = clientCase.team,
           version = JavaTime.offsetDateTime,
           state = clientCase.state,
-          onCampus = data.onCampus,
-          notifiedPolice = data.notifiedPolice,
-          notifiedAmbulance = data.notifiedAmbulance,
-          notifiedFire = data.notifiedFire,
+          incidentDate = data.incident.map(_.incidentDate),
+          onCampus = data.incident.map(_.onCampus),
+          notifiedPolice = data.incident.map(_.notifiedPolice),
+          notifiedAmbulance = data.incident.map(_.notifiedAmbulance),
+          notifiedFire = data.incident.map(_.notifiedFire),
           originalEnquiry = data.originalEnquiry,
           caseType = data.caseType,
           cause = data.cause

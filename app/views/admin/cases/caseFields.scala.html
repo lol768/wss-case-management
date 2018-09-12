@@ -36,21 +36,37 @@
   '_default -> ""
 )
 
-@b3.radio(form("onCampus"),
-  options = Seq("true" -> "On-campus", "false" -> "Off-campus"),
-  '_label -> "Where did the incident occur?",
-  'required -> true
-)
-
-@b3.free('_label -> "Additional services required for incident") {
-  @b3.checkbox(form("notifiedPolice"), '_text -> "Police notified")
-  @b3.checkbox(form("notifiedAmbulance"), '_text -> "Ambulance called")
-  @b3.checkbox(form("notifiedFire"), '_text -> "Fire service called")
+@b3.free('_label -> "Incident") {
+  <div class="checkbox">
+    <label for="incident_fields">
+      <input type="checkbox"
+             id="incident_fields"
+             data-toggle="optional-subform"
+             data-target="#incident"
+        @if(form.data.keys.exists(_.startsWith("incident."))) {
+             checked
+        }
+      >
+      This case relates to an incident
+    </label>
+  </div>
 }
+<fieldset id="incident">
+  @b3.radio(form("incident.onCampus"),
+    options = Seq("true" -> "On-campus", "false" -> "Off-campus"),
+    '_label -> "Where did the incident occur?"
+  )
 
-@b3.datetimeLocal(form("incidentDate"),
-  '_label -> "Date of incident"
-)
+  @b3.free('_label -> "Additional services required for incident") {
+    @b3.checkbox(form("incident.notifiedPolice"), '_text -> "Police notified")
+    @b3.checkbox(form("incident.notifiedAmbulance"), '_text -> "Ambulance called")
+    @b3.checkbox(form("incident.notifiedFire"), '_text -> "Fire service called")
+  }
+
+  @b3.datetimeLocal(form("incident.incidentDate"),
+    '_label -> "Date of incident"
+  )
+</fieldset>
 
 @b3.checkboxGroup(
   label = "Case tags",

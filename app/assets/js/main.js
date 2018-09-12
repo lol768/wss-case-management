@@ -71,4 +71,20 @@ $(() => {
       }
     });
   });
+
+  $('input[type="checkbox"][data-toggle="optional-subform"][data-target]').each((i, el) => {
+    const $checkbox = $(el);
+    const $target = $($checkbox.data('target'));
+
+    const update = () => {
+      if ($checkbox.is(':checked')) {
+        $target.show().find(':input').prop('disabled', false);
+      } else {
+        $target.hide().find(':input').prop('disabled', true);
+      }
+    };
+
+    $checkbox.on('input change', update);
+    update();
+  });
 });

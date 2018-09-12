@@ -1,10 +1,8 @@
 package domain
 
-import java.time.OffsetDateTime
 import java.util.UUID
 
 import domain.dao.CaseDao.Case
-import domain.dao.{CaseDao, GeneratedId}
 import helpers.JavaTime
 import warwick.sso._
 
@@ -59,14 +57,14 @@ object Fixtures {
       Some(IssueKey(IssueKeyType.Case, issueKey)),
       "Mental health assessment",
       JavaTime.offsetDateTime,
-      JavaTime.offsetDateTime,
       Teams.MentalHealth,
       JavaTime.offsetDateTime,
       IssueState.Open,
-      onCampus = false,
-      notifiedPolice = false,
-      notifiedAmbulance = false,
-      notifiedFire = false,
+      None,
+      None,
+      None,
+      None,
+      None,
       None,
       Some(CaseType.MentalHealthAssessment),
       CaseCause.New

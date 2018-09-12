@@ -187,14 +187,14 @@ object CaseDao {
     key: Option[IssueKey],
     subject: String,
     created: OffsetDateTime,
-    incidentDate: OffsetDateTime,
     team: Team,
     version: OffsetDateTime,
     state: IssueState,
-    onCampus: Boolean,
-    notifiedPolice: Boolean,
-    notifiedAmbulance: Boolean,
-    notifiedFire: Boolean,
+    incidentDate: Option[OffsetDateTime],
+    onCampus: Option[Boolean],
+    notifiedPolice: Option[Boolean],
+    notifiedAmbulance: Option[Boolean],
+    notifiedFire: Option[Boolean],
     originalEnquiry: Option[UUID],
     caseType: Option[CaseType],
     cause: CaseCause
@@ -206,10 +206,10 @@ object CaseDao {
         key.get,
         subject,
         created,
-        incidentDate,
         team,
         version,
         state,
+        incidentDate,
         onCampus,
         notifiedPolice,
         notifiedAmbulance,
@@ -249,14 +249,14 @@ object CaseDao {
     key: IssueKey,
     subject: String,
     created: OffsetDateTime,
-    incidentDate: OffsetDateTime,
     team: Team,
     version: OffsetDateTime,
     state: IssueState,
-    onCampus: Boolean,
-    notifiedPolice: Boolean,
-    notifiedAmbulance: Boolean,
-    notifiedFire: Boolean,
+    incidentDate: Option[OffsetDateTime],
+    onCampus: Option[Boolean],
+    notifiedPolice: Option[Boolean],
+    notifiedAmbulance: Option[Boolean],
+    notifiedFire: Option[Boolean],
     originalEnquiry: Option[UUID],
     caseType: Option[CaseType],
     cause: CaseCause,
@@ -269,14 +269,14 @@ object CaseDao {
     def key = column[IssueKey]("case_key")
     def subject = column[String]("subject")
     def created = column[OffsetDateTime]("created_utc")
-    def incidentDate = column[OffsetDateTime]("incident_date_utc")
     def team = column[Team]("team_id")
     def version = column[OffsetDateTime]("version_utc")
     def state = column[IssueState]("state")
-    def onCampus = column[Boolean]("on_campus")
-    def notifiedPolice = column[Boolean]("notified_police")
-    def notifiedAmbulance = column[Boolean]("notified_ambulance")
-    def notifiedFire = column[Boolean]("notified_fire")
+    def incidentDate = column[Option[OffsetDateTime]]("incident_date_utc")
+    def onCampus = column[Option[Boolean]]("on_campus")
+    def notifiedPolice = column[Option[Boolean]]("notified_police")
+    def notifiedAmbulance = column[Option[Boolean]]("notified_ambulance")
+    def notifiedFire = column[Option[Boolean]]("notified_fire")
     def originalEnquiry = column[Option[UUID]]("enquiry_id")
     def caseType = column[Option[CaseType]]("case_type")
     def cause = column[CaseCause]("cause")
@@ -291,7 +291,7 @@ object CaseDao {
     def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 
     override def * : ProvenShape[Case] =
-      (id.?, key.?, subject, created, incidentDate, team, version, state, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause).mapTo[Case]
+      (id.?, key.?, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause).mapTo[Case]
     def idx = index("idx_client_case_key", key, unique = true)
   }
 
@@ -303,7 +303,7 @@ object CaseDao {
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
     override def * : ProvenShape[CaseVersion] =
-      (id, key, subject, created, incidentDate, team, version, state, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, operation, timestamp).mapTo[CaseVersion]
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, operation, timestamp).mapTo[CaseVersion]
   }
 
   implicit class CaseExtensions[C[_]](q: Query[Cases, Case, C]) {

@@ -60,6 +60,7 @@
         @profiles.toSeq.map { p =>  <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a> }
       }
     </td>
+    <td>@clientCase.key.get.string @clientCase.subject</td>
     <td>@helpers.JavaTime.Relative(clientCase.created)</td>
     <td>
       @clientCase.team.name
@@ -139,6 +140,7 @@
       <thead>
         <tr>
           <th>Client</th>
+          <th>Subject</th>
           <th>Created</th>
           <th>Team assigned</th>
           <th>Owners</th>
@@ -159,6 +161,7 @@
       <thead>
         <tr>
           <th>Client</th>
+          <th>Subject</th>
           <th>Created</th>
           <th>Team assigned</th>
           <th>Owners</th>
