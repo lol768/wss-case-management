@@ -11,7 +11,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.JsValue
 import slick.jdbc.JdbcProfile
-import slick.jdbc.PostgresProfile.api._
+import ExtendedPostgresProfile.api._
 import slick.lifted.{Index, PrimaryKey, ProvenShape}
 import warwick.sso.UniversityID
 

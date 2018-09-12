@@ -13,7 +13,7 @@ import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.mailer.Email
 import slick.jdbc.{JdbcProfile, PostgresProfile}
-import slick.jdbc.PostgresProfile.api._
+import ExtendedPostgresProfile.api._
 import warwick.sso.Usercode
 
 import scala.concurrent.ExecutionContext

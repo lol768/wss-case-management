@@ -12,7 +12,7 @@ import helpers.JavaTime
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
 

@@ -11,7 +11,7 @@ import helpers.ConditionalChain._
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 import uk.ac.warwick.util.logging.AuditLogger
 import uk.ac.warwick.util.logging.AuditLogger.RequestInformation
 import warwick.core.timing.TimingContext

@@ -6,7 +6,7 @@ import java.util.UUID
 
 import domain.dao.AbstractDaoTest
 import helpers.JavaTime
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 
 class CustomJdbcTypesTest extends AbstractDaoTest {
 

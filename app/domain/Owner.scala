@@ -5,7 +5,7 @@ import java.util.UUID
 
 import domain.CustomJdbcTypes._
 import enumeratum.{EnumEntry, PlayEnum}
-import slick.jdbc.PostgresProfile.api._
+import ExtendedPostgresProfile.api._
 import warwick.sso.Usercode
 import scala.collection.immutable
 import scala.language.higherKinds

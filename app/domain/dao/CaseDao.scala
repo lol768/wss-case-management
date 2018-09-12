@@ -30,7 +30,7 @@ trait CaseDao {
   def findByIDsQuery(ids: Set[UUID]): Query[Cases, Case, Seq]
   def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq]
   def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq]
-  def searchQuery(query: String): Query[Cases, Case, Seq]
+  def textSearchQuery(query: String): Query[Cases, Case, Seq]
   def update(c: Case, version: OffsetDateTime): DBIO[Case]
   def insertTags(tags: Set[StoredCaseTag]): DBIO[Seq[StoredCaseTag]]
   def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag]
@@ -85,14 +85,13 @@ class CaseDaoImpl @Inject()(
       .filter { case (_, client) => client.client === universityID }
       .map { case (c, _) => c }
 
-  override def searchQuery(queryStr: String): Query[Cases, Case, Seq] = {
-    val query = toTsQuery(queryStr.bind, Some("english"))
+  override def textSearchQuery(queryStr: String): Query[Cases, Case, Seq] = {
+    val query = plainToTsQuery(queryStr.bind, Some("english"))
 
     cases.table
       .withNotes
       .filter { case (c, n) =>
-        c.searchableSubject @@ query ||
-        n.map(_.searchableText @@ query)
+        (c.searchableKey @+ c.searchableSubject @+ n.map(_.searchableText)) @@ query
       }
       .map { case (c, _) => c }
       .distinct
@@ -281,6 +280,7 @@ object CaseDao {
 
   trait CommonProperties { self: Table[_] =>
     def key = column[IssueKey]("case_key")
+    def searchableKey = toTsVector(key.asColumnOf[String], Some("english"))
     def subject = column[String]("subject")
     def searchableSubject = toTsVector(subject, Some("english"))
     def created = column[OffsetDateTime]("created_utc")

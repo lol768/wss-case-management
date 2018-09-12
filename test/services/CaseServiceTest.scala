@@ -9,7 +9,7 @@ import domain.dao.CaseDao.Case
 import domain.dao.{AbstractDaoTest, CaseDao, UploadedFileDao}
 import domain._
 import helpers.DataFixture
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.{UniversityID, Usercode}
 

@@ -2,7 +2,7 @@ package domain
 
 import com.github.tminglei.slickpg._
 import slick.basic.Capability
-import slick.driver.JdbcProfile
+import slick.jdbc.JdbcCapabilities
 
 trait ExtendedPostgresProfile
   extends ExPostgresProfile
@@ -10,7 +10,7 @@ trait ExtendedPostgresProfile
 
   // Add back `capabilities.insertOrUpdate` to enable native `upsert` support; for postgres 9.5+
   override protected def computeCapabilities: Set[Capability] =
-    super.computeCapabilities + JdbcProfile.capabilities.insertOrUpdate
+    super.computeCapabilities + JdbcCapabilities.insertOrUpdate
 
   override val api: API = new API {}
 

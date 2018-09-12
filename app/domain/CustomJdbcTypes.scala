@@ -8,7 +8,7 @@ import java.util.{Calendar, TimeZone}
 import enumeratum.SlickEnumSupport
 import helpers.JavaTime
 import play.api.libs.json.{JsValue, Json}
-import slick.jdbc.PostgresProfile.api._
+import ExtendedPostgresProfile.api._
 import slick.jdbc.{JdbcProfile, JdbcType, PostgresProfile}
 import warwick.sso.{GroupName, UniversityID, Usercode}
 
