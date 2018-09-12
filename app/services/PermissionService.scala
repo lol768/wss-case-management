@@ -17,6 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
 trait PermissionService {
   def inAnyTeam(user: Usercode): Future[ServiceResult[Boolean]]
   def inAnyTeam(users: Set[Usercode]): ServiceResult[Map[Usercode, Boolean]]
+  def teams(user: Usercode): ServiceResult[Seq[Team]]
   def canViewTeam(user: Usercode, team: Team): ServiceResult[Boolean]
   def canViewTeamFuture(user: Usercode, team: Team): Future[ServiceResult[Boolean]]
   def canViewEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
@@ -50,8 +51,7 @@ class PermissionServiceImpl @Inject() (
 
   private def inAnyTeamImpl(user: Usercode): ServiceResult[Boolean] =
       ServiceResults.sequence(Seq(isAdmin(user)) ++ Teams.all.map(inTeam(user, _)))
-        .right.map(_.contains(true)
-    )
+        .right.map(_.contains(true))
 
   override def inAnyTeam(users: Set[Usercode]): ServiceResult[Map[Usercode, Boolean]] = {
     users.toSeq.map(user => user -> inAnyTeamImpl(user)).partition { case (_, result) => result.isLeft } match {
@@ -59,6 +59,14 @@ class PermissionServiceImpl @Inject() (
       case (errors, _) => Left(errors.toList.collect { case (_, Left(x)) => x }.flatten)
     }
   }
+
+  override def teams(user: Usercode): ServiceResult[Seq[Team]] =
+    ServiceResults.sequence(
+      Teams.all.map { team =>
+        inTeam(user, team)
+          .right.map { b => if (b) Some(team) else None }
+      }
+    ).right.map(_.flatten)
 
   override def canViewTeam(user: Usercode, team: Team): ServiceResult[Boolean] =
     ServiceResults.sequence(Seq(isAdmin(user), inTeam(user, team)))
