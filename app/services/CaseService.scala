@@ -289,10 +289,10 @@ class CaseServiceImpl @Inject() (
     }
 
   override def listOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
-    daoRunner.run(dao.listQuery(Some(team), None, CaseStateFilter.Open).result).map(Right.apply)
+    daoRunner.run(dao.listQuery(Some(team), None, IssueStateFilter.Open).result).map(Right.apply)
 
   override def listOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
-    daoRunner.run(dao.listQuery(None, Some(owner), CaseStateFilter.Open).result).map(Right.apply)
+    daoRunner.run(dao.listQuery(None, Some(owner), IssueStateFilter.Open).result).map(Right.apply)
 
   override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]] =
     ownerService.getCaseOwners(ids)

@@ -1,25 +1,22 @@
 package domain.dao
 
 import java.time.{LocalDate, OffsetDateTime}
-
-import helpers.StringUtils._
 import java.util.UUID
 
 import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.CaseDao._
-import enumeratum.{EnumEntry, PlayEnum}
+import helpers.JavaTime
+import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
-import ExtendedPostgresProfile.api._
-import helpers.JavaTime
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
 
-import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
 
@@ -53,7 +50,7 @@ trait CaseDao {
   def insertDocument(document: StoredCaseDocument): DBIO[StoredCaseDocument]
   def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime): DBIO[Done]
   def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq]
-  def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq]
+  def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, Case, Seq]
 }
 
 @Singleton
@@ -99,9 +96,9 @@ class CaseDaoImpl @Inject()(
         q.team.map { team => c.team.? === team },
         q.caseType.map { caseType => c.caseType === caseType },
         q.state.flatMap {
-          case CaseStateFilter.All => None
-          case CaseStateFilter.Open => Some(c.state.? =!= (IssueState.Closed: IssueState))
-          case CaseStateFilter.Closed => Some(c.state.? === (IssueState.Closed: IssueState))
+          case IssueStateFilter.All => None
+          case IssueStateFilter.Open => Some(c.isOpen.?)
+          case IssueStateFilter.Closed => Some(!c.isOpen.?)
         }
       ).flatten
 
@@ -171,7 +168,7 @@ class CaseDaoImpl @Inject()(
   override def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq] =
     caseDocuments.table.filter(_.caseId === caseID)
 
-  override def listQuery(team: Option[Team], owner: Option[Usercode], state: CaseStateFilter): Query[Cases, Case, Seq] = {
+  override def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, Case, Seq] = {
     owner.fold(cases.table.subquery)(u =>
       cases.table
         .join(Owner.owners.table)
@@ -181,9 +178,9 @@ class CaseDaoImpl @Inject()(
     ).filter(c => {
       val teamFilter = team.fold(true.bind)(c.team === _)
       val stateFilter = state match {
-        case CaseStateFilter.Open => c.isOpen
-        case CaseStateFilter.Closed => !c.isOpen
-        case CaseStateFilter.All => true.bind
+        case IssueStateFilter.Open => c.isOpen
+        case IssueStateFilter.Closed => !c.isOpen
+        case IssueStateFilter.All => true.bind
       }
       teamFilter && stateFilter
     })
@@ -691,22 +688,13 @@ object CaseDao {
     def idx = index("idx_case_document_version", (id, version))
   }
 
-  sealed trait CaseStateFilter extends EnumEntry
-  object CaseStateFilter extends PlayEnum[CaseStateFilter] {
-    case object Open extends CaseStateFilter
-    case object Closed extends CaseStateFilter
-    case object All extends CaseStateFilter
-
-    val values: immutable.IndexedSeq[CaseStateFilter] = findValues
-  }
-
   case class CaseSearchQuery(
     query: Option[String] = None,
     createdAfter: Option[LocalDate] = None,
     createdBefore: Option[LocalDate] = None,
     team: Option[Team] = None,
     caseType: Option[CaseType] = None,
-    state: Option[CaseStateFilter] = None
+    state: Option[IssueStateFilter] = None
   ) {
     def isEmpty: Boolean = !nonEmpty
     def nonEmpty: Boolean =

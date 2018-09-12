@@ -57,7 +57,8 @@ object Message extends Versioning {
   )
 
   sealed trait CommonProperties { self: Table[_] =>
-    def text = column [String]("text")
+    def text = column[String]("text")
+    def searchableText = toTsVector(text, Some("english"))
     def sender = column[MessageSender]("sender")
     def teamMember = column[Option[Usercode]]("team_member")
     def created = column[OffsetDateTime]("created_utc")

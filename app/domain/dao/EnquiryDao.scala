@@ -10,6 +10,8 @@ import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import ExtendedPostgresProfile.api._
+import domain.Enquiry.EnquirySearchQuery
+import helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext
@@ -24,6 +26,7 @@ trait EnquiryDao {
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findOpenQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findOpenQuery(owner: Usercode): Query[Enquiry.Enquiries, Enquiry, Seq]
+  def searchQuery(query: EnquirySearchQuery): Query[Enquiry.Enquiries, Enquiry, Seq]
 }
 
 @Singleton
@@ -61,5 +64,28 @@ class EnquiryDaoImpl @Inject() (
       .on((e, o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Enquiry:Owner.EntityType))
       .filter { case (e, o) => e.isOpen && o.userId === owner }
       .map { case (e, _) => e }
+
+  override def searchQuery(q: EnquirySearchQuery): Query[Enquiry.Enquiries, Enquiry, Seq] = {
+    def queries(e: Enquiry.Enquiries, m: Rep[Option[Message.Messages]]): Seq[Rep[Option[Boolean]]] =
+      Seq[Option[Rep[Option[Boolean]]]](
+        q.query.filter(_.nonEmpty).map { queryStr =>
+          (e.searchableKey @+ e.searchableSubject @+ m.map(_.searchableText)) @@  plainToTsQuery(queryStr.bind, Some("english"))
+        },
+        q.createdAfter.map { d => e.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
+        q.createdBefore.map { d => e.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
+        q.team.map { team => e.team.? === team },
+        q.state.flatMap {
+          case IssueStateFilter.All => None
+          case IssueStateFilter.Open => Some(e.isOpen.?)
+          case IssueStateFilter.Closed => Some(!e.isOpen.?)
+        }
+      ).flatten
+
+    Enquiry.enquiries.table
+      .withMessages
+      .filter { case (c, m) => queries(c, m).reduce(_ && _) }
+      .map { case (c, _) => c }
+      .distinct
+  }
 
 }
