@@ -1,11 +1,10 @@
 package domain.dao
 
 import domain._
-import domain.dao.CaseDao.{Case, CaseStateFilter, Cases}
+import domain.dao.CaseDao.{Case, Cases}
 import helpers.DataFixture
 import warwick.sso.Usercode
-import slick.jdbc.PostgresProfile.api._
-
+import domain.ExtendedPostgresProfile.api._
 
 class CaseDaoTest extends AbstractDaoTest {
 
@@ -58,18 +57,18 @@ class CaseDaoTest extends AbstractDaoTest {
         def toKeys: Seq[Int] = exec(query.result).map(_.key.get.number)
       }
 
-      dao.listQuery(None, None, CaseStateFilter.All).toKeys.length mustBe 8
-      dao.listQuery(None, None, CaseStateFilter.Open).toKeys mustBe Seq(1, 3, 5, 7)
-      dao.listQuery(None, None, CaseStateFilter.Closed).toKeys mustBe Seq(2, 4, 6, 8)
+      dao.listQuery(None, None, IssueStateFilter.All).toKeys.length mustBe 8
+      dao.listQuery(None, None, IssueStateFilter.Open).toKeys mustBe Seq(1, 3, 5, 7)
+      dao.listQuery(None, None, IssueStateFilter.Closed).toKeys mustBe Seq(2, 4, 6, 8)
 
-      dao.listQuery(Some(Teams.MentalHealth), None, CaseStateFilter.Open).toKeys mustBe Seq(1, 5)
-      dao.listQuery(Some(Teams.MentalHealth), None, CaseStateFilter.Closed).toKeys mustBe Seq(2, 6)
-      dao.listQuery(Some(Teams.MentalHealth), None, CaseStateFilter.All).toKeys mustBe Seq(1, 2, 5, 6)
+      dao.listQuery(Some(Teams.MentalHealth), None, IssueStateFilter.Open).toKeys mustBe Seq(1, 5)
+      dao.listQuery(Some(Teams.MentalHealth), None, IssueStateFilter.Closed).toKeys mustBe Seq(2, 6)
+      dao.listQuery(Some(Teams.MentalHealth), None, IssueStateFilter.All).toKeys mustBe Seq(1, 2, 5, 6)
 
-      dao.listQuery(Some(Teams.StudentSupport), None, CaseStateFilter.Open).toKeys mustBe Seq(3, 7)
-      dao.listQuery(Some(Teams.MentalHealth), Some(Usercode("u1234567")), CaseStateFilter.Open).toKeys mustBe Seq(5)
-      dao.listQuery(Some(Teams.MentalHealth), Some(Usercode("u1234567")), CaseStateFilter.All).toKeys mustBe Seq(5, 6)
-      dao.listQuery(None, Some(Usercode("u1234567")), CaseStateFilter.All).toKeys mustBe Seq(5, 6, 7, 8)
+      dao.listQuery(Some(Teams.StudentSupport), None, IssueStateFilter.Open).toKeys mustBe Seq(3, 7)
+      dao.listQuery(Some(Teams.MentalHealth), Some(Usercode("u1234567")), IssueStateFilter.Open).toKeys mustBe Seq(5)
+      dao.listQuery(Some(Teams.MentalHealth), Some(Usercode("u1234567")), IssueStateFilter.All).toKeys mustBe Seq(5, 6)
+      dao.listQuery(None, Some(Usercode("u1234567")), IssueStateFilter.All).toKeys mustBe Seq(5, 6, 7, 8)
     }
   }
 

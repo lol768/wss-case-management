@@ -9,7 +9,7 @@ import helpers.JavaTime
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{JsValue, Json}
 import slick.jdbc.JdbcProfile
-import slick.jdbc.PostgresProfile.api._
+import ExtendedPostgresProfile.api._
 import warwick.sso.UniversityID
 
 import scala.concurrent.ExecutionContext

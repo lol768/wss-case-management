@@ -16,7 +16,7 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import services.CaseService._
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
 
@@ -33,6 +33,7 @@ trait CaseService {
   def findFull(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]]
   def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, Seq[MessageData], Seq[CaseNote])]]]
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
+  def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def update(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def updateState(caseID: UUID, targetState: IssueState, version: OffsetDateTime, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]]
@@ -147,6 +148,9 @@ class CaseServiceImpl @Inject() (
       errors => Future.successful(Left(errors)),
       ids => find(ids.map(UUID.fromString))
     ))
+
+  override def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
+    daoRunner.run(dao.searchQuery(query).take(limit).result).map(Right.apply)
 
   private def updateDifferencesDBIO[A, B](items: Set[B], query: Query[Table[A], A, Seq], map: A => B, comap: B => A, insert: A => DBIO[A], delete: A => DBIO[Done]): DBIO[Unit] = {
     val existing = query.result
@@ -285,10 +289,10 @@ class CaseServiceImpl @Inject() (
     }
 
   override def listOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
-    daoRunner.run(dao.listQuery(Some(team), None, CaseStateFilter.Open).result).map(Right.apply)
+    daoRunner.run(dao.listQuery(Some(team), None, IssueStateFilter.Open).result).map(Right.apply)
 
   override def listOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
-    daoRunner.run(dao.listQuery(None, Some(owner), CaseStateFilter.Open).result).map(Right.apply)
+    daoRunner.run(dao.listQuery(None, Some(owner), IssueStateFilter.Open).result).map(Right.apply)
 
   override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]] =
     ownerService.getCaseOwners(ids)

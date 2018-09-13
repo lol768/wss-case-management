@@ -6,7 +6,7 @@ import akka.Done
 import domain.CustomJdbcTypes._
 import helpers.JavaTime
 import slick.dbio.Effect
-import slick.jdbc.PostgresProfile.api._
+import ExtendedPostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.FixedSqlStreamingAction
 

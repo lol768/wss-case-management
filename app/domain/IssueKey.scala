@@ -1,7 +1,11 @@
 package domain
 
+import domain.Teams.Formatter
 import enumeratum.{Enum, EnumEntry}
 import helpers.StringUtils._
+import play.api.data.{FormError, Forms, Mapping}
+import play.api.data.format.Formats.parsing
+import play.api.data.format.Formatter
 import play.api.mvc.{PathBindable, QueryStringBindable}
 
 import scala.collection.immutable
@@ -33,6 +37,17 @@ object IssueKey {
     override def unbind(key: String, value: IssueKey): String =
       s"$key=${value.string}"
   }
+
+  implicit val issueKeyFormatter: Formatter[IssueKey] = new Formatter[IssueKey] {
+    override val format = Some(("format.issueKey", Nil))
+
+    override def bind(key: String, data: Map[String, String]): Either[Seq[FormError], IssueKey] =
+      parsing(IssueKey.apply, "error.issueKey", Nil)(key, data)
+
+    override def unbind(key: String, value: IssueKey) = Map(key -> value.string)
+  }
+
+  val formField: Mapping[IssueKey] = Forms.of(issueKeyFormatter)
 }
 
 sealed abstract class IssueKeyType(val code: String, val prefix: Char) extends EnumEntry

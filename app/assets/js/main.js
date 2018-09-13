@@ -8,6 +8,7 @@ import './flexi-picker';
 import ClientSearch from './client-search';
 import UserListPopovers from './user-list-popovers';
 import MessageThreads from './message-threads';
+import CasePicker from './case-picker';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -31,6 +32,10 @@ $(() => {
 
   $('.panel-group.enquiries').each((i, container) => {
     MessageThreads(container);
+  });
+
+  $('.case-picker').each((i, container) => {
+    CasePicker(container);
   });
 
   $('html')

@@ -1,15 +1,15 @@
 package domain
 
-import java.time.OffsetDateTime
+import java.time.{LocalDate, OffsetDateTime}
 import java.util.UUID
 
-import warwick.sso.UniversityID
-import slick.jdbc.PostgresProfile.api._
-import CustomJdbcTypes._
+import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
 import domain.IssueState.{Open, Reopened}
-import enumeratum.{EnumEntry, PlayEnum}
+import helpers.StringUtils._
 import play.api.data.Form
 import play.api.data.Forms._
+import warwick.sso.UniversityID
 
 import scala.language.higherKinds
 
@@ -60,10 +60,12 @@ object Enquiry extends Versioning {
     self: Table[_] =>
 
     def key = column[IssueKey]("enquiry_key")
+    def searchableKey = toTsVector(key.asColumnOf[String], Some("english"))
     def team = column[Team]("team_id")
     def version = column[OffsetDateTime]("version_utc")
     def universityId = column[UniversityID]("university_id")
     def subject = column[String]("subject")
+    def searchableSubject = toTsVector(subject, Some("english"))
     def state = column[IssueState]("state")
     def created = column[OffsetDateTime]("created_utc")
   }
@@ -98,6 +100,22 @@ object Enquiry extends Versioning {
       .on { (e, m) =>
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
+  }
+
+  case class EnquirySearchQuery(
+    query: Option[String] = None,
+    createdAfter: Option[LocalDate] = None,
+    createdBefore: Option[LocalDate] = None,
+    team: Option[Team] = None,
+    state: Option[IssueStateFilter] = None
+  ) {
+    def isEmpty: Boolean = !nonEmpty
+    def nonEmpty: Boolean =
+      query.exists(_.hasText) ||
+      createdAfter.nonEmpty ||
+      createdBefore.nonEmpty ||
+      team.nonEmpty ||
+      state.nonEmpty
   }
 }
 

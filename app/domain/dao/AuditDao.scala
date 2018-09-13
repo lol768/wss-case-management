@@ -9,7 +9,7 @@ import domain.CustomJdbcTypes._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 import warwick.sso.Usercode
 
 import scala.concurrent.ExecutionContext

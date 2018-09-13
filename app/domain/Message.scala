@@ -6,7 +6,7 @@ import java.util.UUID
 import domain.CustomJdbcTypes._
 import enumeratum._
 import helpers.JavaTime
-import slick.jdbc.PostgresProfile.api._
+import ExtendedPostgresProfile.api._
 import warwick.sso.{UniversityID, Usercode}
 
 /**
@@ -57,7 +57,8 @@ object Message extends Versioning {
   )
 
   sealed trait CommonProperties { self: Table[_] =>
-    def text = column [String]("text")
+    def text = column[String]("text")
+    def searchableText = toTsVector(text, Some("english"))
     def sender = column[MessageSender]("sender")
     def teamMember = column[Option[Usercode]]("team_member")
     def created = column[OffsetDateTime]("created_utc")

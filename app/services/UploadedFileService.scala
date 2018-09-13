@@ -12,7 +12,7 @@ import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 import warwick.objectstore.ObjectStorageService
 
 import scala.concurrent.{ExecutionContext, Future}
