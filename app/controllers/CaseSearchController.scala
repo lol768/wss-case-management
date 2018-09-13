@@ -11,7 +11,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, ActionFilter, AnyContent}
 import services.{CaseService, PermissionService}
 import warwick.sso.AuthenticatedRequest
 
@@ -39,7 +39,7 @@ class CaseSearchController @Inject()(
   import anyTeamActionRefiner._
   import viewCaseActionRefiner._
 
-  private def canViewAnyCase = PermissionsFilter[AuthenticatedRequest] { implicit request =>
+  private val canViewAnyCase: ActionFilter[AuthenticatedRequest] = PermissionsFilter[AuthenticatedRequest] { implicit request =>
     permissions.canViewCase(request.context.user.get.usercode)
   }
 

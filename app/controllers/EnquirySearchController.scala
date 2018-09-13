@@ -38,7 +38,7 @@ class EnquirySearchController @Inject()(
   import anyTeamActionRefiner._
   import viewEnquiryActionRefiner._
 
-  private def canViewAnyEnquiry: ActionFilter[AuthenticatedRequest] = PermissionsFilter[AuthenticatedRequest] { implicit request =>
+  private val canViewAnyEnquiry: ActionFilter[AuthenticatedRequest] = PermissionsFilter[AuthenticatedRequest] { implicit request =>
     permissions.inAnyTeam(request.context.user.get.usercode)
   }
 
