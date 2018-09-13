@@ -1,0 +1,13 @@
+@import java.time.OffsetDateTime
+@import java.util.UUID
+
+@import domain.{Team, SitsProfile}
+@import domain.dao.CaseDao.Case
+
+@(
+  team: Team,
+  cases: Seq[(Case, OffsetDateTime)],
+  clients: Map[UUID, Set[SitsProfile]]
+)(implicit context: RequestContext)
+
+@views.html.admin.caseTable("Closed cases", cases, clients, Some("There are no closed cases"))

@@ -79,7 +79,7 @@ class NavigationServiceImpl @Inject() (
 
   def teamLinksForUser(usercode: Usercode): Seq[NavigationPage] =
     permission.teams(usercode).right.map(_.map { team =>
-      NavigationPage(s"${team.name} Team", controllers.admin.routes.AdminController.teamHome(team.id))
+      NavigationPage(s"${team.name} team", controllers.admin.routes.AdminController.teamHome(team.id))
     }).getOrElse(Nil)
 
   override def getNavigation(loginContext: LoginContext): Seq[Navigation] =

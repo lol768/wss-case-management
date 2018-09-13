@@ -1,0 +1,50 @@
+@import java.time.OffsetDateTime
+@import java.util.UUID
+
+@import domain.SitsProfile
+@import domain.dao.CaseDao.Case
+
+@(
+  title: String,
+  cases: Seq[(Case, OffsetDateTime)],
+  clients: Map[UUID, Set[SitsProfile]],
+  emptyMessage: Option[String] = None
+)(implicit context: RequestContext)
+
+@caseRow(clientCase: Case, lastUpdated: OffsetDateTime) = {
+  <tr>
+    <td>
+      @clients.get(clientCase.id.get).map { profiles =>
+        <ul class="list-unstyled">
+          @profiles.toSeq.map { p =>
+            <li><a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a></li>
+          }
+        </ul>
+      }
+    </td>
+    <td>
+      <a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">@clientCase.key.get.string @clientCase.subject</a>
+    </td>
+    <td>@helpers.JavaTime.Relative(lastUpdated)</td>
+  </tr>
+}
+
+@if(cases.nonEmpty) {
+  <table class="table table-default">
+    <caption>@title</caption>
+    <thead>
+      <tr>
+        <th class="col-sm-3">Clients</th>
+        <th class="col-sm-6">Subject</th>
+        <th class="col-sm-3">Last updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      @cases.map { case (clientCase, lastUpdated) =>
+        @caseRow(clientCase, lastUpdated)
+      }
+    </tbody>
+  </table>
+} else {
+  @emptyMessage.map { m => <p>@m</p> }
+}

@@ -1,0 +1,11 @@
+@import java.util.UUID
+
+@import domain.{Enquiry, MessageData, SitsProfile, Team}
+
+@(
+  team: Team,
+  enquiries: Seq[(Enquiry, MessageData)],
+  clients: Map[UUID, Set[SitsProfile]]
+)(implicit context: RequestContext)
+
+@views.html.admin.enquiryTable("Closed enquiries", enquiries, clients, Some("There are no closed enquiries"))

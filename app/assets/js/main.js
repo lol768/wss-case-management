@@ -9,6 +9,8 @@ import ClientSearch from './client-search';
 import UserListPopovers from './user-list-popovers';
 import MessageThreads from './message-threads';
 import CasePicker from './case-picker';
+import CaseSearch from './case-search';
+import EnquirySearch from './enquiry-search';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -36,6 +38,14 @@ $(() => {
 
   $('.case-picker').each((i, container) => {
     CasePicker(container);
+  });
+
+  $('.case-search').each((i, container) => {
+    CaseSearch(container);
+  });
+
+  $('.enquiry-search').each((i, container) => {
+    EnquirySearch(container);
   });
 
   $('html')
@@ -91,5 +101,13 @@ $(() => {
 
     $checkbox.on('input change', update);
     update();
+  });
+
+  $('details[data-toggle="load"][data-href][data-target]').on('toggle', function load() {
+    const $details = $(this);
+    if (this.open && !$details.data('loading')) {
+      $details.data('loading', true);
+      $details.find($details.data('target')).load($details.data('href'));
+    }
   });
 });

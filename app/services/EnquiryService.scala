@@ -6,7 +6,6 @@ import java.util.UUID
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.Enquiry.EnquirySearchQuery
-import domain.MessageSender.Client
 import domain._
 import domain.dao.{DaoRunner, EnquiryDao, MessageDao}
 import helpers.JavaTime
@@ -58,8 +57,13 @@ trait EnquiryService {
   def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
 
   def findEnquiriesNeedingReply(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
-
   def findEnquiriesNeedingReply(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+
+  def findEnquiriesAwaitingClient(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+  def findEnquiriesAwaitingClient(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+
+  def findClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+  def findClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
 }
 
 @Singleton
@@ -212,21 +216,45 @@ class EnquiryServiceImpl @Inject() (
   override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]] =
     ownerService.setEnquiryOwners(id, owners)
 
-  override def findEnquiriesNeedingReply(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
-    findEnquiriesNeedingReplyInternal(enquiryDao.findOpenQuery(team))
-  }
+  override def findEnquiriesNeedingReply(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
+    findEnquiriesWithLastSender(enquiryDao.findOpenQuery(team), MessageSender.Client)
 
-  override def findEnquiriesNeedingReply(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
-    findEnquiriesNeedingReplyInternal(enquiryDao.findOpenQuery(owner))
-  }
+  override def findEnquiriesNeedingReply(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
+    findEnquiriesWithLastSender(enquiryDao.findOpenQuery(owner), MessageSender.Client)
 
-  private def findEnquiriesNeedingReplyInternal(daoQuery: Query[Enquiry.Enquiries, Enquiry, Seq])(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
+  override def findEnquiriesAwaitingClient(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
+    findEnquiriesWithLastSender(enquiryDao.findOpenQuery(team), MessageSender.Team)
+
+  override def findEnquiriesAwaitingClient(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
+    findEnquiriesWithLastSender(enquiryDao.findOpenQuery(owner), MessageSender.Team)
+
+  override def findClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
+    findEnquiriesWithLatestMessage(enquiryDao.findClosedQuery(team))
+
+  override def findClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
+    findEnquiriesWithLatestMessage(enquiryDao.findClosedQuery(owner))
+
+  private def findEnquiriesWithLastSender(daoQuery: Query[Enquiry.Enquiries, Enquiry, Seq], lastSender: MessageSender)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
     val query = daoQuery
       .join(Message.messages.table)
       .on((enquiry, message) => {
         message.id in messageDao.latestForEnquiryQuery(enquiry)
-          .filter(_.sender === (Client : MessageSender))
+          .filter(_.sender === lastSender)
           .map(_.id)
+      })
+      .map{ case (enquiry,message) => (enquiry, message.messageData)}
+
+    daoRunner.run(query.result).map { pairs =>
+      implicit def dateOrdering: Ordering[OffsetDateTime] = JavaTime.dateTimeOrdering.reverse
+      Right(pairs.sortBy{ case (enquiry, latestMessage) => Seq(enquiry.version, latestMessage.created).min })
+    }
+  }
+
+  private def findEnquiriesWithLatestMessage(daoQuery: Query[Enquiry.Enquiries, Enquiry, Seq])(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
+    val query = daoQuery
+      .join(Message.messages.table)
+      .on((enquiry, message) => {
+        message.id in messageDao.latestForEnquiryQuery(enquiry).map(_.id)
       })
       .map{ case (enquiry,message) => (enquiry, message.messageData)}
 

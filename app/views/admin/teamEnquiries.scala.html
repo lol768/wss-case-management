@@ -1,0 +1,26 @@
+@import java.util.UUID
+
+@import domain.{Enquiry, MessageData, SitsProfile, Team}
+
+@(
+  team: Team,
+  requiringAction: Seq[(Enquiry, MessageData)],
+  awaitingClient: Seq[(Enquiry, MessageData)],
+  clients: Map[UUID, Set[SitsProfile]]
+)(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
+
+@b3.vertical.formCSRF(routes.EnquirySearchController.search(), 'class -> "enquiry-search") { implicit ifc =>
+  @b3.free() {
+    <input type="text" class="form-control input-lg" placeholder="Search enquiries" />
+  }
+}
+
+@views.html.admin.enquiryTable("Enquiries requiring action", requiringAction, clients)
+@views.html.admin.enquiryTable("Enquiries waiting for reply from client", awaitingClient, clients)
+
+<details data-toggle="load" data-href="@controllers.admin.routes.AdminController.closedEnquiries(team.id)" data-target=".content">
+  <summary>Show closed enquiries</summary>
+  <div class="content">
+    <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
+  </div>
+</details>

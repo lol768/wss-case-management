@@ -1,5 +1,6 @@
 package controllers.admin
 
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import controllers.BaseController
@@ -25,45 +26,51 @@ class AdminController @Inject()(
 
   import canViewTeamActionRefiner._
 
-  def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest => {
-    findEnquiriesAndCases { (userEnquiries, teamEnquiries, userCases, teamCases, owners, clients) => {
+  def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    findEnquiriesAndCases { (enquiriesNeedingReply, enquiriesAwaitingClient, openCases, clients) => {
      profileService.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
-        val userLookup = userLookupService.getUsers(owners.values.flatten.toSeq).toOption.getOrElse(Map())
         val resolvedClients = clients.mapValues(_.flatMap(c => profiles.get(c)))
-        val resolvedOwners = owners.mapValues(_.flatMap(o => userLookup.get(o).filter(_.isFound)))
-        Ok(views.html.admin.teamHome(teamRequest.team, userEnquiries, teamEnquiries, userCases, teamCases, resolvedClients, resolvedOwners))
+        Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, openCases, resolvedClients))
       })
     }}
-  }}
+  }
 
   private def findEnquiriesAndCases(f: (
       Seq[(Enquiry, MessageData)],
       Seq[(Enquiry, MessageData)],
-      Seq[Case],
-      Seq[Case],
-      Map[UUID, Set[Usercode]],
+      Seq[(Case, OffsetDateTime)],
       Map[UUID, Set[UniversityID]]
     ) => Future[Result])(implicit teamRequest: TeamSpecificRequest[_]) = {
     ServiceResults.zip(
-      enquiries.findEnquiriesNeedingReply(currentUser.usercode),
       enquiries.findEnquiriesNeedingReply(teamRequest.team),
-      cases.listOpenCases(currentUser.usercode),
+      enquiries.findEnquiriesAwaitingClient(teamRequest.team),
       cases.listOpenCases(teamRequest.team)
-    ).map(_.right.map { case (userEnquiries, teamEnquiriesWithDupes, userCases, teamCasesWithDupes) =>
-       val teamEnquiries = teamEnquiriesWithDupes.filterNot { case (teamEnquiry, _) =>
-         userEnquiries.exists { case (ownerEnquiry, _) => ownerEnquiry.id.get == teamEnquiry.id.get }
-       }
-       val teamCases = teamCasesWithDupes.filterNot(tc => userCases.exists(_.id.get == tc.id.get))
-       (userEnquiries, teamEnquiries, userCases, teamCases)
-    }).successFlatMap { case (userEnquiries, teamEnquiries, userCases, teamCases) =>
-      ServiceResults.zip(
-        enquiries.getOwners((userEnquiries ++ teamEnquiries).flatMap { case (e, _) => e.id }.toSet),
-        cases.getOwners((userCases ++ teamCases).flatMap(_.id).toSet),
-        cases.getClients((userCases.flatMap(_.id) ++ teamCases.flatMap(_.id)).toSet)
-      ).successFlatMap { case (enquiryOwners, caseOwners, caseClients ) =>
-        val owners = enquiryOwners ++ caseOwners
-        val clients = (userEnquiries ++ teamEnquiries).map{ case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients
-        f(userEnquiries, teamEnquiries, userCases, teamCases, owners, clients)
+    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, openCases) =>
+      cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successFlatMap { caseClients =>
+        val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map{ case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients
+        f(enquiriesNeedingReply, enquiriesAwaitingClient, openCases, clients)
+      }
+    }
+  }
+
+  def closedEnquiries(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    enquiries.findClosedEnquiries(teamRequest.team).successFlatMap { enquiries =>
+      val clients = enquiries.map { case (e, _) => e.id.get -> Set(e.universityID) }.toMap
+
+      profileService.getProfiles(clients.values.flatten.toSet).successMap { profiles =>
+        val resolvedClients = clients.mapValues(_.flatMap(c => profiles.get(c)))
+        Ok(views.html.admin.teamClosedEnquiries(teamRequest.team, enquiries, resolvedClients))
+      }
+    }
+  }
+
+  def closedCases(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    cases.listClosedCases(teamRequest.team).successFlatMap { closedCases =>
+      cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successFlatMap { clients =>
+        profileService.getProfiles(clients.values.flatten.toSet).successMap { profiles =>
+          val resolvedClients = clients.mapValues(_.flatMap(c => profiles.get(c)))
+          Ok(views.html.admin.teamClosedCases(teamRequest.team, closedCases, resolvedClients))
+        }
       }
     }
   }
