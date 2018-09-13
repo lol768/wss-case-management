@@ -217,7 +217,7 @@ section.indent {
   border-bottom: 1px solid @table-border-color;
 
   > caption {
-    color: #a14418;
+    color: @brand-colour;
     font-size: @font-size-h5;
     font-weight: normal;
     padding: 0;
@@ -232,5 +232,5 @@ summary {
   cursor: pointer;
   &:focus { outline: none; }
 
-  details[data-toggle="load"] & { color: #a14418; }
+  details[data-toggle="load"] & { color: @brand-colour; }
 }
