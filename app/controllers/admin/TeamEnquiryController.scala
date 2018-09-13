@@ -2,17 +2,20 @@ package controllers.admin
 
 import java.time.OffsetDateTime
 
-import controllers.BaseController
 import controllers.admin.TeamEnquiryController._
-import controllers.refiners.CanEditEnquiryActionRefiner
+import controllers.refiners.{CanAddTeamMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
+import controllers.{API, BaseController}
 import domain._
 import helpers.JavaTime
+import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.{Action, AnyContent, Result}
 import services.EnquiryService
+import warwick.sso.UserLookupService
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -22,31 +25,139 @@ object TeamEnquiryController {
     version: OffsetDateTime
   )
 
-  def form(enquiry: Enquiry) = Form(
+  def reassignEnquiryForm(enquiry: Enquiry) = Form(
     mapping(
       "team" -> Teams.formField,
       "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version)
     )(ReassignEnquiryData.apply)(ReassignEnquiryData.unapply)
   )
+
+  case class StateChangeForm (
+    text: String,
+    version: OffsetDateTime
+  )
+
+  def stateChangeForm(enquiry: Enquiry) = Form(mapping(
+    "text" -> text,
+    "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version)
+  )(StateChangeForm.apply)(StateChangeForm.unapply))
 }
 
 @Singleton
 class TeamEnquiryController @Inject()(
+  canAddTeamMessageToEnquiryActionRefiner: CanAddTeamMessageToEnquiryActionRefiner,
   canEditEnquiryActionRefiner: CanEditEnquiryActionRefiner,
-  service: EnquiryService
+  canViewEnquiryActionRefiner: CanViewEnquiryActionRefiner,
+  service: EnquiryService,
+  userLookupService: UserLookupService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
+  import canAddTeamMessageToEnquiryActionRefiner._
   import canEditEnquiryActionRefiner._
+  import canViewEnquiryActionRefiner._
+
+  private def renderMessages(enquiry: Enquiry, f: Form[StateChangeForm])(implicit request: EnquirySpecificRequest[_]): Future[Result] =
+    service.getForRender(enquiry.id.get).successMap { case (e, messages) =>
+      Ok(views.html.admin.enquiry.messages(
+        e,
+        messages,
+        f,
+        userLookupService.getUsers(messages.flatMap(_.teamMember)).toOption.getOrElse(Map()),
+        userLookupService.getUsers(Seq(e.universityID)).toOption.getOrElse(Map())
+      ))
+    }
+
+  def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
+    renderMessages(request.enquiry, stateChangeForm(request.enquiry).fill(StateChangeForm("", request.enquiry.version)))
+  }
+
+  def redirectToMessages(enquiryKey: IssueKey): Action[AnyContent] = Action {
+    Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
+  }
+
+  def addMessage(enquiryKey: IssueKey): Action[AnyContent] = CanAddTeamMessageToEnquiryAction(enquiryKey).async { implicit request =>
+    Form(single("text" -> nonEmptyText)).bindFromRequest().fold(
+      formWithErrors => {
+        val form = stateChangeForm(request.enquiry)
+          .fill(StateChangeForm(formWithErrors.value.getOrElse(""), request.enquiry.version))
+          .copy(errors = formWithErrors.errors)
+
+        render.async {
+          case Accepts.Json() =>
+            Future.successful(
+              BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
+                form.errors.map(error => API.Error(error.getClass.getSimpleName, error.message))
+              )))
+            )
+          case _ =>
+            renderMessages(request.enquiry, form)
+        }
+      },
+      messageText => {
+        val message = messageData(messageText, request)
+        service.addMessage(request.enquiry, message).successMap { m =>
+          val messageData = MessageData(m.text, m.sender, m.created, m.teamMember)
+          render {
+            case Accepts.Json() =>
+              val clientName = "Client"
+              val teamName = message.teamMember.flatMap(usercode => userLookupService.getUser(usercode).toOption.filter(_.isFound).flatMap(_.name.full)).getOrElse(request.enquiry.team.name)
+
+              Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
+                "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, clientName, teamName).toString()
+              ))))
+            case _ =>
+              Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
+          }
+        }
+      }
+    )
+  }
+
+  def close(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
+    updateStateAndMessage(IssueState.Closed)
+  }
+
+  def reopen(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
+    updateStateAndMessage(IssueState.Reopened)
+  }
+
+  private def updateStateAndMessage(newState: IssueState)(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
+    stateChangeForm(request.enquiry).bindFromRequest().fold(
+      formWithErrors => renderMessages(request.enquiry, formWithErrors),
+      formData => {
+        val action = if(formData.text.hasText) {
+          val message = messageData(formData.text, request)
+          service.updateStateWithMessage(request.enquiry, newState, message, formData.version)
+        } else {
+          service.updateState(request.enquiry, newState, formData.version)
+        }
+
+        action.successMap { enquiry =>
+          Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get))
+            .flashing("success" -> Messages(s"flash.enquiry.$newState"))
+        }
+      }
+    )
+  }
+
+  private def messageData(text:String, request: EnquirySpecificRequest[_]): MessageSave =
+    MessageSave(
+      text = text,
+      sender = MessageSender.Team,
+      teamMember = request.context.user.map(_.usercode)
+    )
 
   def reassignForm(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey) { implicit request =>
-    Ok(views.html.admin.enquiry.reassign(request.enquiry, form(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version))))
+    Ok(views.html.admin.enquiry.reassign(request.enquiry, reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version))))
   }
 
   def reassign(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
-    form(request.enquiry).bindFromRequest().fold(
+    reassignEnquiryForm(request.enquiry).bindFromRequest().fold(
       formWithErrors => Future.successful(
-        // TODO submitted team is lost here
-        Ok(views.html.admin.enquiry.reassign(request.enquiry, formWithErrors.fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version))))
+        Ok(views.html.admin.enquiry.reassign(
+          request.enquiry,
+          formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", request.enquiry.version))
+        ))
       ),
       data =>
         if (data.team == request.enquiry.team) // No change

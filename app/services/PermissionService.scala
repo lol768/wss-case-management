@@ -10,7 +10,7 @@ import javax.inject.{Inject, Provider, Singleton}
 import play.api.Configuration
 import system.Roles
 import warwick.core.timing.{TimingContext, TimingService}
-import warwick.sso.{GroupName, GroupService, RoleName, RoleService, User, Usercode}
+import warwick.sso.{GroupName, GroupService, RoleService, User, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -23,7 +23,9 @@ trait PermissionService {
   def canViewTeam(user: Usercode, team: Team): ServiceResult[Boolean]
   def canViewTeamFuture(user: Usercode, team: Team): Future[ServiceResult[Boolean]]
   def canViewEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
-  def canAddMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def canAddTeamMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def canClientViewEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def canAddClientMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canEditEnquiry(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canViewCase(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
@@ -76,17 +78,21 @@ class PermissionServiceImpl @Inject() (
   override def canViewEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(
       isAdmin(user.usercode),
-      inAnyTeam(user.usercode),
-      isEnquiryClient(user, id)
+      inAnyTeam(user.usercode)
     )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
 
-  override def canAddMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+  override def canAddTeamMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(
       isAdmin(user.usercode),
       isEnquiryTeam(user.usercode, id),
-      isEnquiryOwner(user.usercode, id),
-      isEnquiryClient(user, id)
+      isEnquiryOwner(user.usercode, id)
     )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+
+  override def canClientViewEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    isEnquiryClient(user, id)
+
+  override def canAddClientMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    isEnquiryClient(user, id)
 
   override def canEditEnquiry(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(
