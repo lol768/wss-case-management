@@ -64,6 +64,9 @@ trait EnquiryService {
 
   def findClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
   def findClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+
+  def countEnquiriesOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def countEnquiriesClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
 }
 
 @Singleton
@@ -274,6 +277,20 @@ class EnquiryServiceImpl @Inject() (
       ownerType = MessageOwner.Enquiry
     ), Seq(enquiry.universityID))
   }
+
+  override def countEnquiriesOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(
+      enquiryDao.findOpenQuery(team)
+        .filter(_.created >= date)
+        .length.result
+    ).map(Right.apply)
+
+  override def countEnquiriesClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(
+      enquiryDao.findClosedQuery(team)
+        .filter(_.version >= date)
+        .length.result
+    ).map(Right.apply)
 }
 
 object EnquiryService {

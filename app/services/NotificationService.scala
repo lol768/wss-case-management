@@ -5,12 +5,12 @@ import domain._
 import domain.dao.CaseDao.Case
 import helpers.ServiceResults
 import helpers.ServiceResults.{ServiceError, ServiceResult}
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.mailer.Email
-import warwick.core.timing.TimingContext
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
+import warwick.core.timing.TimingContext
 import warwick.sso._
 
 import scala.collection.JavaConverters._
@@ -28,6 +28,7 @@ trait NotificationService {
   def caseReassign(clientCase: Case)(implicit t: TimingContext): Future[ServiceResult[Activity]]
 }
 
+@Singleton
 class NotificationServiceImpl @Inject()(
   myWarwickService: MyWarwickService,
   permissionService: PermissionService,

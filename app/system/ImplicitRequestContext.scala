@@ -21,15 +21,17 @@ trait ImplicitRequestContext extends LowPriorityRequestContextImplicits {
   @Inject
   private[this] var configuration: Configuration = _
 
-  implicit def requestContext(implicit request: RequestHeader): RequestContext = request match {
-    case req: AuthenticatedRequest[_] =>
-      RequestContext.authenticated(ssoClient, req, navigationService.getNavigation(req.context), csrfPageHelperFactory, configuration)
+  implicit def requestContext(implicit request: RequestHeader): RequestContext =
+    request match {
+      case req: AuthenticatedRequest[_] =>
+        RequestContext.authenticated(ssoClient, req, navigationService.getNavigation(req.context), csrfPageHelperFactory, configuration)
 
-    case req: WrappedAuthenticatedRequest[_] =>
-      RequestContext.authenticated(ssoClient, req, navigationService.getNavigation(req.authRequest.context), csrfPageHelperFactory, configuration)
+      case req: WrappedAuthenticatedRequest[_] =>
+        RequestContext.authenticated(ssoClient, req.authRequest, navigationService.getNavigation(req.authRequest.context), csrfPageHelperFactory, configuration)
 
-    case _ => RequestContext.anonymous(ssoClient, request, Nil, csrfPageHelperFactory, configuration)
-  }
+      case _ =>
+        RequestContext.authenticated(ssoClient, request, loginContext => navigationService.getNavigation(loginContext), csrfPageHelperFactory, configuration)
+    }
 
   implicit val requestContextBuilder: RequestHeader => RequestContext = { request => requestContext(request) }
 

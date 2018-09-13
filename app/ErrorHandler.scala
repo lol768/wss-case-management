@@ -1,12 +1,10 @@
-import controllers.RequestContext
 import helpers.Json._
 import javax.inject.{Inject, Singleton}
+import play.api.Environment
 import play.api.http.{HttpErrorHandler, Status}
 import play.api.libs.json.Json
-import play.api.mvc.{AcceptExtractors, Rendering, RequestHeader, Results}
-import play.api.{Configuration, Environment}
-import system.{CSRFPageHelperFactory, Logging}
-import warwick.sso.SSOClient
+import play.api.mvc._
+import system.{ImplicitRequestContext, Logging}
 
 import scala.concurrent.Future
 
@@ -16,13 +14,10 @@ import scala.concurrent.Future
 @Singleton
 class ErrorHandler @Inject()(
   environment: Environment,
-  sso: SSOClient,
-  csrfPageHelperFactory: CSRFPageHelperFactory,
-  configuration: Configuration
-) extends HttpErrorHandler with Results with Status with Logging with Rendering with AcceptExtractors {
+) extends HttpErrorHandler with Results with Status with Logging with Rendering with AcceptExtractors with ImplicitRequestContext {
 
-  def onClientError(request: RequestHeader, statusCode: Int, message: String) = {
-    implicit val context = RequestContext.authenticated(sso, request, Nil, csrfPageHelperFactory, configuration)
+  def onClientError(request: RequestHeader, statusCode: Int, message: String): Future[Result] = {
+    implicit val requestHeader: RequestHeader = request
 
     Future.successful(
       statusCode match {
@@ -38,8 +33,8 @@ class ErrorHandler @Inject()(
     )
   }
 
-  def onServerError(request: RequestHeader, exception: Throwable) = {
-    implicit val context = RequestContext.authenticated(sso, request, Nil, csrfPageHelperFactory, configuration)
+  def onServerError(request: RequestHeader, exception: Throwable): Future[Result] = {
+    implicit val requestHeader: RequestHeader = request
 
     logger.error("Internal Server Error", exception)
     Future.successful(

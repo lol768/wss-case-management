@@ -8,14 +8,15 @@ import controllers.refiners.{CanViewTeamActionRefiner, TeamSpecificRequest}
 import domain.dao.CaseDao.Case
 import domain.{Enquiry, MessageData}
 import helpers.ServiceResults
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import play.api.mvc.{Action, AnyContent, Result}
-import services.{CaseService, EnquiryService}
 import services.tabula.ProfileService
-import warwick.sso.{UniversityID, UserLookupService, Usercode}
+import services.{CaseService, EnquiryService}
+import warwick.sso.{UniversityID, UserLookupService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
+@Singleton
 class AdminController @Inject()(
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   enquiries: EnquiryService,

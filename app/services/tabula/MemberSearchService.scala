@@ -3,7 +3,7 @@ package services.tabula
 import com.google.inject.ImplementedBy
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
@@ -19,6 +19,7 @@ trait MemberSearchService {
   def search(query: String): Future[ServiceResult[Seq[TabulaResponseParsers.MemberSearchResult]]]
 }
 
+@Singleton
 class MemberSearchServiceImpl @Inject()(
   ws: WSClient,
   trustedApplicationsManager: TrustedApplicationsManager,

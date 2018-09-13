@@ -4,12 +4,13 @@ import java.time.OffsetDateTime
 
 import com.google.inject.{ImplementedBy, Inject}
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
 import domain._
 import helpers.JavaTime
+import javax.inject.Singleton
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{JsValue, Json}
 import slick.jdbc.JdbcProfile
-import ExtendedPostgresProfile.api._
 import warwick.sso.UniversityID
 
 import scala.concurrent.ExecutionContext
@@ -93,6 +94,7 @@ trait RegistrationDao {
 
 }
 
+@Singleton
 class RegistrationDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit executionContext: ExecutionContext)

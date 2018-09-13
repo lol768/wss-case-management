@@ -85,7 +85,12 @@ GET         /team/case/:caseKey/document/:id        @controllers.admin.CaseDocum
 POST        /team/case/:caseKey/document/:id/delete @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 
-## Admins/Sysadmins ##
+## Admins ##
+
+GET         /admin                                  @controllers.IndexController.redirectToPath(path = "/admin/reports")
+GET         /admin/reports                          @controllers.reports.ReportsController.home
+
+## Sysadmins ##
 
 GET         /sysadmin                               @controllers.IndexController.redirectToPath(path = "/sysadmin/masquerade")
 GET         /sysadmin/masquerade                    @controllers.sysadmin.MasqueradeController.masquerade

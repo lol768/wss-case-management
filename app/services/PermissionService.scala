@@ -8,6 +8,7 @@ import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Provider, Singleton}
 import play.api.Configuration
+import system.Roles
 import warwick.core.timing.{TimingContext, TimingService}
 import warwick.sso.{GroupName, GroupService, RoleName, RoleService, User, Usercode}
 
@@ -18,6 +19,7 @@ trait PermissionService {
   def inAnyTeam(user: Usercode): Future[ServiceResult[Boolean]]
   def inAnyTeam(users: Set[Usercode]): ServiceResult[Map[Usercode, Boolean]]
   def teams(user: Usercode): ServiceResult[Seq[Team]]
+  def isAdmin(user: Usercode): Future[ServiceResult[Boolean]]
   def canViewTeam(user: Usercode, team: Team): ServiceResult[Boolean]
   def canViewTeamFuture(user: Usercode, team: Team): Future[ServiceResult[Boolean]]
   def canViewEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
@@ -44,13 +46,11 @@ class PermissionServiceImpl @Inject() (
 
   private val webgroupPrefix = config.get[String]("app.webgroup.team.prefix")
 
-  private val adminRole = RoleName("admin")
-
   override def inAnyTeam(user: Usercode): Future[ServiceResult[Boolean]] =
     Future.successful(inAnyTeamImpl(user))
 
   private def inAnyTeamImpl(user: Usercode): ServiceResult[Boolean] =
-      ServiceResults.sequence(Seq(isAdmin(user)) ++ Teams.all.map(inTeam(user, _)))
+      ServiceResults.sequence(Seq(isAdminImpl(user)) ++ Teams.all.map(inTeam(user, _)))
         .right.map(_.contains(true))
 
   override def inAnyTeam(users: Set[Usercode]): ServiceResult[Map[Usercode, Boolean]] = {
@@ -63,8 +63,11 @@ class PermissionServiceImpl @Inject() (
   override def teams(user: Usercode): ServiceResult[Seq[Team]] =
     Right(Teams.all.filter(canViewTeam(user, _).getOrElse(false)))
 
+  override def isAdmin(user: Usercode): Future[ServiceResult[Boolean]] =
+    Future.successful(isAdminImpl(user))
+
   override def canViewTeam(user: Usercode, team: Team): ServiceResult[Boolean] =
-    ServiceResults.sequence(Seq(isAdmin(user), inTeam(user, team)))
+    ServiceResults.sequence(Seq(isAdminImpl(user), inTeam(user, team)))
       .right.map(_.contains(true))
 
   override def canViewTeamFuture(user: Usercode, team: Team): Future[ServiceResult[Boolean]] =
@@ -72,14 +75,14 @@ class PermissionServiceImpl @Inject() (
 
   override def canViewEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(
-      Future.successful(isAdmin(user.usercode)),
-      Future.successful(inAnyTeamImpl(user.usercode)),
+      isAdmin(user.usercode),
+      inAnyTeam(user.usercode),
       isEnquiryClient(user, id)
     )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
 
   override def canAddMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(
-      Future.successful(isAdmin(user.usercode)),
+      isAdmin(user.usercode),
       isEnquiryTeam(user.usercode, id),
       isEnquiryOwner(user.usercode, id),
       isEnquiryClient(user, id)
@@ -87,7 +90,7 @@ class PermissionServiceImpl @Inject() (
 
   override def canEditEnquiry(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(
-      Future.successful(isAdmin(user)),
+      isAdmin(user),
       isEnquiryTeam(user, id),
       isEnquiryOwner(user, id)
     )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
@@ -109,14 +112,14 @@ class PermissionServiceImpl @Inject() (
     enquiryService.get(id).map(_.map { enquiry => enquiry.universityID == user.universityId.get } )
 
   override def canViewCase(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    Future.successful(ServiceResults.sequence(Seq(
+    Future.sequence(Seq(
       isAdmin(user),
-      inAnyTeamImpl(user)
-    )).right.map(_.contains(true)))
+      inAnyTeam(user)
+    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
 
   override def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(
-      Future.successful(isAdmin(user)),
+      isAdmin(user),
       isCaseTeam(user, id),
       isCaseOwner(user, id)
     )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
@@ -143,8 +146,8 @@ class PermissionServiceImpl @Inject() (
       r => Right(r)
     )
 
-  private def isAdmin(user: Usercode): ServiceResult[Boolean] =
-    groupService.isUserInGroup(user, roleService.getRole(adminRole).groupName).fold(
+  private def isAdminImpl(user: Usercode): ServiceResult[Boolean] =
+    groupService.isUserInGroup(user, roleService.getRole(Roles.Admin).groupName).fold(
       e => ServiceResults.exceptionToServiceResult(e),
       r => Right(r)
     )

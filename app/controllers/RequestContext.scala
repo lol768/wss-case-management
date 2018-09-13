@@ -5,7 +5,7 @@ import play.api.mvc.{Flash, RequestHeader}
 import services.Navigation
 import warwick.core.timing._
 import system.{CSRFPageHelper, CSRFPageHelperFactory}
-import warwick.sso.{AuthenticatedRequest, SSOClient, User}
+import warwick.sso.{AuthenticatedRequest, LoginContext, SSOClient, User}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -34,9 +34,9 @@ object RequestContext {
   def authenticated(sso: SSOClient, request: AuthenticatedRequest[_], navigation: Seq[Navigation], csrfHelperFactory: CSRFPageHelperFactory, configuration: Configuration): RequestContext =
     RequestContext(sso, request, request.context.user, request.context.actualUser, navigation, csrfHelperFactory, configuration)
 
-  def authenticated(sso: SSOClient, request: RequestHeader, navigation: Seq[Navigation], csrfHelperFactory: CSRFPageHelperFactory, configuration: Configuration): RequestContext = {
+  def authenticated(sso: SSOClient, request: RequestHeader, navigation: LoginContext => Seq[Navigation], csrfHelperFactory: CSRFPageHelperFactory, configuration: Configuration): RequestContext = {
     val eventualRequestContext = sso.withUser(request) { loginContext =>
-      Future.successful(Right(RequestContext(sso, request, loginContext.user, loginContext.actualUser, navigation, csrfHelperFactory, configuration)))
+      Future.successful(Right(RequestContext(sso, request, loginContext.user, loginContext.actualUser, navigation(loginContext), csrfHelperFactory, configuration)))
     }.map(_.right.get)
 
     Await.result(eventualRequestContext, Duration.Inf)
