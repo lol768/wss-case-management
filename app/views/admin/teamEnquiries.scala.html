@@ -15,8 +15,8 @@
   }
 }
 
-@views.html.admin.enquiryTable("Enquiries requiring action", requiringAction, clients)
-@views.html.admin.enquiryTable("Enquiries waiting for reply from client", awaitingClient, clients)
+@views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction, clients)
+@views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient, clients)
 
 <details data-toggle="load" data-href="@controllers.admin.routes.AdminController.closedEnquiries(team.id)" data-target=".content">
   <summary>Show closed enquiries</summary>

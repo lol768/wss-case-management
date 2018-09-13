@@ -5,7 +5,7 @@
 @import domain.dao.CaseDao.Case
 
 @(
-  title: String,
+  title: Option[String],
   cases: Seq[(Case, OffsetDateTime)],
   clients: Map[UUID, Set[SitsProfile]],
   emptyMessage: Option[String] = None
@@ -31,7 +31,7 @@
 
 @if(cases.nonEmpty) {
   <table class="table table-default">
-    <caption>@title</caption>
+    @title.map { t => <caption>@t</caption> }
     <thead>
       <tr>
         <th class="col-sm-3">Clients</th>
