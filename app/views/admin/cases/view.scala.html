@@ -68,22 +68,21 @@
         <dt>State</dt>
         <dd>@c.clientCase.state @* TODO Transition buttons *@</dd>
 
-        <dt>Incident</dt>
-        <dd>
-          @helpers.JavaTime.Relative(c.clientCase.incidentDate)
-          @if(c.clientCase.onCampus) { On-campus } else { Off-campus }
-          @if(c.clientCase.notifiedPolice) { <span class="label label-info">Police notified</span> }
-          @if(c.clientCase.notifiedAmbulance) { <span class="label label-info">Ambulance called</span> }
-          @if(c.clientCase.notifiedFire) { <span class="label label-info">Fire service called</span> }
-        </dd>
+        @c.clientCase.incidentDate.map { incidentDate =>
+          <dt>Incident</dt>
+          <dd>
+            @helpers.JavaTime.Relative(incidentDate)
+            @if(c.clientCase.onCampus.contains(true)) { On-campus } else { Off-campus }
+            @if(c.clientCase.notifiedPolice.contains(true)) { <span class="label label-info">Police notified</span> }
+            @if(c.clientCase.notifiedAmbulance.contains(true)) { <span class="label label-info">Ambulance called</span> }
+            @if(c.clientCase.notifiedFire.contains(true)) { <span class="label label-info">Fire service called</span> }
+          </dd>
+        }
 
         @originalEnquiry.map { enquiry =>
           <dt>Original enquiry</dt>
           <dd>
-            <a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)">
-              @enquiry.key.get.string
-              @enquiry.subject
-            </a>
+            <a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)">@enquiry.key.get.string @enquiry.subject</a>
             -
             @helpers.JavaTime.Relative(enquiry.created)
           </dd>
