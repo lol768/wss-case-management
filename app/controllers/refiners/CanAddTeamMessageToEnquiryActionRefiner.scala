@@ -9,7 +9,7 @@ import system.ImplicitRequestContext
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class CanAddMessageToEnquiryActionRefiner @Inject()(
+class CanAddTeamMessageToEnquiryActionRefiner @Inject()(
   enquiryService: EnquiryService,
   securityService: SecurityService,
   permissionService: PermissionService
@@ -17,11 +17,11 @@ class CanAddMessageToEnquiryActionRefiner @Inject()(
 
   private implicit val implicitEnquiryService: EnquiryService = enquiryService
 
-  private val CanAddMessage = PermissionsFilter[EnquirySpecificRequest] { implicit request =>
-    permissionService.canAddMessageToEnquiry(request.context.user.get, request.enquiry.id.get)
+  private val CanAddTeamMessage = PermissionsFilter[EnquirySpecificRequest] { implicit request =>
+    permissionService.canAddTeamMessageToEnquiry(request.context.user.get, request.enquiry.id.get)
   }
 
-  def CanAddMessageToEnquiryAction(enquiryKey: IssueKey): ActionBuilder[EnquirySpecificRequest, AnyContent] =
-    securityService.SigninRequiredAction andThen WithEnquiry(enquiryKey) andThen CanAddMessage
+  def CanAddTeamMessageToEnquiryAction(enquiryKey: IssueKey): ActionBuilder[EnquirySpecificRequest, AnyContent] =
+    securityService.SigninRequiredAction andThen WithEnquiry(enquiryKey) andThen CanAddTeamMessage
 
 }

@@ -82,7 +82,7 @@
         @originalEnquiry.map { enquiry =>
           <dt>Original enquiry</dt>
           <dd>
-            <a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)">@enquiry.key.get.string @enquiry.subject</a>
+            <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)">@enquiry.key.get.string @enquiry.subject</a>
             -
             @helpers.JavaTime.Relative(enquiry.created)
           </dd>

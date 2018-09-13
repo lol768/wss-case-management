@@ -39,11 +39,6 @@ POST        /enquiry                                @controllers.enquiries.Enqui
 GET         /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.messages(enquiryKey: domain.IssueKey)
 POST        /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.addMessage(enquiryKey: domain.IssueKey)
 
-GET         /enquiry/:enquiryKey/close              @controllers.enquiries.EnquiryMessagesController.redirectToMessages(enquiryKey: domain.IssueKey)
-POST        /enquiry/:enquiryKey/close              @controllers.enquiries.EnquiryMessagesController.close(enquiryKey: domain.IssueKey)
-GET         /enquiry/:enquiryKey/reopen             @controllers.enquiries.EnquiryMessagesController.redirectToMessages(enquiryKey: domain.IssueKey)
-POST        /enquiry/:enquiryKey/reopen             @controllers.enquiries.EnquiryMessagesController.reopen(enquiryKey: domain.IssueKey)
-
 ## Teams ##
 
 GET         /team/:teamId                           @controllers.admin.AdminController.teamHome(teamId: String)
@@ -55,6 +50,12 @@ POST        /team/client/:universityID                          @controllers.adm
 POST        /team/client/:universityID/invite                   @controllers.admin.ClientController.invite(universityID: warwick.sso.UniversityID)
 GET         /team/client/:universityID/registration-history     @controllers.admin.ClientController.registrationHistory(universityID: warwick.sso.UniversityID)
 
+GET         /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.messages(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.addMessage(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/close                     @controllers.admin.TeamEnquiryController.redirectToMessages(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey/close                     @controllers.admin.TeamEnquiryController.close(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/reopen                    @controllers.admin.TeamEnquiryController.redirectToMessages(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey/reopen                    @controllers.admin.TeamEnquiryController.reopen(enquiryKey: domain.IssueKey)
 GET         /team/enquiry/:enquiryKey/reassign                  @controllers.admin.TeamEnquiryController.reassignForm(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey/reassign                  @controllers.admin.TeamEnquiryController.reassign(enquiryKey: domain.IssueKey)
 GET         /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquiryForm(enquiryKey: domain.IssueKey)

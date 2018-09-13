@@ -17,7 +17,7 @@
       }.getOrElse { @enquiry.universityID }
     </td>
     <td>
-      <a href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)">@enquiry.key.get.string @enquiry.subject</a>
+      <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)">@enquiry.key.get.string @enquiry.subject</a>
     </td>
     <td>@helpers.JavaTime.Relative(message.created)</td>
   </tr>

@@ -1,0 +1,92 @@
+@import controllers.admin.TeamEnquiryController.StateChangeForm
+@import domain.{Enquiry, IssueState, MessageData, MessageSender}
+@import helpers.JavaTime
+@import warwick.sso.{UniversityID, User, Usercode}
+
+@(
+  enquiry: Enquiry,
+  messages: Seq[MessageData],
+  stateChangeForm: Form[StateChangeForm],
+  userLookup: Map[Usercode, User],
+  universityIDLookup: Map[UniversityID, User]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"${enquiry.key.get.string} ${enquiry.subject} from ${universityIDLookup.get(enquiry.universityID).flatMap(_.name.full).getOrElse("[Unknown user]")} (${enquiry.universityID.string})") {
+  <h2>
+    <div class="pull-right">
+      @if(enquiry.version.isAfter(messages.last.created)) {
+        @JavaTime.Relative(enquiry.version, printToday = true)
+      } else {
+        @JavaTime.Relative(messages.last.created, printToday = true)
+      }
+    </div>
+    @if(enquiry.state != IssueState.Closed) {
+      <i class="fal fa-fw fa-comment-dots"></i>
+    } else {
+      <i class="fal fa-fw fa-comment-check"></i>
+    }
+    @enquiry.subject
+  </h2>
+  <div class="enquiry panel panel-default">
+    <div class="panel-body">
+      @messages.map { message =>
+        @views.html.enquiry.enquiryMessage(
+          enquiry,
+          message,
+          "Client",
+          message.teamMember.flatMap(usercode => userLookup.get(usercode).filter(_.isFound).flatMap(_.name.full)).getOrElse(enquiry.team.name)
+        )
+      }
+    </div>
+    <div class="panel-footer">
+      @if(enquiry.state != IssueState.Closed) {
+        @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key.get)) { implicit ifc =>
+          @b3.free('_label -> "Add a message", '_class -> stateChangeForm("text").error.map(_ => "has-error").getOrElse("")) {
+            <div class="flex">
+              @b3.textarea(stateChangeForm("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
+              <button type="submit" class="btn btn-link">
+                <i class="far fa-share-square fa-2x"></i>
+              </button>
+            </div>
+            @if(stateChangeForm("text").hasErrors) {
+              <div class="help-block">
+                @stateChangeForm("text").errors.map { error =>
+                  @error.format
+                }
+              </div>
+            }
+          }
+
+          <div class="spaced-buttons">
+            <button
+              type="submit"
+              formaction="@controllers.admin.routes.TeamEnquiryController.close(enquiry.key.get)"
+              class="btn btn-primary"
+            >
+              Close enquiry
+            </button>
+
+            <a class="btn btn-default" href="@controllers.admin.routes.CaseController.createForm(enquiry.team.id, Some(enquiry.key.get))">
+              Create case from enquiry
+            </a>
+
+            @b3.validatedHidden(stateChangeForm, "version")
+          </div>
+        }
+      } else {
+        @b3.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.reopen(enquiry.key.get)) { implicit ifc =>
+          @b3.validatedHidden(stateChangeForm, "version")
+
+          @b3.textarea(stateChangeForm("text"),
+            '_label -> "Add a message",
+            'rows -> 5
+          )
+
+          <div class="spaced-buttons">
+            <button type="submit" class="btn btn-primary">Reopen enquiry</button>
+          </div>
+        }
+      }
+    </div>
+  </div>
+}

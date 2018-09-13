@@ -95,7 +95,7 @@ class NotificationServiceImpl @Inject()(
 
   override def newEnquiry(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
     withInitialTeamUsers { users =>
-      val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get).url}"
+      val url = s"https://$domain${controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).url}"
 
       emailService.queue(
         Email(
@@ -122,7 +122,7 @@ class NotificationServiceImpl @Inject()(
   override def enquiryMessage(enquiry: Enquiry, sender: MessageSender)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
     if (sender == MessageSender.Client) {
       withTeamUsers(enquiry.team) { users =>
-        val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get).url}"
+        val url = s"https://$domain${controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).url}"
 
         emailService.queue(
           Email(
@@ -174,7 +174,7 @@ class NotificationServiceImpl @Inject()(
 
   override def enquiryReassign(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
     withTeamUsers(enquiry.team) { users =>
-      val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get).url}"
+      val url = s"https://$domain${controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).url}"
 
       emailService.queue(
         Email(
