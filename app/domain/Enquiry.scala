@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import warwick.sso.UniversityID
-import slick.jdbc.PostgresProfile.api._
+import ExtendedPostgresProfile.api._
 import CustomJdbcTypes._
 import domain.IssueState.{Open, Reopened}
 import enumeratum.{EnumEntry, PlayEnum}

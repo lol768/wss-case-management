@@ -11,7 +11,7 @@ import helpers.DataFixture
 import org.jclouds.http.HttpResponseException
 import org.mockito.Matchers._
 import org.mockito.Mockito._
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.Usercode
 

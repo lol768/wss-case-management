@@ -10,7 +10,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsString, Json}
 import warwick.core.timing.TimingContext
 import warwick.sso.Usercode
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 
 import scala.concurrent.{ExecutionContext, Future}
 

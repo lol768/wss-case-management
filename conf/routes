@@ -17,6 +17,9 @@ GET         /service/healthcheck                    @controllers.ServiceCheckCon
 # Other services
 POST        /service/flexipicker                    @controllers.FlexiPickerController.queryJson
 GET         /service/clientsearch                   @controllers.ClientSearchController.search(query: String ?= "")
+GET         /service/casesearch                     @controllers.CaseSearchController.search
+POST        /service/casesearch                     @controllers.CaseSearchController.search
+POST        /service/casesearch/:caseKey            @controllers.CaseSearchController.lookup(caseKey: domain.IssueKey)
 
 GET         /                                       @controllers.IndexController.home
 

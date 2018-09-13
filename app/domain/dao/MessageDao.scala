@@ -9,7 +9,7 @@ import domain.{Message, MessageClient, MessageOwner}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 import warwick.sso.UniversityID
 
 import scala.concurrent.ExecutionContext

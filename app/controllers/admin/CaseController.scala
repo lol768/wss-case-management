@@ -67,17 +67,18 @@ object CaseController {
 
   case class CaseLinkFormData(
     linkType: CaseLinkType,
-    targetID: UUID
+    targetKey: IssueKey
   )
 
-  def caseLinkForm(sourceID: UUID, caseService: CaseService)(implicit t: TimingContext): Form[CaseLinkFormData] = {
-    def isValid(id: UUID): Boolean =
-      Try(Await.result(caseService.find(id), 5.seconds))
-        .toOption.exists(_.isRight)
+  def caseLinkForm(sourceKey: IssueKey, caseService: CaseService)(implicit t: TimingContext): Form[CaseLinkFormData] = {
+    def isValid(key: IssueKey): Boolean =
+      key.keyType == IssueKeyType.Case &&
+        Try(Await.result(caseService.find(key), 5.seconds))
+          .toOption.exists(_.isRight)
 
     Form(mapping(
       "linkType" -> CaseLinkType.formField,
-      "targetID" -> uuid.verifying("error.linkTarget.same", _ != sourceID).verifying("error.required", id => isValid(id))
+      "targetKey" -> IssueKey.formField.verifying("error.linkTarget.same", _ != sourceKey).verifying("error.required", key => isValid(key))
     )(CaseLinkFormData.apply)(CaseLinkFormData.unapply))
   }
 
@@ -300,18 +301,18 @@ class CaseController @Inject()(
   }
 
   def linkForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
-    Ok(views.html.admin.cases.link(caseRequest.`case`, caseLinkForm(caseRequest.`case`.id.get, cases)))
+    Ok(views.html.admin.cases.link(caseRequest.`case`, caseLinkForm(caseKey, cases)))
   }
 
   def link(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    caseLinkForm(caseRequest.`case`.id.get, cases).bindFromRequest().fold(
+    caseLinkForm(caseKey, cases).bindFromRequest().fold(
       formWithErrors => Future.successful(
         Ok(views.html.admin.cases.link(caseRequest.`case`, formWithErrors))
       ),
-      data => cases.find(data.targetID).successFlatMap { targetCase =>
+      data => cases.find(data.targetKey).successFlatMap { targetCase =>
         val caseNote = CaseNoteSave(s"${caseKey.string} (${caseRequest.`case`.subject}) ${data.linkType.outwardDescription} ${targetCase.key.get.string} (${targetCase.subject})", caseRequest.context.user.get.usercode)
 
-        cases.addLink(data.linkType, caseRequest.`case`.id.get, data.targetID, caseNote).successMap { _ =>
+        cases.addLink(data.linkType, caseRequest.`case`.id.get, targetCase.id.get, caseNote).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.linked"))
         }

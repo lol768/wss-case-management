@@ -9,7 +9,7 @@ import domain.dao.AbstractDaoTest
 import helpers.JavaTime
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 import warwick.sso.{GroupName, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}

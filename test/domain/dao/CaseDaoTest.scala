@@ -4,7 +4,7 @@ import domain._
 import domain.dao.CaseDao.{Case, CaseStateFilter, Cases}
 import helpers.DataFixture
 import warwick.sso.Usercode
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 
 
 class CaseDaoTest extends AbstractDaoTest {

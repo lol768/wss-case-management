@@ -6,7 +6,7 @@ import java.util.UUID
 import domain.CustomJdbcTypes._
 import enumeratum._
 import helpers.JavaTime
-import slick.jdbc.PostgresProfile.api._
+import ExtendedPostgresProfile.api._
 import warwick.sso.{UniversityID, Usercode}
 
 /**

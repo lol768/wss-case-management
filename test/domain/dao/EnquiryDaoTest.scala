@@ -5,7 +5,7 @@ import java.util.UUID
 import domain._
 import slick.dbio.DBIOAction
 import warwick.sso.UniversityID
-import slick.jdbc.PostgresProfile.api._
+import domain.ExtendedPostgresProfile.api._
 
 import scala.concurrent.Future
 

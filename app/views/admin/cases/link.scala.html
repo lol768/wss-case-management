@@ -21,9 +21,10 @@
       'required -> true
     )
 
-    @* TODO Replace this with a Flexipicker once we have Case searching and storing the last n viewed cases *@
-    @b3.text(form("targetID"),
-      '_label -> "Case"
+    @b3.text(form("targetKey"),
+      '_label -> "Case",
+      'class -> "case-picker",
+      '_class -> "case-picker-container"
     )
 
     @tags.submitOrCancel("Link", controllers.admin.routes.CaseController.view(c.key.get))
