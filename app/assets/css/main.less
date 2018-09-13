@@ -15,6 +15,7 @@
 @import "flexi-picker";
 
 @fa-font-path: './lib/id7/fonts';
+@brand-colour: #a14418;
 
 .pull-right:first-child {
   & + h1, & + h2, & + h3, & + h4, & + h5, & + h6 {
@@ -225,4 +226,11 @@ section.indent {
 
 .tab-content > .active {
   padding-top: @grid-gutter-width;
+}
+
+summary {
+  cursor: pointer;
+  &:focus { outline: none; }
+
+  details[data-toggle="load"] & { color: #a14418; }
 }
