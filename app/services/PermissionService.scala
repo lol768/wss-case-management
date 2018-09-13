@@ -61,12 +61,7 @@ class PermissionServiceImpl @Inject() (
   }
 
   override def teams(user: Usercode): ServiceResult[Seq[Team]] =
-    ServiceResults.sequence(
-      Teams.all.map { team =>
-        inTeam(user, team)
-          .right.map { b => if (b) Some(team) else None }
-      }
-    ).right.map(_.flatten)
+    Right(Teams.all.filter(canViewTeam(user, _).getOrElse(false)))
 
   override def canViewTeam(user: Usercode, team: Team): ServiceResult[Boolean] =
     ServiceResults.sequence(Seq(isAdmin(user), inTeam(user, team)))

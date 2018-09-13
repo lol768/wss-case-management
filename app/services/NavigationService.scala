@@ -1,7 +1,6 @@
 package services
 
 import com.google.inject.ImplementedBy
-import domain.Teams
 import javax.inject.{Inject, Singleton}
 import play.api.mvc.Call
 import system.Roles._
@@ -54,10 +53,6 @@ class NavigationServiceImpl @Inject() (
 
   private lazy val masquerade = Option(NavigationPage("Masquerade", controllers.sysadmin.routes.MasqueradeController.masquerade()))
 
-  private lazy val teams = Teams.all.map { team =>
-    team -> NavigationPage(s"${team.name} Team", controllers.admin.routes.AdminController.teamHome(team.id))
-  }
-
   private def sysadminLinks(loginContext: LoginContext): Seq[Navigation] = {
     loginContext.user.map { _ =>
 
@@ -83,11 +78,9 @@ class NavigationServiceImpl @Inject() (
     login.user.map(_.usercode).map(teamLinksForUser).getOrElse(Nil)
 
   def teamLinksForUser(usercode: Usercode): Seq[NavigationPage] =
-    teams.filter { case (team, _) =>
-      permission.canViewTeam(usercode, team).getOrElse(false)
-    }.map {
-      case (_, page) => page
-    }
+    permission.teams(usercode).right.map(_.map { team =>
+      NavigationPage(s"${team.name} Team", controllers.admin.routes.AdminController.teamHome(team.id))
+    }).getOrElse(Nil)
 
   override def getNavigation(loginContext: LoginContext): Seq[Navigation] =
     sysadminLinks(loginContext) ++ teamLinks(loginContext)
