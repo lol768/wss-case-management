@@ -1,6 +1,7 @@
 package services
 
 import com.google.inject.ImplementedBy
+import domain.Team
 import javax.inject.{Inject, Singleton}
 import play.api.mvc.Call
 import system.Roles._
@@ -27,10 +28,12 @@ sealed trait Navigation {
 
 case class NavigationPage(
   label: String,
-  route: Call,
-  children: Seq[Navigation] = Nil
+  route: Call
 ) extends Navigation {
   val dropdown = false
+  val children: Seq[Navigation] = Nil
+
+  def withChildren(children: Seq[Navigation]) = NavigationDropdown(label, route, children)
 }
 
 case class NavigationDropdown(
@@ -51,19 +54,19 @@ class NavigationServiceImpl @Inject() (
   permission: PermissionService
 ) extends NavigationService {
 
-  private lazy val masquerade = Option(NavigationPage("Masquerade", controllers.sysadmin.routes.MasqueradeController.masquerade()))
+  private lazy val sysadmin = NavigationPage("Sysadmin", Call("GET", "/sysadmin"))
+  private lazy val masquerade = NavigationPage("Masquerade", controllers.sysadmin.routes.MasqueradeController.masquerade())
+  private def teamHome(team: Team) = NavigationPage(s"${team.name} team", controllers.admin.routes.AdminController.teamHome(team.id))
 
   private def sysadminLinks(loginContext: LoginContext): Seq[Navigation] = {
     loginContext.user.map { _ =>
-
       val links: Seq[NavigationPage] = Seq(
-        masquerade.filter(_ => loginContext.actualUserHasRole(Sysadmin) || loginContext.actualUserHasRole(Masquerader)).toSeq
-
+        Some(masquerade).filter(_ => loginContext.actualUserHasRole(Masquerader)).toSeq
       ).flatten
 
       if (links.nonEmpty) {
         Seq(
-          NavigationDropdown("Sysadmin", controllers.sysadmin.routes.MasqueradeController.masquerade(), links)
+          sysadmin.withChildren(links)
         )
       } else {
         Nil
@@ -78,10 +81,8 @@ class NavigationServiceImpl @Inject() (
     login.user.map(_.usercode).map(teamLinksForUser).getOrElse(Nil)
 
   def teamLinksForUser(usercode: Usercode): Seq[NavigationPage] =
-    permission.teams(usercode).right.map(_.map { team =>
-      NavigationPage(s"${team.name} team", controllers.admin.routes.AdminController.teamHome(team.id))
-    }).getOrElse(Nil)
+    permission.teams(usercode).right.map(_.map(teamHome)).getOrElse(Nil)
 
   override def getNavigation(loginContext: LoginContext): Seq[Navigation] =
-    sysadminLinks(loginContext) ++ teamLinks(loginContext)
+    teamLinks(loginContext) ++ sysadminLinks(loginContext)
 }

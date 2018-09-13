@@ -24,7 +24,7 @@ class HomeSpec extends BaseSpec {
     "render team link for member of a test" in {
       val home = req("/").forUser(users.ss1).get()
       val html = contentAsHtml(home)
-      html.navigationPages mustBe Seq((s"${Teams.StudentSupport.name.replace("&", "&amp;")} Team", Uri.parse(s"/team/${Teams.StudentSupport.id}")))
+      html.navigationPages mustBe Seq((s"${Teams.StudentSupport.name.replace("&", "&amp;")} team", Uri.parse(s"/team/${Teams.StudentSupport.id}")))
     }
 
     "reject a user without a University ID" in {

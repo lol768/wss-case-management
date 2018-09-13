@@ -87,6 +87,7 @@ DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocum
 
 ## Admins/Sysadmins ##
 
+GET         /sysadmin                               @controllers.IndexController.redirectToPath(path = "/sysadmin/masquerade")
 GET         /sysadmin/masquerade                    @controllers.sysadmin.MasqueradeController.masquerade
 
 ## Fallbacks ##
