@@ -1,0 +1,11 @@
+@import domain.Team
+
+@(
+  team: Team
+)(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
+
+@b3.vertical.formCSRF(routes.ClientSearchController.search(), 'class -> "client-search") { implicit ifc =>
+  @b3.free() {
+    <input type="text" class="form-control input-lg" placeholder="Search clients" />
+  }
+}

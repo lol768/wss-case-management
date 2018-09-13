@@ -45,8 +45,10 @@ trait CaseService {
   def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]]
   def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def deleteNote(caseID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
-  def listOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
-  def listOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
+  def listOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
+  def listOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
+  def listClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
+  def listClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
   def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
   def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]]
@@ -288,11 +290,45 @@ class CaseServiceImpl @Inject() (
       } yield done).map(Right.apply)
     }
 
-  override def listOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
-    daoRunner.run(dao.listQuery(Some(team), None, IssueStateFilter.Open).result).map(Right.apply)
+  override def listOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]] =
+    daoRunner.run(
+      dao.listQuery(Some(team), None, IssueStateFilter.Open)
+        .withLastUpdated
+        .result
+        .map(_.map { case (c, messageLastUpdated, noteLastUpdated) =>
+          (c, Seq(Option(c.version), messageLastUpdated, noteLastUpdated).flatten.max)
+        })
+    ).map(Right.apply)
 
-  override def listOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
-    daoRunner.run(dao.listQuery(None, Some(owner), IssueStateFilter.Open).result).map(Right.apply)
+  override def listOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]] =
+    daoRunner.run(
+      dao.listQuery(None, Some(owner), IssueStateFilter.Open)
+        .withLastUpdated
+        .result
+        .map(_.map { case (c, messageLastUpdated, noteLastUpdated) =>
+          (c, Seq(Option(c.version), messageLastUpdated, noteLastUpdated).flatten.max)
+        })
+    ).map(Right.apply)
+
+  override def listClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]] =
+    daoRunner.run(
+      dao.listQuery(Some(team), None, IssueStateFilter.Closed)
+        .withLastUpdated
+        .result
+        .map(_.map { case (c, messageLastUpdated, noteLastUpdated) =>
+          (c, Seq(Option(c.version), messageLastUpdated, noteLastUpdated).flatten.max)
+        })
+    ).map(Right.apply)
+
+  override def listClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]] =
+    daoRunner.run(
+      dao.listQuery(None, Some(owner), IssueStateFilter.Closed)
+        .withLastUpdated
+        .result
+        .map(_.map { case (c, messageLastUpdated, noteLastUpdated) =>
+          (c, Seq(Option(c.version), messageLastUpdated, noteLastUpdated).flatten.max)
+        })
+    ).map(Right.apply)
 
   override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]] =
     ownerService.getCaseOwners(ids)

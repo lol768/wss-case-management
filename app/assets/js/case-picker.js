@@ -26,9 +26,7 @@ export default function CasePicker(element) {
   function doSearch(query, callback) {
     currentQuery = query;
 
-    postJsonWithCredentials('/service/casesearch', {
-      query,
-    })
+    postJsonWithCredentials('/service/casesearch', { query })
       .then(response => response.json())
       .catch((e) => {
         log.error(e);

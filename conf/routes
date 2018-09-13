@@ -47,6 +47,8 @@ POST        /enquiry/:enquiryKey/reopen             @controllers.enquiries.Enqui
 ## Teams ##
 
 GET         /team/:teamId                           @controllers.admin.AdminController.teamHome(teamId: String)
+GET         /team/:teamId/closed-enquiries          @controllers.admin.AdminController.closedEnquiries(teamId: String)
+GET         /team/:teamId/closed-cases              @controllers.admin.AdminController.closedCases(teamId: String)
 
 GET         /team/client/:universityID                          @controllers.admin.ClientController.client(universityID: warwick.sso.UniversityID)
 POST        /team/client/:universityID                          @controllers.admin.ClientController.updateSummary(universityID: warwick.sso.UniversityID)
@@ -85,6 +87,7 @@ DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocum
 
 ## Admins/Sysadmins ##
 
+GET         /sysadmin                               @controllers.IndexController.redirectToPath(path = "/sysadmin/masquerade")
 GET         /sysadmin/masquerade                    @controllers.sysadmin.MasqueradeController.masquerade
 
 ## Fallbacks ##

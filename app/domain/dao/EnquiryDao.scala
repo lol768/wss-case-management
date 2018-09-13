@@ -26,6 +26,8 @@ trait EnquiryDao {
   def findByClientQuery(client: UniversityID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findOpenQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findOpenQuery(owner: Usercode): Query[Enquiry.Enquiries, Enquiry, Seq]
+  def findClosedQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq]
+  def findClosedQuery(owner: Usercode): Query[Enquiry.Enquiries, Enquiry, Seq]
   def searchQuery(query: EnquirySearchQuery): Query[Enquiry.Enquiries, Enquiry, Seq]
 }
 
@@ -63,6 +65,17 @@ class EnquiryDaoImpl @Inject() (
       .join(Owner.owners.table)
       .on((e, o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Enquiry:Owner.EntityType))
       .filter { case (e, o) => e.isOpen && o.userId === owner }
+      .map { case (e, _) => e }
+
+  override def findClosedQuery(team: Team): Query[Enquiry.Enquiries, Enquiry, Seq] =
+    Enquiry.enquiries.table
+      .filter(e => !e.isOpen && e.team === team)
+
+  override def findClosedQuery(owner: Usercode): Query[Enquiry.Enquiries, Enquiry, Seq] =
+    Enquiry.enquiries.table
+      .join(Owner.owners.table)
+      .on((e, o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Enquiry:Owner.EntityType))
+      .filter { case (e, o) => !e.isOpen && o.userId === owner }
       .map { case (e, _) => e }
 
   override def searchQuery(q: EnquirySearchQuery): Query[Enquiry.Enquiries, Enquiry, Seq] = {

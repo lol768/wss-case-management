@@ -350,6 +350,24 @@ object CaseDao {
         .joinLeft(caseNotes.table)
         .on { case ((c, _), n) => c.id === n.caseId }
         .map { case ((c, m), n) => (c, m, n) }
+    def withLastUpdated = q
+      .joinLeft(Message.messages.table)
+      .on((c, m) =>
+        m.id in Message.messages.table
+          .filter(m => m.ownerId === c.id && m.ownerType === (MessageOwner.Case: MessageOwner))
+          .sortBy(_.created.reverse)
+          .take(1)
+          .map(_.id)
+      )
+      .joinLeft(caseNotes.table)
+      .on { case ((c, _), n) =>
+        n.id in caseNotes.table
+          .filter(_.caseId === c.id)
+          .sortBy(_.created.reverse)
+          .take(1)
+          .map(_.id)
+      }
+      .map { case ((c, m), n) => (c, m.map(_.created), n.map(_.created)) }
   }
 
   case class StoredCaseTag(

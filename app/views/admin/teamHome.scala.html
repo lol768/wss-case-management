@@ -1,184 +1,45 @@
+@import java.time.OffsetDateTime
+@import java.util.UUID
+
 @import controllers.RequestContext
 @import domain.dao.CaseDao.Case
-@import domain.Team
-@import domain.Enquiry
-@import domain.MessageData
-@import domain.SitsProfile
-@import java.time.Duration
-@import warwick.sso.UniversityID
+@import domain.{Enquiry, MessageData, SitsProfile, Team}
 
-@import domain.EnquiryOwner
-@import java.util.UUID
-@import warwick.sso.User
-@import play.api.libs.json._
 @(team: Team,
-  ownerEnquiries: Seq[(Enquiry, MessageData)],
-  teamEnquiries: Seq[(Enquiry, MessageData)],
-  ownerCases: Seq[Case],
-  teamCases: Seq[Case],
-  clients: Map[UUID, Set[SitsProfile]],
-  owners: Map[UUID, Set[User]]
+  enquiriesRequiringAction: Seq[(Enquiry, MessageData)],
+  enquiriesAwaitingClient: Seq[(Enquiry, MessageData)],
+  openCases: Seq[(Case, OffsetDateTime)],
+  clients: Map[UUID, Set[SitsProfile]]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
-@enquiryRow(enquiry: Enquiry, message: MessageData) = {
-  <tr>
-    <td>
-      @clients.get(enquiry.id.get).flatMap(_.headOption).map { p: SitsProfile =>
-        <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>
-      }.getOrElse { @enquiry.universityID }
-    </td>
-    <td>@enquiry.key.get.string @enquiry.subject</td>
-    <td>@helpers.JavaTime.Relative(enquiry.created)</td>
-    <td>@helpers.JavaTime.Relative(message.created)</td>
-    <td>
-      @enquiry.team.name
-      <a class="btn btn-default" href="@controllers.admin.routes.TeamEnquiryController.reassignForm(enquiry.key.get)">Reassign</a>
-    </td>
-    <td>
-      <button
-        class="btn btn-link user-list-popover"
-        data-users="@Json.stringify(JsArray(owners.getOrElse(enquiry.id.get, Set()).map(u => Json.obj(
-          "universityID" -> u.universityId.get.string,
-          "name" -> JsString(u.name.full.getOrElse("[Unknown user]"))
-        )).toSeq))"
-        data-more-link="@controllers.admin.routes.OwnersController.enquiryForm(enquiry.key.get)"
-        data-more-caption="Edit owners"
-        type="button"
-      >
-        <i class="fa fa-users"></i>
-        @owners.getOrElse(enquiry.id.get, Set()).size
-      </button>
-    </td>
-    <td><a class="btn btn-default" href="@controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get)">View</a></td>
-  </tr>
-}
+@main(s"${team.name} team") {
+  <ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active">
+      <a href="#enquiries" aria-controls="enquiries" role="tab" data-toggle="tab"><i class="fal fa-comment-dots"></i> Enquiries</a>
+    </li>
+    <li role="presentation">
+      <a href="#cases" aria-controls="cases" role="tab" data-toggle="tab"><i class="fal fa-clipboard-list"></i> Cases</a>
+    </li>
+    <li role="presentation">
+      <a href="#clients" aria-controls="clients" role="tab" data-toggle="tab"><i class="fal fa-user"></i> Clients</a>
+    </li>
+    <li role="presentation">
+      <a href="#appointments" aria-controls="appointments" role="tab" data-toggle="tab"><i class="fal fa-calendar-alt"></i> Appointments</a>
+    </li>
+  </ul>
 
-@caseRow(clientCase: Case) = {
-  <tr>
-    <td>
-      @clients.get(clientCase.id.get).map { profiles =>
-        <ul class="list-unstyled">
-          @profiles.toSeq.map { p =>
-            <li><a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a></li>
-          }
-        </ul>
-      }
-    </td>
-    <td>@clientCase.key.get.string @clientCase.subject</td>
-    <td>@helpers.JavaTime.Relative(clientCase.created)</td>
-    <td>
-      @clientCase.team.name
-      <a class="btn btn-default" href="@controllers.admin.routes.CaseController.reassignForm(clientCase.key.get)">Reassign</a>
-    </td>
-    <td>
-      <button
-        class="btn btn-link user-list-popover"
-        data-users="@Json.stringify(JsArray(owners.getOrElse(clientCase.id.get, Set()).map(u => Json.obj(
-          "universityID" -> u.universityId.get.string,
-          "name" -> JsString(u.name.full.getOrElse("[Unknown user]"))
-        )).toSeq))"
-        data-more-link="@controllers.admin.routes.OwnersController.caseSubmit(clientCase.key.get)"
-        data-more-caption="Edit owners"
-        type="button"
-      >
-        <i class="fa fa-users"></i>
-        @owners.getOrElse(clientCase.id.get, Set()).size
-      </button>
-    </td>
-    <td><a class="btn btn-default" href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">View</a></td>
-  </tr>
-}
-
-@main(team.name) {
-  <form action="@routes.ClientSearchController.search()" method="get" class="client-search">
-    <input type="text" class="form-control input-lg" placeholder="Search for a client" />
-  </form>
-
-  @if(ownerEnquiries.nonEmpty) {
-    <h2>Enquiries assigned to me requiring action</h2>
-    <table class="table table-default">
-      <thead>
-        <tr>
-          <th class="col-sm-2">Client</th>
-          <th class="col-sm-2">Subject</th>
-          <th class="col-sm-2">Created</th>
-          <th class="col-sm-2">Last message</th>
-          <th class="col-sm-2">Team assigned</th>
-          <th class="col-sm-1">Owners</th>
-          <th class="col-sm-1"></th>
-        </tr>
-      </thead>
-      <tbody>
-        @ownerEnquiries.map { case (enquiry, message) =>
-          @enquiryRow(enquiry, message)
-        }
-      </tbody>
-    </table>
-  }
-
-  @if(teamEnquiries.nonEmpty) {
-    <h2>Enquiries assigned to @team.name requiring action</h2>
-    <table class="table table-default">
-      <thead>
-        <tr>
-          <th class="col-sm-2">Client</th>
-          <th class="col-sm-2">Subject</th>
-          <th class="col-sm-2">Created</th>
-          <th class="col-sm-2">Last message</th>
-          <th class="col-sm-2">Team assigned</th>
-          <th class="col-sm-1">Owners</th>
-          <th class="col-sm-1"></th>
-        </tr>
-      </thead>
-      <tbody>
-        @teamEnquiries.map { case (enquiry, message) =>
-          @enquiryRow(enquiry, message)
-        }
-      </tbody>
-    </table>
-  }
-
-  @if(ownerCases.nonEmpty) {
-    <h2>Open cases assigned to me</h2>
-    <table class="table table-default">
-      <thead>
-        <tr>
-          <th class="col-sm-2">Client</th>
-          <th class="col-sm-3">Subject</th>
-          <th class="col-sm-2">Created</th>
-          <th class="col-sm-3">Team assigned</th>
-          <th class="col-sm-1">Owners</th>
-          <th class="col-sm-1"></th>
-        </tr>
-      </thead>
-      <tbody>
-        @ownerCases.map { clientCase =>
-          @caseRow(clientCase)
-        }
-      </tbody>
-    </table>
-  }
-
-  @if(teamCases.nonEmpty) {
-    <h2>Open cases assigned to @team.name</h2>
-    <table class="table table-default">
-      <thead>
-        <tr>
-          <th class="col-sm-2">Client</th>
-          <th class="col-sm-3">Subject</th>
-          <th class="col-sm-2">Created</th>
-          <th class="col-sm-3">Team assigned</th>
-          <th class="col-sm-1">Owners</th>
-          <th class="col-sm-1"></th>
-        </tr>
-      </thead>
-      <tbody>
-        @teamCases.map { clientCase =>
-          @caseRow(clientCase)
-        }
-      </tbody>
-    </table>
-  }
-
-  <p><a href="@controllers.admin.routes.CaseController.createForm(team.id)" class="btn btn-default">Create a case</a></p>
+  <div class="tab-content">
+    <div role="tabpanel" class="tab-pane active" id="enquiries">
+      @views.html.admin.teamEnquiries(team, enquiriesRequiringAction, enquiriesAwaitingClient, clients)
+    </div>
+    <div role="tabpanel" class="tab-pane" id="cases">
+      @views.html.admin.teamCases(team, openCases, clients)
+    </div>
+    <div role="tabpanel" class="tab-pane" id="clients">
+      @views.html.admin.teamClients(team)
+    </div>
+    <div role="tabpanel" class="tab-pane" id="appointments">
+      @views.html.admin.teamAppointments(team)
+    </div>
+  </div>
 }

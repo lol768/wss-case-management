@@ -1,0 +1,28 @@
+@import java.time.OffsetDateTime
+@import java.util.UUID
+
+@import domain.dao.CaseDao.Case
+@import domain.{SitsProfile, Team}
+
+@(
+  team: Team,
+  openCases: Seq[(Case, OffsetDateTime)],
+  clients: Map[UUID, Set[SitsProfile]]
+)(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
+
+@b3.vertical.formCSRF(routes.CaseSearchController.search(), 'class -> "case-search") { implicit ifc =>
+  @b3.free() {
+    <input type="text" class="form-control input-lg" placeholder="Search cases" />
+  }
+}
+
+<p><a href="@controllers.admin.routes.CaseController.createForm(team.id)" class="btn btn-default">Create a new case</a></p>
+
+@views.html.admin.caseTable("Open cases", openCases, clients)
+
+<details data-toggle="load" data-href="@controllers.admin.routes.AdminController.closedCases(team.id)" data-target=".content">
+  <summary>Show closed cases</summary>
+  <div class="content">
+    <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
+  </div>
+</details>
