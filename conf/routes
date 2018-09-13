@@ -20,6 +20,9 @@ GET         /service/clientsearch                   @controllers.ClientSearchCon
 GET         /service/casesearch                     @controllers.CaseSearchController.search
 POST        /service/casesearch                     @controllers.CaseSearchController.search
 POST        /service/casesearch/:caseKey            @controllers.CaseSearchController.lookup(caseKey: domain.IssueKey)
+GET         /service/enquirysearch                  @controllers.EnquirySearchController.search
+POST        /service/enquirysearch                  @controllers.EnquirySearchController.search
+POST        /service/enquirysearch/:enquiryKey      @controllers.EnquirySearchController.lookup(enquiryKey: domain.IssueKey)
 
 GET         /                                       @controllers.IndexController.home
 

@@ -1,10 +1,10 @@
 package controllers
 
+import controllers.API.Response._
 import controllers.CaseSearchController._
 import controllers.refiners.{AnyTeamActionRefiner, CanViewCaseActionRefiner, PermissionsFilter}
-import domain.dao.CaseDao.{Case, CaseSearchQuery, CaseStateFilter}
-import domain.{CaseType, IssueKey, Teams}
-import API.Response._
+import domain.dao.CaseDao.{Case, CaseSearchQuery}
+import domain.{CaseType, IssueKey, IssueStateFilter, Teams}
 import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
@@ -24,7 +24,7 @@ object CaseSearchController {
     "createdBefore" -> optional(localDate),
     "team" -> optional(Teams.formField),
     "caseType" -> optional(CaseType.formField),
-    "state" -> optional(CaseStateFilter.formField)
+    "state" -> optional(IssueStateFilter.formField)
   )(CaseSearchQuery.apply)(CaseSearchQuery.unapply))
 }
 

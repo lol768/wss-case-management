@@ -5,6 +5,7 @@ import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
+import domain.Enquiry.EnquirySearchQuery
 import domain.MessageSender.Client
 import domain._
 import domain.dao.{DaoRunner, EnquiryDao, MessageDao}
@@ -49,6 +50,8 @@ trait EnquiryService {
   def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[(Enquiry, Seq[MessageData])]]
 
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]]
+
+  def search(query: EnquirySearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]]
 
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
 
@@ -199,6 +202,9 @@ class EnquiryServiceImpl @Inject() (
       errors => Future.successful(Left(errors)),
       ids => get(ids.map(UUID.fromString))
     ))
+
+  override def search(query: EnquirySearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]] =
+    daoRunner.run(enquiryDao.searchQuery(query).take(limit).result).map(Right.apply)
 
   override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]] =
     ownerService.getEnquiryOwners(ids)
