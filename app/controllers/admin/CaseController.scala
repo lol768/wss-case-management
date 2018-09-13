@@ -5,7 +5,7 @@ import java.util.UUID
 
 import controllers.BaseController
 import controllers.admin.CaseController._
-import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CanViewTeamActionRefiner, CaseSpecificRequest}
+import controllers.refiners._
 import domain._
 import domain.dao.CaseDao.Case
 import helpers.ServiceResults.{ServiceError, ServiceResult}
@@ -15,7 +15,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Result}
-import services.{CaseService, EnquiryService}
+import services.{CaseService, EnquiryService, PermissionService}
 import services.tabula.ProfileService
 import warwick.core.timing.TimingContext
 import warwick.sso._
@@ -117,11 +117,14 @@ class CaseController @Inject()(
   cases: CaseService,
   enquiries: EnquiryService,
   userLookupService: UserLookupService,
+  permissions: PermissionService,
+  anyTeamActionRefiner: AnyTeamActionRefiner,
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   canViewCaseActionRefiner: CanViewCaseActionRefiner,
   canEditCaseActionRefiner: CanEditCaseActionRefiner
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
+  import anyTeamActionRefiner._
   import canViewCaseActionRefiner._
   import canViewTeamActionRefiner._
   import canEditCaseActionRefiner._
@@ -152,11 +155,24 @@ class CaseController @Inject()(
     renderCase(caseKey, caseNoteForm(caseRequest.`case`.version).fill(CaseNoteFormData("", caseRequest.`case`.version)))
   }
 
-  def createForm(teamId: String, fromEnquiry: Option[IssueKey]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+  def createSelectTeam(fromEnquiry: Option[IssueKey], client: Option[UniversityID]): Action[AnyContent] = AnyTeamMemberRequiredAction { implicit request =>
+    permissions.teams(request.context.user.get.usercode).fold(showErrors, teams => {
+      if (teams.size == 1)
+        Redirect(controllers.admin.routes.CaseController.createForm(teams.head.id, fromEnquiry, client))
+      else
+        Ok(views.html.admin.cases.createSelectTeam(teams, fromEnquiry, client))
+    })
+  }
+
+  def createForm(teamId: String, fromEnquiry: Option[IssueKey], client: Option[UniversityID]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     val baseForm = form(teamRequest.team, profiles, enquiries)
 
-    fromEnquiry match {
-      case Some(enquiryKey) => enquiries.get(enquiryKey).successMap { enquiry =>
+    (fromEnquiry, client) match {
+      case (Some(_), Some(_)) => Future.successful(
+        BadRequest("Can't specify both fromEnquiry and client")
+      )
+
+      case (Some(enquiryKey), _) => enquiries.get(enquiryKey).successMap { enquiry =>
         Ok(views.html.admin.cases.create(
           teamRequest.team,
           baseForm.bind(Map(
@@ -165,6 +181,15 @@ class CaseController @Inject()(
           )).discardingErrors
         ))
       }
+
+      case (_, Some(universityID)) => Future.successful(
+        Ok(views.html.admin.cases.create(
+          teamRequest.team,
+          baseForm.bind(Map(
+            "clients[0]" -> universityID.string
+          )).discardingErrors
+        ))
+      )
 
       case _ => Future.successful(
         Ok(views.html.admin.cases.create(teamRequest.team, baseForm))

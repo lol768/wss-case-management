@@ -230,6 +230,8 @@
       </div>
     }
 
+    <p><a class="btn btn-default" href="@controllers.admin.routes.CaseController.createSelectTeam(client = Some(profile.universityID))">Create a case</a></p>
+
     @if(enquiries.isEmpty) {
       <p>No open or closed enquiries</p>
     } else {
