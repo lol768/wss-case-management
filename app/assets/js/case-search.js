@@ -34,7 +34,7 @@ export default function CaseSearch(container) {
     displayText: item => `
         <div class="flexi-picker-result">
           <div class="media-left">
-            <i class="fal fa-comment-dots fa-fw"></i>
+            <i class="fal fa-clipboard-list fa-fw"></i>
           </div>
           <div class="media-body">
             <span class="title">${item.key}</span>
