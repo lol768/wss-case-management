@@ -18,7 +18,7 @@
 
 <p><a href="@controllers.admin.routes.CaseController.createForm(team.id)" class="btn btn-default">Create a new case</a></p>
 
-@views.html.admin.caseTable("Open cases", openCases, clients)
+@views.html.admin.caseTable(Some("Open cases"), openCases, clients)
 
 <details data-toggle="load" data-href="@controllers.admin.routes.AdminController.closedCases(team.id)" data-target=".content">
   <summary>Show closed cases</summary>

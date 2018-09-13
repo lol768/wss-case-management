@@ -3,7 +3,7 @@
 @import domain.{Enquiry, MessageData, SitsProfile}
 
 @(
-  title: String,
+  title: Option[String],
   enquiries: Seq[(Enquiry, MessageData)],
   clients: Map[UUID, Set[SitsProfile]],
   emptyMessage: Option[String] = None
@@ -25,7 +25,7 @@
 
 @if(enquiries.nonEmpty) {
   <table class="table table-default">
-    <caption>@title</caption>
+    @title.map { t => <caption>@t</caption> }
     <thead>
       <tr>
         <th class="col-sm-3">Client</th>

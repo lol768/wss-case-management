@@ -16,6 +16,7 @@
 
 @fa-font-path: './lib/id7/fonts';
 @brand-colour: #a14418;
+@nav-link-padding: 10px 15px;
 
 .pull-right:first-child {
   & + h1, & + h2, & + h3, & + h4, & + h5, & + h6 {
@@ -218,8 +219,8 @@ section.indent {
 
   > caption {
     color: @brand-colour;
-    font-size: @font-size-h5;
-    font-weight: normal;
+    font-size: @main-font-size;
+    font-weight: bold;
     padding: 0;
   }
 }
@@ -228,9 +229,28 @@ section.indent {
   padding-top: @grid-gutter-width;
 }
 
+.nav-tabs {
+  > li.active {
+    font-weight: bold;
+  }
+
+  html.flexbox & {
+    display: flex;
+
+    > li {
+      flex: 1 1 0;
+
+      > a i {
+        margin-right: 5px;
+      }
+    }
+  }
+}
+
 summary {
   cursor: pointer;
   &:focus { outline: none; }
+  font-weight: bold;
 
   details[data-toggle="load"] & { color: @brand-colour; }
 }

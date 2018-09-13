@@ -10,4 +10,4 @@
   clients: Map[UUID, Set[SitsProfile]]
 )(implicit context: RequestContext)
 
-@views.html.admin.caseTable("Closed cases", cases, clients, Some("There are no closed cases"))
+@views.html.admin.caseTable(None, cases, clients, Some("There are no closed cases"))
