@@ -1,0 +1,40 @@
+@import controllers.reports.ReportsController.Statistics
+@import domain.Team
+
+@(
+  openedEnquiries: Seq[(Team, Statistics)],
+  closedEnquiries: Seq[(Team, Statistics)],
+  openedCases: Seq[(Team, Statistics)],
+  closedCases: Seq[(Team, Statistics)]
+)(implicit context: RequestContext)
+
+@report(title: String, r: Seq[(Team, Statistics)]) = {
+  <table class="table table-default">
+    <caption>@title</caption>
+    <thead>
+      <tr>
+        <th class="col-sm-6">Team</th>
+        <th class="col-sm-2">Last 7 days</th>
+        <th class="col-sm-2">Last 14 days</th>
+        <th class="col-sm-2">Last 28 days</th>
+      </tr>
+    </thead>
+    <tbody>
+      @r.map { case (team, stats) =>
+        <tr>
+          <td>@team.name</td>
+          <td>@stats.last7Days</td>
+          <td>@stats.last14Days</td>
+          <td>@stats.last28Days</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}
+
+@main("Reports") {
+  @report("Enquiries opened", openedEnquiries)
+  @report("Enquiries closed", closedEnquiries)
+  @report("Cases opened", openedCases)
+  @report("Cases closed", closedCases)
+}

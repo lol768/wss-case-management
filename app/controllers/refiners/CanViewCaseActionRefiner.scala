@@ -2,7 +2,6 @@ package controllers.refiners
 
 import domain.IssueKey
 import javax.inject.{Inject, Singleton}
-import play.api.Configuration
 import play.api.mvc._
 import services.{CaseService, PermissionService, SecurityService}
 import system.ImplicitRequestContext
@@ -11,7 +10,6 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class CanViewCaseActionRefiner @Inject()(
-  config: Configuration,
   caseService: CaseService,
   securityService: SecurityService,
   permissionService: PermissionService
@@ -19,7 +17,7 @@ class CanViewCaseActionRefiner @Inject()(
 
   implicit val implicitCaseService: CaseService = caseService
 
-  private def CanViewCase[A] = PermissionsFilter[CaseSpecificRequest] { implicit request =>
+  private val CanViewCase = PermissionsFilter[CaseSpecificRequest] { implicit request =>
     permissionService.canViewCase(request.context.user.get.usercode)
   }
 

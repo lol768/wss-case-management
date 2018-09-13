@@ -3,7 +3,7 @@ package services
 import java.security.MessageDigest
 
 import com.google.inject.ImplementedBy
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import warwick.sso.UniversityID
 
@@ -14,6 +14,7 @@ trait PhotoService {
 
 }
 
+@Singleton
 class PhotoServiceImpl @Inject()(
   configuration: Configuration
 ) extends PhotoService {

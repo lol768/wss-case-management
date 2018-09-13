@@ -9,16 +9,16 @@ import warwick.sso.AuthenticatedRequest
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class AnyTeamActionRefiner @Inject()(
+class AdminActionRefiner @Inject()(
   securityService: SecurityService,
   permissionService: PermissionService
 )(implicit ec: ExecutionContext) extends ImplicitRequestContext {
 
-  private val AnyTeamMember = PermissionsFilter[AuthenticatedRequest] { implicit request =>
-    permissionService.inAnyTeam(request.context.user.get.usercode)
+  private val IsAdmin = PermissionsFilter[AuthenticatedRequest] { implicit request =>
+    permissionService.isAdmin(request.context.user.get.usercode)
   }
 
-  def AnyTeamMemberRequiredAction: ActionBuilder[AuthenticatedRequest, AnyContent] =
-    securityService.SigninRequiredAction andThen AnyTeamMember
+  def AdminRequiredAction: ActionBuilder[AuthenticatedRequest, AnyContent] =
+    securityService.SigninRequiredAction andThen IsAdmin
 
 }

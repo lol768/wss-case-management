@@ -2,7 +2,6 @@ package controllers.refiners
 
 import domain.IssueKey
 import javax.inject.{Inject, Singleton}
-import play.api.Configuration
 import play.api.mvc._
 import services.{EnquiryService, PermissionService, SecurityService}
 import system.ImplicitRequestContext
@@ -11,7 +10,6 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class CanEditEnquiryActionRefiner @Inject()(
-  config: Configuration,
   enquiryService: EnquiryService,
   securityService: SecurityService,
   permissionService: PermissionService
@@ -19,7 +17,7 @@ class CanEditEnquiryActionRefiner @Inject()(
 
   private implicit val implicitEnquiryService: EnquiryService = enquiryService
 
-  private def CanEditEnquiry[A] = PermissionsFilter[EnquirySpecificRequest] { implicit request =>
+  private val CanEditEnquiry = PermissionsFilter[EnquirySpecificRequest] { implicit request =>
     permissionService.canEditEnquiry(request.context.user.get.usercode, request.enquiry.id.get)
   }
 

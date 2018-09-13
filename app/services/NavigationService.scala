@@ -56,9 +56,21 @@ class NavigationServiceImpl @Inject() (
 
   private lazy val sysadmin = NavigationPage("Sysadmin", Call("GET", "/sysadmin"))
   private lazy val masquerade = NavigationPage("Masquerade", controllers.sysadmin.routes.MasqueradeController.masquerade())
+
+  private lazy val admin =
+    NavigationDropdown("Admin", Call("GET", "/admin"), Seq(
+      NavigationPage("Reports", controllers.reports.routes.ReportsController.home())
+    ))
+
   private def teamHome(team: Team) = NavigationPage(s"${team.name} team", controllers.admin.routes.AdminController.teamHome(team.id))
 
-  private def sysadminLinks(loginContext: LoginContext): Seq[Navigation] = {
+  private def adminLinks(loginContext: LoginContext): Seq[Navigation] =
+    if (loginContext.actualUserHasRole(Admin))
+      Seq(admin)
+    else
+      Nil
+
+  private def sysadminLinks(loginContext: LoginContext): Seq[Navigation] =
     loginContext.user.map { _ =>
       val links: Seq[NavigationPage] = Seq(
         Some(masquerade).filter(_ => loginContext.actualUserHasRole(Masquerader)).toSeq
@@ -71,11 +83,9 @@ class NavigationServiceImpl @Inject() (
       } else {
         Nil
       }
-
     }.getOrElse {
       Nil
     }
-  }
 
   def teamLinks(login: LoginContext): Seq[NavigationPage] =
     login.user.map(_.usercode).map(teamLinksForUser).getOrElse(Nil)
@@ -84,5 +94,5 @@ class NavigationServiceImpl @Inject() (
     permission.teams(usercode).right.map(_.map(teamHome)).getOrElse(Nil)
 
   override def getNavigation(loginContext: LoginContext): Seq[Navigation] =
-    teamLinks(loginContext) ++ sysadminLinks(loginContext)
+    teamLinks(loginContext) ++ adminLinks(loginContext) ++ sysadminLinks(loginContext)
 }

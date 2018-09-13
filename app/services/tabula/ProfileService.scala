@@ -5,7 +5,7 @@ import domain.SitsProfile
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
 import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
@@ -31,7 +31,8 @@ object ProfileService {
   case class ProfileServiceError(message: String) extends ServiceError
 }
 
-class ProfileServiceImpl  @Inject()(
+@Singleton
+class ProfileServiceImpl @Inject()(
   ws: WSClient,
   trustedApplicationsManager: TrustedApplicationsManager,
   cache: AsyncCacheApi,
