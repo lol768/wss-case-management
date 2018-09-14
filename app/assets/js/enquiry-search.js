@@ -49,7 +49,13 @@ export default function EnquirySearch(container) {
     openLinkInNewTab: true,
     selectOnBlur: false,
     showHintOnFocus: true,
-    itemLink: item => `/team/enquiry/${item.key}`,
+    itemLink: (item) => {
+      if (item) {
+        return `/team/enquiry/${item.key}`;
+      }
+
+      return undefined;
+    },
     afterSelect: () => {
       $typeahead.trigger('blur');
     },

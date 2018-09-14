@@ -41,7 +41,7 @@
     "webpack-stream": "^5.1.1"
   },
   "dependencies": {
-    "bootstrap-3-typeahead": "github:bassjobsen/Bootstrap-3-Typeahead#fc2d5dce4a5406d9b924224e395d5647918707c7",
+    "bootstrap-3-typeahead": "github:UniversityofWarwick/Bootstrap-3-Typeahead#7214ee2a9d2cf82731ff7ad8d398afb4bcd91b8b",
     "core-js": "^2.4.0",
     "id7": "github:UniversityofWarwick/id7#fa5-alpha5",
     "isomorphic-fetch": "^2.2.1",

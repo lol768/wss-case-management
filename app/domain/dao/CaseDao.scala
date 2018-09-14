@@ -89,7 +89,12 @@ class CaseDaoImpl @Inject()(
     def queries(c: Cases, n: Rep[Option[CaseNotes]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
-          (c.searchableKey @+ c.searchableSubject @+ n.map(_.searchableText)) @@  plainToTsQuery(queryStr.bind, Some("english"))
+          val query = plainToTsQuery(queryStr.bind, Some("english"))
+
+          // Need to search CaseNote fields separately otherwise the @+ will stop it matching cases
+          // with no notes
+          (c.searchableKey @+ c.searchableSubject) @@ query ||
+          n.map(_.searchableText) @@ query
         },
         q.createdAfter.map { d => c.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => c.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
