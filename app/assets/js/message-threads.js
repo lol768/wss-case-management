@@ -42,6 +42,7 @@ export default function MessageThreads(container) {
     e.preventDefault();
     const $form = $(e.target);
     $form.find(':input').prop('readonly', true);
+    $form.find('button').prop('disabled', true);
     $form.find('.alert-danger').empty().addClass('hidden');
     postMultipartFormWithCredentials($form.prop('action'), e.target)
       .then(response => response.json())
@@ -59,11 +60,13 @@ export default function MessageThreads(container) {
           }
         }
         $form.find(':input').prop('readonly', false);
+        $form.find('button').prop('disabled', false);
       })
       .catch((error) => {
         log.error(error);
         $form.find('.alert-danger').empty().html(error.message).removeClass('hidden');
         $form.find(':input').prop('readonly', false);
+        $form.find('button').prop('disabled', false);
       });
   });
 }
