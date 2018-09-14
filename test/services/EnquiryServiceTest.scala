@@ -37,13 +37,13 @@ class EnquiryServiceTest extends AbstractDaoTest {
           created = enquiryDate
         ), MessageSave(
           "Hello", MessageSender.Client, None
-        )).serviceValue
+        ), None).serviceValue
 
         if (addMessages) {
           for (_ <- 1 to 10) {
             val messageDate = enquiryDate.plusHours(Random.nextInt(1000).toLong)
             DateTimeUtils.useMockDateTime(messageDate.toInstant, () => {
-              enquiryService.addMessage(enquiry, MessageSave("Reply!", MessageSender.Team, None))
+              enquiryService.addMessage(enquiry, MessageSave("Reply!", MessageSender.Team, None), None)
             })
           }
         }
