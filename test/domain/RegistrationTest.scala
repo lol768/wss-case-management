@@ -10,11 +10,11 @@ class RegistrationTest extends PlaySpec {
   "RegistrationDataHistory" should {
 
     "match the number of fields in RegistrationData" in {
-      RegistrationDataHistory(null, null, null, null, null, null).productArity mustBe RegistrationData(null, null, null, null, null, null).productArity
+      RegistrationDataHistory(null, null, null, null, null, null, null).productArity mustBe RegistrationData(null, null, null, null, null, null, null).productArity
     }
 
     "include all fields in the JSON writer" in {
-      val d = RegistrationDataHistory(Seq(), Seq(), Seq(), Seq(), Seq(), Seq())
+      val d = RegistrationDataHistory(Seq(), Seq(), Seq(), Seq(), Seq(), Seq(), Seq())
       Json.toJson(d)(RegistrationDataHistory.writer)
         .as[JsObject].value.keys.size mustBe d.productArity
     }
@@ -27,7 +27,8 @@ class RegistrationTest extends PlaySpec {
         disabilities = Seq((Set(Disabilities.Blind), now)),
         medications = Seq((Set(Medications.Antidepressant), now)),
         appointmentAdjustments = Seq(("Adjustment", now)),
-        referrals = Seq((Set(RegistrationReferrals.GP), now))
+        referrals = Seq((Set(RegistrationReferrals.GP), now)),
+        consentPrivacyStatement = Seq((Some(true), now))
       )
       val js = Json.toJson(d)(RegistrationDataHistory.writer)
       js mustBe Json.obj(
@@ -63,6 +64,10 @@ class RegistrationTest extends PlaySpec {
             "description" -> RegistrationReferrals.GP.description
           )),
           "version" -> now
+        )),
+        "consentPrivacyStatement" -> Json.arr(Json.obj(
+          "value" -> true,
+          "version" -> now
         ))
       )
     }
@@ -76,7 +81,8 @@ class RegistrationTest extends PlaySpec {
         disabilities = Set(Disabilities.Blind),
         medications = Set(Medications.Antidepressant),
         appointmentAdjustments = "",
-        referrals = Set(RegistrationReferrals.GP, RegistrationReferrals.FamilyMember)
+        referrals = Set(RegistrationReferrals.GP, RegistrationReferrals.FamilyMember),
+        consentPrivacyStatement = Some(true)
       )
       val data1Version = now.minusHours(1)
 
@@ -86,7 +92,8 @@ class RegistrationTest extends PlaySpec {
         disabilities = Set(Disabilities.Blind), // No change from 1
         medications = Set(Medications.Antidepressant, Medications.Antipsychotic), // Addition
         appointmentAdjustments = "", // No change from 1
-        referrals = Set(RegistrationReferrals.GP) // Removal
+        referrals = Set(RegistrationReferrals.GP), // Removal
+        consentPrivacyStatement = Some(true)
       )
       val data2Version = now.minusMinutes(30)
 
@@ -96,7 +103,8 @@ class RegistrationTest extends PlaySpec {
         disabilities = Set(Disabilities.Deaf), // Change from 1
         medications = Set(Medications.Antidepressant, Medications.Antipsychotic), // No change from 2
         appointmentAdjustments = "", // No change from 1
-        referrals = Set(RegistrationReferrals.GP, RegistrationReferrals.FamilyMember) // Change from 2
+        referrals = Set(RegistrationReferrals.GP, RegistrationReferrals.FamilyMember), // Change from 2
+        consentPrivacyStatement = Some(true)
       )
       val data3Version = now.minusMinutes(15)
 

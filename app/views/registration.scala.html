@@ -56,6 +56,11 @@
       idPrefix = "referral"
     )
 
+    @b3.free() {
+      <p><a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Privacy statement</a></p>
+      @b3.checkbox(form("consent-privacy-statement"), '_text -> "I have read the privacy statement and agree to my data being used")
+    }
+
     @tags.submitOrCancel(existing.map(_ => "Update").getOrElse("Submit"), controllers.routes.IndexController.home())
 
   }
