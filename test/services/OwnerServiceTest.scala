@@ -40,7 +40,7 @@ class OwnerServiceTest extends AbstractDaoTest {
           created = enquiryDate
         ), MessageSave(
           "Hello", MessageSender.Client, None
-        )).serviceValue
+        ), None).serviceValue
       }
     }
 
