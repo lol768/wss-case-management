@@ -51,13 +51,13 @@ class EnquirySearchController @Inject()(
         )))
       ),
       query => {
-        val results: Future[ServiceResult[Seq[Enquiry]]] =
-          if (query.isEmpty) enquiries.findRecentlyViewed(request.user.get.usercode, 10)
-          else enquiries.search(query, 10)
+        val (category: String, results: Future[ServiceResult[Seq[Enquiry]]]) =
+          if (query.isEmpty) "Recently viewed enquiries" -> enquiries.findRecentlyViewed(request.user.get.usercode, 10)
+          else "Search results" -> enquiries.search(query, 10)
 
         results.successMap { c =>
           Ok(Json.toJson(API.Success(data = Json.obj(
-            "results" -> c.map(toJson)
+            "results" -> c.map(toJson(_, Some(category)))
           ))))
         }
       }
@@ -70,13 +70,14 @@ class EnquirySearchController @Inject()(
     ))))
   }
 
-  private def toJson(e: Enquiry): JsObject = Json.obj(
+  private def toJson(e: Enquiry, category: Option[String] = None): JsObject = Json.obj(
     "id" -> e.id.get,
     "key" -> e.key.get.string,
     "subject" -> e.subject,
     "team" -> e.team.name,
     "created" -> e.created.format(JavaTime.iSO8601DateFormat),
-    "state" -> e.state.entryName
+    "state" -> e.state.entryName,
+    "category" -> category
   )
 
 }

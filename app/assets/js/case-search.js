@@ -49,7 +49,13 @@ export default function CaseSearch(container) {
     openLinkInNewTab: true,
     selectOnBlur: false,
     showHintOnFocus: true,
-    itemLink: item => `/team/case/${item.key}`,
+    itemLink: (item) => {
+      if (item) {
+        return `/team/case/${item.key}`;
+      }
+
+      return undefined;
+    },
     afterSelect: () => {
       $typeahead.trigger('blur');
     },

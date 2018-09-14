@@ -59,9 +59,11 @@ export default function CasePicker(element) {
     showHintOnFocus: 'all',
     changeInputOnMove: false,
     afterSelect: (item) => {
-      const text = displayItem(item);
-      richResultField.store(item.key, text);
-      $element.data('item', item);
+      if (item) {
+        const text = displayItem(item);
+        richResultField.store(item.key, text);
+        $element.data('item', item);
+      }
     },
   });
 
