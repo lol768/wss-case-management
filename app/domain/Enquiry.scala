@@ -96,8 +96,8 @@ object Enquiry extends Versioning {
 
   implicit class EnquiryExtensions[C[_]](q: Query[Enquiries, Enquiry, C]) {
     def withMessages = q
-      .joinLeft(Message.messages.table)
-      .on { (e, m) =>
+      .joinLeft(Message.messages.table.withUploadedFile)
+      .on { case (e, (m, _)) =>
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
   }

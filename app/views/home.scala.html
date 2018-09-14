@@ -1,12 +1,9 @@
-@import domain.MessageData
-@import domain.Enquiry
-@import domain.MessageSender
-@import domain.Registration
+@import domain.{Enquiry, IssueState, MessageData, Registration, UploadedFile}
 @import helpers.JavaTime
-@import domain.IssueState
+
 @(
   teams: Seq[domain.Team],
-  enquiries: Seq[(Enquiry, Seq[MessageData])],
+  enquiries: Seq[(Enquiry, Seq[(MessageData, Option[UploadedFile])])],
   registration: Option[Registration]
 )(implicit context: RequestContext, req: RequestHeader)
 
@@ -39,10 +36,10 @@
             <h4 class="panel-title">
                 <a class="@if(enquiries.head._1 != enquiry){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@enquiry.key.get.string" aria-expanded="true" aria-controls="collapse-@enquiry.key.get.string">
                 <div class="pull-right">
-                  @if(enquiry.version.isAfter(messages.last.created)) {
+                  @if(enquiry.version.isAfter(messages.last._1.created)) {
                     @JavaTime.Relative(enquiry.version, printToday = true)
                   } else {
-                    @JavaTime.Relative(messages.last.created, printToday = true)
+                    @JavaTime.Relative(messages.last._1.created, printToday = true)
                   }
                   <i class="fas fa-fw fa-angle-down"></i>
                   <i class="fas fa-fw fa-angle-up"></i>
@@ -59,8 +56,8 @@
 
           <div id="collapse-@enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head._1 == enquiry){in}" role="tabpanel" aria-labelledby="heading-@enquiry.key.get.string">
             <div class="panel-body">
-              @messages.map { message =>
-                @views.html.enquiry.enquiryMessage(enquiry, message, clientName = "You", enquiry.team.name)
+              @messages.map { case (message, file) =>
+                @views.html.enquiry.enquiryMessage(enquiry, message, file, clientName = "You", enquiry.team.name)
               }
             </div>
               <div class="panel-footer">

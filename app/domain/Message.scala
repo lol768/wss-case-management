@@ -4,10 +4,14 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
+import domain.dao.UploadedFileDao
+import domain.dao.UploadedFileDao.StoredUploadedFile
 import enumeratum._
 import helpers.JavaTime
-import ExtendedPostgresProfile.api._
 import warwick.sso.{UniversityID, Usercode}
+
+import scala.language.higherKinds
 
 /**
   * Conversational message which can be attached to an Enquiry or Case.
@@ -16,6 +20,7 @@ import warwick.sso.{UniversityID, Usercode}
 case class Message (
   id: UUID,
   text: String,
+  fileId: Option[UUID],
   sender: MessageSender,
   teamMember: Option[Usercode],
   ownerId: UUID,
@@ -29,6 +34,7 @@ case class Message (
     MessageVersion(
       id,
       text,
+      fileId,
       sender,
       teamMember,
       ownerId,
@@ -59,6 +65,7 @@ object Message extends Versioning {
   sealed trait CommonProperties { self: Table[_] =>
     def text = column[String]("text")
     def searchableText = toTsVector(text, Some("english"))
+    def fileId = column[Option[UUID]]("file_id")
     def sender = column[MessageSender]("sender")
     def teamMember = column[Option[Usercode]]("team_member")
     def created = column[OffsetDateTime]("created_utc")
@@ -72,9 +79,11 @@ object Message extends Versioning {
 
     def id = column[UUID]("id", O.PrimaryKey)
 
-    def * = (id, text, sender, teamMember, ownerId, ownerType, created, version).mapTo[Message]
-
+    def * = (id, text, fileId, sender, teamMember, ownerId, ownerType, created, version).mapTo[Message]
     def messageData = (text, sender, created, teamMember).mapTo[MessageData]
+
+    def fileFK = foreignKey("fk_message_file", fileId, UploadedFileDao.uploadedFiles.table)(_.id.?)
+    def fileIndex = index("idx_message_file", fileId)
   }
 
   class MessageVersions(tag: Tag) extends Table[MessageVersion](tag, "message_version") with StoredVersionTable[Message] with CommonProperties {
@@ -82,7 +91,7 @@ object Message extends Versioning {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
-    def * = (id, text, sender, teamMember, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
+    def * = (id, text, fileId, sender, teamMember, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
     def pk = primaryKey("pk_messageversions", (id, timestamp))
     def idx = index("idx_messageversions", (id, version))
   }
@@ -97,17 +106,23 @@ object Message extends Versioning {
     def message = foreignKey("fk_client_message", messageId, messages.table)(m => m.id)
   }
 
+  implicit class MessageExtensions[C[_]](q: Query[Messages, Message, C]) {
+    def withUploadedFile = q
+      .joinLeft(UploadedFileDao.uploadedFiles.table)
+      .on(_.fileId === _.id)
+  }
+
   val messages: VersionedTableQuery[Message, MessageVersion, Messages, MessageVersions] =
     VersionedTableQuery(TableQuery[Messages], TableQuery[MessageVersions])
 
   val messageClients = TableQuery[MessageClients]
-
 
 }
 
 case class MessageVersion (
   id: UUID,
   text: String,
+  fileId: Option[UUID],
   sender: MessageSender,
   teamMember: Option[Usercode],
   ownerId: UUID,
@@ -143,6 +158,7 @@ object MessageData {
 
   // oldest first
   val dateOrdering = Ordering.by[MessageData, OffsetDateTime](data => data.created)(JavaTime.dateTimeOrdering)
+  val dateOrderingWithFile = Ordering.by[(MessageData, Option[StoredUploadedFile]), OffsetDateTime] { case (data, _) => data.created }(JavaTime.dateTimeOrdering)
 }
 
 sealed trait MessageSender extends EnumEntry

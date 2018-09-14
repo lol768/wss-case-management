@@ -1,18 +1,34 @@
-@import domain.MessageData
-@import domain.MessageSender
+@import domain.{Enquiry, MessageData, MessageSender, UploadedFile}
 @import helpers.JavaTime
-@import domain.Enquiry
-@(enquiry: Enquiry, message: MessageData, clientName: String, teamName: String)
+
+@(
+  enquiry: Enquiry,
+  message: MessageData,
+  file: Option[UploadedFile],
+  clientName: String,
+  teamName: String
+)
+
 @if(message.sender == MessageSender.Client) {
   <div class="message message-client">
     <div class="date pull-right">@JavaTime.Relative(message.created, printToday = true)</div>
     <div class="message--author">@clientName</div>
     @views.utils.nl2br(message.text)
+    @file.map { f =>
+      <hr>
+      <i class="fal fa-paperclip"></i>
+      <a href="#">@f.fileName</a> (@f.contentLength bytes)
+    }
   </div>
 } else {
   <div class="message message-team">
     <div class="date pull-right">@JavaTime.Relative(message.created, printToday = true)</div>
     <div class="message--author">@teamName</div>
     @views.utils.nl2br(message.text)
+    @file.map { f =>
+      <hr>
+      <i class="fal fa-paperclip"></i>
+      <a href="#">@f.fileName</a> (@f.contentLength bytes)
+    }
   </div>
 }

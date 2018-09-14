@@ -7,7 +7,7 @@
   profile: SitsProfile,
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
-  enquiries: Seq[(Enquiry, Seq[MessageData])],
+  enquiries: Seq[(Enquiry, Seq[(MessageData, Option[UploadedFile])])],
   cases: Seq[(Case, Seq[MessageData], Seq[CaseNote])],
   form: Form[ClientSummaryData],
   inMentalHealthTeam: Boolean,
@@ -266,13 +266,13 @@
               </tr>
             </thead>
             <tbody>
-              @defining(enquiries.filter { case (e, _) => e.state != IssueState.Closed }) { open: Seq[(Enquiry, Seq[MessageData])] =>
+              @defining(enquiries.filter { case (e, _) => e.state != IssueState.Closed }) { open: Seq[(Enquiry, Seq[(MessageData, Option[UploadedFile])])] =>
                 @open.map { case (enquiry, messages) =>
                   <tr>
                     <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)" target="_blank">@enquiry.key.get.string</a></td>
                     <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)" target="_blank">@enquiry.subject</a></td>
                     <td>@enquiry.team.name</td>
-                    <td>@messages.reverse.headOption.map(m => JavaTime.Relative(m.created.toLocalDate).capitalize)</td>
+                    <td>@messages.reverse.headOption.map { case (m, _) => JavaTime.Relative(m.created.toLocalDate).capitalize }</td>
                   </tr>
                 }
               }
@@ -291,7 +291,7 @@
               </tr>
             </thead>
             <tbody>
-            @defining(enquiries.filter { case (e, _) => e.state == IssueState.Closed }) { closed: Seq[(Enquiry, Seq[MessageData])] =>
+            @defining(enquiries.filter { case (e, _) => e.state == IssueState.Closed }) { closed: Seq[(Enquiry, Seq[(MessageData, Option[UploadedFile])])] =>
               @closed.map { case (enquiry, messages) =>
                 <tr>
                   <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)" target="_blank">@enquiry.key.get.string</a></td>

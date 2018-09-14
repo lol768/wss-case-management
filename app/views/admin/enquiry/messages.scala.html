@@ -1,11 +1,11 @@
 @import controllers.admin.TeamEnquiryController.StateChangeForm
-@import domain.{Enquiry, IssueState, MessageData, MessageSender}
+@import domain.{Enquiry, IssueState, MessageData, MessageSender, UploadedFile}
 @import helpers.JavaTime
 @import warwick.sso.{UniversityID, User, Usercode}
 
 @(
   enquiry: Enquiry,
-  messages: Seq[MessageData],
+  messages: Seq[(MessageData, Option[UploadedFile])],
   stateChangeForm: Form[StateChangeForm],
   userLookup: Map[Usercode, User],
   universityIDLookup: Map[UniversityID, User]
@@ -14,10 +14,10 @@
 @main(s"${enquiry.key.get.string} ${enquiry.subject} from ${universityIDLookup.get(enquiry.universityID).flatMap(_.name.full).getOrElse("[Unknown user]")} (${enquiry.universityID.string})") {
   <h2>
     <div class="pull-right">
-      @if(enquiry.version.isAfter(messages.last.created)) {
+      @if(enquiry.version.isAfter(messages.last._1.created)) {
         @JavaTime.Relative(enquiry.version, printToday = true)
       } else {
-        @JavaTime.Relative(messages.last.created, printToday = true)
+        @JavaTime.Relative(messages.last._1.created, printToday = true)
       }
     </div>
     @if(enquiry.state != IssueState.Closed) {
@@ -29,10 +29,11 @@
   </h2>
   <div class="enquiry panel panel-default">
     <div class="panel-body">
-      @messages.map { message =>
+      @messages.map { case (message, file) =>
         @views.html.enquiry.enquiryMessage(
           enquiry,
           message,
+          file,
           "Client",
           message.teamMember.flatMap(usercode => userLookup.get(usercode).filter(_.isFound).flatMap(_.name.full)).getOrElse(enquiry.team.name)
         )

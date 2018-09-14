@@ -79,7 +79,7 @@ class EnquiryDaoImpl @Inject() (
       .map { case (e, _) => e }
 
   override def searchQuery(q: EnquirySearchQuery): Query[Enquiry.Enquiries, Enquiry, Seq] = {
-    def queries(e: Enquiry.Enquiries, m: Rep[Option[Message.Messages]]): Seq[Rep[Option[Boolean]]] =
+    def queries(e: Enquiry.Enquiries, mf: Rep[(Option[Message.Messages], Rep[Option[UploadedFileDao.UploadedFiles]])]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
           (e.searchableKey @+ e.searchableSubject @+ m.map(_.searchableText)) @@  plainToTsQuery(queryStr.bind, Some("english"))
@@ -96,7 +96,7 @@ class EnquiryDaoImpl @Inject() (
 
     Enquiry.enquiries.table
       .withMessages
-      .filter { case (c, m) => queries(c, m).reduce(_ && _) }
+      .filter { case (c, mf) => queries(c, mf).reduce(_ && _) }
       .map { case (c, _) => c }
       .distinct
   }
