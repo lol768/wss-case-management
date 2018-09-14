@@ -37,7 +37,7 @@ class RegisterController @Inject()(
   def form: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
     withOptionalRegistration {
       case Some(registration) =>
-        Future.successful(Ok(views.html.registration(registerForm.fill(registration.data), Some(registration))))
+        Future.successful(Ok(views.html.registration(registerForm.fill(registration.data.copy(consentPrivacyStatement = None)), Some(registration))))
       case _ =>
         Future.successful(Ok(views.html.registration(registerForm, None)))
     }
