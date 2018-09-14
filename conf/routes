@@ -38,6 +38,7 @@ POST        /enquiry                                @controllers.enquiries.Enqui
 
 GET         /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.messages(enquiryKey: domain.IssueKey)
 POST        /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.addMessage(enquiryKey: domain.IssueKey)
+GET         /enquiry/:enquiryKey/:fileId            @controllers.enquiries.EnquiryMessagesController.download(enquiryKey: domain.IssueKey, fileId: java.util.UUID)
 
 ## Teams ##
 
@@ -52,6 +53,7 @@ GET         /team/client/:universityID/registration-history     @controllers.adm
 
 GET         /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.messages(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.addMessage(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/:fileId                   @controllers.admin.TeamEnquiryController.download(enquiryKey: domain.IssueKey, fileId: java.util.UUID)
 GET         /team/enquiry/:enquiryKey/close                     @controllers.admin.TeamEnquiryController.redirectToMessages(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey/close                     @controllers.admin.TeamEnquiryController.close(enquiryKey: domain.IssueKey)
 GET         /team/enquiry/:enquiryKey/reopen                    @controllers.admin.TeamEnquiryController.redirectToMessages(enquiryKey: domain.IssueKey)

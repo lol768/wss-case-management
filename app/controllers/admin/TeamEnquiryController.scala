@@ -1,11 +1,12 @@
 package controllers.admin
 
 import java.time.OffsetDateTime
+import java.util.UUID
 
 import com.google.common.io.{ByteSource, Files}
 import controllers.admin.TeamEnquiryController._
 import controllers.refiners.{CanAddTeamMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
-import controllers.{API, BaseController}
+import controllers.{API, BaseController, UploadedFileServing}
 import domain._
 import helpers.JavaTime
 import helpers.StringUtils._
@@ -52,7 +53,7 @@ class TeamEnquiryController @Inject()(
   canViewEnquiryActionRefiner: CanViewEnquiryActionRefiner,
   service: EnquiryService,
   userLookupService: UserLookupService
-)(implicit executionContext: ExecutionContext) extends BaseController {
+)(implicit executionContext: ExecutionContext) extends BaseController with UploadedFileServing {
 
   import canAddTeamMessageToEnquiryActionRefiner._
   import canEditEnquiryActionRefiner._
@@ -107,7 +108,7 @@ class TeamEnquiryController @Inject()(
               val teamName = message.teamMember.flatMap(usercode => userLookupService.getUser(usercode).toOption.filter(_.isFound).flatMap(_.name.full)).getOrElse(request.enquiry.team.name)
 
               Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
-                "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, f, clientName, teamName).toString()
+                "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, f, clientName, teamName, f => routes.TeamEnquiryController.download(enquiryKey, f.id)).toString()
               ))))
             case _ =>
               Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
@@ -115,6 +116,14 @@ class TeamEnquiryController @Inject()(
         }
       }
     )
+  }
+
+  def download(enquiryKey: IssueKey, fileId: UUID): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
+    service.getForRender(request.enquiry.id.get).successFlatMap { case (_, messages) =>
+      messages.flatMap { case (_, f) => f }.find(_.id == fileId)
+        .map(serveFile)
+        .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
+    }
   }
 
   def close(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanEditEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>

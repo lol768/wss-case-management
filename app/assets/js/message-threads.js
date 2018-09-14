@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import _ from 'lodash-es';
 import log from 'loglevel';
-import { postJsonWithCredentials } from './serverpipe';
+import { postMultipartFormWithCredentials } from './serverpipe';
 
 export default function MessageThreads(container) {
   const $container = $(container);
@@ -41,12 +41,9 @@ export default function MessageThreads(container) {
   $container.on('submit', (e) => {
     e.preventDefault();
     const $form = $(e.target);
-    $form.find('textarea, button').prop('disabled', true);
+    $form.find(':input').prop('readonly', true);
     $form.find('.alert-danger').empty().addClass('hidden');
-    postJsonWithCredentials($form.prop('action'), {
-      csrfToken: $form.find('input[name=csrfToken]').val(),
-      text: $form.find('textarea[name=text]').val(),
-    })
+    postMultipartFormWithCredentials($form.prop('action'), e.target)
       .then(response => response.json())
       .then((response) => {
         if (response.success) {
@@ -61,12 +58,12 @@ export default function MessageThreads(container) {
             $form.find('.alert-danger').empty().html('An unknown error occurred').removeClass('hidden');
           }
         }
-        $form.find('textarea, button').prop('disabled', false);
+        $form.find(':input').prop('readonly', false);
       })
       .catch((error) => {
         log.error(error);
         $form.find('.alert-danger').empty().html(error.message).removeClass('hidden');
-        $form.find('textarea, button').prop('disabled', false);
+        $form.find(':input').prop('readonly', false);
       });
   });
 }

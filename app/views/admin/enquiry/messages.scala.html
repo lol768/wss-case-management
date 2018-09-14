@@ -35,16 +35,21 @@
           message,
           file,
           "Client",
-          message.teamMember.flatMap(usercode => userLookup.get(usercode).filter(_.isFound).flatMap(_.name.full)).getOrElse(enquiry.team.name)
+          message.teamMember.flatMap(usercode => userLookup.get(usercode).filter(_.isFound).flatMap(_.name.full)).getOrElse(enquiry.team.name),
+          f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key.get, f.id)
         )
       }
     </div>
     <div class="panel-footer">
       @if(enquiry.state != IssueState.Closed) {
-        @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key.get)) { implicit ifc =>
+        @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
           @b3.free('_label -> "Add a message", '_class -> stateChangeForm("text").error.map(_ => "has-error").getOrElse("")) {
             <div class="flex">
               @b3.textarea(stateChangeForm("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
+
+              @* Styling TBC *@
+              <input type="file" name="file" class="form-control">
+
               <button type="submit" class="btn btn-link">
                 <i class="far fa-share-square fa-2x"></i>
               </button>

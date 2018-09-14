@@ -1,9 +1,11 @@
 package controllers.enquiries
 
+import java.util.UUID
+
 import com.google.common.io.{ByteSource, Files}
 import controllers.enquiries.EnquiryMessagesController._
 import controllers.refiners.{CanAddClientMessageToEnquiryActionRefiner, CanClientViewEnquiryActionRefiner, EnquirySpecificRequest}
-import controllers.{API, BaseController}
+import controllers.{API, BaseController, UploadedFileServing}
 import domain._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -25,8 +27,8 @@ class EnquiryMessagesController @Inject()(
   canClientViewEnquiryActionRefiner: CanClientViewEnquiryActionRefiner,
   canAddClientMessageToEnquiryActionRefiner: CanAddClientMessageToEnquiryActionRefiner,
   service: EnquiryService,
-  userLookupService: UserLookupService
-)(implicit executionContext: ExecutionContext) extends BaseController {
+  userLookupService: UserLookupService,
+)(implicit executionContext: ExecutionContext) extends BaseController with UploadedFileServing {
 
   import canAddClientMessageToEnquiryActionRefiner._
   import canClientViewEnquiryActionRefiner._
@@ -72,7 +74,7 @@ class EnquiryMessagesController @Inject()(
               val teamName = request.enquiry.team.name
 
               Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
-                "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, f, clientName, teamName).toString()
+                "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, f, clientName, teamName, f => routes.EnquiryMessagesController.download(enquiryKey, f.id)).toString()
               ))))
             case _ =>
               Redirect(routes.EnquiryMessagesController.messages(enquiryKey))
@@ -80,6 +82,14 @@ class EnquiryMessagesController @Inject()(
         }
       }
     )
+  }
+
+  def download(enquiryKey: IssueKey, fileId: UUID): Action[AnyContent] = CanClientViewEnquiryAction(enquiryKey).async { implicit request =>
+    service.getForRender(request.enquiry.id.get).successFlatMap { case (_, messages) =>
+      messages.flatMap { case (_, f) => f }.find(_.id == fileId)
+        .map(serveFile)
+        .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
+    }
   }
 
   private def messageData(text:String, request: EnquirySpecificRequest[_]): MessageSave =

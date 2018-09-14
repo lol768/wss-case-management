@@ -57,17 +57,20 @@
           <div id="collapse-@enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head._1 == enquiry){in}" role="tabpanel" aria-labelledby="heading-@enquiry.key.get.string">
             <div class="panel-body">
               @messages.map { case (message, file) =>
-                @views.html.enquiry.enquiryMessage(enquiry, message, file, clientName = "You", enquiry.team.name)
+                @views.html.enquiry.enquiryMessage(enquiry, message, file, clientName = "You", enquiry.team.name, f => controllers.enquiries.routes.EnquiryMessagesController.download(enquiry.key.get, f.id))
               }
             </div>
               <div class="panel-footer">
-                @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get)) { implicit ifc =>
+                @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
                   <div class="form-group">
                     <label for="textarea-@enquiry.key.get.string">
                       Add a message
                     </label>
                     <div class="flex">
                       <textarea id="textarea-@enquiry.key.get.string" class="form-control" rows="1" name="text"></textarea>
+
+                      @* Styling TBC *@
+                      <input type="file" name="file" class="form-control">
 
                       <button type="submit" class="btn btn-link">
                         <i class="far fa-share-square fa-2x"></i>

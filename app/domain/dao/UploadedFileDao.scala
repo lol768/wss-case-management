@@ -94,6 +94,7 @@ object UploadedFileDao {
 
   trait CommonProperties { self: Table[_] =>
     def fileName = column[String]("file_name")
+    def searchableFileName = toTsVector(fileName, Some("english"))
     def contentLength = column[Long]("content_length")
     def contentType = column[String]("content_type")
     def uploadedBy = column[Usercode]("uploaded_by")
