@@ -24,7 +24,8 @@ case class RegistrationData(
   disabilities: Set[Disability],
   medications: Set[Medication],
   appointmentAdjustments: String,
-  referrals: Set[RegistrationReferral]
+  referrals: Set[RegistrationReferral],
+  consentPrivacyStatement: Option[Boolean]
 )
 
 object RegistrationDataHistory {

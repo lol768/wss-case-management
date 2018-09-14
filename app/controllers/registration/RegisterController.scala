@@ -30,7 +30,8 @@ class RegisterController @Inject()(
       .verifying(FormHelpers.nonEmpty("error.required.list")),
     "appointment-adjustments" -> text,
     "referrals" -> set(of[RegistrationReferral](RegistrationReferrals.Formatter))
-      .verifying(FormHelpers.nonEmpty("error.required.list"))
+      .verifying(FormHelpers.nonEmpty("error.required.list")),
+    "consent-privacy-statement" -> optional(boolean).verifying("error.privacyStatementConsent.required", _.contains(true))
   )(RegistrationData.apply)(RegistrationData.unapply))
 
   def form: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
