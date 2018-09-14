@@ -243,17 +243,22 @@ class CaseController @Inject()(
           cases.create(c, clients, data.tags),
           updateOriginalEnquiry
         ).successFlatMap { case (createdCase, originalEnquiry) =>
-          val copyEnquiryOwners: Future[ServiceResult[Set[Usercode]]] =
+          val setOwners: Future[ServiceResult[Set[Usercode]]] =
             originalEnquiry.map { enquiry =>
               enquiries.getOwners(Set(enquiry.id.get)).flatMap(_.fold(
                 errors => Future.successful(Left(errors)),
-                ownerMap => ownerMap.get(enquiry.id.get).filter(_.nonEmpty).map { owners =>
+                ownerMap => {
+                  // CASE-133 Add the creating user as an owner
+                  val owners = ownerMap.getOrElse(enquiry.id.get, Set.empty) + teamRequest.context.user.get.usercode
                   cases.setOwners(createdCase.id.get, owners)
-                }.getOrElse(Future.successful(Right(Set.empty[Usercode])))
+                }
               ))
-            }.getOrElse(Future.successful(Right(Set.empty[Usercode])))
+            }.getOrElse {
+              // CASE-133 Add the creating user as an owner
+              cases.setOwners(createdCase.id.get, Set(teamRequest.context.user.get.usercode))
+            }
 
-          copyEnquiryOwners.successMap { _ =>
+          setOwners.successMap { _ =>
             Redirect(controllers.admin.routes.CaseController.view(createdCase.key.get))
               .flashing("success" -> Messages("flash.case.created", createdCase.key.get.string))
           }
