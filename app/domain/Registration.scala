@@ -36,7 +36,8 @@ object RegistrationDataHistory {
     "disabilities" -> toJson(r.disabilities)(Writes.set(IdAndDescription.writer)),
     "medications" -> toJson(r.medications)(Writes.set(IdAndDescription.writer)),
     "appointmentAdjustments" -> toJson(r.appointmentAdjustments),
-    "referrals" -> toJson(r.referrals)(Writes.set(IdAndDescription.writer))
+    "referrals" -> toJson(r.referrals)(Writes.set(IdAndDescription.writer)),
+    "consentPrivacyStatement" -> toJson(r.consentPrivacyStatement)
   )
 
   def apply(history: Seq[(RegistrationData, OffsetDateTime)]): RegistrationDataHistory = RegistrationDataHistory(
@@ -46,6 +47,7 @@ object RegistrationDataHistory {
     medications = flatten(history.map { case (result, ts) => (result.medications, ts) }.toList),
     appointmentAdjustments = flatten(history.map { case (result, ts) => (result.appointmentAdjustments, ts) }.toList),
     referrals = flatten(history.map { case (result, ts) => (result.referrals, ts) }.toList),
+    consentPrivacyStatement = flatten(history.map { case (result, ts) => (result.consentPrivacyStatement, ts) }.toList),
   )
 
   private def flatten[A](items: List[(A, OffsetDateTime)]): Seq[(A, OffsetDateTime)] = (items match {
@@ -74,5 +76,6 @@ case class RegistrationDataHistory(
   disabilities: Seq[(Set[Disability], OffsetDateTime)],
   medications: Seq[(Set[Medication], OffsetDateTime)],
   appointmentAdjustments: Seq[(String, OffsetDateTime)],
-  referrals: Seq[(Set[RegistrationReferral], OffsetDateTime)]
+  referrals: Seq[(Set[RegistrationReferral], OffsetDateTime)],
+  consentPrivacyStatement: Seq[(Option[Boolean], OffsetDateTime)]
 )

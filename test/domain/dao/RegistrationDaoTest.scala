@@ -26,7 +26,8 @@ class RegistrationDaoTest extends AbstractDaoTest {
           disabilities = Set(Disabilities.Deaf, Disabilities.Blind),
           medications = Set(Medications.Antidepressant),
           appointmentAdjustments = "None",
-          referrals = Set(RegistrationReferrals.GP)
+          referrals = Set(RegistrationReferrals.GP),
+          consentPrivacyStatement = Some(true)
         )
 
         val test = for {
@@ -58,7 +59,8 @@ class RegistrationDaoTest extends AbstractDaoTest {
         disabilities = Set(Disabilities.Deaf, Disabilities.Blind),
         medications = Set(Medications.Antidepressant),
         appointmentAdjustments = "None",
-        referrals = Set(RegistrationReferrals.GP)
+        referrals = Set(RegistrationReferrals.GP),
+        consentPrivacyStatement = Some(true)
       )
 
       val updatedData = data.copy(
