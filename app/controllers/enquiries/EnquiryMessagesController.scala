@@ -100,7 +100,7 @@ class EnquiryMessagesController @Inject()(
     )
 
   private def uploadedFile(request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Option[(ByteSource, UploadedFileSave)] =
-    request.body.file("file").map { file =>
+    request.body.file("file").filter(_.filename.nonEmpty).map { file =>
       (Files.asByteSource(file.ref), UploadedFileSave(
         file.filename,
         file.ref.length(),

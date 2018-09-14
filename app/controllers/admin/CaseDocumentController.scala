@@ -56,7 +56,7 @@ class CaseDocumentController @Inject()(
         Ok(views.html.admin.cases.addDocument(caseKey, formWithErrors))
       ),
       documentType =>
-        caseRequest.body.file("file").map { file =>
+        caseRequest.body.file("file").filter(_.filename.nonEmpty).map { file =>
           // TODO should this add a case note?
           cases.addDocument(
             caseID = caseRequest.`case`.id.get,
