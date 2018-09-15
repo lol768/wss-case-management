@@ -110,7 +110,6 @@
                     <h4 class="modal-title" id="add-owner-modal-label">Add an owner</h4>
                   </div>
                   <div class="modal-body">
-                    @* col-xs-12 is to undo the negative margin added by this being inside a form-horizontal *@
                     @b3.free() {
                       @tags.flexipicker(values = Nil, name = "owners[]", placeholder = "Search for a user", multiple = false)
                     }
