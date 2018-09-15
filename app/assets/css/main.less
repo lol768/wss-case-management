@@ -268,3 +268,10 @@ summary {
 
   details[data-toggle="load"] & { color: @brand-colour; }
 }
+
+// Headings immediately after another heading should be closer together
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  + h1, + h2, + h3, + h4, + h5, + h6, + .h1, + .h2, + .h3, + .h4, + .h5, + .h6 {
+    margin-top: 0;
+  }
+}

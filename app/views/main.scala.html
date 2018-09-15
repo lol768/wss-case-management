@@ -1,5 +1,6 @@
 @(
-  title: String = ""
+  title: String = "",
+  icon: String = ""
 )(content: Html)(implicit context: RequestContext)
 
 <!DOCTYPE html>
@@ -118,7 +119,12 @@
           </div>
           @if(!title.isEmpty) {
             <div class="id7-page-title">
-              <h1>@title</h1>
+              <h1>
+                @if(!icon.isEmpty) {
+                  <i class="@icon"></i>
+                }
+                @title
+              </h1>
             </div>
           }
         </header>

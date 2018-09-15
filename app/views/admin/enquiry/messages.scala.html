@@ -1,25 +1,163 @@
-@import controllers.admin.TeamEnquiryController.StateChangeForm
-@import domain.{Enquiry, IssueState, MessageData, MessageSender, UploadedFile}
+@import java.time.OffsetDateTime
+
+@import controllers.admin.TeamEnquiryController.ReassignEnquiryData
+@import domain.{Enquiry, IssueState, MessageData, MessageSender, SitsProfile, Teams, UploadedFile, UserType}
 @import helpers.JavaTime
-@import warwick.sso.{UniversityID, User, Usercode}
+@import warwick.sso.{User, Usercode}
 
 @(
   enquiry: Enquiry,
+  client: SitsProfile,
   messages: Seq[(MessageData, Option[UploadedFile])],
-  stateChangeForm: Form[StateChangeForm],
+  owners: Seq[User],
   userLookup: Map[Usercode, User],
-  universityIDLookup: Map[UniversityID, User]
+  reassignForm: Form[ReassignEnquiryData],
+  stateChangeForm: Form[OffsetDateTime],
+  messageForm: Form[String],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@main(s"${enquiry.key.get.string} ${enquiry.subject} from ${universityIDLookup.get(enquiry.universityID).flatMap(_.name.full).getOrElse("[Unknown user]")} (${enquiry.universityID.string})") {
-  <h2>
+@main(
+  title = s"${enquiry.key.get.string} ${enquiry.subject}",
+  icon = if(enquiry.state != IssueState.Closed) "fal fa-fw fa-comment-dots" else "fal fa-fw fa-comment-check"
+) {
+  <h5>
     <div class="pull-right">
-      @if(enquiry.version.isAfter(messages.last._1.created)) {
-        @JavaTime.Relative(enquiry.version, printToday = true)
-      } else {
-        @JavaTime.Relative(messages.last._1.created, printToday = true)
-      }
+    @if(enquiry.version.isAfter(messages.last._1.created)) {
+      @JavaTime.Relative(enquiry.version, printToday = true)
+    } else {
+      @JavaTime.Relative(messages.last._1.created, printToday = true)
+    }
     </div>
+
+    @client.fullName,
+    @client.universityID.string,
+    @client.userType match {
+      case UserType.Student => {
+        @client.yearOfStudy.map(_.level) match {
+          case Some("1") => {First year}
+          case Some("2") => {Second year}
+          case Some("3") => {Third year}
+          case Some("4") => {Fourth year}
+          case Some(level) => {@{level}th year}
+          case _ => {}
+        }
+        @client.group student, @client.department.name
+      }
+      case _ => {@client.userType, @client.department.name}
+    }
+  </h5>
+  <h5>
+    @if(enquiry.state == IssueState.Closed) {
+      Closed
+    } else {
+      Open,
+      @if(messages.last._1.sender == MessageSender.Client) {
+        requires action
+      } else {
+        waiting for client
+      }
+    }
+  </h5>
+
+  <div class="row">
+    <div class="col-sm-6 col-md-4">
+      @b3.horizontal.formCSRF(controllers.admin.routes.TeamEnquiryController.reassign(enquiry.key.get), "col-sm-4", "col-sm-8") { implicit ifc =>
+        @b3.validatedHidden(reassignForm, "version")
+
+        @b3.select(reassignForm("team"),
+          options = Teams.all.map { t => t.id -> t.name },
+          '_label -> "Team"
+        )
+      }
+
+      <div class="form-horizontal">
+        <div class="col-sm-4 control-label">
+          Owners
+        </div>
+        <div class="col-sm-8">
+          @if(owners.nonEmpty) {
+            <ul class="list-unstyled">
+              @owners.map { owner =>
+                <li class="form-control-static">@owner.name.full</li>
+              }
+            </ul>
+          } else {
+            <p class="form-control-static">None</p>
+          }
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-4 col-md-offset-2">
+      <div class="form-horizontal">
+        <div class="col-sm-4 control-label">
+          Actions
+        </div>
+        <div class="col-sm-8">
+          @if(enquiry.state != IssueState.Closed) {
+            @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.close(enquiry.key.get)) { implicit ifc =>
+              @b3.validatedHidden(stateChangeForm, "version")
+
+              <p>
+                <button type="submit" class="btn btn-primary btn-block">
+                  Close enquiry
+                </button>
+              </p>
+            }
+          } else {
+            @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.reopen(enquiry.key.get)) { implicit ifc =>
+              @b3.validatedHidden(stateChangeForm, "version")
+
+              <p>
+                <button type="submit" class="btn btn-primary btn-block">
+                  Reopen enquiry
+                </button>
+              </p>
+            }
+          }
+
+          <p>
+            <a class="btn btn-default btn-block" href="@controllers.admin.routes.CaseController.createForm(enquiry.team.id, Some(enquiry.key.get))">
+              Create case from enquiry
+            </a>
+          </p>
+
+          <p>
+            <a class="btn btn-default btn-block" href="@controllers.admin.routes.AdminController.teamHome(enquiry.team.id)">
+              Return to enquiries list
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@*
+  <h2>
+
     @if(enquiry.state != IssueState.Closed) {
       <i class="fal fa-fw fa-comment-dots"></i>
     } else {
@@ -47,7 +185,6 @@
             <div class="flex">
               @b3.textarea(stateChangeForm("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
 
-              @* Styling TBC *@
               <input type="file" name="file" class="form-control">
 
               <button type="submit" class="btn btn-link">
@@ -94,5 +231,5 @@
         }
       }
     </div>
-  </div>
+  </div>*@
 }
