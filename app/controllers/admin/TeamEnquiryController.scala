@@ -202,10 +202,10 @@ class TeamEnquiryController @Inject()(
       ),
       data =>
         if (data.team == request.enquiry.team) // No change
-          Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(data.team.id)))
+          Future.successful(Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey)))
         else
           service.reassign(request.enquiry, data.team, data.version).successMap { _ =>
-            Redirect(controllers.admin.routes.AdminController.teamHome(request.enquiry.team.id))
+            Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
               .flashing("success" -> Messages("flash.enquiry.reassigned", data.team.name))
           }
     )

@@ -67,8 +67,13 @@
 
         @b3.select(reassignForm("team"),
           options = Teams.all.map { t => t.id -> t.name },
+          'class -> "change-submit",
           '_label -> "Team"
         )
+
+        @b3.free('_class -> "hidden", Symbol("aria-hidden") -> "true") {
+          <button type="submit" class="btn btn-primary">Reassign</button>
+        }
       }
 
       <div class="row form-horizontal">
@@ -78,23 +83,24 @@
         <div class="col-sm-8">
           @b3.horizontal.formCSRF(controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key.get), "col-sm-0", "col-sm-12", 'class -> "dirty-check") { implicit ifc =>
             @if(owners.nonEmpty) {
-              <ul class="list-unstyled">
-                @owners.map { owner =>
-                  <li class="form-control-static">
-                    <input type="hidden" name="owners[]" value="@owner.usercode.string">
-                    @owner.name.full
-                  </li>
-                }
-              </ul>
+              @owners.map { owner =>
+                <div class="form-control-static">
+                  <button type="button" class="pull-right btn btn-link" data-toggle="remove-submit" data-target="div">
+                    <i class="fas fa-times-circle"></i>
+                  </button>
+                  <input type="hidden" name="owners[]" value="@owner.usercode.string">
+                  @owner.name.full
+                </div>
+              }
             } else {
-              <p class="form-control-static">None</p>
+              <div class="form-control-static">None</div>
             }
 
-            <p class="form-control-static">
+            <div class="form-control-static">
               <a role="button" href="#add-owner-modal" data-toggle="modal" data-target="#add-owner-modal">
                 Add an owner
               </a>
-            </p>
+            </div>
 
             <div class="modal fade" id="add-owner-modal" tabindex="-1" role="dialog" aria-labelledby="add-owner-modal-label">
               <div class="modal-dialog" role="document">
