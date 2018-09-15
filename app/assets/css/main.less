@@ -119,8 +119,10 @@ section.indent {
 }
 
 .panel.enquiry {
-  background: #bfcac6 url(/assets/images/messages-bg.jpg) top right no-repeat;
-  background-size: cover;
+  &.enquiry--client {
+    background: #bfcac6 url(/assets/images/messages-bg.jpg) top right no-repeat;
+    background-size: cover;
+  }
 
   &.state-Closed {
     opacity: 0.7;
@@ -150,6 +152,7 @@ section.indent {
   }
 
   .message {
+    .clearfix();
     border-radius: 10px;
     box-shadow: 5px 5px 10px 0 rgba(0,0,0,0.3);
     padding: @panel-heading-padding;
@@ -176,6 +179,10 @@ section.indent {
       background-color: #CFEFFB;
       border: 1px solid #c0c0c0;
       margin-left: 20%;
+    }
+    .message--read-indicator {
+      font-size: @font-size-h5;
+      color: #3E8C27;
     }
   }
   .panel-footer {

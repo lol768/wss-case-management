@@ -7,31 +7,35 @@
   file: Option[UploadedFile],
   clientName: String,
   teamName: String,
-  attachmentRoute: UploadedFile => Call
+  attachmentRoute: UploadedFile => Call,
+  readIndicator: Option[Boolean] = None
 )
+
+@renderMessage(author: String) = {
+  <div class="date pull-right">@JavaTime.Relative(message.created, printToday = true)</div>
+  <div class="message--author">@author</div>
+  @views.utils.nl2br(message.text)
+  @file.map { f =>
+    <div class="message--attachment">
+      <i class="fal fa-paperclip"></i>
+      <a href="@attachmentRoute(f)">@f.fileName</a>
+    </div>
+  }
+  @readIndicator.map { isRead =>
+    @if(isRead) {
+      <div class="message--read-indicator pull-right">
+        <i class="fal fa-check-double" title="This message has been seen"></i>
+      </div>
+    }
+  }
+}
 
 @if(message.sender == MessageSender.Client) {
   <div class="message message-client">
-    <div class="date pull-right">@JavaTime.Relative(message.created, printToday = true)</div>
-    <div class="message--author">@clientName</div>
-    @views.utils.nl2br(message.text)
-    @file.map { f =>
-      <div class="message--attachment">
-        <i class="fal fa-paperclip"></i>
-        <a href="@attachmentRoute(f)">@f.fileName</a>
-      </div>
-    }
+    @renderMessage(clientName)
   </div>
 } else {
   <div class="message message-team">
-    <div class="date pull-right">@JavaTime.Relative(message.created, printToday = true)</div>
-    <div class="message--author">@teamName</div>
-    @views.utils.nl2br(message.text)
-    @file.map { f =>
-      <div class="message--attachment">
-        <i class="fal fa-paperclip"></i>
-        <a href="@attachmentRoute(f)">@f.fileName</a>
-      </div>
-    }
+    @renderMessage(teamName)
   </div>
 }

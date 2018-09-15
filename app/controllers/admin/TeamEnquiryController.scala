@@ -9,7 +9,6 @@ import controllers.refiners.{CanAddTeamMessageToEnquiryActionRefiner, CanEditEnq
 import controllers.{API, BaseController, UploadedFileServing}
 import domain._
 import helpers.{JavaTime, ServiceResults}
-import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -57,26 +56,34 @@ class TeamEnquiryController @Inject()(
   import canEditEnquiryActionRefiner._
   import canViewEnquiryActionRefiner._
 
-  private def renderMessages(enquiry: Enquiry, reassignForm: Form[ReassignEnquiryData], stateChangeForm: Form[OffsetDateTime], messageForm: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] =
+  private def renderMessages(enquiry: Enquiry, reassignForm: Form[ReassignEnquiryData], stateChangeForm: Form[OffsetDateTime], messageForm: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
+    val clientUsercode = userLookupService.getUsers(Seq(enquiry.universityID)).getOrElse(Map()).values.map(_.usercode).headOption
+    val findClientLastRead =
+      clientUsercode.map(service.findLastViewDate(enquiry.id.get, _))
+        .getOrElse(Future.successful(Right(None)))
+
     ServiceResults.zip(
       service.getForRender(enquiry.id.get),
       profiles.getProfile(enquiry.universityID).map(_.value),
-      service.getOwners(Set(enquiry.id.get))
-    ).successMap { case ((e, messages), profile, ownersMap) =>
+      service.getOwners(Set(enquiry.id.get)),
+      findClientLastRead
+    ).successMap { case ((e, messages), profile, ownersMap, clientLastRead) =>
       val allUsers = messages.flatMap { case (m, _) => m.teamMember }.toSet ++ ownersMap.values.flatten
-      val userLookup = userLookupService.getUsers(allUsers.toSeq).toOption.getOrElse(Map())
+      val userLookup = userLookupService.getUsers(allUsers.toSeq).getOrElse(Map())
 
       Ok(views.html.admin.enquiry.messages(
         e,
         profile,
         messages,
         ownersMap.values.flatten.flatMap(userLookup.get).toSeq.sortBy { u => (u.name.last, u.name.first) },
+        clientLastRead,
         userLookup,
         reassignForm,
         stateChangeForm,
         messageForm
       ))
     }
+  }
 
   def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
     renderMessages(
@@ -140,15 +147,15 @@ class TeamEnquiryController @Inject()(
     }
   }
 
-  def close(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanEditEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>
-    updateStateAndMessage(IssueState.Closed)
+  def close(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
+    updateState(IssueState.Closed)
   }
 
-  def reopen(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanEditEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>
-    updateStateAndMessage(IssueState.Reopened)
+  def reopen(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
+    updateState(IssueState.Reopened)
   }
 
-  private def updateStateAndMessage(newState: IssueState)(implicit request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Future[Result] = {
+  private def updateState(newState: IssueState)(implicit request: EnquirySpecificRequest[AnyContent]): Future[Result] = {
     stateChangeForm(request.enquiry).bindFromRequest().fold(
       formWithErrors => renderMessages(
         request.enquiry,

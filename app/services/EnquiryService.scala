@@ -51,6 +51,7 @@ trait EnquiryService {
   def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[(Enquiry, Seq[(MessageData, Option[UploadedFile])])]]
 
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]]
+  def findLastViewDate(enquiryID: UUID, usercode: Usercode)(implicit t: TimingContext): Future[ServiceResult[Option[OffsetDateTime]]]
 
   def search(query: EnquirySearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]]
 
@@ -220,6 +221,9 @@ class EnquiryServiceImpl @Inject() (
       errors => Future.successful(Left(errors)),
       ids => get(ids.map(UUID.fromString))
     ))
+
+  override def findLastViewDate(enquiryID: UUID, usercode: Usercode)(implicit t: TimingContext): Future[ServiceResult[Option[OffsetDateTime]]] =
+    auditService.findLastEventDateForTargetID(enquiryID.toString, usercode, 'EnquiryView)
 
   override def search(query: EnquirySearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]] =
     daoRunner.run(enquiryDao.searchQuery(query).take(limit).result).map(Right.apply)

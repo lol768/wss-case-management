@@ -57,6 +57,7 @@
           <div id="collapse-@enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head._1 == enquiry){in}" role="tabpanel" aria-labelledby="heading-@enquiry.key.get.string">
             <div class="panel-body">
               @messages.map { case (message, file) =>
+                @* FIXME CASE-138 Change enquiry.team to message.team *@
                 @views.html.enquiry.enquiryMessage(enquiry, message, file, clientName = "You", enquiry.team.name, f => controllers.enquiries.routes.EnquiryMessagesController.download(enquiry.key.get, f.id))
               }
             </div>

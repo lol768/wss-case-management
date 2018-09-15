@@ -10,6 +10,7 @@
   client: SitsProfile,
   messages: Seq[(MessageData, Option[UploadedFile])],
   owners: Seq[User],
+  clientLastRead: Option[OffsetDateTime],
   userLookup: Map[Usercode, User],
   reassignForm: Form[ReassignEnquiryData],
   stateChangeForm: Form[OffsetDateTime],
@@ -22,11 +23,11 @@
 ) {
   <h5>
     <div class="pull-right">
-    @if(enquiry.version.isAfter(messages.last._1.created)) {
-      @JavaTime.Relative(enquiry.version, printToday = true)
-    } else {
-      @JavaTime.Relative(messages.last._1.created, printToday = true)
-    }
+      @if(enquiry.version.isAfter(messages.last._1.created)) {
+        @JavaTime.Relative(enquiry.version, printToday = true)
+      } else {
+        @JavaTime.Relative(messages.last._1.created, printToday = true)
+      }
     </div>
 
     @client.fullName,
@@ -70,25 +71,57 @@
         )
       }
 
-      <div class="form-horizontal">
+      <div class="row form-horizontal">
         <div class="col-sm-4 control-label">
           Owners
         </div>
         <div class="col-sm-8">
-          @if(owners.nonEmpty) {
-            <ul class="list-unstyled">
-              @owners.map { owner =>
-                <li class="form-control-static">@owner.name.full</li>
-              }
-            </ul>
-          } else {
-            <p class="form-control-static">None</p>
+          @b3.horizontal.formCSRF(controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key.get), "col-sm-0", "col-sm-12", 'class -> "dirty-check") { implicit ifc =>
+            @if(owners.nonEmpty) {
+              <ul class="list-unstyled">
+                @owners.map { owner =>
+                  <li class="form-control-static">
+                    <input type="hidden" name="owners[]" value="@owner.usercode.string">
+                    @owner.name.full
+                  </li>
+                }
+              </ul>
+            } else {
+              <p class="form-control-static">None</p>
+            }
+
+            <p class="form-control-static">
+              <a role="button" href="#add-owner-modal" data-toggle="modal" data-target="#add-owner-modal">
+                Add an owner
+              </a>
+            </p>
+
+            <div class="modal fade" id="add-owner-modal" tabindex="-1" role="dialog" aria-labelledby="add-owner-modal-label">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="add-owner-modal-label">Add an owner</h4>
+                  </div>
+                  <div class="modal-body">
+                    @* col-xs-12 is to undo the negative margin added by this being inside a form-horizontal *@
+                    @b3.free() {
+                      @tags.flexipicker(values = Nil, name = "owners[]", placeholder = "Search for a user", multiple = false)
+                    }
+                  </div>
+                  <div class="modal-footer spaced-buttons">
+                    <button type="submit" class="btn btn-primary">Add owner</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           }
         </div>
       </div>
     </div>
     <div class="col-sm-6 col-md-4 col-md-offset-2">
-      <div class="form-horizontal">
+      <div class="row form-horizontal">
         <div class="col-sm-4 control-label">
           Actions
         </div>
@@ -131,59 +164,33 @@
     </div>
   </div>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@*
-  <h2>
-
-    @if(enquiry.state != IssueState.Closed) {
-      <i class="fal fa-fw fa-comment-dots"></i>
-    } else {
-      <i class="fal fa-fw fa-comment-check"></i>
-    }
-    @enquiry.subject
-  </h2>
-  <div class="enquiry panel panel-default">
+  <div class="enquiry enquiry--team panel">
     <div class="panel-body">
+      @* FIXME CASE-138 Change enquiry.team to message.team *@
       @messages.map { case (message, file) =>
         @views.html.enquiry.enquiryMessage(
           enquiry,
           message,
           file,
-          "Client",
-          message.teamMember.flatMap(usercode => userLookup.get(usercode).filter(_.isFound).flatMap(_.name.full)).getOrElse(enquiry.team.name),
-          f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key.get, f.id)
+          client.fullName,
+          message.teamMember
+            .flatMap { usercode =>
+              userLookup.get(usercode)
+                .filter(_.isFound)
+                .flatMap(_.name.full)
+                .map { name => s"$name, ${enquiry.team.name} team" }
+            }.getOrElse(s"${enquiry.team.name} team"),
+          f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key.get, f.id),
+          clientLastRead.filter(_ => message.sender == MessageSender.Team).map(_.isAfter(message.created))
         )
       }
     </div>
-    <div class="panel-footer">
-      @if(enquiry.state != IssueState.Closed) {
+    @if(enquiry.state != IssueState.Closed) {
+      <div class="panel-footer">
         @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
-          @b3.free('_label -> "Add a message", '_class -> stateChangeForm("text").error.map(_ => "has-error").getOrElse("")) {
+          @b3.free('_label -> "Add a message", '_class -> messageForm("text").error.map(_ => "has-error").getOrElse("")) {
             <div class="flex">
-              @b3.textarea(stateChangeForm("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
+              @b3.textarea(messageForm("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
 
               <input type="file" name="file" class="form-control">
 
@@ -191,45 +198,17 @@
                 <i class="fal fa-paper-plane fa-2x"></i>
               </button>
             </div>
-            @if(stateChangeForm("text").hasErrors) {
+
+            @if(messageForm("text").hasErrors) {
               <div class="help-block">
-                @stateChangeForm("text").errors.map { error =>
+                @messageForm("text").errors.map { error =>
                   @error.format
                 }
               </div>
             }
           }
-
-          <div class="spaced-buttons">
-            <button
-              type="submit"
-              formaction="@controllers.admin.routes.TeamEnquiryController.close(enquiry.key.get)"
-              class="btn btn-primary"
-            >
-              Close enquiry
-            </button>
-
-            <a class="btn btn-default" href="@controllers.admin.routes.CaseController.createForm(enquiry.team.id, Some(enquiry.key.get))">
-              Create case from enquiry
-            </a>
-
-            @b3.validatedHidden(stateChangeForm, "version")
-          </div>
         }
-      } else {
-        @b3.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.reopen(enquiry.key.get)) { implicit ifc =>
-          @b3.validatedHidden(stateChangeForm, "version")
-
-          @b3.textarea(stateChangeForm("text"),
-            '_label -> "Add a message",
-            'rows -> 5
-          )
-
-          <div class="spaced-buttons">
-            <button type="submit" class="btn btn-primary">Reopen enquiry</button>
-          </div>
-        }
-      }
-    </div>
-  </div>*@
+      </div>
+    }
+  </div>
 }
