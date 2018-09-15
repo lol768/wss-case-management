@@ -30,7 +30,7 @@
 
     <div class="panel-group enquiries" id="enquiries-accordion" role="tablist" aria-multiselectable="true">
       @enquiries.map { case (enquiry, messages) =>
-        <div class="panel panel-default enquiry state-@enquiry.state.entryName">
+        <div class="panel panel-default enquiry enquiry--client state-@enquiry.state.entryName">
 
           <div class="panel-heading" role="tab" id="heading-@enquiry.key.get.string">
             <h4 class="panel-title">
