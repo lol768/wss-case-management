@@ -53,7 +53,6 @@ GET         /team/client/:universityID/registration-history     @controllers.adm
 
 GET         /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.messages(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.addMessage(enquiryKey: domain.IssueKey)
-GET         /team/enquiry/:enquiryKey/:fileId                   @controllers.admin.TeamEnquiryController.download(enquiryKey: domain.IssueKey, fileId: java.util.UUID)
 GET         /team/enquiry/:enquiryKey/close                     @controllers.admin.TeamEnquiryController.redirectToMessages(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey/close                     @controllers.admin.TeamEnquiryController.close(enquiryKey: domain.IssueKey)
 GET         /team/enquiry/:enquiryKey/reopen                    @controllers.admin.TeamEnquiryController.redirectToMessages(enquiryKey: domain.IssueKey)
@@ -62,6 +61,7 @@ GET         /team/enquiry/:enquiryKey/reassign                  @controllers.adm
 POST        /team/enquiry/:enquiryKey/reassign                  @controllers.admin.TeamEnquiryController.reassign(enquiryKey: domain.IssueKey)
 GET         /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquiryForm(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquirySubmit(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/:fileId                   @controllers.admin.TeamEnquiryController.download(enquiryKey: domain.IssueKey, fileId: java.util.UUID)
 
 GET         /team/case/create                       @controllers.admin.CaseController.createSelectTeam(fromEnquiry: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
 GET         /team/case/create/:teamId               @controllers.admin.CaseController.createForm(teamId: String, fromEnquiry: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
