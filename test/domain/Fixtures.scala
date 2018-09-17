@@ -35,12 +35,14 @@ object Fixtures {
       ownerId: UUID,
       ownerType: MessageOwner,
       sender: MessageSender = MessageSender.Client,
-      teamMember: Option[Usercode] = None
+      teamMember: Option[Usercode] = None,
+      team: Option[Team] = None
     ) = Message(
       id = UUID.randomUUID(),
       text = "Hello",
       sender = sender,
       teamMember = teamMember,
+      team = team,
       ownerId = ownerId,
       ownerType = ownerType
     )

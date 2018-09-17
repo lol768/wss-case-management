@@ -67,12 +67,12 @@ class EnquiryMessagesController @Inject()(
         val files = uploadedFiles(request)
 
         service.addMessage(request.enquiry, message, files).successMap { case (m, f) =>
-          val messageData = MessageData(m.text, m.sender, m.created, m.teamMember)
+          val messageData = MessageData(m.text, m.sender, m.created, m.teamMember, m.team)
 
           render {
             case Accepts.Json() =>
               val clientName = "You"
-              val teamName = request.enquiry.team.name
+              val teamName = s"${messageData.team.getOrElse(request.enquiry.team).name} team"
 
               Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
                 "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, f, clientName, teamName, f => routes.EnquiryMessagesController.download(enquiryKey, f.id)).toString()

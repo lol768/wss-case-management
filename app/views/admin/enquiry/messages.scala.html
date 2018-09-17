@@ -175,7 +175,6 @@
     <div class="enquiry-details--messages">
       <div class="enquiry enquiry--team panel">
         <div class="panel-body">
-          @* FIXME CASE-138 Change enquiry.team to message.team *@
           @messages.map { case (message, file) =>
             @views.html.enquiry.enquiryMessage(
               enquiry,
@@ -187,8 +186,8 @@
                   userLookup.get(usercode)
                     .filter(_.isFound)
                     .flatMap(_.name.full)
-                    .map { name => s"$name, ${enquiry.team.name} team" }
-                }.getOrElse(s"${enquiry.team.name} team"),
+                    .map { name => s"$name, ${message.team.getOrElse(enquiry.team).name} team" }
+                }.getOrElse(s"${message.team.getOrElse(enquiry.team).name} team"),
               f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key.get, f.id),
               clientLastRead.filter(_ => message.sender == MessageSender.Team).map(_.isAfter(message.created))
             )
