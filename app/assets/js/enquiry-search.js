@@ -34,7 +34,7 @@ export default function EnquirySearch(container) {
     displayText: item => `
         <div class="flexi-picker-result">
           <div class="media-left">
-            <i class="fal fa-comment-dots fa-fw"></i>
+            <i class="fal ${item.state === 'Closed' ? 'fa-comment-check' : 'fa-comment-dots'} fa-fw"></i>
           </div>
           <div class="media-body">
             <span class="title">${item.key}</span>

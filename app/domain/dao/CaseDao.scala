@@ -112,6 +112,8 @@ class CaseDaoImpl @Inject()(
       .filter { case (c, n) => queries(c, n).reduce(_ && _) }
       .map { case (c, _) => c }
       .distinct
+      // This is cheating a bit, as it relies on Closed being before all other states alphabetically
+      .sortBy { c => (c.state.desc, c.created.desc) }
   }
 
   override def update(c: Case, version: OffsetDateTime): DBIO[Case] =
