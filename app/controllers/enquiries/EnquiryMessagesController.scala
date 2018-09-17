@@ -13,7 +13,7 @@ import play.api.data.Forms._
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
-import services.EnquiryService
+import services.{AuditService, EnquiryService}
 import warwick.sso.UserLookupService
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -27,6 +27,7 @@ class EnquiryMessagesController @Inject()(
   canClientViewEnquiryActionRefiner: CanClientViewEnquiryActionRefiner,
   canAddClientMessageToEnquiryActionRefiner: CanAddClientMessageToEnquiryActionRefiner,
   service: EnquiryService,
+  audit: AuditService,
   userLookupService: UserLookupService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
@@ -83,6 +84,19 @@ class EnquiryMessagesController @Inject()(
         }
       }
     )
+  }
+
+  def auditView(enquiryKey: IssueKey): Action[AnyContent] = CanClientViewEnquiryAction(enquiryKey).async { implicit request =>
+    audit.audit('EnquiryView, request.enquiry.id.get.toString, 'Enquiry, Json.obj()) {
+      Future.successful(Right(
+        render {
+          case Accepts.Json() =>
+            Accepted(Json.toJson(API.Success[JsObject](data = Json.obj())))
+          case _ =>
+            Redirect(routes.EnquiryMessagesController.messages(enquiryKey))
+        }
+      ))
+    }.successMap(identity)
   }
 
   def download(enquiryKey: IssueKey, fileId: UUID): Action[AnyContent] = CanClientViewEnquiryAction(enquiryKey).async { implicit request =>

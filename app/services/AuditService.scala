@@ -80,19 +80,11 @@ class AuditServiceImpl @Inject()(
         Future.successful(Left(errors))
       case Right(result) =>
         val targetId = targetIdTransform(result)
-        daoRunner.run(
-          dao.insert(AuditEvent(
-            id = UUID.randomUUID(),
-            operation = operation,
-            usercode = context.usercode,
-            data = data,
-            targetId = targetId,
-            targetType = targetType
-          ))
-        ).map { _ =>
-          doAudit(operation, targetId, targetType, data)
-          Right(result)
-        }
+        daoRunner.run(insertAuditEventDBIO(operation, targetId, targetType, data))
+          .map { _ =>
+            doAudit(operation, targetId, targetType, data)
+            Right(result)
+          }
     }
 
   override def audit[A](operation: Symbol, targetId: String, targetType: Symbol, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]] =
@@ -100,20 +92,22 @@ class AuditServiceImpl @Inject()(
       case Left(errors) =>
         Future.successful(Left(errors))
       case Right(result) =>
-        daoRunner.run(
-          dao.insert(AuditEvent(
-            id = UUID.randomUUID(),
-            operation = operation,
-            usercode = context.usercode,
-            data = data,
-            targetId = targetId,
-            targetType = targetType
-          ))
-        ).map { _ =>
-          doAudit(operation, targetId, targetType, data)
-          Right(result)
-        }
+        daoRunner.run(insertAuditEventDBIO(operation, targetId, targetType, data))
+          .map { _ =>
+            doAudit(operation, targetId, targetType, data)
+            Right(result)
+          }
     }
+
+  private def insertAuditEventDBIO(operation: Symbol, targetId: String, targetType: Symbol, data: JsValue)(implicit context: AuditLogContext): DBIO[AuditEvent] =
+    dao.insert(AuditEvent(
+      id = UUID.randomUUID(),
+      operation = operation,
+      usercode = context.usercode,
+      data = data,
+      targetId = targetId,
+      targetType = targetType
+    ))
 
   private val asUUID = SimpleExpression.unary[String, UUID] { (id, qb) =>
     qb.expr(id)

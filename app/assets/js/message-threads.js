@@ -1,14 +1,22 @@
 import $ from 'jquery';
 import _ from 'lodash-es';
 import log from 'loglevel';
-import { postMultipartFormWithCredentials } from './serverpipe';
+import { postJsonWithCredentials, postMultipartFormWithCredentials } from './serverpipe';
 
 export default function MessageThreads(container) {
   const $container = $(container);
 
   // Scroll to bottom when expanded
   $container.find('.collapse').on('shown.bs.collapse', (e) => {
-    $(e.target).find('.panel-body').scrollTop(Number.MAX_SAFE_INTEGER);
+    const $target = $(e.target);
+    $target.find('.panel-body').scrollTop(Number.MAX_SAFE_INTEGER);
+
+    // POST to the ping endpoint specified if it exists
+    if ($target.data('ping')) {
+      postJsonWithCredentials($target.data('ping'), {})
+        .then(response => response.json())
+        .catch(err => log.error(err));
+    }
   });
   // And on load
   $('.collapse.in .panel-body').scrollTop(Number.MAX_SAFE_INTEGER);
