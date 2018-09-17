@@ -113,7 +113,7 @@ class EnquiryServiceImpl @Inject() (
     ))
   }
 
-  private def addMessageDBIO(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)]): DBIO[(Message, Seq[UploadedFile])] =
+  private def addMessageDBIO(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit t: TimingContext): DBIO[(Message, Seq[UploadedFile])] =
     for {
       message <- messageDao.insert(Message(
         id = UUID.randomUUID(),

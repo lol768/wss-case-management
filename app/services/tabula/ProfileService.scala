@@ -52,10 +52,10 @@ class ProfileServiceImpl @Inject()(
     _ => Ttl(soft = 1.hour, medium = 1.day, hard = 7.days)
   )
 
-  private lazy val wrappedCache = VariableTtlCacheHelper.async[ServiceResult[SitsProfile]](cache, logger, ttlStrategy)
+  private lazy val wrappedCache = VariableTtlCacheHelper.async[ServiceResult[SitsProfile]](cache, logger, ttlStrategy, timing)
 
   override def getProfile(universityID: UniversityID)(implicit t: TimingContext): Future[CacheElement[ServiceResult[SitsProfile]]] = time(TimingCategory) {
-    wrappedCache.getOrElseUpdateElement(s"tabulaprofile:${universityID.string}") {
+    wrappedCache.getOrElseUpdateElement(s"tabulaprofile:${universityID.string}", CacheOptions.default) {
       val url = s"$tabulaProfileUrl/${universityID.string}"
       val request = ws.url(url)
 
@@ -85,7 +85,7 @@ class ProfileServiceImpl @Inject()(
           )
         })
       })
-    }(CacheOptions.default)
+    }
   }
 
   override def getProfiles(universityIDs: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, SitsProfile]]] = time(TimingCategory) {

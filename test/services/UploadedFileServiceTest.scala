@@ -1,17 +1,18 @@
 package services
 
-import java.io.{IOException, InputStream}
+import java.io.InputStream
 import java.nio.charset.StandardCharsets
 
 import akka.Done
 import com.google.common.io.ByteSource
+import domain.ExtendedPostgresProfile.api._
 import domain.UploadedFileSave
 import domain.dao.{AbstractDaoTest, DaoRunner, UploadedFileDao}
 import helpers.DataFixture
 import org.jclouds.http.HttpResponseException
 import org.mockito.Matchers._
 import org.mockito.Mockito._
-import domain.ExtendedPostgresProfile.api._
+import warwick.core.timing.TimingService
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.Usercode
 
@@ -37,7 +38,8 @@ class UploadedFileServiceTest extends AbstractDaoTest {
         get[AuditService],
         objectStorageService,
         get[DaoRunner],
-        get[UploadedFileDao]
+        get[UploadedFileDao],
+        get[TimingService]
       )
 
       (uploadedFileService, objectStorageService)

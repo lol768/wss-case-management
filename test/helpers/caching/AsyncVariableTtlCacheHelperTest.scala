@@ -11,11 +11,12 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.Logger
+import services.{NoTimeTracking, NullTimingService}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with ScalaFutures {
+class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with ScalaFutures with NoTimeTracking {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -37,7 +38,7 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
     "call once within soft TTL and do a background update when outside the soft TTL" in {
       val provider = mock[Provider[String]]
       when(provider.get).thenAnswer(answerNumberStrings())
-      val wrapper = VariableTtlCacheHelper.async(new NeverExpiringMemoryAsyncCacheApi(), Logger("test"), ttlRule)
+      val wrapper = VariableTtlCacheHelper.async(new NeverExpiringMemoryAsyncCacheApi(), Logger("test"), ttlRule, new NullTimingService)
       def fetchData() = wrapper.getOrElseUpdate("mydata") { Future.successful(provider.get) }
 
       fetchData().futureValue mustBe "Value 1"
@@ -53,7 +54,7 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
     "return a fresh value once outside the medium TTL" in {
       val provider = mock[Provider[String]]
       when(provider.get).thenAnswer(answerNumberStrings())
-      val wrapper = VariableTtlCacheHelper.async(new NeverExpiringMemoryAsyncCacheApi(), Logger("test"), ttlRule)
+      val wrapper = VariableTtlCacheHelper.async(new NeverExpiringMemoryAsyncCacheApi(), Logger("test"), ttlRule, new NullTimingService)
       def fetchData() = wrapper.getOrElseUpdate("mydata") { Future.successful(provider.get) }
 
       fetchData().futureValue mustBe "Value 1"
@@ -70,7 +71,7 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
     "return the stale value outside the medium TTL if the update fails" in {
       val provider = mock[Provider[String]]
       when(provider.get).thenAnswer(answerNumberStrings())
-      val wrapper = VariableTtlCacheHelper.async(new NeverExpiringMemoryAsyncCacheApi(), Logger("test"), ttlRule)
+      val wrapper = VariableTtlCacheHelper.async(new NeverExpiringMemoryAsyncCacheApi(), Logger("test"), ttlRule, new NullTimingService)
       var firstCall = true
       def fetchData() = wrapper.getOrElseUpdate("mydata") {
         if(firstCall) {
@@ -93,17 +94,17 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
       val cache = new NeverExpiringMemoryAsyncCacheApi()
 
       // get a String value put in the cache
-      private val oldWrapper = VariableTtlCacheHelper.async[String](cache, Logger("test"), 1.second, 1.minute, 1.hour)
+      private val oldWrapper = VariableTtlCacheHelper.async[String](cache, Logger("test"), 1.second, 1.minute, 1.hour, new NullTimingService)
       Await.ready(
         oldWrapper.getOrElseUpdate("mykey")(Future.successful("oldvalue")),
         Duration.Inf
       )
 
-      val wrapper: AsyncVariableTtlCacheHelper[Option[String]] = VariableTtlCacheHelper.async[Option[String]](cache, Logger("test"), 1.second, 1.minute, 1.hour)
+      val wrapper: AsyncVariableTtlCacheHelper[Option[String]] = VariableTtlCacheHelper.async[Option[String]](cache, Logger("test"), 1.second, 1.minute, 1.hour, new NullTimingService)
     }
 
     "handle a class change in getOrElseUpdateElement" in new ClassChangeContext {
-      val result: CacheElement[Option[String]] = wrapper.getOrElseUpdateElement("mykey")(Future.successful(Some("newvalue")))(CacheOptions.default).futureValue
+      val result: CacheElement[Option[String]] = wrapper.getOrElseUpdateElement("mykey", CacheOptions.default)(Future.successful(Some("newvalue"))).futureValue
       result.value mustBe Some("newvalue")
     }
 
