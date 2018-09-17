@@ -23,6 +23,7 @@ case class Message (
   text: String,
   sender: MessageSender,
   teamMember: Option[Usercode],
+  team: Option[Team],
   ownerId: UUID,
   ownerType: MessageOwner,
   created: OffsetDateTime = OffsetDateTime.now(),
@@ -36,6 +37,7 @@ case class Message (
       text,
       sender,
       teamMember,
+      team,
       ownerId,
       ownerType,
       created,
@@ -66,6 +68,7 @@ object Message extends Versioning {
     def searchableText = toTsVector(text, Some("english"))
     def sender = column[MessageSender]("sender")
     def teamMember = column[Option[Usercode]]("team_member")
+    def team = column[Option[Team]]("team_id")
     def created = column[OffsetDateTime]("created_utc")
     def ownerId = column[UUID]("owner_id")
     def ownerType = column[MessageOwner]("owner_type")
@@ -77,8 +80,8 @@ object Message extends Versioning {
 
     def id = column[UUID]("id", O.PrimaryKey)
 
-    def * = (id, text, sender, teamMember, ownerId, ownerType, created, version).mapTo[Message]
-    def messageData = (text, sender, created, teamMember).mapTo[MessageData]
+    def * = (id, text, sender, teamMember, team, ownerId, ownerType, created, version).mapTo[Message]
+    def messageData = (text, sender, created, teamMember, team).mapTo[MessageData]
   }
 
   class MessageVersions(tag: Tag) extends Table[MessageVersion](tag, "message_version") with StoredVersionTable[Message] with CommonProperties {
@@ -86,7 +89,7 @@ object Message extends Versioning {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
-    def * = (id, text, sender, teamMember, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
+    def * = (id, text, sender, teamMember, team, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
     def pk = primaryKey("pk_messageversions", (id, timestamp))
     def idx = index("idx_messageversions", (id, version))
   }
@@ -121,6 +124,7 @@ case class MessageVersion (
   text: String,
   sender: MessageSender,
   teamMember: Option[Usercode],
+  team: Option[Team],
   ownerId: UUID,
   ownerType: MessageOwner,
   created: OffsetDateTime,
@@ -146,7 +150,8 @@ case class MessageData (
   text: String,
   sender: MessageSender,
   created: OffsetDateTime,
-  teamMember: Option[Usercode]
+  teamMember: Option[Usercode],
+  team: Option[Team]
 )
 
 object MessageData {

@@ -28,8 +28,7 @@
   <div class="enquiry enquiry--client panel panel-default">
     <div class="panel-body">
       @messages.map { case (message, file) =>
-        @* FIXME CASE-138 Change enquiry.team to message.team *@
-        @views.html.enquiry.enquiryMessage(enquiry, message, file, "You", enquiry.team.name, f => controllers.enquiries.routes.EnquiryMessagesController.download(enquiry.key.get, f.id))
+        @views.html.enquiry.enquiryMessage(enquiry, message, file, "You", s"${message.team.getOrElse(enquiry.team).name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(enquiry.key.get, f.id))
       }
     </div>
     <div class="panel-footer">

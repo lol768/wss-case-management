@@ -120,6 +120,7 @@ class EnquiryServiceImpl @Inject() (
         text = message.text,
         sender = message.sender,
         teamMember = message.teamMember,
+        team = message.teamMember.map(_ => enquiry.team), // Only store Team if there is an explicit team member
         ownerId = enquiry.id.get,
         ownerType = MessageOwner.Enquiry
       ), Seq(enquiry.universityID))
