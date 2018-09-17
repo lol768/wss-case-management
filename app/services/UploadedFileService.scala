@@ -13,14 +13,16 @@ import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import domain.ExtendedPostgresProfile.api._
+import system.TimingCategories
+import warwick.core.timing.{TimingContext, TimingService}
 import warwick.objectstore.ObjectStorageService
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[UploadedFileServiceImpl])
 trait UploadedFileService {
-  def storeDBIO(in: ByteSource, metadata: UploadedFileSave): DBIO[UploadedFile]
-  def storeDBIO(in: ByteSource, metadata: UploadedFileSave, ownerId: UUID, ownerType: UploadedFileOwner): DBIO[UploadedFile]
+  def storeDBIO(in: ByteSource, metadata: UploadedFileSave)(implicit t: TimingContext): DBIO[UploadedFile]
+  def storeDBIO(in: ByteSource, metadata: UploadedFileSave, ownerId: UUID, ownerType: UploadedFileOwner)(implicit t: TimingContext): DBIO[UploadedFile]
   def store(in: ByteSource, metadata: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]]
   def store(in: ByteSource, metadata: UploadedFileSave, ownerId: UUID, ownerType: UploadedFileOwner)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]]
 
@@ -33,18 +35,23 @@ class UploadedFileServiceImpl @Inject()(
   auditService: AuditService,
   objectStorageService: ObjectStorageService,
   daoRunner: DaoRunner,
-  dao: UploadedFileDao
+  dao: UploadedFileDao,
+  timing: TimingService,
 )(implicit ec: ExecutionContext) extends UploadedFileService {
 
-  private def storeDBIO(id: UUID, in: ByteSource, metadata: UploadedFileSave, ownerId: Option[UUID], ownerType: Option[UploadedFileOwner]): DBIO[UploadedFile] = {
+  import timing._
+
+  private def storeDBIO(id: UUID, in: ByteSource, metadata: UploadedFileSave, ownerId: Option[UUID], ownerType: Option[UploadedFileOwner])(implicit t: TimingContext): DBIO[UploadedFile] = {
     for {
       // Treat the ObjectStorageService put as DBIO so we force a rollback if it fails (even though it won't delete the object)
-      _ <- DBIO.from(Future {
-        objectStorageService.put(id.toString, in, ObjectStorageService.Metadata(
-          contentLength = metadata.contentLength,
-          contentType = metadata.contentType,
-          fileHash = None, // This is calculated and stored by EncryptedObjectStorageService so no need to do it here
-        ))
+      _ <- DBIO.from(time(TimingCategories.ObjectStorageWrite) {
+        Future {
+          objectStorageService.put(id.toString, in, ObjectStorageService.Metadata(
+            contentLength = metadata.contentLength,
+            contentType = metadata.contentType,
+            fileHash = None, // This is calculated and stored by EncryptedObjectStorageService so no need to do it here
+          ))
+        }
       })
       file <- dao.insert(StoredUploadedFile(
         id,
@@ -60,10 +67,10 @@ class UploadedFileServiceImpl @Inject()(
     } yield file.asUploadedFile
   }
 
-  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave): DBIO[UploadedFile] =
+  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave)(implicit t: TimingContext): DBIO[UploadedFile] =
     storeDBIO(UUID.randomUUID(), in, metadata, None, None)
 
-  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave, ownerId: UUID, ownerType: UploadedFileOwner): DBIO[UploadedFile] =
+  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave, ownerId: UUID, ownerType: UploadedFileOwner)(implicit t: TimingContext): DBIO[UploadedFile] =
     storeDBIO(UUID.randomUUID(), in, metadata, Some(ownerId), Some(ownerType))
 
   override def store(in: ByteSource, metadata: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]] =

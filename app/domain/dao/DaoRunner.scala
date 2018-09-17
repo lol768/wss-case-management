@@ -25,7 +25,7 @@ trait DaoRunner {
 @Singleton
 class DaoRunnerImpl @Inject() (
   protected val dbConfigProvider: DatabaseConfigProvider,
-  val timing: TimingService
+  timing: TimingService,
 )(
   implicit ec: ExecutionContext
 ) extends DaoRunner with HasDatabaseConfigProvider[JdbcProfile] {

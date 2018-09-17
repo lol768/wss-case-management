@@ -10,6 +10,8 @@ import play.api.http.FileMimeTypes
 import play.api.libs.Files.TemporaryFileCreator
 import play.api.mvc.Result
 import play.api.mvc.Results._
+import system.TimingCategories
+import warwick.core.timing.{TimingContext, TimingService}
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.AuthenticatedRequest
 
@@ -17,18 +19,23 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[UploadedFileControllerHelperImpl])
 trait UploadedFileControllerHelper {
-  def serveFile(uploadedFile: UploadedFile)(implicit request: AuthenticatedRequest[_]): Future[Result]
+  def serveFile(uploadedFile: UploadedFile)(implicit request: AuthenticatedRequest[_], t: TimingContext): Future[Result]
 }
 
 @Singleton
 class UploadedFileControllerHelperImpl @Inject()(
   objectStorageService: ObjectStorageService,
   temporaryFileCreator: TemporaryFileCreator,
+  timing: TimingService,
 )(implicit executionContext: ExecutionContext, mimeTypes: FileMimeTypes) extends UploadedFileControllerHelper {
 
-  def serveFile(uploadedFile: UploadedFile)(implicit request: AuthenticatedRequest[_]): Future[Result] = {
+  import timing._
+
+  def serveFile(uploadedFile: UploadedFile)(implicit request: AuthenticatedRequest[_], t: TimingContext): Future[Result] = {
     val source = new ByteSource {
-      override def openStream(): InputStream = objectStorageService.fetch(uploadedFile.id.toString).orNull
+      override def openStream(): InputStream = timeSync(TimingCategories.ObjectStorageRead) {
+        objectStorageService.fetch(uploadedFile.id.toString).orNull
+      }
     }
 
     Future {

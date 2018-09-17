@@ -3,19 +3,21 @@ package helpers.caching
 import helpers.JavaTime
 import play.api.Logger
 import play.api.cache.AsyncCacheApi
+import system.TimingCategories
+import warwick.core.timing.{TimingContext, TimingService}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 object VariableTtlCacheHelper {
-  def async[A: ClassTag](cache: AsyncCacheApi, logger: Logger, softTtl: FiniteDuration, mediumTtl: FiniteDuration, hardTtl: Duration)(implicit executor: ExecutionContext): AsyncVariableTtlCacheHelper[A] = {
+  def async[A: ClassTag](cache: AsyncCacheApi, logger: Logger, softTtl: FiniteDuration, mediumTtl: FiniteDuration, hardTtl: Duration, timing: TimingService)(implicit executor: ExecutionContext): AsyncVariableTtlCacheHelper[A] = {
     val ttl = Ttl(softTtl, mediumTtl, hardTtl)
-    new AsyncVariableTtlCacheHelper[A](cache, logger, _ => ttl)
+    new AsyncVariableTtlCacheHelper[A](cache, logger, _ => ttl, timing)
   }
 
-  def async[A: ClassTag](cache: AsyncCacheApi, logger: Logger, ttl: A => Ttl)(implicit executor: ExecutionContext): AsyncVariableTtlCacheHelper[A] =
-    new AsyncVariableTtlCacheHelper[A](cache, logger, ttl)
+  def async[A: ClassTag](cache: AsyncCacheApi, logger: Logger, ttl: A => Ttl, timing: TimingService)(implicit executor: ExecutionContext): AsyncVariableTtlCacheHelper[A] =
+    new AsyncVariableTtlCacheHelper[A](cache, logger, ttl, timing)
 }
 
 /**
@@ -26,13 +28,15 @@ object VariableTtlCacheHelper {
 class AsyncVariableTtlCacheHelper[A: ClassTag](
   cache: AsyncCacheApi,
   logger: Logger,
-  ttlStrategy: A => Ttl
+  ttlStrategy: A => Ttl,
+  timing: TimingService,
 )(implicit executor: ExecutionContext) {
+  import timing._
 
-  def getOrElseUpdate(key: String)(update: => Future[A]): Future[A] =
-    getOrElseUpdateElement(key)(update)(CacheOptions.default).map(_.value)
+  def getOrElseUpdate(key: String)(update: => Future[A])(implicit t: TimingContext): Future[A] =
+    getOrElseUpdateElement(key, CacheOptions.default)(update).map(_.value)
 
-  def getOrElseUpdateElement(key: String)(update: => Future[A])(implicit cacheOptions: CacheOptions): Future[CacheElement[A]] = {
+  def getOrElseUpdateElement(key: String, cacheOptions: CacheOptions)(update: => Future[A])(implicit t: TimingContext): Future[CacheElement[A]] = {
 
     def validateCachedValueType(element: CacheElement[A]):Future[CacheElement[A]] = {
       element.value match {
@@ -45,7 +49,7 @@ class AsyncVariableTtlCacheHelper[A: ClassTag](
     }
 
     if (cacheOptions.noCache) doUpdate(key)(update)
-    else cache.get[CacheElement[A]](key).flatMap {
+    else time(TimingCategories.CacheRead)(cache.get[CacheElement[A]](key)).flatMap {
       case Some(element) =>
         if (element.isStale) {
           // try to get a fresh value but return the cached value if that fails
@@ -68,7 +72,7 @@ class AsyncVariableTtlCacheHelper[A: ClassTag](
     }
   }
 
-  private def doUpdate(key: String)(update: => Future[A]): Future[CacheElement[A]] =
+  private def doUpdate(key: String)(update: => Future[A])(implicit t: TimingContext): Future[CacheElement[A]] =
     update.flatMap { updateResult =>
       doSet(key, updateResult)
     }.recover {
@@ -76,13 +80,13 @@ class AsyncVariableTtlCacheHelper[A: ClassTag](
         throw new RuntimeException(s"Failure to retrieve new value for $key", e)
     }
 
-  private def doSet(key: String, value: A): Future[CacheElement[A]] = {
+  private def doSet(key: String, value: A)(implicit t: TimingContext): Future[CacheElement[A]] = {
     val ttl = ttlStrategy(value)
     val now = JavaTime.instant
     val softExpiry = now.plusSeconds(ttl.soft.toSeconds).getEpochSecond
     val mediumExpiry = now.plusSeconds(ttl.medium.toSeconds).getEpochSecond
     val element = CacheElement(value, now.getEpochSecond, softExpiry, mediumExpiry)
-    cache.set(key, element, ttl.hard)
+    time(TimingCategories.CacheWrite)(cache.set(key, element, ttl.hard))
       .recover { case e: Throwable => logger.error(s"Failure to update cache for $key", e) }
       .map(_ => element)
   }
