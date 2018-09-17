@@ -75,7 +75,8 @@ object CaseController {
 
   case class CaseLinkFormData(
     linkType: CaseLinkType,
-    targetKey: IssueKey
+    targetKey: IssueKey,
+    message: String
   )
 
   def caseLinkForm(sourceKey: IssueKey, caseService: CaseService)(implicit t: TimingContext): Form[CaseLinkFormData] = {
@@ -86,7 +87,8 @@ object CaseController {
 
     Form(mapping(
       "linkType" -> CaseLinkType.formField,
-      "targetKey" -> IssueKey.formField.verifying("error.linkTarget.same", _ != sourceKey).verifying("error.required", key => isValid(key))
+      "targetKey" -> IssueKey.formField.verifying("error.linkTarget.same", _ != sourceKey).verifying("error.required", key => isValid(key)),
+      "message" -> nonEmptyText
     )(CaseLinkFormData.apply)(CaseLinkFormData.unapply))
   }
 
@@ -352,7 +354,7 @@ class CaseController @Inject()(
         Ok(views.html.admin.cases.link(caseRequest.`case`, formWithErrors))
       ),
       data => cases.find(data.targetKey).successFlatMap { targetCase =>
-        val caseNote = CaseNoteSave(s"${caseKey.string} (${caseRequest.`case`.subject}) ${data.linkType.outwardDescription} ${targetCase.key.get.string} (${targetCase.subject})", caseRequest.context.user.get.usercode)
+        val caseNote = CaseNoteSave(s"${caseKey.string} (${caseRequest.`case`.subject}) ${data.linkType.outwardDescription} ${targetCase.key.get.string} (${targetCase.subject}) \n ${data.message}", caseRequest.context.user.get.usercode)
 
         cases.addLink(data.linkType, caseRequest.`case`.id.get, targetCase.id.get, caseNote).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))

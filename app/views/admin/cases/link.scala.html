@@ -27,6 +27,8 @@
       '_class -> "case-picker-container"
     )
 
+    @b3.textarea(form("message"), '_label -> "Description")
+
     @tags.submitOrCancel("Link", controllers.admin.routes.CaseController.view(c.key.get))
   }
 }
