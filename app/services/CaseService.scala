@@ -403,7 +403,7 @@ class CaseServiceImpl @Inject() (
     auditService.audit('CaseReassign, c.id.get.toString, 'Case, Json.obj("team" -> team.id, "caseType" -> caseType.map(_.entryName).orNull[String])) {
       daoRunner.run(DBIO.seq(
           dao.update(c.copy(team = team, caseType = caseType), version),
-          addNoteDBIO(c.id.get, CaseNoteType.GeneralNote, note)
+          addNoteDBIO(c.id.get, CaseNoteType.Referral, note)
       )).map(Right.apply)
     }.flatMap(_.fold(
       errors => Future.successful(Left(errors)),
