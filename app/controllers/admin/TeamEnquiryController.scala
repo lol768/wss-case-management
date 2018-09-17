@@ -6,7 +6,7 @@ import java.util.UUID
 import com.google.common.io.{ByteSource, Files}
 import controllers.admin.TeamEnquiryController._
 import controllers.refiners.{CanAddTeamMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
-import controllers.{API, BaseController, UploadedFileServing}
+import controllers.{API, BaseController, UploadedFileControllerHelper}
 import domain._
 import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
@@ -49,8 +49,9 @@ class TeamEnquiryController @Inject()(
   canViewEnquiryActionRefiner: CanViewEnquiryActionRefiner,
   service: EnquiryService,
   userLookupService: UserLookupService,
-  profiles: ProfileService
-)(implicit executionContext: ExecutionContext) extends BaseController with UploadedFileServing {
+  profiles: ProfileService,
+  uploadedFileControllerHelper: UploadedFileControllerHelper,
+)(implicit executionContext: ExecutionContext) extends BaseController {
 
   import canAddTeamMessageToEnquiryActionRefiner._
   import canEditEnquiryActionRefiner._
@@ -67,14 +68,14 @@ class TeamEnquiryController @Inject()(
       profiles.getProfile(enquiry.universityID).map(_.value),
       service.getOwners(Set(enquiry.id.get)),
       findClientLastRead
-    ).successMap { case ((e, messages), profile, ownersMap, clientLastRead) =>
-      val allUsers = messages.flatMap { case (m, _) => m.teamMember }.toSet ++ ownersMap.values.flatten
+    ).successMap { case (render, profile, ownersMap, clientLastRead) =>
+      val allUsers = render.messages.flatMap { case (m, _) => m.teamMember }.toSet ++ ownersMap.values.flatten
       val userLookup = userLookupService.getUsers(allUsers.toSeq).getOrElse(Map())
 
       Ok(views.html.admin.enquiry.messages(
-        e,
+        render.enquiry,
         profile,
-        messages,
+        render.messages,
         ownersMap.values.flatten.flatMap(userLookup.get).toSeq.sortBy { u => (u.name.last, u.name.first) },
         clientLastRead,
         userLookup,
@@ -119,9 +120,9 @@ class TeamEnquiryController @Inject()(
       },
       messageText => {
         val message = messageData(messageText, request)
-        val file = uploadedFile(request)
+        val files = uploadedFiles(request)
 
-        service.addMessage(request.enquiry, message, file).successMap { case (m, f) =>
+        service.addMessage(request.enquiry, message, files).successMap { case (m, f) =>
           val messageData = MessageData(m.text, m.sender, m.created, m.teamMember)
           render {
             case Accepts.Json() =>
@@ -140,9 +141,9 @@ class TeamEnquiryController @Inject()(
   }
 
   def download(enquiryKey: IssueKey, fileId: UUID): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
-    service.getForRender(request.enquiry.id.get).successFlatMap { case (_, messages) =>
-      messages.flatMap { case (_, f) => f }.find(_.id == fileId)
-        .map(serveFile)
+    service.getForRender(request.enquiry.id.get).successFlatMap { render =>
+      render.messages.flatMap { case (_, f) => f }.find(_.id == fileId)
+        .map(uploadedFileControllerHelper.serveFile)
         .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
     }
   }
@@ -178,8 +179,8 @@ class TeamEnquiryController @Inject()(
       teamMember = request.context.user.map(_.usercode)
     )
 
-  private def uploadedFile(request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Option[(ByteSource, UploadedFileSave)] =
-    request.body.file("file").filter(_.filename.nonEmpty).map { file =>
+  private def uploadedFiles(request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Seq[(ByteSource, UploadedFileSave)] =
+    request.body.files.filter(_.filename.nonEmpty).map { file =>
       (Files.asByteSource(file.ref), UploadedFileSave(
         file.filename,
         file.ref.length(),

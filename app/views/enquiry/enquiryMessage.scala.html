@@ -4,7 +4,7 @@
 @(
   enquiry: Enquiry,
   message: MessageData,
-  file: Option[UploadedFile],
+  files: Seq[UploadedFile],
   clientName: String,
   teamName: String,
   attachmentRoute: UploadedFile => Call,
@@ -15,10 +15,16 @@
   <div class="date pull-right">@JavaTime.Relative(message.created, printToday = true)</div>
   <div class="message--author">@author</div>
   @views.utils.nl2br(message.text)
-  @file.map { f =>
+  @if(files.nonEmpty) {
     <div class="message--attachment">
-      <i class="fal fa-paperclip"></i>
-      <a href="@attachmentRoute(f)">@f.fileName</a>
+      <ul class="list-unstyled">
+        @files.map { file =>
+          <li>
+            <i class="fal fa-paperclip"></i>
+            <a href="@attachmentRoute(file)">@file.fileName</a>
+          </li>
+        }
+      </ul>
     </div>
   }
   @readIndicator.map { isRead =>

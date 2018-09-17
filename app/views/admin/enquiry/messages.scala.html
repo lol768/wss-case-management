@@ -8,7 +8,7 @@
 @(
   enquiry: Enquiry,
   client: SitsProfile,
-  messages: Seq[(MessageData, Option[UploadedFile])],
+  messages: Seq[(MessageData, Seq[UploadedFile])],
   owners: Seq[User],
   clientLastRead: Option[OffsetDateTime],
   userLookup: Map[Usercode, User],
@@ -197,7 +197,8 @@
             <div class="flex">
               @b3.textarea(messageForm("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
 
-              <input type="file" name="file" class="form-control">
+              @* Styling TBC *@
+              <input type="file" name="file" class="form-control" multiple>
 
               <button type="submit" class="btn btn-link">
                 <i class="fal fa-paper-plane fa-2x"></i>

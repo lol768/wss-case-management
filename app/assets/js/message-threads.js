@@ -50,7 +50,7 @@ export default function MessageThreads(container) {
         if (response.success) {
           $form.closest('.panel').find('.panel-body').append($('<div/>').html(response.data.message).unwrap());
           $('.collapse.in .panel-body').scrollTop(Number.MAX_SAFE_INTEGER);
-          $form.find('textarea[name=text]').val('');
+          $form.trigger('reset');
         } else {
           log.error(response);
           if (response.errors && response.errors.length) {

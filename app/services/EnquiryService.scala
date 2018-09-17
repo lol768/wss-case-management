@@ -25,12 +25,12 @@ trait EnquiryService {
   /**
     * Create initial Enquiry with provided text as a Message.
     */
-  def save(enquiry: Enquiry, message: MessageSave, file: Option[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
+  def save(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
   /**
     * Add a message to an existing Enquiry.
     */
-  def addMessage(enquiry: Enquiry, message: MessageSave, file: Option[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(Message, Option[UploadedFile])]]
+  def addMessage(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(Message, Seq[UploadedFile])]]
 
   /**
     * Reassign an enquiry to another team
@@ -39,16 +39,16 @@ trait EnquiryService {
 
   def updateState(enquiry: Enquiry, targetState: IssueState, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
-  def updateStateWithMessage(enquiry: Enquiry, targetState: IssueState, message: MessageSave, file: Option[(ByteSource, UploadedFileSave)], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
+  def updateStateWithMessage(enquiry: Enquiry, targetState: IssueState, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
-  def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, Seq[(MessageData, Option[UploadedFile])])]]]
+  def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryRender]]]
 
   def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Enquiry]]
   def get(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]]
   def get(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Enquiry]]
 
-  def getForRender(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[(Enquiry, Seq[(MessageData, Option[UploadedFile])])]]
-  def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[(Enquiry, Seq[(MessageData, Option[UploadedFile])])]]
+  def getForRender(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]]
+  def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]]
 
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]]
   def findLastViewDate(enquiryID: UUID, usercode: Usercode)(implicit t: TimingContext): Future[ServiceResult[Option[OffsetDateTime]]]
@@ -84,8 +84,8 @@ class EnquiryServiceImpl @Inject() (
 )(implicit ec: ExecutionContext) extends EnquiryService {
 
   import EnquiryService._
-  
-  override def save(enquiry: Enquiry, message: MessageSave, file: Option[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
+
+  override def save(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
     require(enquiry.id.isEmpty, "Enquiry must not have an existing ID before being saved")
     require(enquiry.key.isEmpty, "Enquiry must not have an existing key before being saved")
     require(message.sender == MessageSender.Client, "Initial message must be from the Client")
@@ -94,7 +94,7 @@ class EnquiryServiceImpl @Inject() (
       daoRunner.run(for {
         nextId <- sql"SELECT nextval('SEQ_ENQUIRY_KEY')".as[Int].head
         e <- enquiryDao.insert(enquiry.copy(id = Some(id), key = Some(IssueKey(IssueKeyType.Enquiry, nextId))))
-        _ <- addMessageDBIO(e, message, file)
+        _ <- addMessageDBIO(e, message, files)
       } yield e).map(Right.apply)
     }.flatMap(_.fold(
       errors => Future.successful(Left(errors)),
@@ -102,32 +102,30 @@ class EnquiryServiceImpl @Inject() (
     ))
   }
 
-  override def addMessage(enquiry: Enquiry, message: MessageSave, file: Option[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(Message, Option[UploadedFile])]] = {
+  override def addMessage(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(Message, Seq[UploadedFile])]] = {
     auditService.audit('EnquiryAddMessage, enquiry.id.get.toString, 'Enquiry, Json.obj()) {
       daoRunner.run(
-        addMessageDBIO(enquiry, message, file)
+        addMessageDBIO(enquiry, message, files)
       ).map(Right.apply)
     }.flatMap(_.fold(
       errors => Future.successful(Left(errors)),
-      { case (message, file) => notificationService.enquiryMessage(enquiry, message.sender).map(_.right.map(_ => (message, file))) }
+      { case (m, file) => notificationService.enquiryMessage(enquiry, m.sender).map(_.right.map(_ => (m, file))) }
     ))
   }
 
-  private def addMessageDBIO(enquiry: Enquiry, message: MessageSave, file: Option[(ByteSource, UploadedFileSave)]): DBIO[(Message, Option[UploadedFile])] =
+  private def addMessageDBIO(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)]): DBIO[(Message, Seq[UploadedFile])] =
     for {
-      f <- file.map { case (in, metadata) =>
-        uploadedFileService.storeDBIO(in, metadata)
-          .map(Some(_))
-      }.getOrElse(DBIO.successful(None))
       message <- messageDao.insert(Message(
         id = UUID.randomUUID(),
         text = message.text,
-        fileId = f.map(_.id),
         sender = message.sender,
         teamMember = message.teamMember,
         ownerId = enquiry.id.get,
         ownerType = MessageOwner.Enquiry
       ), Seq(enquiry.universityID))
+      f <- DBIO.sequence(files.map { case (in, metadata) =>
+        uploadedFileService.storeDBIO(in, metadata, message.id, UploadedFileOwner.Message)
+      })
     } yield (message, f)
 
   override def reassign(enquiry: Enquiry, team: Team, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] =
@@ -148,10 +146,10 @@ class EnquiryServiceImpl @Inject() (
     }
   }
 
-  def updateStateWithMessage(enquiry: Enquiry, targetState: IssueState, message: MessageSave, file: Option[(ByteSource, UploadedFileSave)], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
+  def updateStateWithMessage(enquiry: Enquiry, targetState: IssueState, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
     auditService.audit(Symbol(s"Enquiry${targetState.entryName}WithMessage"), enquiry.id.get.toString, 'Enquiry, Json.obj()) {
       daoRunner.run(
-        addMessageDBIO(enquiry, message, file).andThen(
+        addMessageDBIO(enquiry, message, files).andThen(
           enquiryDao.update(enquiry.copy(state = targetState), version)
         )
       ).map(Right.apply)
@@ -161,7 +159,7 @@ class EnquiryServiceImpl @Inject() (
     ))
   }
 
-  override def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, Seq[(MessageData, Option[UploadedFile])])]]] = {
+  override def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryRender]]] = {
     val query = enquiryDao.findByClientQuery(client).withMessages
       .sortBy {
         case (e, mf) => (e.version.reverse, mf.map { case (m, _) => m.created })
@@ -198,7 +196,7 @@ class EnquiryServiceImpl @Inject() (
   private def getWithMessagesQuery(query: Query[Enquiry.Enquiries, Enquiry, Seq]) =
     query.withMessages.map { case (e, mf) => (e, mf.map { case (m, f) => (m.messageData, f) }) }
 
-  override def getForRender(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[(Enquiry, Seq[(MessageData, Option[UploadedFile])])]] =
+  override def getForRender(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]] =
     auditService.audit('EnquiryView, id.toString, 'Enquiry, Json.obj()) {
       val query = getWithMessagesQuery(enquiryDao.findByIDQuery(id))
 
@@ -207,8 +205,8 @@ class EnquiryServiceImpl @Inject() (
       }
     }
 
-  override def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[(Enquiry, Seq[(MessageData, Option[UploadedFile])])]] =
-    auditService.audit[(Enquiry, Seq[(MessageData, Option[UploadedFile])])]('EnquiryView, (pair: (Enquiry, Seq[(MessageData, Option[UploadedFile])])) => pair._1.id.get.toString, 'Enquiry, Json.obj()) {
+  override def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]] =
+    auditService.audit[EnquiryRender]('EnquiryView, (r: EnquiryRender) => r.enquiry.id.get.toString, 'Enquiry, Json.obj()) {
       val query = getWithMessagesQuery(enquiryDao.findByKeyQuery(enquiryKey))
 
       daoRunner.run(query.result).map { pairs =>
@@ -298,11 +296,16 @@ class EnquiryServiceImpl @Inject() (
 }
 
 object EnquiryService {
-  def groupPairs(pairs: Seq[(Enquiry, Option[(MessageData, Option[StoredUploadedFile])])]): Seq[(Enquiry, Seq[(MessageData, Option[UploadedFile])])] = {
+  def groupPairs(pairs: Seq[(Enquiry, Option[(MessageData, Option[StoredUploadedFile])])]): Seq[EnquiryRender] = {
     sortByRecent(
       OneToMany.leftJoin(pairs)(MessageData.dateOrderingWithFile)
         .map { case (enquiry, mf) =>
-          enquiry -> mf.map { case (m, f) => m -> f.map(_.asUploadedFile) }
+          EnquiryRender(
+            enquiry,
+            OneToMany.leftJoin(mf)(StoredUploadedFile.dateOrdering)
+              .sorted(MessageData.dateOrderingWithFiles)
+              .map { case (m, f) => m -> f.map(_.asUploadedFile) }
+          )
         }
     )
   }
@@ -311,14 +314,13 @@ object EnquiryService {
     * Sort by the most recently updated, either by newest message or when the enquiry was last
     * updated (perhaps from its state changing)
     */
-  def sortByRecent(data: Seq[(Enquiry, Seq[(MessageData, Option[UploadedFile])])]): Seq[(Enquiry, Seq[(MessageData, Option[UploadedFile])])] = {
-    val (open, closed) = data.partition { case (e, _) => e.state != IssueState.Closed }
+  def sortByRecent(data: Seq[EnquiryRender]): Seq[EnquiryRender] = {
+    val (open, closed) = data.partition { e => e.enquiry.state != IssueState.Closed }
     open.sortBy(lastModified)(JavaTime.dateTimeOrdering.reverse) ++ closed.sortBy(lastModified)(JavaTime.dateTimeOrdering.reverse)
   }
 
-  def lastModified(entry: (Enquiry, Seq[(MessageData, Option[UploadedFile])])): OffsetDateTime = {
+  def lastModified(entry: EnquiryRender): OffsetDateTime = {
     import JavaTime.dateTimeOrdering
-    val (enquiry, messages) = entry
-    Stream.cons(enquiry.version, messages.toStream.map { case (m, _) => m.created }).max
+    Stream.cons(entry.enquiry.version, entry.messages.toStream.map { case (m, _) => m.created }).max
   }
 }

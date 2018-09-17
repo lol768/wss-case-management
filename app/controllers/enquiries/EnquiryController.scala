@@ -51,7 +51,7 @@ class EnquiryController @Inject()(
           teamMember = None
         )
 
-        val file = request.body.file("file").filter(_.filename.nonEmpty).map { file =>
+        val files = request.body.files.filter(_.filename.nonEmpty).map { file =>
           (Files.asByteSource(file.ref), UploadedFileSave(
             file.filename,
             file.ref.length(),
@@ -60,7 +60,7 @@ class EnquiryController @Inject()(
           ))
         }
 
-        service.save(enquiry, message, file).successMap { _ =>
+        service.save(enquiry, message, files).successMap { _ =>
           Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.enquiry.received"))
         }
 
