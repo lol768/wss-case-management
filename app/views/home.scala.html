@@ -1,9 +1,9 @@
-@import domain.{Enquiry, IssueState, MessageData, Registration, UploadedFile}
+@import domain.{EnquiryRender, IssueState, Registration}
 @import helpers.JavaTime
 
 @(
   teams: Seq[domain.Team],
-  enquiries: Seq[(Enquiry, Seq[(MessageData, Option[UploadedFile])])],
+  enquiries: Seq[EnquiryRender],
   registration: Option[Registration]
 )(implicit context: RequestContext, req: RequestHeader)
 
@@ -29,48 +29,48 @@
     <h2>Your enquiries</h2>
 
     <div class="panel-group enquiries" id="enquiries-accordion" role="tablist" aria-multiselectable="true">
-      @enquiries.map { case (enquiry, messages) =>
-        <div class="panel panel-default enquiry state-@enquiry.state.entryName">
+      @enquiries.map { e =>
+        <div class="panel panel-default enquiry state-@e.enquiry.state.entryName">
 
-          <div class="panel-heading" role="tab" id="heading-@enquiry.key.get.string">
+          <div class="panel-heading" role="tab" id="heading-@e.enquiry.key.get.string">
             <h4 class="panel-title">
-                <a class="@if(enquiries.head._1 != enquiry){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@enquiry.key.get.string" aria-expanded="true" aria-controls="collapse-@enquiry.key.get.string">
+                <a class="@if(enquiries.head.enquiry != e.enquiry){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@e.enquiry.key.get.string" aria-expanded="true" aria-controls="collapse-@e.enquiry.key.get.string">
                 <div class="pull-right">
-                  @if(enquiry.version.isAfter(messages.last._1.created)) {
-                    @JavaTime.Relative(enquiry.version, printToday = true)
+                  @if(e.enquiry.version.isAfter(e.messages.last._1.created)) {
+                    @JavaTime.Relative(e.enquiry.version, printToday = true)
                   } else {
-                    @JavaTime.Relative(messages.last._1.created, printToday = true)
+                    @JavaTime.Relative(e.messages.last._1.created, printToday = true)
                   }
                   <i class="fas fa-fw fa-angle-down"></i>
                   <i class="fas fa-fw fa-angle-up"></i>
                 </div>
-                @if(enquiry.state != IssueState.Closed) {
+                @if(e.enquiry.state != IssueState.Closed) {
                   <i class="fal fa-fw fa-comment-dots"></i>
                 } else {
                   <i class="fal fa-fw fa-comment-check"></i>
                 }
-                @enquiry.subject
+                @e.enquiry.subject
               </a>
             </h4>
           </div>
 
-          <div id="collapse-@enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head._1 == enquiry){in}" role="tabpanel" aria-labelledby="heading-@enquiry.key.get.string">
+          <div id="collapse-@e.enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head.enquiry == e.enquiry){in}" role="tabpanel" aria-labelledby="heading-@e.enquiry.key.get.string">
             <div class="panel-body">
-              @messages.map { case (message, file) =>
-                @views.html.enquiry.enquiryMessage(enquiry, message, file, clientName = "You", enquiry.team.name, f => controllers.enquiries.routes.EnquiryMessagesController.download(enquiry.key.get, f.id))
+              @e.messages.map { case (message, file) =>
+                @views.html.enquiry.enquiryMessage(e.enquiry, message, file, clientName = "You", e.enquiry.team.name, f => controllers.enquiries.routes.EnquiryMessagesController.download(e.enquiry.key.get, f.id))
               }
             </div>
               <div class="panel-footer">
-                @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
+                @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(e.enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
                   <div class="form-group">
-                    <label for="textarea-@enquiry.key.get.string">
+                    <label for="textarea-@e.enquiry.key.get.string">
                       Add a message
                     </label>
                     <div class="flex">
-                      <textarea id="textarea-@enquiry.key.get.string" class="form-control" rows="1" name="text"></textarea>
+                      <textarea id="textarea-@e.enquiry.key.get.string" class="form-control" rows="1" name="text"></textarea>
 
                       @* Styling TBC *@
-                      <input type="file" name="file" class="form-control">
+                      <input type="file" name="file" class="form-control" multiple>
 
                       <button type="submit" class="btn btn-link">
                         <i class="far fa-share-square fa-2x"></i>

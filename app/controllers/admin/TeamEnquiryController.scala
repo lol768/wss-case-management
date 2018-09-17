@@ -60,13 +60,13 @@ class TeamEnquiryController @Inject()(
   import canViewEnquiryActionRefiner._
 
   private def renderMessages(enquiry: Enquiry, f: Form[StateChangeForm])(implicit request: EnquirySpecificRequest[_]): Future[Result] =
-    service.getForRender(enquiry.id.get).successMap { case (e, messages) =>
+    service.getForRender(enquiry.id.get).successMap { render =>
       Ok(views.html.admin.enquiry.messages(
-        e,
-        messages,
+        render.enquiry,
+        render.messages,
         f,
-        userLookupService.getUsers(messages.flatMap { case (m, _) => m.teamMember }).toOption.getOrElse(Map()),
-        userLookupService.getUsers(Seq(e.universityID)).toOption.getOrElse(Map())
+        userLookupService.getUsers(render.messages.flatMap { case (m, _) => m.teamMember }).toOption.getOrElse(Map()),
+        userLookupService.getUsers(Seq(render.enquiry.universityID)).toOption.getOrElse(Map())
       ))
     }
 
@@ -98,9 +98,9 @@ class TeamEnquiryController @Inject()(
       },
       messageText => {
         val message = messageData(messageText, request)
-        val file = uploadedFile(request)
+        val files = uploadedFiles(request)
 
-        service.addMessage(request.enquiry, message, file).successMap { case (m, f) =>
+        service.addMessage(request.enquiry, message, files).successMap { case (m, f) =>
           val messageData = MessageData(m.text, m.sender, m.created, m.teamMember)
           render {
             case Accepts.Json() =>
@@ -119,8 +119,8 @@ class TeamEnquiryController @Inject()(
   }
 
   def download(enquiryKey: IssueKey, fileId: UUID): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
-    service.getForRender(request.enquiry.id.get).successFlatMap { case (_, messages) =>
-      messages.flatMap { case (_, f) => f }.find(_.id == fileId)
+    service.getForRender(request.enquiry.id.get).successFlatMap { render =>
+      render.messages.flatMap { case (_, f) => f }.find(_.id == fileId)
         .map(serveFile)
         .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
     }
@@ -140,9 +140,9 @@ class TeamEnquiryController @Inject()(
       formData => {
         val action = if(formData.text.hasText) {
           val message = messageData(formData.text, request)
-          val file = uploadedFile(request)
+          val files = uploadedFiles(request)
 
-          service.updateStateWithMessage(request.enquiry, newState, message, file, formData.version)
+          service.updateStateWithMessage(request.enquiry, newState, message, files, formData.version)
         } else {
           service.updateState(request.enquiry, newState, formData.version)
         }
@@ -162,8 +162,8 @@ class TeamEnquiryController @Inject()(
       teamMember = request.context.user.map(_.usercode)
     )
 
-  private def uploadedFile(request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Option[(ByteSource, UploadedFileSave)] =
-    request.body.file("file").filter(_.filename.nonEmpty).map { file =>
+  private def uploadedFiles(request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Seq[(ByteSource, UploadedFileSave)] =
+    request.body.files.filter(_.filename.nonEmpty).map { file =>
       (Files.asByteSource(file.ref), UploadedFileSave(
         file.filename,
         file.ref.length(),

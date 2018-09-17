@@ -1,14 +1,12 @@
 package services
 
-import domain.{Enquiry, MessageData, MessageSender, UploadedFile}
+import domain._
 import helpers.JavaTime
 import org.scalatestplus.play.PlaySpec
 
 class EnquiryServiceObjectTest extends PlaySpec {
 
   import services.EnquiryService._
-
-  type Item = (Enquiry, Seq[(MessageData, Option[UploadedFile])])
 
   val enquiryToday = Enquiry(universityID = null, subject = "Enquiry", team = null)
   private val enquiryLastWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.minusWeeks(1))
@@ -20,24 +18,24 @@ class EnquiryServiceObjectTest extends PlaySpec {
   "lastModified" should {
 
     "always use enquiry if no messages" in {
-      lastModified((enquiryLastWeek, Nil)) mustBe enquiryLastWeek.version
+      lastModified(EnquiryRender(enquiryLastWeek, Nil)) mustBe enquiryLastWeek.version
     }
 
     "use enquiry date if newer" in {
-      lastModified((enquiryToday, Seq((messageLastWeek, None), (messageLastWeek, None)))) mustBe enquiryToday.version
+      lastModified(EnquiryRender(enquiryToday, Seq((messageLastWeek, Nil), (messageLastWeek, Nil)))) mustBe enquiryToday.version
     }
 
     "use most recent message if newer" in {
-      lastModified((enquiryLastWeek, Seq((messageLastWeek, None), (messageTomorrow, None)))) mustBe messageTomorrow.created
+      lastModified(EnquiryRender(enquiryLastWeek, Seq((messageLastWeek, Nil), (messageTomorrow, Nil)))) mustBe messageTomorrow.created
     }
 
   }
 
   "sortByRecent" should {
     "sort descending" in {
-      val item1: Item = (enquiryLastWeek, Nil)
-      val item2: Item = (enquiryToday, Seq((messageLastWeek, None)))
-      val item3: Item = (enquiryLastWeek, Seq((messageLastWeek, None), (messageTomorrow, None)))
+      val item1 = EnquiryRender(enquiryLastWeek, Nil)
+      val item2 = EnquiryRender(enquiryToday, Seq((messageLastWeek, Nil)))
+      val item3 = EnquiryRender(enquiryLastWeek, Seq((messageLastWeek, Nil), (messageTomorrow, Nil)))
 
       sortByRecent(Seq(
         item3, item1, item2

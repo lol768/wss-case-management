@@ -77,4 +77,5 @@ object CustomJdbcTypes extends SlickEnumSupport {
   implicit lazy val caseNoteTypeMapper: JdbcType[CaseNoteType] = mappedColumnTypeForEnum(CaseNoteType)
   implicit lazy val caseDocumentTypeMapper: JdbcType[CaseDocumentType] = mappedColumnTypeForEnum(CaseDocumentType)
   implicit lazy val ownerEntityTypeMapper: JdbcType[Owner.EntityType] = mappedColumnTypeForEnum(Owner.EntityType)
+  implicit lazy val uploadedFileOwnerMapper: JdbcType[UploadedFileOwner] = mappedColumnTypeForEnum(UploadedFileOwner)
 }
