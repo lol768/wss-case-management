@@ -23,6 +23,8 @@
       '_label -> "Case type"
     )
 
+    @b3.textarea(form("message"), 'rows -> 5, '_label -> "Reason for reassigning")
+
     @tags.submitOrCancel("Reassign", controllers.admin.routes.AdminController.teamHome(clientCase.team.id))
   }
 }
