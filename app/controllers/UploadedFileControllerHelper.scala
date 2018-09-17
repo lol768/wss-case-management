@@ -3,6 +3,7 @@ package controllers
 import java.io.InputStream
 
 import com.google.common.io.{ByteSource, Files}
+import com.google.inject.ImplementedBy
 import domain.UploadedFile
 import javax.inject.{Inject, Singleton}
 import play.api.http.FileMimeTypes
@@ -14,6 +15,7 @@ import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
+@ImplementedBy(classOf[UploadedFileControllerHelperImpl])
 trait UploadedFileControllerHelper {
   def serveFile(uploadedFile: UploadedFile)(implicit request: AuthenticatedRequest[_]): Future[Result]
 }
