@@ -11,6 +11,7 @@ import enumeratum._
 import helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
+import scala.collection.immutable
 import scala.language.higherKinds
 
 /**
@@ -20,7 +21,6 @@ import scala.language.higherKinds
 case class Message (
   id: UUID,
   text: String,
-  fileId: Option[UUID],
   sender: MessageSender,
   teamMember: Option[Usercode],
   ownerId: UUID,
@@ -34,7 +34,6 @@ case class Message (
     MessageVersion(
       id,
       text,
-      fileId,
       sender,
       teamMember,
       ownerId,
@@ -65,7 +64,6 @@ object Message extends Versioning {
   sealed trait CommonProperties { self: Table[_] =>
     def text = column[String]("text")
     def searchableText = toTsVector(text, Some("english"))
-    def fileId = column[Option[UUID]]("file_id")
     def sender = column[MessageSender]("sender")
     def teamMember = column[Option[Usercode]]("team_member")
     def created = column[OffsetDateTime]("created_utc")
@@ -79,11 +77,8 @@ object Message extends Versioning {
 
     def id = column[UUID]("id", O.PrimaryKey)
 
-    def * = (id, text, fileId, sender, teamMember, ownerId, ownerType, created, version).mapTo[Message]
+    def * = (id, text, sender, teamMember, ownerId, ownerType, created, version).mapTo[Message]
     def messageData = (text, sender, created, teamMember).mapTo[MessageData]
-
-    def fileFK = foreignKey("fk_message_file", fileId, UploadedFileDao.uploadedFiles.table)(_.id.?)
-    def fileIndex = index("idx_message_file", fileId)
   }
 
   class MessageVersions(tag: Tag) extends Table[MessageVersion](tag, "message_version") with StoredVersionTable[Message] with CommonProperties {
@@ -91,7 +86,7 @@ object Message extends Versioning {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
-    def * = (id, text, fileId, sender, teamMember, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
+    def * = (id, text, sender, teamMember, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
     def pk = primaryKey("pk_messageversions", (id, timestamp))
     def idx = index("idx_messageversions", (id, version))
   }
@@ -107,9 +102,11 @@ object Message extends Versioning {
   }
 
   implicit class MessageExtensions[C[_]](q: Query[Messages, Message, C]) {
-    def withUploadedFile = q
+    def withUploadedFiles = q
       .joinLeft(UploadedFileDao.uploadedFiles.table)
-      .on(_.fileId === _.id)
+      .on { case (m, f) =>
+        m.id === f.ownerId && f.ownerType === (UploadedFileOwner.Message: UploadedFileOwner)
+      }
   }
 
   val messages: VersionedTableQuery[Message, MessageVersion, Messages, MessageVersions] =
@@ -122,7 +119,6 @@ object Message extends Versioning {
 case class MessageVersion (
   id: UUID,
   text: String,
-  fileId: Option[UUID],
   sender: MessageSender,
   teamMember: Option[Usercode],
   ownerId: UUID,
@@ -157,8 +153,9 @@ object MessageData {
   def tupled = (apply _).tupled
 
   // oldest first
-  val dateOrdering = Ordering.by[MessageData, OffsetDateTime](data => data.created)(JavaTime.dateTimeOrdering)
-  val dateOrderingWithFile = Ordering.by[(MessageData, Option[StoredUploadedFile]), OffsetDateTime] { case (data, _) => data.created }(JavaTime.dateTimeOrdering)
+  val dateOrdering: Ordering[MessageData] = Ordering.by[MessageData, OffsetDateTime](data => data.created)(JavaTime.dateTimeOrdering)
+  val dateOrderingWithFile: Ordering[(MessageData, Option[StoredUploadedFile])] = Ordering.by[(MessageData, Option[StoredUploadedFile]), OffsetDateTime] { case (data, _) => data.created }(JavaTime.dateTimeOrdering)
+  val dateOrderingWithFiles: Ordering[(MessageData, Seq[StoredUploadedFile])] = Ordering.by[(MessageData, Seq[StoredUploadedFile]), OffsetDateTime] { case (data, _) => data.created }(JavaTime.dateTimeOrdering)
 }
 
 sealed trait MessageSender extends EnumEntry
@@ -166,7 +163,7 @@ object MessageSender extends PlayEnum[MessageSender] {
   case object Client extends MessageSender
   case object Team extends MessageSender
 
-  val values = findValues
+  val values: immutable.IndexedSeq[MessageSender] = findValues
 }
 
 sealed trait MessageOwner extends EnumEntry
@@ -174,5 +171,5 @@ object MessageOwner extends PlayEnum[MessageOwner] {
   case object Enquiry extends MessageOwner
   case object Case extends MessageOwner
 
-  val values = findValues
+  val values: immutable.IndexedSeq[MessageOwner] = findValues
 }

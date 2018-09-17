@@ -4,7 +4,7 @@
 
 @(
   enquiry: Enquiry,
-  messages: Seq[(MessageData, Option[UploadedFile])],
+  messages: Seq[(MessageData, Seq[UploadedFile])],
   f: Form[String],
   universityIDLookup: Map[UniversityID, User]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
@@ -39,7 +39,7 @@
               @b3.textarea(f("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
 
               @* Styling TBC *@
-              <input type="file" name="file" class="form-control">
+              <input type="file" name="file" class="form-control" multiple>
 
               <button type="submit" class="btn btn-link">
                 <i class="fal fa-paper-plane fa-2x"></i>

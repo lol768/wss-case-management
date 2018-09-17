@@ -39,7 +39,6 @@ object Fixtures {
     ) = Message(
       id = UUID.randomUUID(),
       text = "Hello",
-      fileId = None,
       sender = sender,
       teamMember = teamMember,
       ownerId = ownerId,
