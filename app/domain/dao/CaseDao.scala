@@ -110,8 +110,10 @@ class CaseDaoImpl @Inject()(
     cases.table
       .withNotes
       .filter { case (c, n) => queries(c, n).reduce(_ && _) }
-      .map { case (c, _) => c }
+      .map { case (c, _) => (c, c.isOpen) }
+      .sortBy { case (c, isOpen) => (isOpen.desc, c.created.desc) }
       .distinct
+      .map { case (c, _) => c }
   }
 
   override def update(c: Case, version: OffsetDateTime): DBIO[Case] =

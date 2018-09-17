@@ -101,9 +101,11 @@ class EnquiryDaoImpl @Inject() (
 
     Enquiry.enquiries.table
       .withMessages
-      .filter { case (c, mf) => queries(c, mf.map(_._1), mf.flatMap(_._2)).reduce(_ && _) }
-      .map { case (c, _) => c }
+      .filter { case (e, mf) => queries(e, mf.map(_._1), mf.flatMap(_._2)).reduce(_ && _) }
+      .map { case (e, _) => (e, e.isOpen) }
+      .sortBy { case (e, isOpen) => (isOpen.desc, e.created.desc) }
       .distinct
+      .map { case (e, _) => e }
   }
 
 }
