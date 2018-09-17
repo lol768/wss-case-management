@@ -6,7 +6,7 @@ import java.util.UUID
 import com.google.common.io.{ByteSource, Files}
 import controllers.admin.TeamEnquiryController._
 import controllers.refiners.{CanAddTeamMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
-import controllers.{API, BaseController, UploadedFileServing}
+import controllers.{API, BaseController, UploadedFileControllerHelper}
 import domain._
 import helpers.JavaTime
 import helpers.StringUtils._
@@ -52,8 +52,9 @@ class TeamEnquiryController @Inject()(
   canEditEnquiryActionRefiner: CanEditEnquiryActionRefiner,
   canViewEnquiryActionRefiner: CanViewEnquiryActionRefiner,
   service: EnquiryService,
-  userLookupService: UserLookupService
-)(implicit executionContext: ExecutionContext) extends BaseController with UploadedFileServing {
+  userLookupService: UserLookupService,
+  uploadedFileControllerHelper: UploadedFileControllerHelper,
+)(implicit executionContext: ExecutionContext) extends BaseController {
 
   import canAddTeamMessageToEnquiryActionRefiner._
   import canEditEnquiryActionRefiner._
@@ -121,7 +122,7 @@ class TeamEnquiryController @Inject()(
   def download(enquiryKey: IssueKey, fileId: UUID): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
     service.getForRender(request.enquiry.id.get).successFlatMap { render =>
       render.messages.flatMap { case (_, f) => f }.find(_.id == fileId)
-        .map(serveFile)
+        .map(uploadedFileControllerHelper.serveFile)
         .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
     }
   }

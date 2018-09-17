@@ -5,7 +5,7 @@ import java.util.UUID
 import com.google.common.io.{ByteSource, Files}
 import controllers.enquiries.EnquiryMessagesController._
 import controllers.refiners.{CanAddClientMessageToEnquiryActionRefiner, CanClientViewEnquiryActionRefiner, EnquirySpecificRequest}
-import controllers.{API, BaseController, UploadedFileServing}
+import controllers.{API, BaseController, UploadedFileControllerHelper}
 import domain._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -28,7 +28,8 @@ class EnquiryMessagesController @Inject()(
   canAddClientMessageToEnquiryActionRefiner: CanAddClientMessageToEnquiryActionRefiner,
   service: EnquiryService,
   userLookupService: UserLookupService,
-)(implicit executionContext: ExecutionContext) extends BaseController with UploadedFileServing {
+  uploadedFileControllerHelper: UploadedFileControllerHelper,
+)(implicit executionContext: ExecutionContext) extends BaseController {
 
   import canAddClientMessageToEnquiryActionRefiner._
   import canClientViewEnquiryActionRefiner._
@@ -87,7 +88,7 @@ class EnquiryMessagesController @Inject()(
   def download(enquiryKey: IssueKey, fileId: UUID): Action[AnyContent] = CanClientViewEnquiryAction(enquiryKey).async { implicit request =>
     service.getForRender(request.enquiry.id.get).successFlatMap { render =>
       render.messages.flatMap { case (_, f) => f }.find(_.id == fileId)
-        .map(serveFile)
+        .map(uploadedFileControllerHelper.serveFile)
         .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
     }
   }

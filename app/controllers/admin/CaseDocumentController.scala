@@ -4,9 +4,9 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import com.google.common.io.Files
+import controllers.{BaseController, UploadedFileControllerHelper}
 import controllers.admin.CaseDocumentController._
 import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CaseSpecificRequest}
-import controllers.{BaseController, UploadedFileServing}
 import domain._
 import helpers.JavaTime
 import helpers.ServiceResults.ServiceError
@@ -34,15 +34,16 @@ object CaseDocumentController {
 class CaseDocumentController @Inject()(
   cases: CaseService,
   canViewCaseActionRefiner: CanViewCaseActionRefiner,
-  canEditCaseActionRefiner: CanEditCaseActionRefiner
-)(implicit executionContext: ExecutionContext) extends BaseController with UploadedFileServing {
+  canEditCaseActionRefiner: CanEditCaseActionRefiner,
+  uploadedFileControllerHelper: UploadedFileControllerHelper,
+)(implicit executionContext: ExecutionContext) extends BaseController {
 
   import canEditCaseActionRefiner._
   import canViewCaseActionRefiner._
 
   def download(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
     withCaseDocument(id) { doc =>
-      serveFile(doc.file)
+      uploadedFileControllerHelper.serveFile(doc.file)
     }
   }
 
