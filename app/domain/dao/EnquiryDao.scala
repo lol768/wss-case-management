@@ -102,10 +102,10 @@ class EnquiryDaoImpl @Inject() (
     Enquiry.enquiries.table
       .withMessages
       .filter { case (e, mf) => queries(e, mf.map(_._1), mf.flatMap(_._2)).reduce(_ && _) }
-      .map { case (e, _) => e }
+      .map { case (e, _) => (e, e.isOpen) }
+      .sortBy { case (e, isOpen) => (isOpen.desc, e.created.desc) }
       .distinct
-      // This is cheating a bit, as it relies on Closed being before all other states alphabetically
-      .sortBy { e => (e.state.desc, e.created.desc) }
+      .map { case (e, _) => e }
   }
 
 }
