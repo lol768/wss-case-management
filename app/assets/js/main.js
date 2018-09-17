@@ -110,4 +110,17 @@ $(() => {
       $details.find($details.data('target')).load($details.data('href'));
     }
   });
+
+  $(':button[data-toggle="remove-submit"][data-target]').on('click', function removeAndSubmit() {
+    const $button = $(this);
+    const $form = $button.closest('form');
+    $button.closest($button.data('target')).find(':input').remove();
+    $form.submit();
+  });
+
+  $(':input.change-submit').on('change', function submitOnChange() {
+    const $input = $(this);
+    const $form = $input.closest('form');
+    $form.submit();
+  });
 });

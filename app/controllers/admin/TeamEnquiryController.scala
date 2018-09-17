@@ -8,8 +8,7 @@ import controllers.admin.TeamEnquiryController._
 import controllers.refiners.{CanAddTeamMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
 import controllers.{API, BaseController, UploadedFileControllerHelper}
 import domain._
-import helpers.JavaTime
-import helpers.StringUtils._
+import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -18,6 +17,7 @@ import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.EnquiryService
+import services.tabula.ProfileService
 import warwick.sso.UserLookupService
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -28,22 +28,18 @@ object TeamEnquiryController {
     version: OffsetDateTime
   )
 
-  def reassignEnquiryForm(enquiry: Enquiry) = Form(
+  def reassignEnquiryForm(enquiry: Enquiry): Form[ReassignEnquiryData] = Form(
     mapping(
       "team" -> Teams.formField,
       "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version)
     )(ReassignEnquiryData.apply)(ReassignEnquiryData.unapply)
   )
 
-  case class StateChangeForm (
-    text: String,
-    version: OffsetDateTime
-  )
-
-  def stateChangeForm(enquiry: Enquiry) = Form(mapping(
-    "text" -> text,
+  def stateChangeForm(enquiry: Enquiry): Form[OffsetDateTime] = Form(single(
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version)
-  )(StateChangeForm.apply)(StateChangeForm.unapply))
+  ))
+
+  val messageForm = Form(single("text" -> nonEmptyText))
 }
 
 @Singleton
@@ -53,6 +49,7 @@ class TeamEnquiryController @Inject()(
   canViewEnquiryActionRefiner: CanViewEnquiryActionRefiner,
   service: EnquiryService,
   userLookupService: UserLookupService,
+  profiles: ProfileService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
@@ -60,19 +57,42 @@ class TeamEnquiryController @Inject()(
   import canEditEnquiryActionRefiner._
   import canViewEnquiryActionRefiner._
 
-  private def renderMessages(enquiry: Enquiry, f: Form[StateChangeForm])(implicit request: EnquirySpecificRequest[_]): Future[Result] =
-    service.getForRender(enquiry.id.get).successMap { render =>
+  private def renderMessages(enquiry: Enquiry, reassignForm: Form[ReassignEnquiryData], stateChangeForm: Form[OffsetDateTime], messageForm: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
+    val clientUsercode = userLookupService.getUsers(Seq(enquiry.universityID)).getOrElse(Map()).values.map(_.usercode).headOption
+    val findClientLastRead =
+      clientUsercode.map(service.findLastViewDate(enquiry.id.get, _))
+        .getOrElse(Future.successful(Right(None)))
+
+    ServiceResults.zip(
+      service.getForRender(enquiry.id.get),
+      profiles.getProfile(enquiry.universityID).map(_.value),
+      service.getOwners(Set(enquiry.id.get)),
+      findClientLastRead
+    ).successMap { case (render, profile, ownersMap, clientLastRead) =>
+      val allUsers = render.messages.flatMap { case (m, _) => m.teamMember }.toSet ++ ownersMap.values.flatten
+      val userLookup = userLookupService.getUsers(allUsers.toSeq).getOrElse(Map())
+
       Ok(views.html.admin.enquiry.messages(
         render.enquiry,
+        profile,
         render.messages,
-        f,
-        userLookupService.getUsers(render.messages.flatMap { case (m, _) => m.teamMember }).toOption.getOrElse(Map()),
-        userLookupService.getUsers(Seq(render.enquiry.universityID)).toOption.getOrElse(Map())
+        ownersMap.values.flatten.flatMap(userLookup.get).toSeq.sortBy { u => (u.name.last, u.name.first) },
+        clientLastRead,
+        userLookup,
+        reassignForm,
+        stateChangeForm,
+        messageForm
       ))
     }
+  }
 
   def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
-    renderMessages(request.enquiry, stateChangeForm(request.enquiry).fill(StateChangeForm("", request.enquiry.version)))
+    renderMessages(
+      request.enquiry,
+      reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version)),
+      stateChangeForm(request.enquiry).fill(request.enquiry.version),
+      messageForm
+    )
   }
 
   def redirectToMessages(enquiryKey: IssueKey): Action[AnyContent] = Action {
@@ -80,21 +100,22 @@ class TeamEnquiryController @Inject()(
   }
 
   def addMessage(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanAddTeamMessageToEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>
-    Form(single("text" -> nonEmptyText)).bindFromRequest().fold(
+    messageForm.bindFromRequest().fold(
       formWithErrors => {
-        val form = stateChangeForm(request.enquiry)
-          .fill(StateChangeForm(formWithErrors.value.getOrElse(""), request.enquiry.version))
-          .copy(errors = formWithErrors.errors)
-
         render.async {
           case Accepts.Json() =>
             Future.successful(
               BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
-                form.errors.map(error => API.Error(error.getClass.getSimpleName, error.message))
+                formWithErrors.errors.map(error => API.Error(error.getClass.getSimpleName, error.message))
               )))
             )
           case _ =>
-            renderMessages(request.enquiry, form)
+            renderMessages(
+              request.enquiry,
+              reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version)),
+              stateChangeForm(request.enquiry).fill(request.enquiry.version),
+              formWithErrors
+            )
         }
       },
       messageText => {
@@ -127,32 +148,27 @@ class TeamEnquiryController @Inject()(
     }
   }
 
-  def close(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanEditEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>
-    updateStateAndMessage(IssueState.Closed)
+  def close(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
+    updateState(IssueState.Closed)
   }
 
-  def reopen(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanEditEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>
-    updateStateAndMessage(IssueState.Reopened)
+  def reopen(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
+    updateState(IssueState.Reopened)
   }
 
-  private def updateStateAndMessage(newState: IssueState)(implicit request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Future[Result] = {
+  private def updateState(newState: IssueState)(implicit request: EnquirySpecificRequest[AnyContent]): Future[Result] = {
     stateChangeForm(request.enquiry).bindFromRequest().fold(
-      formWithErrors => renderMessages(request.enquiry, formWithErrors),
-      formData => {
-        val action = if(formData.text.hasText) {
-          val message = messageData(formData.text, request)
-          val files = uploadedFiles(request)
-
-          service.updateStateWithMessage(request.enquiry, newState, message, files, formData.version)
-        } else {
-          service.updateState(request.enquiry, newState, formData.version)
-        }
-
-        action.successMap { enquiry =>
+      formWithErrors => renderMessages(
+        request.enquiry,
+        reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version)),
+        formWithErrors,
+        messageForm
+      ),
+      version =>
+        service.updateState(request.enquiry, newState, version).successMap { enquiry =>
           Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get))
             .flashing("success" -> Messages(s"flash.enquiry.$newState"))
         }
-      }
     )
   }
 
@@ -187,10 +203,10 @@ class TeamEnquiryController @Inject()(
       ),
       data =>
         if (data.team == request.enquiry.team) // No change
-          Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(data.team.id)))
+          Future.successful(Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey)))
         else
           service.reassign(request.enquiry, data.team, data.version).successMap { _ =>
-            Redirect(controllers.admin.routes.AdminController.teamHome(request.enquiry.team.id))
+            Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
               .flashing("success" -> Messages("flash.enquiry.reassigned", data.team.name))
           }
     )

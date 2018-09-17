@@ -58,7 +58,7 @@ class OwnersController @Inject()(
         },
         data => {
           enquiryService.setOwners(request.enquiry.id.get, data.toSet).successMap(_ =>
-            Redirect(controllers.admin.routes.AdminController.teamHome(request.enquiry.team.id))
+            Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key.get))
               .flashing("success" -> Messages("flash.enquiry.owners.updated"))
           )
         }

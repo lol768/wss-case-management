@@ -1,6 +1,7 @@
 package services
 
 import java.math.MathContext
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
@@ -36,6 +37,7 @@ trait AuditService {
   def audit[A](operation: Symbol, targetId: String, targetType: Symbol, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]]
   def audit[A](operation: Symbol, targetIdTransform: A => String, targetType: Symbol, data: JsValue)(f: => Future[ServiceResult[A]])(implicit context: AuditLogContext): Future[ServiceResult[A]]
   def findRecentTargetIDsByOperation(operation: Symbol, usercode: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[String]]]
+  def findLastEventDateForTargetID(targetId: String, usercode: Usercode, operation: Symbol)(implicit t: TimingContext): Future[ServiceResult[Option[OffsetDateTime]]]
 }
 
 @Singleton
@@ -126,6 +128,15 @@ class AuditServiceImpl @Inject()(
         .sortBy { case (_, maxDate) => maxDate.desc }
         .take(limit)
         .map { case (targetId, _) => targetId }
+        .result
+    ).map(Right.apply)
+
+  override def findLastEventDateForTargetID(targetId: String, usercode: Usercode, operation: Symbol)(implicit t: TimingContext): Future[ServiceResult[Option[OffsetDateTime]]] =
+    daoRunner.run(
+      dao.findByOperationAndUsercodeQuery(operation, usercode)
+        .filter(_.targetId === targetId)
+        .map(_.date)
+        .max
         .result
     ).map(Right.apply)
 
