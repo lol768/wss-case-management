@@ -486,15 +486,11 @@ class CaseController @Inject()(
         } else {
           if (data.team == caseRequest.`case`.team) // No change
             Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(data.team.id)))
-          else {
-            ServiceResults.zip(
-              cases.addGeneralNote(caseRequest.`case`.id.get, CaseNoteSave(data.message, caseRequest.context.user.get.usercode)),
-              cases.reassign(caseRequest.`case`, data.team, data.caseType, data.version)
-            ).successMap { _ =>
+          else
+            cases.reassign(caseRequest.`case`, data.team, data.caseType, CaseNoteSave(data.message, caseRequest.context.user.get.usercode), data.version).successMap { _ =>
               Redirect(controllers.admin.routes.AdminController.teamHome(caseRequest.`case`.team.id))
                 .flashing("success" -> Messages("flash.case.reassigned", data.team.name))
             }
-          }
         }
     )
   }
