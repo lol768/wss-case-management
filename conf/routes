@@ -38,6 +38,7 @@ POST        /enquiry                                @controllers.enquiries.Enqui
 
 GET         /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.messages(enquiryKey: domain.IssueKey)
 POST        /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.addMessage(enquiryKey: domain.IssueKey)
+GET         /enquiry/:enquiryKey/:fileId            @controllers.enquiries.EnquiryMessagesController.download(enquiryKey: domain.IssueKey, fileId: java.util.UUID)
 
 ## Teams ##
 
@@ -60,6 +61,7 @@ GET         /team/enquiry/:enquiryKey/reassign                  @controllers.adm
 POST        /team/enquiry/:enquiryKey/reassign                  @controllers.admin.TeamEnquiryController.reassign(enquiryKey: domain.IssueKey)
 GET         /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquiryForm(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquirySubmit(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/:fileId                   @controllers.admin.TeamEnquiryController.download(enquiryKey: domain.IssueKey, fileId: java.util.UUID)
 
 GET         /team/case/create                       @controllers.admin.CaseController.createSelectTeam(fromEnquiry: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
 GET         /team/case/create/:teamId               @controllers.admin.CaseController.createForm(teamId: String, fromEnquiry: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)

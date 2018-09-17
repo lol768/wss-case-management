@@ -52,3 +52,18 @@ export function postJsonWithCredentials(url, body, options = {}) {
     ...options,
   });
 }
+
+export function postMultipartFormWithCredentials(url, form, options = {}) {
+  const defaultHeaders = {
+    Accept: 'application/json',
+  };
+  const headers = 'headers' in options ? [...options.headers, defaultHeaders] : defaultHeaders;
+
+  headers[getCsrfHeaderName()] = getCsrfToken();
+  return fetchWithCredentials(url, {
+    method: 'POST',
+    body: new FormData(form),
+    headers,
+    ...options,
+  });
+}

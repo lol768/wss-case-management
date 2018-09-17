@@ -4,10 +4,15 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
+import domain.dao.UploadedFileDao
+import domain.dao.UploadedFileDao.StoredUploadedFile
 import enumeratum._
 import helpers.JavaTime
-import ExtendedPostgresProfile.api._
 import warwick.sso.{UniversityID, Usercode}
+
+import scala.collection.immutable
+import scala.language.higherKinds
 
 /**
   * Conversational message which can be attached to an Enquiry or Case.
@@ -73,7 +78,6 @@ object Message extends Versioning {
     def id = column[UUID]("id", O.PrimaryKey)
 
     def * = (id, text, sender, teamMember, ownerId, ownerType, created, version).mapTo[Message]
-
     def messageData = (text, sender, created, teamMember).mapTo[MessageData]
   }
 
@@ -97,11 +101,18 @@ object Message extends Versioning {
     def message = foreignKey("fk_client_message", messageId, messages.table)(m => m.id)
   }
 
+  implicit class MessageExtensions[C[_]](q: Query[Messages, Message, C]) {
+    def withUploadedFiles = q
+      .joinLeft(UploadedFileDao.uploadedFiles.table)
+      .on { case (m, f) =>
+        m.id === f.ownerId && f.ownerType === (UploadedFileOwner.Message: UploadedFileOwner)
+      }
+  }
+
   val messages: VersionedTableQuery[Message, MessageVersion, Messages, MessageVersions] =
     VersionedTableQuery(TableQuery[Messages], TableQuery[MessageVersions])
 
   val messageClients = TableQuery[MessageClients]
-
 
 }
 
@@ -142,7 +153,9 @@ object MessageData {
   def tupled = (apply _).tupled
 
   // oldest first
-  val dateOrdering = Ordering.by[MessageData, OffsetDateTime](data => data.created)(JavaTime.dateTimeOrdering)
+  val dateOrdering: Ordering[MessageData] = Ordering.by[MessageData, OffsetDateTime](data => data.created)(JavaTime.dateTimeOrdering)
+  val dateOrderingWithFile: Ordering[(MessageData, Option[StoredUploadedFile])] = Ordering.by[(MessageData, Option[StoredUploadedFile]), OffsetDateTime] { case (data, _) => data.created }(JavaTime.dateTimeOrdering)
+  val dateOrderingWithFiles: Ordering[(MessageData, Seq[StoredUploadedFile])] = Ordering.by[(MessageData, Seq[StoredUploadedFile]), OffsetDateTime] { case (data, _) => data.created }(JavaTime.dateTimeOrdering)
 }
 
 sealed trait MessageSender extends EnumEntry
@@ -150,7 +163,7 @@ object MessageSender extends PlayEnum[MessageSender] {
   case object Client extends MessageSender
   case object Team extends MessageSender
 
-  val values = findValues
+  val values: immutable.IndexedSeq[MessageSender] = findValues
 }
 
 sealed trait MessageOwner extends EnumEntry
@@ -158,5 +171,5 @@ object MessageOwner extends PlayEnum[MessageOwner] {
   case object Enquiry extends MessageOwner
   case object Case extends MessageOwner
 
-  val values = findValues
+  val values: immutable.IndexedSeq[MessageOwner] = findValues
 }

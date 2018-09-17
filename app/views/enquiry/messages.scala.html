@@ -1,10 +1,10 @@
-@import domain.{Enquiry, IssueState, MessageData, MessageSender}
+@import domain.{Enquiry, IssueState, MessageData, MessageSender, UploadedFile}
 @import helpers.JavaTime
 @import warwick.sso.{UniversityID, User, Usercode}
 
 @(
   enquiry: Enquiry,
-  messages: Seq[MessageData],
+  messages: Seq[(MessageData, Seq[UploadedFile])],
   f: Form[String],
   universityIDLookup: Map[UniversityID, User]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
@@ -12,10 +12,10 @@
 @main(s"${enquiry.team.name} enquiry from ${universityIDLookup.get(enquiry.universityID).flatMap(_.name.full).getOrElse("[Unknown user]")} (${enquiry.universityID.string})") {
   <h2>
     <div class="pull-right">
-      @if(enquiry.version.isAfter(messages.last.created)) {
+      @if(enquiry.version.isAfter(messages.last._1.created)) {
         @JavaTime.Relative(enquiry.version, printToday = true)
       } else {
-        @JavaTime.Relative(messages.last.created, printToday = true)
+        @JavaTime.Relative(messages.last._1.created, printToday = true)
       }
     </div>
     @if(enquiry.state != IssueState.Closed) {
@@ -27,16 +27,20 @@
   </h2>
   <div class="enquiry panel panel-default">
     <div class="panel-body">
-      @messages.map { message =>
-        @views.html.enquiry.enquiryMessage(enquiry, message, "You", enquiry.team.name)
+      @messages.map { case (message, file) =>
+        @views.html.enquiry.enquiryMessage(enquiry, message, file, "You", enquiry.team.name, f => controllers.enquiries.routes.EnquiryMessagesController.download(enquiry.key.get, f.id))
       }
     </div>
     <div class="panel-footer">
       @if(enquiry.state != IssueState.Closed) {
-        @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get)) { implicit ifc =>
+        @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
           @b3.free('_label -> "Add a message", '_class -> f("text").error.map(_ => "has-error").getOrElse("")) {
             <div class="flex">
               @b3.textarea(f("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
+
+              @* Styling TBC *@
+              <input type="file" name="file" class="form-control" multiple>
+
               <button type="submit" class="btn btn-link">
                 <i class="far fa-share-square fa-2x"></i>
               </button>

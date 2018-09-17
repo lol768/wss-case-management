@@ -7,7 +7,7 @@
   profile: SitsProfile,
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
-  enquiries: Seq[(Enquiry, Seq[MessageData])],
+  enquiries: Seq[EnquiryRender],
   cases: Seq[(Case, Seq[MessageData], Seq[CaseNote])],
   form: Form[ClientSummaryData],
   inMentalHealthTeam: Boolean,
@@ -237,14 +237,14 @@
     } else {
       <p>
         @tags.p(
-          number = enquiries.count { case (e, _) => e.state != IssueState.Closed },
+          number = enquiries.count { r => r.enquiry.state != IssueState.Closed },
           singular = "open enquiry"
         )(
           plural = "open enquiries",
           zero = "No"
         ),
         @tags.p(
-          number = enquiries.count { case (e, _) => e.state == IssueState.Closed },
+          number = enquiries.count { r => r.enquiry.state == IssueState.Closed },
           singular = "closed enquiry"
         )(
           plural = "closed enquiries",
@@ -254,7 +254,7 @@
       </p>
 
       <div class="hidden" id="enquiry-tables">
-        @if(enquiries.exists { case (e, _) => e.state != IssueState.Closed }) {
+        @if(enquiries.exists { r => r.enquiry.state != IssueState.Closed }) {
           <table class="table table-condensed">
             <caption>Open enquiries</caption>
             <thead>
@@ -266,20 +266,20 @@
               </tr>
             </thead>
             <tbody>
-              @defining(enquiries.filter { case (e, _) => e.state != IssueState.Closed }) { open: Seq[(Enquiry, Seq[MessageData])] =>
-                @open.map { case (enquiry, messages) =>
+              @defining(enquiries.filter { r => r.enquiry.state != IssueState.Closed }) { open: Seq[EnquiryRender] =>
+                @open.map { case render =>
                   <tr>
-                    <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)" target="_blank">@enquiry.key.get.string</a></td>
-                    <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)" target="_blank">@enquiry.subject</a></td>
-                    <td>@enquiry.team.name</td>
-                    <td>@messages.reverse.headOption.map(m => JavaTime.Relative(m.created.toLocalDate).capitalize)</td>
+                    <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key.get)" target="_blank">@render.enquiry.key.get.string</a></td>
+                    <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key.get)" target="_blank">@render.enquiry.subject</a></td>
+                    <td>@render.enquiry.team.name</td>
+                    <td>@render.messages.reverse.headOption.map { case (m, _) => JavaTime.Relative(m.created.toLocalDate).capitalize }</td>
                   </tr>
                 }
               }
             </tbody>
           </table>
         }
-        @if(enquiries.exists { case (e, _) => e.state == IssueState.Closed }) {
+        @if(enquiries.exists { r => r.enquiry.state == IssueState.Closed }) {
           <table class="table table-condensed">
             <caption>Closed enquiries</caption>
             <thead>
@@ -291,13 +291,13 @@
               </tr>
             </thead>
             <tbody>
-            @defining(enquiries.filter { case (e, _) => e.state == IssueState.Closed }) { closed: Seq[(Enquiry, Seq[MessageData])] =>
-              @closed.map { case (enquiry, messages) =>
+            @defining(enquiries.filter { r => r.enquiry.state == IssueState.Closed }) { closed: Seq[EnquiryRender] =>
+              @closed.map { render =>
                 <tr>
-                  <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)" target="_blank">@enquiry.key.get.string</a></td>
-                  <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)" target="_blank">@enquiry.subject</a></td>
-                  <td>@enquiry.team.name</td>
-                  <td>@JavaTime.Relative(enquiry.version.toLocalDate).capitalize</td>
+                  <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key.get)" target="_blank">@render.enquiry.key.get.string</a></td>
+                  <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key.get)" target="_blank">@render.enquiry.subject</a></td>
+                  <td>@render.enquiry.team.name</td>
+                  <td>@JavaTime.Relative(render.enquiry.version.toLocalDate).capitalize</td>
                 </tr>
               }
             }

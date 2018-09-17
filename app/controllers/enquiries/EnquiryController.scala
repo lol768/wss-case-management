@@ -1,5 +1,6 @@
 package controllers.enquiries
 
+import com.google.common.io.Files
 import controllers.BaseController
 import controllers.refiners.CanViewEnquiryActionRefiner
 import domain.Enquiry.{FormData => Data}
@@ -8,7 +9,8 @@ import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.data.Form
 import play.api.i18n.Messages
-import play.api.mvc.{Action, AnyContent, RequestHeader}
+import play.api.libs.Files.TemporaryFile
+import play.api.mvc.{Action, AnyContent, MultipartFormData, RequestHeader}
 import services.{EnquiryService, SecurityService}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,7 +34,7 @@ class EnquiryController @Inject()(
     render(Enquiry.form)
   }
 
-  def submit(): Action[AnyContent] = SigninRequiredAction.async { implicit request =>
+  def submit(): Action[MultipartFormData[TemporaryFile]] = SigninRequiredAction(parse.multipartFormData).async { implicit request =>
     Enquiry.form.bindFromRequest().fold(
       formWithErrors => Future.successful(render(formWithErrors)),
       formData => {
@@ -49,7 +51,16 @@ class EnquiryController @Inject()(
           teamMember = None
         )
 
-        service.save(enquiry, message).successMap { _ =>
+        val files = request.body.files.filter(_.filename.nonEmpty).map { file =>
+          (Files.asByteSource(file.ref), UploadedFileSave(
+            file.filename,
+            file.ref.length(),
+            file.contentType.getOrElse("application/octet-stream"),
+            request.context.user.get.usercode
+          ))
+        }
+
+        service.save(enquiry, message, files).successMap { _ =>
           Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.enquiry.received"))
         }
 

@@ -1,18 +1,49 @@
-@import domain.MessageData
-@import domain.MessageSender
+@import domain.{Enquiry, MessageData, MessageSender, UploadedFile}
 @import helpers.JavaTime
-@import domain.Enquiry
-@(enquiry: Enquiry, message: MessageData, clientName: String, teamName: String)
+
+@(
+  enquiry: Enquiry,
+  message: MessageData,
+  files: Seq[UploadedFile],
+  clientName: String,
+  teamName: String,
+  attachmentRoute: UploadedFile => Call
+)
+
 @if(message.sender == MessageSender.Client) {
   <div class="message message-client">
     <div class="date pull-right">@JavaTime.Relative(message.created, printToday = true)</div>
     <div class="message--author">@clientName</div>
     @views.utils.nl2br(message.text)
+    @if(files.nonEmpty) {
+      <div class="message--attachment">
+        <ul class="list-unstyled">
+          @files.map { file =>
+            <li>
+              <i class="fal fa-paperclip"></i>
+              <a href="@attachmentRoute(file)">@file.fileName</a>
+            </li>
+          }
+        </ul>
+      </div>
+    }
   </div>
 } else {
   <div class="message message-team">
     <div class="date pull-right">@JavaTime.Relative(message.created, printToday = true)</div>
     <div class="message--author">@teamName</div>
     @views.utils.nl2br(message.text)
+    @if(files.nonEmpty) {
+      <div class="message--attachment">
+        <ul class="list-unstyled">
+          @files.map { file =>
+            <li>
+              <i class="fal fa-paperclip"></i>
+              <a href="@attachmentRoute(file)">@file.fileName</a>
+            </li>
+          }
+        </ul>
+      </div>
+    }
   </div>
 }

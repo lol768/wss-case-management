@@ -1,11 +1,10 @@
 package controllers.admin
 
-import java.io.InputStream
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import com.google.common.io.{ByteSource, Files}
-import controllers.BaseController
+import com.google.common.io.Files
+import controllers.{BaseController, UploadedFileControllerHelper}
 import controllers.admin.CaseDocumentController._
 import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CaseSpecificRequest}
 import domain._
@@ -15,10 +14,9 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
+import play.api.libs.Files.TemporaryFile
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.CaseService
-import warwick.objectstore.ObjectStorageService
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -35,10 +33,9 @@ object CaseDocumentController {
 @Singleton
 class CaseDocumentController @Inject()(
   cases: CaseService,
-  objectStorageService: ObjectStorageService,
-  temporaryFileCreator: TemporaryFileCreator,
   canViewCaseActionRefiner: CanViewCaseActionRefiner,
-  canEditCaseActionRefiner: CanEditCaseActionRefiner
+  canEditCaseActionRefiner: CanEditCaseActionRefiner,
+  uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import canEditCaseActionRefiner._
@@ -46,18 +43,7 @@ class CaseDocumentController @Inject()(
 
   def download(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
     withCaseDocument(id) { doc =>
-      val source = new ByteSource {
-        override def openStream(): InputStream = objectStorageService.fetch(doc.file.id.toString).orNull
-      }
-
-      Future {
-        val temporaryFile = temporaryFileCreator.create(prefix = doc.file.fileName, suffix = caseRequest.context.actualUser.get.usercode.string)
-        val file = temporaryFile.path.toFile
-        source.copyTo(Files.asByteSink(file))
-
-        Ok.sendFile(content = file, fileName = _ => doc.file.fileName, onClose = () => temporaryFileCreator.delete(temporaryFile))
-          .as(doc.file.contentType)
-      }
+      uploadedFileControllerHelper.serveFile(doc.file)
     }
   }
 
@@ -71,7 +57,7 @@ class CaseDocumentController @Inject()(
         Ok(views.html.admin.cases.addDocument(caseKey, formWithErrors))
       ),
       documentType =>
-        caseRequest.body.file("file").map { file =>
+        caseRequest.body.file("file").filter(_.filename.nonEmpty).map { file =>
           // TODO should this add a case note?
           cases.addDocument(
             caseID = caseRequest.`case`.id.get,

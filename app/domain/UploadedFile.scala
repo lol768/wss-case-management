@@ -3,7 +3,10 @@ package domain
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import enumeratum.{EnumEntry, PlayEnum}
 import warwick.sso.Usercode
+
+import scala.collection.immutable
 
 case class UploadedFile(
   id: UUID, // Files are stored flat in the object store container by UUID
@@ -23,5 +26,12 @@ case class UploadedFileSave(
   fileName: String,
   contentLength: Long,
   contentType: String,
-  uploadedBy: Usercode
+  uploadedBy: Usercode,
 )
+
+sealed trait UploadedFileOwner extends EnumEntry
+object UploadedFileOwner extends PlayEnum[UploadedFileOwner] {
+  case object Message extends UploadedFileOwner
+
+  val values: immutable.IndexedSeq[UploadedFileOwner] = findValues
+}

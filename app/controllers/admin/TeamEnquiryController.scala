@@ -1,10 +1,12 @@
 package controllers.admin
 
 import java.time.OffsetDateTime
+import java.util.UUID
 
+import com.google.common.io.{ByteSource, Files}
 import controllers.admin.TeamEnquiryController._
 import controllers.refiners.{CanAddTeamMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
-import controllers.{API, BaseController}
+import controllers.{API, BaseController, UploadedFileControllerHelper}
 import domain._
 import helpers.JavaTime
 import helpers.StringUtils._
@@ -12,8 +14,9 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.{Action, AnyContent, Result}
+import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.EnquiryService
 import warwick.sso.UserLookupService
 
@@ -49,7 +52,8 @@ class TeamEnquiryController @Inject()(
   canEditEnquiryActionRefiner: CanEditEnquiryActionRefiner,
   canViewEnquiryActionRefiner: CanViewEnquiryActionRefiner,
   service: EnquiryService,
-  userLookupService: UserLookupService
+  userLookupService: UserLookupService,
+  uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import canAddTeamMessageToEnquiryActionRefiner._
@@ -57,13 +61,13 @@ class TeamEnquiryController @Inject()(
   import canViewEnquiryActionRefiner._
 
   private def renderMessages(enquiry: Enquiry, f: Form[StateChangeForm])(implicit request: EnquirySpecificRequest[_]): Future[Result] =
-    service.getForRender(enquiry.id.get).successMap { case (e, messages) =>
+    service.getForRender(enquiry.id.get).successMap { render =>
       Ok(views.html.admin.enquiry.messages(
-        e,
-        messages,
+        render.enquiry,
+        render.messages,
         f,
-        userLookupService.getUsers(messages.flatMap(_.teamMember)).toOption.getOrElse(Map()),
-        userLookupService.getUsers(Seq(e.universityID)).toOption.getOrElse(Map())
+        userLookupService.getUsers(render.messages.flatMap { case (m, _) => m.teamMember }).toOption.getOrElse(Map()),
+        userLookupService.getUsers(Seq(render.enquiry.universityID)).toOption.getOrElse(Map())
       ))
     }
 
@@ -75,7 +79,7 @@ class TeamEnquiryController @Inject()(
     Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
   }
 
-  def addMessage(enquiryKey: IssueKey): Action[AnyContent] = CanAddTeamMessageToEnquiryAction(enquiryKey).async { implicit request =>
+  def addMessage(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanAddTeamMessageToEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>
     Form(single("text" -> nonEmptyText)).bindFromRequest().fold(
       formWithErrors => {
         val form = stateChangeForm(request.enquiry)
@@ -95,7 +99,9 @@ class TeamEnquiryController @Inject()(
       },
       messageText => {
         val message = messageData(messageText, request)
-        service.addMessage(request.enquiry, message).successMap { m =>
+        val files = uploadedFiles(request)
+
+        service.addMessage(request.enquiry, message, files).successMap { case (m, f) =>
           val messageData = MessageData(m.text, m.sender, m.created, m.teamMember)
           render {
             case Accepts.Json() =>
@@ -103,7 +109,7 @@ class TeamEnquiryController @Inject()(
               val teamName = message.teamMember.flatMap(usercode => userLookupService.getUser(usercode).toOption.filter(_.isFound).flatMap(_.name.full)).getOrElse(request.enquiry.team.name)
 
               Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
-                "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, clientName, teamName).toString()
+                "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, f, clientName, teamName, f => routes.TeamEnquiryController.download(enquiryKey, f.id)).toString()
               ))))
             case _ =>
               Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
@@ -113,21 +119,31 @@ class TeamEnquiryController @Inject()(
     )
   }
 
-  def close(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
+  def download(enquiryKey: IssueKey, fileId: UUID): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
+    service.getForRender(request.enquiry.id.get).successFlatMap { render =>
+      render.messages.flatMap { case (_, f) => f }.find(_.id == fileId)
+        .map(uploadedFileControllerHelper.serveFile)
+        .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
+    }
+  }
+
+  def close(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanEditEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>
     updateStateAndMessage(IssueState.Closed)
   }
 
-  def reopen(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
+  def reopen(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanEditEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>
     updateStateAndMessage(IssueState.Reopened)
   }
 
-  private def updateStateAndMessage(newState: IssueState)(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
+  private def updateStateAndMessage(newState: IssueState)(implicit request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Future[Result] = {
     stateChangeForm(request.enquiry).bindFromRequest().fold(
       formWithErrors => renderMessages(request.enquiry, formWithErrors),
       formData => {
         val action = if(formData.text.hasText) {
           val message = messageData(formData.text, request)
-          service.updateStateWithMessage(request.enquiry, newState, message, formData.version)
+          val files = uploadedFiles(request)
+
+          service.updateStateWithMessage(request.enquiry, newState, message, files, formData.version)
         } else {
           service.updateState(request.enquiry, newState, formData.version)
         }
@@ -140,12 +156,22 @@ class TeamEnquiryController @Inject()(
     )
   }
 
-  private def messageData(text:String, request: EnquirySpecificRequest[_]): MessageSave =
+  private def messageData(text: String, request: EnquirySpecificRequest[_]): MessageSave =
     MessageSave(
       text = text,
       sender = MessageSender.Team,
       teamMember = request.context.user.map(_.usercode)
     )
+
+  private def uploadedFiles(request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Seq[(ByteSource, UploadedFileSave)] =
+    request.body.files.filter(_.filename.nonEmpty).map { file =>
+      (Files.asByteSource(file.ref), UploadedFileSave(
+        file.filename,
+        file.ref.length(),
+        file.contentType.getOrElse("application/octet-stream"),
+        request.context.user.get.usercode
+      ))
+    }
 
   def reassignForm(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey) { implicit request =>
     Ok(views.html.admin.enquiry.reassign(request.enquiry, reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version))))

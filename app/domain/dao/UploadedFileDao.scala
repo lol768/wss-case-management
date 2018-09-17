@@ -12,6 +12,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import ExtendedPostgresProfile.api._
+import helpers.JavaTime
 import slick.lifted.ProvenShape
 import warwick.sso.Usercode
 
@@ -51,6 +52,8 @@ object UploadedFileDao {
     contentLength: Long,
     contentType: String,
     uploadedBy: Usercode,
+    ownerId: Option[UUID],
+    ownerType: Option[UploadedFileOwner],
     created: OffsetDateTime,
     version: OffsetDateTime
   ) extends Versioned[StoredUploadedFile] {
@@ -73,11 +76,20 @@ object UploadedFileDao {
         contentLength,
         contentType,
         uploadedBy,
+        ownerId,
+        ownerType,
         created,
         version,
         operation,
         timestamp
       ).asInstanceOf[B]
+  }
+
+  object StoredUploadedFile {
+    def tupled = (apply _).tupled
+
+    // oldest first
+    val dateOrdering: Ordering[StoredUploadedFile] = Ordering.by[StoredUploadedFile, OffsetDateTime](data => data.created)(JavaTime.dateTimeOrdering)
   }
 
   case class StoredUploadedFileVersion(
@@ -86,6 +98,8 @@ object UploadedFileDao {
     contentLength: Long,
     contentType: String,
     uploadedBy: Usercode,
+    ownerId: Option[UUID],
+    ownerType: Option[UploadedFileOwner],
     created: OffsetDateTime,
     version: OffsetDateTime,
     operation: DatabaseOperation,
@@ -94,9 +108,12 @@ object UploadedFileDao {
 
   trait CommonProperties { self: Table[_] =>
     def fileName = column[String]("file_name")
+    def searchableFileName = toTsVector(fileName, Some("english"))
     def contentLength = column[Long]("content_length")
     def contentType = column[String]("content_type")
     def uploadedBy = column[Usercode]("uploaded_by")
+    def ownerId = column[Option[UUID]]("owner_id")
+    def ownerType = column[Option[UploadedFileOwner]]("owner_type")
     def created = column[OffsetDateTime]("created_utc")
     def version = column[OffsetDateTime]("version_utc")
   }
@@ -108,7 +125,7 @@ object UploadedFileDao {
     def id = column[UUID]("id", O.PrimaryKey)
 
     override def * : ProvenShape[StoredUploadedFile] =
-      (id, fileName, contentLength, contentType, uploadedBy, created, version).mapTo[StoredUploadedFile]
+      (id, fileName, contentLength, contentType, uploadedBy, ownerId, ownerType, created, version).mapTo[StoredUploadedFile]
   }
 
   class UploadedFileVersions(tag: Tag) extends Table[StoredUploadedFileVersion](tag, "uploaded_file_version")
@@ -119,7 +136,7 @@ object UploadedFileDao {
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
     override def * : ProvenShape[StoredUploadedFileVersion] =
-      (id, fileName, contentLength, contentType, uploadedBy, created, version, operation, timestamp).mapTo[StoredUploadedFileVersion]
+      (id, fileName, contentLength, contentType, uploadedBy, ownerId, ownerType, created, version, operation, timestamp).mapTo[StoredUploadedFileVersion]
     def pk = primaryKey("pk_uploaded_file_version", (id, timestamp))
     def idx = index("idx_uploaded_file_version", (id, version))
   }
