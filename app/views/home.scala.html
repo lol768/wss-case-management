@@ -58,7 +58,7 @@
             <div class="panel-body">
               @e.messages.map { case (message, file) =>
                 @* FIXME CASE-138 Change enquiry.team to message.team *@
-                @views.html.enquiry.enquiryMessage(e.enquiry, message, file, clientName = "You", e.enquiry.team.name, f => controllers.enquiries.routes.EnquiryMessagesController.download(e.enquiry.key.get, f.id))
+                @views.html.enquiry.enquiryMessage(e.enquiry, message, file, clientName = "You", s"${e.enquiry.team.name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(e.enquiry.key.get, f.id))
               }
             </div>
               <div class="panel-footer">
