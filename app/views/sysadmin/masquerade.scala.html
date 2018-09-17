@@ -1,55 +1,115 @@
 @import controllers.RequestContext
+@import domain.{Route, SitsDepartment, SitsProfile, UserType}
 @import play.api.data.Form
 @import play.api.data.Forms._
-@import play.api.mvc._
 @import warwick.sso.Usercode
 
-@()(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
-
-@import b3.inline.fieldConstructor
+@(
+  testUsers: Seq[(SitsDepartment, Seq[(UserType, Seq[(Option[Route], Seq[SitsProfile])])])]
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main("Masquerade") {
-  @if(context.isMasquerading) {
-    <p>
-      You're currently masquerading as
-      @context.user.get.name.full.get
-      (@context.user.get.usercode.string).
-    </p>
+  <div class="row">
+    <div class="col-md-6">
+      @if(context.isMasquerading) {
+        <p>
+          You're currently masquerading as
+          @context.user.get.name.full.get
+          (@context.user.get.usercode.string).
+        </p>
 
-    @b3.formCSRF(warwick.sso.routes.MasqueradeController.unmask()) {
-      <p>
-        <button type="submit" class="btn btn-default">Unmask</button>
-      </p>
-    }
+        @b3.inline.formCSRF(warwick.sso.routes.MasqueradeController.unmask()) { implicit ifc =>
+          <p>
+            <button type="submit" class="btn btn-default">Unmask</button>
+          </p>
+        }
 
-    <hr>
-  }
-
-  @context.flash.get(warwick.sso.MasqueradeController.ErrorFlashKey).map { masqueradeError =>
-    <div class="alert alert-danger">@masqueradeError</div>
-  }
-
-  <p>Masquerading allows you to see the site exactly as another user would see it.</p>
-
-  @defining(Form(single("usercode" -> nonEmptyText).transform(s => Usercode(s), (u: Usercode) => u.string))) { form: Form[Usercode] =>
-    @b3.formCSRF(warwick.sso.routes.MasqueradeController.masquerade()) {
-      @b3.inputWrapped("text", form("usercode"),
-        'class -> "flexi-picker",
-        Symbol("data-include-groups") -> "false",
-        'placeholder -> "Type a usercode",
-        'autofocus -> true,
-        'autocomplete -> "off"
-      ) { input =>
-        <div class="input-group">
-          @input
-          <div class="input-group-btn">
-            <button type="submit" class="btn btn-default">
-              <i class="fal fa-fw fa-user-secret"></i>
-              Mask
-            </button>
-          </div>
-        </div>
+        <hr>
       }
+
+      @context.flash.get(warwick.sso.MasqueradeController.ErrorFlashKey).map { masqueradeError =>
+        <div class="alert alert-danger">@masqueradeError</div>
+      }
+
+      <p>Masquerading allows you to see the site exactly as another user would see it.</p>
+
+      @defining(Form(single("usercode" -> nonEmptyText).transform(s => Usercode(s), (u: Usercode) => u.string))) { form: Form[Usercode] =>
+        @b3.inline.formCSRF(warwick.sso.routes.MasqueradeController.masquerade()) { implicit ifc =>
+          @b3.inputWrapped("text", form("usercode"),
+            'class -> "flexi-picker",
+            Symbol("data-include-groups") -> "false",
+            'placeholder -> "Type a usercode",
+            'autofocus -> true,
+            'autocomplete -> "off"
+          ) { input =>
+            <div class="input-group">
+              @input
+              <div class="input-group-btn">
+                <button type="submit" class="btn btn-default">
+                  <i class="fal fa-fw fa-user-secret"></i>
+                  Mask
+                </button>
+              </div>
+            </div>
+          }
+        }
+      }
+    </div>
+    @if(testUsers.nonEmpty) {
+      <div class="col-md-6">
+        <h3><i class="fal fa-vial"></i> Test data</h3>
+
+        <p>The following users are available for masquerading in the test system:</p>
+
+        @testUsers.map { case (department, deptProfiles) =>
+          <h4>@department.name</h4>
+
+          @deptProfiles.map { case (userType, userTypeProfiles) =>
+            <h5>@userType.entryName</h5>
+
+            @userTypeProfiles.map { case (route, profiles) =>
+              @route.map { r =>
+                <h6>@r.name</h6>
+              }
+
+              <ul>
+                @profiles.map { client =>
+                  <li>
+                    @b3.inline.formCSRF(warwick.sso.routes.MasqueradeController.masquerade(), 'class -> "inline-form") { implicit ifc =>
+                      <input type="hidden" name="usercode" value="@client.usercode.string">
+                      <button type="submit" class="btn btn-default btn-sm">
+                        <i class="fal fa-fw fa-user-secret"></i>
+                        Mask
+                      </button>
+                    }
+
+                    @client.photo.map { url =>
+                      <img class="img-thumbnail img-circle" src="@url?s=24">
+                    }
+
+                    @client.fullName,
+                    @client.universityID.string,
+                    @client.userType match {
+                      case UserType.Student => {
+                        @client.yearOfStudy.map(_.level) match {
+                          case Some("1") => {First year}
+                          case Some("2") => {Second year}
+                          case Some("3") => {Third year}
+                          case Some("4") => {Fourth year}
+                          case Some(level) => {@{level}th year}
+                          case _ => {}
+                        }
+                        @client.group student
+                      }
+                      case _ => {@client.userType}
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          }
+        }
+      </div>
     }
-  }
+  </div>
 }
