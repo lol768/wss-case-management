@@ -38,6 +38,7 @@ POST        /enquiry                                @controllers.enquiries.Enqui
 
 GET         /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.messages(enquiryKey: domain.IssueKey)
 POST        /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.addMessage(enquiryKey: domain.IssueKey)
+POST        /enquiry/:enquiryKey/view               @controllers.enquiries.EnquiryMessagesController.auditView(enquiryKey: domain.IssueKey)
 GET         /enquiry/:enquiryKey/:fileId            @controllers.enquiries.EnquiryMessagesController.download(enquiryKey: domain.IssueKey, fileId: java.util.UUID)
 
 ## Teams ##

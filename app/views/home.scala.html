@@ -54,7 +54,7 @@
             </h4>
           </div>
 
-          <div id="collapse-@e.enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head.enquiry == e.enquiry){in}" role="tabpanel" aria-labelledby="heading-@e.enquiry.key.get.string">
+          <div id="collapse-@e.enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head.enquiry == e.enquiry){in}" role="tabpanel" aria-labelledby="heading-@e.enquiry.key.get.string" data-ping="@controllers.enquiries.routes.EnquiryMessagesController.auditView(e.enquiry.key.get)">
             <div class="panel-body">
               @e.messages.map { case (message, file) =>
                 @views.html.enquiry.enquiryMessage(e.enquiry, message, file, clientName = "You", s"${message.team.getOrElse(e.enquiry.team).name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(e.enquiry.key.get, f.id))
