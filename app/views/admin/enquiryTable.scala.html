@@ -13,9 +13,10 @@
 @enquiryRow(enquiry: Enquiry, message: MessageData) = {
   <tr>
     <td>
-      @clients.get(enquiry.id.get).flatMap(_.headOption).map(_.fold(_.string, { p: SitsProfile =>
-        <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>
-      }))
+      @clients.get(enquiry.id.get).flatMap(_.headOption).map {
+        case Left(universityID) => {<li><a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a></li>}
+        case Right(p) => {<li><a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a></li>}
+      }
     </td>
     <td>
       <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)">@enquiry.key.get.string @enquiry.subject</a>
