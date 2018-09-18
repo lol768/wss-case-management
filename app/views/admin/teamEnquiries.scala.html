@@ -6,6 +6,7 @@
   team: Team,
   requiringAction: Seq[(Enquiry, MessageData)],
   awaitingClient: Seq[(Enquiry, MessageData)],
+  closedEnquiries: Int,
   clients: Map[UUID, Set[SitsProfile]]
 )(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
@@ -18,9 +19,13 @@
 @views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction, clients)
 @views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient, clients)
 
-<details data-toggle="load" data-href="@controllers.admin.routes.AdminController.closedEnquiries(team.id)" data-target=".content">
-  <summary>Show closed enquiries</summary>
-  <div class="content">
-    <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
-  </div>
-</details>
+@if(closedEnquiries == 0) {
+  No closed enquiries to show
+} else {
+  <details data-toggle="load" data-href="@controllers.admin.routes.AdminController.closedEnquiries(team.id)" data-target=".content">
+    <summary>Show @tags.p(closedEnquiries, "closed enquiry")(plural = "closed enquiries")</summary>
+    <div class="content">
+      <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
+    </div>
+  </details>
+}

@@ -8,7 +8,9 @@
 @(team: Team,
   enquiriesRequiringAction: Seq[(Enquiry, MessageData)],
   enquiriesAwaitingClient: Seq[(Enquiry, MessageData)],
+  closedEnquiries: Int,
   openCases: Seq[(Case, OffsetDateTime)],
+  closedCases: Int,
   clients: Map[UUID, Set[SitsProfile]]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
@@ -30,10 +32,10 @@
 
   <div class="tab-content">
     <div role="tabpanel" class="tab-pane active" id="enquiries">
-      @views.html.admin.teamEnquiries(team, enquiriesRequiringAction, enquiriesAwaitingClient, clients)
+      @views.html.admin.teamEnquiries(team, enquiriesRequiringAction, enquiriesAwaitingClient, closedEnquiries, clients)
     </div>
     <div role="tabpanel" class="tab-pane" id="cases">
-      @views.html.admin.teamCases(team, openCases, clients)
+      @views.html.admin.teamCases(team, openCases, closedCases, clients)
     </div>
     <div role="tabpanel" class="tab-pane" id="clients">
       @views.html.admin.teamClients(team)
