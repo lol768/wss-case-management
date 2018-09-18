@@ -294,3 +294,29 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 .enquiry-details .panel.enquiry .message {
   margin-bottom: (@panel-body-padding * 2);
 }
+
+.search-default {
+  position: relative;
+  .form-control {
+    max-width: 25%;
+    color: #000000;
+    border: 0;
+    box-shadow: none;
+    border-bottom: 1px solid #cccccc;
+    padding-left: @padding-large-horizontal * 1.5;
+    &:hover {
+      border-bottom-color: #404040;
+    }
+    &:focus {
+      border-bottom-color: #000000;
+      box-shadow: none;
+    }
+    &::placeholder {
+      color: #808080;
+    }
+  }
+  .fa-search {
+    position: absolute;
+    line-height: @input-height-large;
+  }
+}

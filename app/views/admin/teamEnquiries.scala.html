@@ -10,7 +10,8 @@
 )(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
 @b3.vertical.formCSRF(routes.EnquirySearchController.search(), 'class -> "enquiry-search") { implicit ifc =>
-  @b3.free() {
+  @b3.free('_class -> "search-default") {
+    <i class="fal fa-search"></i>
     <input type="text" class="form-control input-lg" placeholder="Search enquiries" />
   }
 }
