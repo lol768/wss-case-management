@@ -1,20 +1,21 @@
 @import java.util.UUID
 
 @import domain.{Enquiry, MessageData, SitsProfile}
+@import warwick.sso.UniversityID
 
 @(
   title: Option[String],
   enquiries: Seq[(Enquiry, MessageData)],
-  clients: Map[UUID, Set[SitsProfile]],
+  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
   emptyMessage: Option[String] = None
 )(implicit context: RequestContext)
 
 @enquiryRow(enquiry: Enquiry, message: MessageData) = {
   <tr>
     <td>
-      @clients.get(enquiry.id.get).flatMap(_.headOption).map { p: SitsProfile =>
+      @clients.get(enquiry.id.get).flatMap(_.headOption).map(_.fold(_.string, { p: SitsProfile =>
         <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>
-      }.getOrElse { @enquiry.universityID }
+      }))
     </td>
     <td>
       <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)">@enquiry.key.get.string @enquiry.subject</a>

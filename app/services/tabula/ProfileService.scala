@@ -23,7 +23,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[ProfileServiceImpl])
 trait ProfileService {
-  def getProfile(universityID: UniversityID)(implicit t: TimingContext): Future[CacheElement[ServiceResult[SitsProfile]]]
+  def getProfile(universityID: UniversityID)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Option[SitsProfile]]]]
   def getProfiles(universityIDs: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, SitsProfile]]]
 }
 
@@ -47,14 +47,14 @@ class ProfileServiceImpl @Inject()(
   private lazy val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
   private lazy val tabulaProfileUrl = configuration.get[String]("wellbeing.tabula.profile")
 
-  private lazy val ttlStrategy: ServiceResult[SitsProfile] => Ttl = a => a.fold(
+  private lazy val ttlStrategy: ServiceResult[Option[SitsProfile]] => Ttl = a => a.fold(
     _ => Ttl(soft = 10.seconds, medium = 1.minute, hard = 1.hour),
     _ => Ttl(soft = 1.hour, medium = 1.day, hard = 7.days)
   )
 
-  private lazy val wrappedCache = VariableTtlCacheHelper.async[ServiceResult[SitsProfile]](cache, logger, ttlStrategy, timing)
+  private lazy val wrappedCache = VariableTtlCacheHelper.async[ServiceResult[Option[SitsProfile]]](cache, logger, ttlStrategy, timing)
 
-  override def getProfile(universityID: UniversityID)(implicit t: TimingContext): Future[CacheElement[ServiceResult[SitsProfile]]] = time(TimingCategory) {
+  override def getProfile(universityID: UniversityID)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Option[SitsProfile]]]] = time(TimingCategory) {
     wrappedCache.getOrElseUpdateElement(s"tabulaprofile:${universityID.string}", CacheOptions.default) {
       val url = s"$tabulaProfileUrl/${universityID.string}"
       val request = ws.url(url)
@@ -67,33 +67,36 @@ class ProfileServiceImpl @Inject()(
 
       val jsonResponse = request.addHttpHeaders(trustedHeaders: _*).get()
         .map(r => ServiceResults.catchAsServiceError(Some("Trusted apps integration error")) {
-          TrustedAppsHelper.validateResponse(url, r).json
+          if (r.status == 404) None
+          else Some(TrustedAppsHelper.validateResponse(url, r).json)
         })
 
       jsonResponse.map(response => {
-        response.flatMap(json => {
-          TabulaResponseParsers.validateAPIResponse(json, TabulaResponseParsers.TabulaProfileData.memberReads).fold(
-            errors => handleValidationError(json, errors),
-            data => {
-              val tabulaProfile = data.toUserProfile
-              Right(tabulaProfile.copy(
-                photo = Some(photoService.photoUrl(universityID)),
-                personalTutors = tabulaProfile.personalTutors.map { p => p.copy(photo = Some(photoService.photoUrl(p.universityID))) },
-                researchSupervisors = tabulaProfile.researchSupervisors.map { p => p.copy(photo = Some(photoService.photoUrl(p.universityID))) }
-              ))
-            }
-          )
-        })
+        response.flatMap {
+          case None => Right(None)
+          case Some(json) =>
+            TabulaResponseParsers.validateAPIResponse(json, TabulaResponseParsers.TabulaProfileData.memberReads).fold(
+              errors => handleValidationError(json, errors),
+              data => {
+                val tabulaProfile = data.toUserProfile
+                Right(Some(tabulaProfile.copy(
+                  photo = Some(photoService.photoUrl(universityID)),
+                  personalTutors = tabulaProfile.personalTutors.map { p => p.copy(photo = Some(photoService.photoUrl(p.universityID))) },
+                  researchSupervisors = tabulaProfile.researchSupervisors.map { p => p.copy(photo = Some(photoService.photoUrl(p.universityID))) }
+                )))
+              }
+            )
+        }
       })
     }
   }
 
   override def getProfiles(universityIDs: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, SitsProfile]]] = time(TimingCategory) {
     val profiles = ServiceResults.futureSequence(universityIDs.toSeq.map(id => getProfile(id).map(_.value)))
-    profiles.map(_.map(_.map(p => (p.universityID, p)).toMap))
+    profiles.map(_.map(_.flatten.map(p => (p.universityID, p)).toMap))
   }
 
-  private def handleValidationError(json: JsValue, errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[SitsProfile] = {
+  private def handleValidationError(json: JsValue, errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[Option[SitsProfile]] = {
     val serviceErrors = errors.map { case (path, validationErrors) =>
       ProfileServiceError(s"$path: ${validationErrors.map(_.message).mkString(", ")}")
     }

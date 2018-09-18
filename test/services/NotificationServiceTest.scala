@@ -136,7 +136,7 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
       )
 
       when(profileService.getProfile(universityID))
-        .thenReturn(Future.successful(CacheElement(Right(profile), -1L, -1L, -1L)) : Future[CacheElement[ServiceResult[SitsProfile]]])
+        .thenReturn(Future.successful(CacheElement(Right(Some(profile)), -1L, -1L, -1L)) : Future[CacheElement[ServiceResult[Option[SitsProfile]]]])
 
       when(emailService.queue(any(), any())(any())).thenReturn(Future.successful(Right(Nil)))
       when(myWarwickService.sendAsNotification(any())).thenReturn(FutureConverters.toJava(Future.successful(List(

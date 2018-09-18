@@ -5,12 +5,12 @@
 @import domain.SitsProfile
 @(
   enquiry: Enquiry,
-  client: SitsProfile,
+  client: Option[SitsProfile],
   messages: Seq[(MessageData, Seq[UploadedFile])],
   f: Form[String],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@main(s"${enquiry.team.name} enquiry from ${client.fullName} (${enquiry.universityID.string})") {
+@main(s"${enquiry.team.name} enquiry from ${client.map(c => s"${c.fullName} (${enquiry.universityID.string})").getOrElse(enquiry.universityID.string)}") {
   <h2>
     <div class="pull-right">
       @if(enquiry.version.isAfter(messages.last._1.created)) {

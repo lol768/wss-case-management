@@ -142,7 +142,7 @@ class FlexiPickerController @Inject()(
             if (flexiPickerQuery.includeUsers && query.matches("^[0-9]{7,}$"))
               profileService.getProfile(UniversityID(query)).map(_.value)
                 .flatMap {
-                  case Right(profile) => Future.successful(Right(Seq(FlexiPickerResult.apply(profile, flexiPickerQuery.universityId))))
+                  case Right(Some(profile)) => Future.successful(Right(Seq(FlexiPickerResult.apply(profile, flexiPickerQuery.universityId))))
                   case _ =>
                     Future(userLookupService.getUsers(Seq(UniversityID(query)), includeDisabled = true).toOption.flatMap(_.headOption.map(_._2)).toSeq)
                       .map { g => Right(g.flatMap(FlexiPickerResult.apply(_, flexiPickerQuery.universityId))) }
