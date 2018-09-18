@@ -5,7 +5,7 @@
 @(form: Form[Seq[Usercode]], clientCase: Case)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("Edit owners") {
-  @b3.vertical.formCSRF(controllers.admin.routes.OwnersController.caseSubmit(clientCase.key.get), 'class -> "dirty-check") { implicit ifc =>
+  @b3.vertical.formCSRF(controllers.admin.routes.OwnersController.caseSubmit(clientCase.key.get)) { implicit ifc =>
 
     @if(form.hasErrors) {
       <div class="alert alert-danger">

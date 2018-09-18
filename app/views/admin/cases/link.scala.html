@@ -11,8 +11,7 @@
 @main(s"Link ${c.key.get.string} to another case") {
   @b3.horizontal.formCSRF(
     controllers.admin.routes.CaseController.link(c.key.get),
-    "col-sm-2", "col-sm-5",
-    'class -> "dirty-check"
+    "col-sm-2", "col-sm-5"
   ) { implicit ifc =>
     @b3.select(form("linkType"),
       options = CaseLinkType.values.map { t => t.entryName -> t.outwardDescription },

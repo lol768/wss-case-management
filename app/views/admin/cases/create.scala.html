@@ -7,7 +7,7 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Create a ${team.name} case") {
-  @b3.vertical.formCSRF(controllers.admin.routes.CaseController.create(team.id), 'class -> "dirty-check") { implicit ifc =>
+  @b3.vertical.formCSRF(controllers.admin.routes.CaseController.create(team.id)) { implicit ifc =>
     @caseFields(team, form)
 
     @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id))
