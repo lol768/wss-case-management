@@ -8,6 +8,7 @@
 @(
   team: Team,
   openCases: Seq[(Case, OffsetDateTime)],
+  closedCases: Int,
   clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
 )(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
@@ -21,9 +22,13 @@
 
 @views.html.admin.caseTable(Some("Open cases"), openCases, clients)
 
-<details data-toggle="load" data-href="@controllers.admin.routes.AdminController.closedCases(team.id)" data-target=".content">
-  <summary>Show closed cases</summary>
-  <div class="content">
-    <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
-  </div>
-</details>
+@if(closedCases == 0) {
+  No closed cases to show
+} else {
+  <details data-toggle="load" data-href="@controllers.admin.routes.AdminController.closedCases(team.id)" data-target=".content">
+    <summary>Show @tags.p(closedCases, "closed case")()</summary>
+    <div class="content">
+      <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
+    </div>
+  </details>
+}

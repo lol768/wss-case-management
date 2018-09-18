@@ -276,7 +276,9 @@
                     <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key.get)" target="_blank">@render.enquiry.key.get.string</a></td>
                     <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key.get)" target="_blank">@render.enquiry.subject</a></td>
                     <td>@render.enquiry.team.name</td>
-                    <td>@render.messages.reverse.headOption.map { case (m, _) => JavaTime.Relative(m.created.toLocalDate).capitalize }</td>
+                    <td>@render.messages.reverse.headOption.map { case (m, _) =>
+                      @JavaTime.Relative(m.created.toLocalDate).capitalize
+                    }</td>
                   </tr>
                 }
               }
