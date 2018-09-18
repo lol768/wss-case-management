@@ -88,7 +88,7 @@
                     }
 
                     @client.fullName,
-                    @client.universityID.string,
+                    <a href="@controllers.admin.routes.ClientController.client(client.universityID)" target="_blank">@client.universityID.string</a>,
                     @client.userType match {
                       case UserType.Student => {
                         @client.yearOfStudy.map(_.level) match {
