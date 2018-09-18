@@ -8,6 +8,7 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.mailer.Email
+import services.tabula.ProfileService
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.core.timing.TimingContext
@@ -35,7 +36,8 @@ class NotificationServiceImpl @Inject()(
   groupService: GroupService,
   userLookupService: UserLookupService,
   emailService: EmailService,
-  config: Configuration
+  profileService: ProfileService,
+  config: Configuration,
 )(implicit executionContext: ExecutionContext) extends NotificationService {
 
   private lazy val domain: String = config.get[String]("domain")
@@ -285,12 +287,10 @@ class NotificationServiceImpl @Inject()(
   }
 
   private def withUser(universityID: UniversityID)(f: User => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
-    userLookupService.getUsers(Seq(universityID)).fold(
-      e => Future.successful(ServiceResults.exceptionToServiceResult(e)),
-      userMap => userMap.get(universityID).map(f).getOrElse(
-        Future.successful(Left(List(ServiceError(s"Cannot find user with university ID ${universityID.string}"))))
-      )
-    )
+    profileService.getProfile(universityID).map(_.value).flatMap(_.fold(
+      errors => Future.successful(Left(errors)),
+      profile => f(profile.asUser)
+    ))
   }
 
   private def withUsers(usercodes: Set[Usercode])(f: Set[User] => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {

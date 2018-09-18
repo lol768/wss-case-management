@@ -58,31 +58,27 @@ class TeamEnquiryController @Inject()(
   import canViewEnquiryActionRefiner._
 
   private def renderMessages(enquiry: Enquiry, reassignForm: Form[ReassignEnquiryData], stateChangeForm: Form[OffsetDateTime], messageForm: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
-    val clientUsercode = userLookupService.getUsers(Seq(enquiry.universityID)).getOrElse(Map()).values.map(_.usercode).headOption
-    val findClientLastRead =
-      clientUsercode.map(service.findLastViewDate(enquiry.id.get, _))
-        .getOrElse(Future.successful(Right(None)))
-
     ServiceResults.zip(
       service.getForRender(enquiry.id.get),
       profiles.getProfile(enquiry.universityID).map(_.value),
       service.getOwners(Set(enquiry.id.get)),
-      findClientLastRead
-    ).successMap { case (render, profile, ownersMap, clientLastRead) =>
+    ).successFlatMap { case (render, profile, ownersMap) =>
       val allUsers = render.messages.flatMap { case (m, _) => m.teamMember }.toSet ++ ownersMap.values.flatten
       val userLookup = userLookupService.getUsers(allUsers.toSeq).getOrElse(Map())
 
-      Ok(views.html.admin.enquiry.messages(
-        render.enquiry,
-        profile,
-        render.messages,
-        ownersMap.values.flatten.flatMap(userLookup.get).toSeq.sortBy { u => (u.name.last, u.name.first) },
-        clientLastRead,
-        userLookup,
-        reassignForm,
-        stateChangeForm,
-        messageForm
-      ))
+      service.findLastViewDate(enquiry.id.get, profile.usercode).successMap { clientLastRead =>
+        Ok(views.html.admin.enquiry.messages(
+          render.enquiry,
+          profile,
+          render.messages,
+          ownersMap.values.flatten.flatMap(userLookup.get).toSeq.sortBy { u => (u.name.last, u.name.first) },
+          clientLastRead,
+          userLookup,
+          reassignForm,
+          stateChangeForm,
+          messageForm
+        ))
+      }
     }
   }
 
