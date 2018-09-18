@@ -1,11 +1,12 @@
 @import controllers.RequestContext
-@import domain.{Route, SitsDepartment, SitsProfile, UserType, Team, Teams}
+@import domain.{Route, SitsDepartment, SitsProfile, Team, Teams, UserType}
 @import play.api.data.Form
 @import play.api.data.Forms._
-@import warwick.sso.Usercode
+@import warwick.sso.{User, Usercode}
 
 @(
-  testUsers: Seq[(SitsDepartment, Seq[(UserType, Seq[(Option[Route], Seq[SitsProfile])])])]
+  testUsers: Seq[(SitsDepartment, Seq[(UserType, Seq[(Option[Route], Seq[SitsProfile])])])],
+  testTeamMembers: Seq[(Team, Seq[User])],
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main("Masquerade") {
@@ -61,30 +62,25 @@
 
         <p>The following users are available for masquerading in the test system:</p>
 
-        <h4>Wellbeing Services team members</h4>
+        @testTeamMembers.map { case (team, users) =>
+          <h4>@team.name team</h4>
 
-        <ul>
-          @defining(Seq(
-            Teams.Counselling -> "wss-dev-counselling-member",
-            Teams.Disability -> "wss-dev-disability-member",
-            Teams.MentalHealth -> "wss-dev-mentalhealth-member",
-            Teams.StudentSupport -> "wss-dev-studentsupport-member",
-          )) { wss =>
-            @wss.map { case (team, usercode) =>
+          <ul>
+            @users.map { user =>
               <li>
                 @b3.inline.formCSRF(warwick.sso.routes.MasqueradeController.masquerade(), 'class -> "inline-form") { implicit ifc =>
-                  <input type="hidden" name="usercode" value="@usercode">
+                  <input type="hidden" name="usercode" value="@user.usercode.string">
                   <button type="submit" class="btn btn-default btn-sm">
                     <i class="fal fa-fw fa-user-secret"></i>
                     Mask
                   </button>
                 }
 
-                @team.name team member
+                @user.name.full
               </li>
             }
-          }
-        </ul>
+          </ul>
+        }
 
         @testUsers.map { case (department, deptProfiles) =>
           <h4>@department.name</h4>

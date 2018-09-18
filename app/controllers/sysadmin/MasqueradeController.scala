@@ -1,14 +1,14 @@
 package controllers.sysadmin
 
 import controllers.BaseController
-import domain.UserType
+import domain.{Teams, UserType}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.mvc.{Action, AnyContent}
 import services.SecurityService
 import services.tabula.ProfileService
 import system.Roles.Masquerader
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, UserLookupService, Usercode}
 
 import scala.concurrent.ExecutionContext
 
@@ -16,16 +16,18 @@ import scala.concurrent.ExecutionContext
 class MasqueradeController @Inject()(
   securityService: SecurityService,
   profiles: ProfileService,
+  userLookupService: UserLookupService,
   configuration: Configuration,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import securityService._
 
-  private[this] val testUsers = configuration.get[Seq[String]]("wellbeing.tabula.testUsers")
+  private[this] val testTabulaUsers = configuration.get[Seq[String]]("wellbeing.tabula.testUsers")
+  private[this] val testTeamMemberUsers = configuration.get[Map[String, Seq[String]]]("wellbeing.testTeamMembers")
   
   def masquerade: Action[AnyContent] = RequiredActualUserRoleAction(Masquerader).async { implicit request =>
-    profiles.getProfiles(testUsers.map(UniversityID.apply).toSet).successMap { profiles =>
-      val testProfiles =
+    profiles.getProfiles(testTabulaUsers.map(UniversityID.apply).toSet).successMap { profiles =>
+      val testUsers =
         profiles.values
           .groupBy(_.department).toSeq
           .map { case (department, deptProfiles) =>
@@ -41,7 +43,15 @@ class MasqueradeController @Inject()(
           }
           .sortBy { case (dept, _) => dept.code }
 
-      Ok(views.html.sysadmin.masquerade(testProfiles))
+      val testTeamMembers =
+        testTeamMemberUsers.flatMap { case (teamId, usercodes) =>
+          userLookupService.getUsers(usercodes.map(Usercode.apply)).toOption.map(_.values)
+            .map { users => Teams.fromId(teamId) -> users.toSeq.sortBy { u => (u.name.last, u.name.first, u.usercode.string) } }
+        }
+        .toSeq
+        .sortBy { case (team, _) => team.name }
+
+      Ok(views.html.sysadmin.masquerade(testUsers, testTeamMembers))
     }
   }
 }
