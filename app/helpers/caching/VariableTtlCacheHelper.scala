@@ -8,15 +8,15 @@ import warwick.core.timing.{TimingContext, TimingService}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.reflect.ClassTag
+import shapeless.Typeable
 
 object VariableTtlCacheHelper {
-  def async[A: ClassTag](cache: AsyncCacheApi, logger: Logger, softTtl: FiniteDuration, mediumTtl: FiniteDuration, hardTtl: Duration, timing: TimingService)(implicit executor: ExecutionContext): AsyncVariableTtlCacheHelper[A] = {
+  def async[A: Typeable](cache: AsyncCacheApi, logger: Logger, softTtl: FiniteDuration, mediumTtl: FiniteDuration, hardTtl: Duration, timing: TimingService)(implicit executor: ExecutionContext): AsyncVariableTtlCacheHelper[A] = {
     val ttl = Ttl(softTtl, mediumTtl, hardTtl)
     new AsyncVariableTtlCacheHelper[A](cache, logger, _ => ttl, timing)
   }
 
-  def async[A: ClassTag](cache: AsyncCacheApi, logger: Logger, ttl: A => Ttl, timing: TimingService)(implicit executor: ExecutionContext): AsyncVariableTtlCacheHelper[A] =
+  def async[A: Typeable](cache: AsyncCacheApi, logger: Logger, ttl: A => Ttl, timing: TimingService)(implicit executor: ExecutionContext): AsyncVariableTtlCacheHelper[A] =
     new AsyncVariableTtlCacheHelper[A](cache, logger, ttl, timing)
 }
 
@@ -25,7 +25,7 @@ object VariableTtlCacheHelper {
   * If an item is retrieved that is older than this soft TTL, we update its
   * value in the background but return the stale value immediately.
   */
-class AsyncVariableTtlCacheHelper[A: ClassTag](
+class AsyncVariableTtlCacheHelper[A: Typeable](
   cache: AsyncCacheApi,
   logger: Logger,
   ttlStrategy: A => Ttl,
@@ -40,7 +40,7 @@ class AsyncVariableTtlCacheHelper[A: ClassTag](
 
     def validateCachedValueType(element: CacheElement[A]):Future[CacheElement[A]] = {
       element.value match {
-        case _: A =>
+        case a if implicitly[Typeable[A]].cast(a).isDefined =>
           Future.successful(element)
         case _ =>
           logger.info(s"Incorrect type from cache fetching $key; doing update")
