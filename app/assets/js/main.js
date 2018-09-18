@@ -74,7 +74,7 @@ $(() => {
       }
     });
 
-  $('form.dirty-check').areYouSure();
+  $('form').not('.no-dirty-check').areYouSure();
 
   $('.toggle-element').each((i, container) => {
     const $this = $(container);
