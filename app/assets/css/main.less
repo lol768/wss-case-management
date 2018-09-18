@@ -49,6 +49,10 @@
   padding: 0 2px;
 }
 
+.client-search, .case-search, .enquiry-search {
+  .make-row();
+}
+
 .client-search {
   .dropdown-menu li {
     margin-bottom: 5px;
@@ -293,4 +297,30 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 
 .enquiry-details .panel.enquiry .message {
   margin-bottom: (@panel-body-padding * 2);
+}
+
+.search-default {
+  .make-md-column(3);
+  position: relative;
+  .form-control {
+    color: #000000;
+    border: 0;
+    box-shadow: none;
+    border-bottom: 1px solid #cccccc;
+    padding-left: @padding-large-horizontal * 1.5;
+    &:hover {
+      border-bottom-color: #404040;
+    }
+    &:focus {
+      border-bottom-color: #000000;
+      box-shadow: none;
+    }
+    &::placeholder {
+      color: #808080;
+    }
+  }
+  .fa-search {
+    position: absolute;
+    line-height: @input-height-large;
+  }
 }
