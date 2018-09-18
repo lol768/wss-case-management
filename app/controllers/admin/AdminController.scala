@@ -28,10 +28,10 @@ class AdminController @Inject()(
   import canViewTeamActionRefiner._
 
   def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    findEnquiriesAndCases { (enquiriesNeedingReply, enquiriesAwaitingClient, openCases, clients) => {
+    findEnquiriesAndCases { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, clients) => {
      profileService.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
         val resolvedClients = clients.mapValues(_.flatMap(c => profiles.get(c)))
-        Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, openCases, resolvedClients))
+        Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, resolvedClients))
       })
     }}
   }
@@ -39,17 +39,21 @@ class AdminController @Inject()(
   private def findEnquiriesAndCases(f: (
       Seq[(Enquiry, MessageData)],
       Seq[(Enquiry, MessageData)],
+      Int,
       Seq[(Case, OffsetDateTime)],
+      Int,
       Map[UUID, Set[UniversityID]]
     ) => Future[Result])(implicit teamRequest: TeamSpecificRequest[_]) = {
     ServiceResults.zip(
       enquiries.findEnquiriesNeedingReply(teamRequest.team),
       enquiries.findEnquiriesAwaitingClient(teamRequest.team),
-      cases.listOpenCases(teamRequest.team)
-    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, openCases) =>
+      enquiries.countClosedEnquiries(teamRequest.team),
+      cases.listOpenCases(teamRequest.team),
+      cases.countClosedCases(teamRequest.team)
+    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases) =>
       cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successFlatMap { caseClients =>
         val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map{ case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients
-        f(enquiriesNeedingReply, enquiriesAwaitingClient, openCases, clients)
+        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, clients)
       }
     }
   }
