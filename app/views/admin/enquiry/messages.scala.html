@@ -19,7 +19,7 @@
 
 @main(
   title = s"${enquiry.key.get.string} ${enquiry.subject}",
-  icon = if(enquiry.state != IssueState.Closed) "fal fa-fw fa-comment-dots" else "fal fa-fw fa-comment-check"
+  icon = tags.icons.enquiryState(enquiry.state)
 ) {
   <div class="enquiry-details">
     <div class="enquiry-details--header">
@@ -203,9 +203,7 @@
                   @* Styling TBC *@
                   <input type="file" name="file" class="form-control" multiple>
 
-                  <button type="submit" class="btn btn-link">
-                    <i class="fal fa-paper-plane fa-2x"></i>
-                  </button>
+                  @tags.messages.sendButton()
                 </div>
 
                 @if(messageForm("text").hasErrors) {
