@@ -154,7 +154,17 @@ class CaseController @Inject()(
       val ownerUsers = userLookup.filterKeys(owners.contains).values.toSeq.sortBy { u => (u.name.last, u.name.first) }
 
       profiles.getProfiles(c.clients).successMap { clientProfiles =>
-        Ok(views.html.admin.cases.view(c, clientProfiles.values.toSeq.sortBy(_.fullName), ownerUsers, caseNotes, originalEnquiry, userLookup, caseNoteForm))
+        Ok(views.html.admin.cases.view(
+          c,
+          c.clients.toSeq
+            .map { id => clientProfiles.get(id).map(Right.apply).getOrElse(Left(id)) }
+            .sortBy { e => (e.isLeft, e.right.map(_.fullName).toOption) },
+          ownerUsers,
+          caseNotes,
+          originalEnquiry,
+          userLookup,
+          caseNoteForm
+        ))
       }
     }
   }

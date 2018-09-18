@@ -8,6 +8,7 @@ import controllers.admin.TeamEnquiryController._
 import controllers.refiners.{CanAddTeamMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
 import controllers.{API, BaseController, UploadedFileControllerHelper}
 import domain._
+import helpers.ServiceResults.ServiceResult
 import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -66,7 +67,11 @@ class TeamEnquiryController @Inject()(
       val allUsers = render.messages.flatMap { case (m, _) => m.teamMember }.toSet ++ ownersMap.values.flatten
       val userLookup = userLookupService.getUsers(allUsers.toSeq).getOrElse(Map())
 
-      service.findLastViewDate(enquiry.id.get, profile.usercode).successMap { clientLastRead =>
+      val getClientLastRead: Future[ServiceResult[Option[OffsetDateTime]]] =
+        profile.map { p => service.findLastViewDate(enquiry.id.get, p.usercode) }
+          .getOrElse(Future.successful(Right(None)))
+
+      getClientLastRead.successMap { clientLastRead =>
         Ok(views.html.admin.enquiry.messages(
           render.enquiry,
           profile,

@@ -3,12 +3,13 @@
 
 @import domain.dao.CaseDao.Case
 @import domain.{SitsProfile, Team}
+@import warwick.sso.UniversityID
 
 @(
   team: Team,
   openCases: Seq[(Case, OffsetDateTime)],
   closedCases: Int,
-  clients: Map[UUID, Set[SitsProfile]]
+  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
 )(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
 @b3.vertical.formCSRF(routes.CaseSearchController.search(), 'class -> "case-search") { implicit ifc =>

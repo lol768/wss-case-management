@@ -289,7 +289,9 @@ class NotificationServiceImpl @Inject()(
   private def withUser(universityID: UniversityID)(f: User => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     profileService.getProfile(universityID).map(_.value).flatMap(_.fold(
       errors => Future.successful(Left(errors)),
-      profile => f(profile.asUser)
+      profile => profile.map(p => f(p.asUser)).getOrElse(
+        Future.successful(Left(List(ServiceError(s"Cannot find user with university ID ${universityID.string}"))))
+      )
     ))
   }
 

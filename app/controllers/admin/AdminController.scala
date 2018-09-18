@@ -30,7 +30,7 @@ class AdminController @Inject()(
   def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     findEnquiriesAndCases { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, clients) => {
      profileService.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
-        val resolvedClients = clients.mapValues(_.flatMap(c => profiles.get(c)))
+        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
         Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, resolvedClients))
       })
     }}
@@ -63,7 +63,7 @@ class AdminController @Inject()(
       val clients = enquiries.map { case (e, _) => e.id.get -> Set(e.universityID) }.toMap
 
       profileService.getProfiles(clients.values.flatten.toSet).successMap { profiles =>
-        val resolvedClients = clients.mapValues(_.flatMap(c => profiles.get(c)))
+        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
         Ok(views.html.admin.teamClosedEnquiries(teamRequest.team, enquiries, resolvedClients))
       }
     }
@@ -73,7 +73,7 @@ class AdminController @Inject()(
     cases.listClosedCases(teamRequest.team).successFlatMap { closedCases =>
       cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successFlatMap { clients =>
         profileService.getProfiles(clients.values.flatten.toSet).successMap { profiles =>
-          val resolvedClients = clients.mapValues(_.flatMap(c => profiles.get(c)))
+          val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
           Ok(views.html.admin.teamClosedCases(teamRequest.team, closedCases, resolvedClients))
         }
       }

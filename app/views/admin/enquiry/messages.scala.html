@@ -7,7 +7,7 @@
 
 @(
   enquiry: Enquiry,
-  client: SitsProfile,
+  client: Option[SitsProfile],
   messages: Seq[(MessageData, Seq[UploadedFile])],
   owners: Seq[User],
   clientLastRead: Option[OffsetDateTime],
@@ -32,22 +32,24 @@
           }
         </div>
 
-        @client.fullName,
-        @client.universityID.string,
-        @client.userType match {
-          case UserType.Student => {
-            @client.yearOfStudy.map(_.level) match {
-              case Some("1") => {First year}
-              case Some("2") => {Second year}
-              case Some("3") => {Third year}
-              case Some("4") => {Fourth year}
-              case Some(level) => {@{level}th year}
-              case _ => {}
+        @client.map { client =>
+          @client.fullName,
+          @client.universityID.string,
+          @client.userType match {
+            case UserType.Student => {
+              @client.yearOfStudy.map(_.level) match {
+                case Some("1") => {First year}
+                case Some("2") => {Second year}
+                case Some("3") => {Third year}
+                case Some("4") => {Fourth year}
+                case Some(level) => {@{level}th year}
+                case _ => {}
+              }
+              @client.group student, @client.department.name
             }
-            @client.group student, @client.department.name
+            case _ => {@client.userType, @client.department.name}
           }
-          case _ => {@client.userType, @client.department.name}
-        }
+        }.getOrElse(enquiry.universityID.string)
       </h5>
       <h5>
         @if(enquiry.state == IssueState.Closed) {
@@ -180,7 +182,7 @@
               enquiry,
               message,
               file,
-              client.fullName,
+              client.map(_.fullName).getOrElse(enquiry.universityID.string),
               message.teamMember
                 .flatMap { usercode =>
                   userLookup.get(usercode)

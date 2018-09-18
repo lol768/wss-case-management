@@ -2,9 +2,11 @@
 @import domain._
 @import domain.dao.CaseDao.Case
 @import services.CaseService
+@import warwick.sso.UniversityID
 
 @(
-  profile: SitsProfile,
+  universityID: UniversityID,
+  profile: Option[SitsProfile],
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
   enquiries: Seq[EnquiryRender],
@@ -41,7 +43,7 @@
 }
 
 @main("Client profile") {
-  <h2>@profile.fullName</h2>
+  <h2>@profile.map(_.fullName).getOrElse(universityID.string)</h2>
 
   @if(form.hasErrors) {
     <div class="alert alert-danger">
@@ -53,79 +55,81 @@
     </div>
   }
 
-  <div class="row">
-    @profile.photo.map { photo =>
-      <div class="col-md-4 col-lg-3">
-        <div class="photo">
-          <img src="@photo" class="img-thumbnail img-circle">
+  @profile.map { profile =>
+    <div class="row">
+      @profile.photo.map { photo =>
+        <div class="col-md-4 col-lg-3">
+          <div class="photo">
+            <img src="@photo" class="img-thumbnail img-circle">
+          </div>
         </div>
-      </div>
-    }
-    <div class="col-md-8">
-      @profile.userType match {
-        case UserType.Student => {
-          <p>
-            @profile.yearOfStudy.map(_.level) match {
-              case Some("1") => {
-                First year
-              }
-              case Some("2") => {
-                Second year
-              }
-              case Some("3") => {
-                Third year
-              }
-              case Some("4") => {
-                Fourth year
-              }
-              case Some(level) => {
-                @{level}th year
-              }
-              case _ => {}
-            }
-            @profile.group student, @profile.department.name
-          </p>
-        }
-        case _ => {
-          <p>@profile.userType, @profile.department.name</p>
-        }
       }
-      <p>DoB @JavaTime.dateFullNoDayFormatter.format(profile.dateOfBirth)</p>
-      <p>@profile.disability.map(_.description).getOrElse("No disabilities")</p>
-      @profile.nationality.map { n =>
-        <p>@n</p>
-      }
-      @profile.tier4VisaRequired.map { required =>
-        @if(required) {
-          <p>Tier 4 visa required</p>
-        } else {
-          <p>No Tier 4 visa required</p>
+      <div class="col-md-8">
+        @profile.userType match {
+          case UserType.Student => {
+            <p>
+              @profile.yearOfStudy.map(_.level) match {
+                case Some("1") => {
+                  First year
+                }
+                case Some("2") => {
+                  Second year
+                }
+                case Some("3") => {
+                  Third year
+                }
+                case Some("4") => {
+                  Fourth year
+                }
+                case Some(level) => {
+                  @{level}th year
+                }
+                case _ => {}
+              }
+              @profile.group student, @profile.department.name
+            </p>
+          }
+          case _ => {
+            <p>@profile.userType, @profile.department.name</p>
+          }
         }
-      }
+        <p>DoB @JavaTime.dateFullNoDayFormatter.format(profile.dateOfBirth)</p>
+        <p>@profile.disability.map(_.description).getOrElse("No disabilities")</p>
+        @profile.nationality.map { n =>
+          <p>@n</p>
+        }
+        @profile.tier4VisaRequired.map { required =>
+          @if(required) {
+            <p>Tier 4 visa required</p>
+          } else {
+            <p>No Tier 4 visa required</p>
+          }
+        }
 
-      @if(inMentalHealthTeam && clientSummary.exists(_.data.highMentalHealthRisk.contains(true))) {
-        <p><span class="label label-danger">High mental health risk</span></p>
-      }
-      @clientSummary.flatMap(_.data.riskStatus).map {
-        case ClientRiskStatus.Low => {
-          <p><span class="label label-success">Low risk status</span></p>
+        @if(inMentalHealthTeam && clientSummary.exists(_.data.highMentalHealthRisk.contains(true))) {
+          <p><span class="label label-danger">High mental health risk</span></p>
         }
-        case ClientRiskStatus.Medium => {
-          <p><span class="label label-warning">Medium risk status</span></p>
+        @clientSummary.flatMap(_.data.riskStatus).map {
+          case ClientRiskStatus.Low => {
+            <p><span class="label label-success">Low risk status</span></p>
+          }
+          case ClientRiskStatus.Medium => {
+            <p><span class="label label-warning">Medium risk status</span></p>
+          }
+          case ClientRiskStatus.High => {
+            <p><span class="label label-danger">High risk status</span></p>
+          }
         }
-        case ClientRiskStatus.High => {
-          <p><span class="label label-danger">High risk status</span></p>
-        }
-      }
+      </div>
     </div>
-  </div>
+  }
 
   <h2>Registration</h2>
 
   <section class="indent">
 
     @registration.map { registration =>
-      <dl class="dl-horizontal field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(profile.universityID)">
+      <dl class="dl-horizontal field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(universityID)">
         <dt>Registered</dt>
         <dd>@helpers.JavaTime.Relative(registration.updatedDate)</dd>
         <dt data-field-history="gp">GP</dt>
@@ -143,7 +147,7 @@
       </dl>
     }.getOrElse {
       <em>Client is not currently registered</em>
-      @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(profile.universityID)) { implicit ifc =>
+      @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(universityID)) { implicit ifc =>
         @b3.submit('class -> "btn btn-default") {
           Invite to register
         }
@@ -230,7 +234,7 @@
       </div>
     }
 
-    <p><a class="btn btn-default" href="@controllers.admin.routes.CaseController.createSelectTeam(client = Some(profile.universityID))">Create a case</a></p>
+    <p><a class="btn btn-default" href="@controllers.admin.routes.CaseController.createSelectTeam(client = Some(universityID))">Create a case</a></p>
 
     @if(enquiries.isEmpty) {
       <p>No open or closed enquiries</p>
@@ -309,7 +313,7 @@
       </div>
     }
 
-    @b3.vertical.formCSRF(controllers.admin.routes.ClientController.updateSummary(profile.universityID)) { implicit ifc =>
+    @b3.vertical.formCSRF(controllers.admin.routes.ClientController.updateSummary(universityID)) { implicit ifc =>
       <div class="row">
         <div class="col-sm-6">
           @b3.textarea(form("notes"),
