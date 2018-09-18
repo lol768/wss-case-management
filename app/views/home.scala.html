@@ -44,11 +44,7 @@
                   <i class="fas fa-fw fa-angle-down"></i>
                   <i class="fas fa-fw fa-angle-up"></i>
                 </div>
-                @if(e.enquiry.state != IssueState.Closed) {
-                  <i class="fal fa-fw fa-comment-dots"></i>
-                } else {
-                  <i class="fal fa-fw fa-comment-check"></i>
-                }
+                @tags.icons.enquiryState(e.enquiry.state)
                 @e.enquiry.subject
               </a>
             </h4>
@@ -72,9 +68,7 @@
                       @* Styling TBC *@
                       <input type="file" name="file" class="form-control" multiple>
 
-                      <button type="submit" class="btn btn-link">
-                        <i class="fal fa-paper-plane fa-2x"></i>
-                      </button>
+                      @tags.messages.sendButton()
                     </div>
                   </div>
                   <div class="alert alert-danger hidden"></div>

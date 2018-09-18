@@ -19,11 +19,7 @@
         @JavaTime.Relative(messages.last._1.created, printToday = true)
       }
     </div>
-    @if(enquiry.state != IssueState.Closed) {
-      <i class="fal fa-fw fa-comment-dots"></i>
-    } else {
-      <i class="fal fa-fw fa-comment-check"></i>
-    }
+    @tags.icons.enquiryState(enquiry.state)
     @enquiry.subject
   </h2>
   <div class="enquiry enquiry--client panel panel-default">
@@ -42,9 +38,7 @@
               @* Styling TBC *@
               <input type="file" name="file" class="form-control" multiple>
 
-              <button type="submit" class="btn btn-link">
-                <i class="fal fa-paper-plane fa-2x"></i>
-              </button>
+              @tags.messages.sendButton()
             </div>
             @if(f("text").hasErrors) {
               <div class="help-block">

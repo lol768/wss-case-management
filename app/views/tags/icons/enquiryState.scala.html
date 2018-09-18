@@ -1,0 +1,7 @@
+@import domain.IssueState
+@(state: domain.IssueState)
+@if(state == IssueState.Closed) {
+  @tags.icons.enquiryClosed()
+} else {
+  @tags.icons.enquiryOpen()
+}
