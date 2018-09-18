@@ -1,5 +1,5 @@
 @import controllers.RequestContext
-@import domain.{Route, SitsDepartment, SitsProfile, UserType}
+@import domain.{Route, SitsDepartment, SitsProfile, UserType, Team, Teams}
 @import play.api.data.Form
 @import play.api.data.Forms._
 @import warwick.sso.Usercode
@@ -60,6 +60,31 @@
         <h3><i class="fal fa-vial"></i> Test data</h3>
 
         <p>The following users are available for masquerading in the test system:</p>
+
+        <h4>Wellbeing Services team members</h4>
+
+        <ul>
+          @defining(Seq(
+            Teams.Counselling -> "wss-dev-counselling-member",
+            Teams.Disability -> "wss-dev-disability-member",
+            Teams.MentalHealth -> "wss-dev-mentalhealth-member",
+            Teams.StudentSupport -> "wss-dev-studentsupport-member",
+          )) { wss =>
+            @wss.map { case (team, usercode) =>
+              <li>
+                @b3.inline.formCSRF(warwick.sso.routes.MasqueradeController.masquerade(), 'class -> "inline-form") { implicit ifc =>
+                  <input type="hidden" name="usercode" value="@usercode">
+                  <button type="submit" class="btn btn-default btn-sm">
+                    <i class="fal fa-fw fa-user-secret"></i>
+                    Mask
+                  </button>
+                }
+
+                @team.name team member
+              </li>
+            }
+          }
+        </ul>
 
         @testUsers.map { case (department, deptProfiles) =>
           <h4>@department.name</h4>
