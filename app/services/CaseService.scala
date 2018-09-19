@@ -50,6 +50,7 @@ trait CaseService {
   def listClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
   def countClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def listClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
+  def countClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def countOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def countClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
@@ -336,6 +337,11 @@ class CaseServiceImpl @Inject() (
         .map(_.map { case (c, messageLastUpdated, noteLastUpdated) =>
           (c, Seq(Option(c.version), messageLastUpdated, noteLastUpdated).flatten.max)
         })
+    ).map(Right.apply)
+
+  override def countClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(
+      dao.listQuery(None, Some(owner), IssueStateFilter.Closed).length.result
     ).map(Right.apply)
 
   override def countOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]] =

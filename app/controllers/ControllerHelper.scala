@@ -27,10 +27,23 @@ trait ControllerHelper extends Results with Logging {
         result.fold(showErrors, fn)
       }
 
+    def successMapTo[B](fn: A => B)(implicit ec: ExecutionContext): Future[ServiceResult[B]] =
+      future.map { result =>
+        result.fold(Left.apply, a => Right(fn(a)))
+      }
+
     def successFlatMap(fn: A => Future[Result])(implicit r: RequestHeader, ec: ExecutionContext): Future[Result] =
       future.flatMap { result =>
         result.fold(
           e => Future.successful(showErrors(e)),
+          fn
+        )
+      }
+
+    def successFlatMapTo[B](fn: A => Future[ServiceResult[B]])(implicit ec: ExecutionContext): Future[ServiceResult[B]] =
+      future.flatMap { result =>
+        result.fold(
+          e => Future.successful(Left(e)),
           fn
         )
       }

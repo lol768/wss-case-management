@@ -1,10 +1,9 @@
 @import java.util.UUID
 
-@import domain.{Enquiry, MessageData, SitsProfile, Team}
+@import domain.{Enquiry, MessageData, SitsProfile}
 @import warwick.sso.UniversityID
 
 @(
-  team: Team,
   enquiries: Seq[(Enquiry, MessageData)],
   clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
 )(implicit context: RequestContext)

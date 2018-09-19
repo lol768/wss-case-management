@@ -1,12 +1,11 @@
 @import java.time.OffsetDateTime
 @import java.util.UUID
 
+@import domain.SitsProfile
 @import domain.dao.CaseDao.Case
-@import domain.{SitsProfile, Team}
 @import warwick.sso.UniversityID
 
 @(
-  team: Team,
   cases: Seq[(Case, OffsetDateTime)],
   clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
 )(implicit context: RequestContext)

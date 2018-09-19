@@ -1,6 +1,7 @@
 @(
   title: String = "",
-  icon: Html = null
+  icon: Html = null,
+  hidePageTitle: Boolean = false
 )(content: Html)(implicit context: RequestContext)
 
 <!DOCTYPE html>
@@ -118,7 +119,7 @@
             </svg>
           </div>
           @if(!title.isEmpty) {
-            <div class="id7-page-title">
+            <div class="id7-page-title @if(hidePageTitle) { hidden }">
               <h1>
                 @if(icon != null) {
                   @icon

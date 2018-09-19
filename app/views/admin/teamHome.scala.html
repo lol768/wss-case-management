@@ -33,16 +33,16 @@
 
   <div class="tab-content">
     <div role="tabpanel" class="tab-pane active" id="enquiries">
-      @views.html.admin.teamEnquiries(team, enquiriesRequiringAction, enquiriesAwaitingClient, closedEnquiries, clients)
+      @views.html.admin.enquiriesTab(enquiriesRequiringAction, enquiriesAwaitingClient, closedEnquiries, clients, controllers.admin.routes.AdminController.closedEnquiries(team.id))
     </div>
     <div role="tabpanel" class="tab-pane" id="cases">
-      @views.html.admin.teamCases(team, openCases, closedCases, clients)
+      @views.html.admin.casesTab(openCases, closedCases, clients, controllers.admin.routes.CaseController.createForm(team.id), controllers.admin.routes.AdminController.closedCases(team.id))
     </div>
     <div role="tabpanel" class="tab-pane" id="clients">
-      @views.html.admin.teamClients(team)
+      @views.html.admin.clientsTab()
     </div>
     <div role="tabpanel" class="tab-pane" id="appointments">
-      @views.html.admin.teamAppointments(team)
+      @views.html.admin.appointmentsTab()
     </div>
   </div>
 }

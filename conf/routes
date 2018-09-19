@@ -25,6 +25,8 @@ POST        /service/enquirysearch                  @controllers.EnquirySearchCo
 POST        /service/enquirysearch/:enquiryKey      @controllers.EnquirySearchController.lookup(enquiryKey: domain.IssueKey)
 
 GET         /                                       @controllers.IndexController.home
+GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries
+GET         /closed-cases                           @controllers.IndexController.closedCases
 
 ## Clients ##
 
