@@ -81,7 +81,8 @@ class CaseServiceTest extends AbstractDaoTest {
         clientCase.id.get,
         CaseDocumentSave(CaseDocumentType.SpecificLearningDifficultyDocument, Usercode("cuscav")),
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav")),
+        CaseNoteSave("I hate herons", Usercode("cuscav"))
       ).serviceValue
 
       val fullyJoined = service.findFull(clientCase.key.get).serviceValue
@@ -219,7 +220,8 @@ class CaseServiceTest extends AbstractDaoTest {
         c.id.get,
         CaseDocumentSave(CaseDocumentType.SpecificLearningDifficultyDocument, Usercode("cuscav")),
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav")),
+        CaseNoteSave("I hate herons", Usercode("cuscav"))
       ).serviceValue
       saved.documentType mustBe CaseDocumentType.SpecificLearningDifficultyDocument
       saved.file.fileName mustBe "problem.txt"
