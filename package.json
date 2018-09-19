@@ -43,7 +43,7 @@
   "dependencies": {
     "bootstrap-3-typeahead": "github:UniversityofWarwick/Bootstrap-3-Typeahead#7214ee2a9d2cf82731ff7ad8d398afb4bcd91b8b",
     "core-js": "^2.4.0",
-    "id7": "github:UniversityofWarwick/id7#fa5-alpha5",
+    "id7": "github:UniversityofWarwick/id7#fa5-alpha6",
     "isomorphic-fetch": "^2.2.1",
     "jquery": "^3.3.1",
     "lodash-es": "^4.17.10",
