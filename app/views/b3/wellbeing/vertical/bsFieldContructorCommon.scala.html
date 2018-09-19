@@ -1,0 +1,22 @@
+@(fieldInfo: b3.B3FieldInfo, inputHtml: Html)(wrap: Html => Html)
+<div class="form-group @fieldInfo.argsMap.get('_class) @fieldInfo.statusWithFeedback" id="@fieldInfo.idFormField">
+    @wrap {
+        @defining(fieldInfo.argsMap.get('helpOnTop).map(_.toString).contains("true")) { helpOnTop =>
+            @if(helpOnTop) {
+                @fieldInfo.infos.map { case (id, text) =>
+                    <span id="@id" class="help-block">@text</span>
+                }
+            }
+            @inputHtml
+            @if(helpOnTop) {
+                @fieldInfo.errors.map { case (id, text) =>
+                    <span id="@id" class="help-block">@text</span>
+                }
+            } else {
+                @fieldInfo.errorsAndInfos.map { case (id, text) =>
+                    <span id="@id" class="help-block">@text</span>
+                }
+            }
+        }
+    }
+</div>
