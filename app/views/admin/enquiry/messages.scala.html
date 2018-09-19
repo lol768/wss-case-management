@@ -14,6 +14,7 @@
   userLookup: Map[Usercode, User],
   stateChangeForm: Form[OffsetDateTime],
   messageForm: Form[String],
+  canViewEnquiryTeam: Boolean
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
@@ -212,11 +213,13 @@
               </a>
             </p>
 
-            <p>
-              <a class="btn btn-default btn-block" href="@controllers.admin.routes.AdminController.teamHome(enquiry.team.id)">
-                Return to enquiries list
-              </a>
-            </p>
+            @if(canViewEnquiryTeam) {
+              <p>
+                <a class="btn btn-default btn-block" href="@controllers.admin.routes.AdminController.teamHome(enquiry.team.id)">
+                  Return to enquiries list
+                </a>
+              </p>
+            }
           </div>
         </div>
       </div>
