@@ -366,7 +366,7 @@ class CaseController @Inject()(
         Ok(views.html.admin.cases.link(caseRequest.`case`, formWithErrors))
       ),
       data => cases.find(data.targetKey).successFlatMap { targetCase =>
-        val caseNote = CaseNoteSave(s"${caseKey.string} (${caseRequest.`case`.subject}) ${data.linkType.outwardDescription} ${targetCase.key.get.string} (${targetCase.subject})\n\n${data.message}", caseRequest.context.user.get.usercode)
+        val caseNote = CaseNoteSave(views.txt.notes.caselink(caseRequest.`case`, targetCase, data.linkType.outwardDescription, data.message).toString, caseRequest.context.user.get.usercode)
 
         cases.addLink(data.linkType, caseRequest.`case`.id.get, targetCase.id.get, caseNote).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
