@@ -154,6 +154,11 @@ case class MessageData (
   team: Option[Team]
 )
 
+case class MessageRender(
+  message: MessageData,
+  files: Seq[UploadedFile]
+)
+
 object MessageData {
   def tupled = (apply _).tupled
 
