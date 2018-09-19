@@ -1,8 +1,26 @@
+@*
+
+Custom field constructor for vertical forms
+
+Features:
+    'colClass -> "col-md-6" will apply a column width to the input element only,
+        by wrapping it in a row.
+
+*@
 @(fieldInfo: b3.B3FieldInfo, inputHtml: Html)(implicit fc: b3.B3FieldConstructor, msgsProv: MessagesProvider)
 @b3.wellbeing.vertical.bsFieldContructorCommon(fieldInfo, inputHtml) { content =>
     @fieldInfo.labelOpt.map { label =>
         <label class="control-label@if(fieldInfo.hideLabel) { sr-only}" @if(fieldInfo.withLabelFor) {
             for="@fieldInfo.id"}>@bs.Args.msg(label)(msgsProv)</label>
     }
-    @content
+    @* If 'colClass is specified, wrap in a row for widthiness *@
+    @fieldInfo.argsMap.get('colClass).map { clazz =>
+        <div class="row">
+            <div class="@clazz">
+                @content
+            </div>
+        </div>
+    }.getOrElse {
+        @content
+    }
 }

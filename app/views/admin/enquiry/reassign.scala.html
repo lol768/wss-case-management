@@ -7,26 +7,21 @@
   form: Form[ReassignEnquiryData]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@implicitFieldConstructor = @{ views.b3.wellbeing.vertical.fieldConstructor() }
-
 @main("Reassign enquiry") {
-  @b3.formCSRF(controllers.admin.routes.TeamEnquiryController.reassign(enquiry.key.get)) {
+  @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.reassign(enquiry.key.get)) { implicit fc =>
     @b3.validatedHidden(form, "version")
 
     @b3.radio(form("team"),
       options = Teams.all.map { t => t.id -> t.name }
     )
 
-    <div class="row">
-      <div class="col-md-6">
-        @b3.textarea(form("message"),
-          'rows -> 5,
-          '_label -> "Reassignment note",
-          '_help -> "(why is this enquiry being assigned to a different team?)",
-          'helpOnTop -> true
-        )
-      </div>
-    </div>
+    @b3.textarea(form("message"),
+      'rows -> 5,
+      'colClass -> "col-md-6",
+      '_label -> "Reassignment note",
+      '_help -> "(why is this enquiry being assigned to a different team?)",
+      'helpOnTop -> true
+    )
 
     @tags.submitOrCancel("Reassign", controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get))
   }

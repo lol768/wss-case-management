@@ -7,7 +7,7 @@
 
 @main("Register for Wellbeing Support Services") {
 
-  @b3.vertical.formCSRF(controllers.registration.routes.RegisterController.submit()) { implicit ifc =>
+  @views.b3.wellbeing.vertical.formCSRF(controllers.registration.routes.RegisterController.submit()) { implicit fc =>
 
     @if(form.hasErrors) {
       <div class="alert alert-danger">
@@ -20,10 +20,12 @@
     }
 
     @b3.text(form("gp"),
+      'colClass -> "col-md-6",
       '_label -> "Confirm the name of your GP/Doctor"
     )
 
     @b3.text(form("tutor"),
+      'colClass -> "col-md-6",
       '_label -> "Confirm the name of your Personal Tutor/Supervisor"
     )
 
@@ -44,6 +46,7 @@
     )
 
     @b3.textarea(form("appointment-adjustments"),
+      'colClass -> "col-md-6",
       '_label -> "Please give details of any reasonable adjustments required for an appointment (please leave blank if not relevant)",
       'rows -> 3
     )
@@ -58,10 +61,10 @@
 
     @b3.free() {
       <p><a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Privacy statement</a></p>
-      @b3.checkbox(form("consent-privacy-statement"), '_text -> "I have read the privacy statement and agree to my data being used")
+      @b3.checkbox(form("consent-privacy-statement"), '_text -> "I have read the privacy statement and understand how the information I provide will be used.")
     }
 
-    @tags.submitOrCancel(existing.map(_ => "Update").getOrElse("Submit"), controllers.routes.IndexController.home())
+    @tags.submitOrCancel(existing.map(_ => "Update").getOrElse("Register"), controllers.routes.IndexController.home())
 
   }
 
