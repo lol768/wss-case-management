@@ -14,13 +14,15 @@
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @renderClientInformation(enquiries: Seq[EnquiryRender], registration: Option[Registration]) = {
-  @registration.map { r =>
-    <div class="pull-right">
-      <a href="@controllers.registration.routes.RegisterController.form()" class="btn btn-default">
+  <div class="pull-right">
+    <a href="@controllers.registration.routes.RegisterController.form()" class="btn btn-default">
+      @if(registration.isDefined) {
         View and update registration
-      </a>
-    </div>
-  }
+      } else {
+        Register
+      }
+    </a>
+  </div>
 
   <p>If you have a question or would like to arrange to speak to somebody about an issue:</p>
   <a class="btn btn-primary" href="@controllers.enquiries.routes.EnquiryController.form()">
