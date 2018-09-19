@@ -1,18 +1,17 @@
 @import java.time.OffsetDateTime
 
-@import controllers.admin.TeamEnquiryController.ReassignEnquiryData
-@import domain.{Enquiry, IssueState, MessageData, MessageSender, SitsProfile, Teams, UploadedFile, UserType}
+@import domain.{Enquiry, EnquiryNote, EnquiryNoteType, IssueState, MessageRender, MessageSender, SitsProfile, UserType}
 @import helpers.JavaTime
 @import warwick.sso.{User, Usercode}
 
 @(
   enquiry: Enquiry,
   client: Option[SitsProfile],
-  messages: Seq[(MessageData, Seq[UploadedFile])],
+  messages: Seq[MessageRender],
+  notes: Seq[EnquiryNote],
   owners: Seq[User],
   clientLastRead: Option[OffsetDateTime],
   userLookup: Map[Usercode, User],
-  reassignForm: Form[ReassignEnquiryData],
   stateChangeForm: Form[OffsetDateTime],
   messageForm: Form[String],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
@@ -25,10 +24,10 @@
     <div class="enquiry-details--header">
       <h5>
         <div class="pull-right">
-          @if(enquiry.version.isAfter(messages.last._1.created)) {
+          @if(enquiry.version.isAfter(messages.last.message.created)) {
             @JavaTime.Relative(enquiry.version)
           } else {
-            @JavaTime.Relative(messages.last._1.created)
+            @JavaTime.Relative(messages.last.message.created)
           }
         </div>
 
@@ -56,7 +55,7 @@
           Closed
         } else {
           Open,
-          @if(messages.last._1.sender == MessageSender.Client) {
+          @if(messages.last.message.sender == MessageSender.Client) {
             requires action
           } else {
             waiting for client
@@ -67,19 +66,62 @@
 
     <div class="enquiry-details--actions row">
       <div class="col-sm-6 col-md-4">
-        @b3.horizontal.formCSRF(controllers.admin.routes.TeamEnquiryController.reassign(enquiry.key.get), "col-sm-4", "col-sm-8") { implicit ifc =>
-          @b3.validatedHidden(reassignForm, "version")
+        <div class="row form-horizontal">
+          <div class="col-sm-4 control-label">
+            Team
+          </div>
+          <div class="col-sm-8">
+            <div class="form-control-static">
+              <div>@enquiry.team.name</div>
 
-          @b3.select(reassignForm("team"),
-            options = Teams.all.map { t => t.id -> t.name },
-            'class -> "change-submit",
-            '_label -> "Team"
-          )
+              @defining(notes.filter(_.noteType == EnquiryNoteType.Referral)) { referralNotes =>
+                @if(referralNotes.nonEmpty) {
+                  <div>
+                    <a role="button" href="#referral-notes-modal" data-toggle="modal" data-target="#referral-notes-modal">
+                      View @tags.p(referralNotes.size, "team assignment note")()
+                    </a>
+                  </div>
 
-          @b3.free('_class -> "hidden", Symbol("aria-hidden") -> "true") {
-            <button type="submit" class="btn btn-primary">Reassign</button>
-          }
-        }
+                  <div class="modal fade" id="referral-notes-modal" tabindex="-1" role="dialog" aria-labelledby="referral-notes-modal-label">
+                    <div class="modal-dialog modal-lg" role="document">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                          <h4 class="modal-title" id="referral-notes-modal-label">Team reassignment notes</h4>
+                        </div>
+                        <div class="modal-body">
+                          @referralNotes.map { note =>
+                            <div class="panel panel-default">
+                              <div class="panel-heading">
+                                <h3 class="panel-title clearfix">
+                                  <span class="date pull-right">
+                                    @helpers.JavaTime.Relative(note.created)
+                                    @if(note.lastUpdated != note.created) {
+                                      (last updated @helpers.JavaTime.Relative(note.lastUpdated))
+                                    }
+                                  </span>
+                                </h3>
+                              </div>
+                              <div class="panel-body">
+                                @views.utils.nl2br(note.text)
+                              </div>
+                              <div class="panel-footer">
+                                <div class="author">@userLookup.get(note.teamMember).flatMap(_.name.full).getOrElse(s"[unknown user ${note.teamMember.string}]")</div>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                        <div class="modal-footer spaced-buttons">
+                          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        </div>
 
         <div class="row form-horizontal">
           <div class="col-sm-4 control-label">
@@ -165,6 +207,12 @@
             </p>
 
             <p>
+              <a class="btn btn-default btn-block" href="@controllers.admin.routes.TeamEnquiryController.reassignForm(enquiry.key.get)">
+                Assign to a different team
+              </a>
+            </p>
+
+            <p>
               <a class="btn btn-default btn-block" href="@controllers.admin.routes.AdminController.teamHome(enquiry.team.id)">
                 Return to enquiries list
               </a>
@@ -177,21 +225,21 @@
     <div class="enquiry-details--messages">
       <div class="enquiry enquiry--team panel">
         <div class="panel-body">
-          @messages.map { case (message, file) =>
+          @messages.map { render =>
             @views.html.enquiry.enquiryMessage(
               enquiry,
-              message,
-              file,
+              render.message,
+              render.files,
               client.map(_.fullName).getOrElse(enquiry.universityID.string),
-              message.teamMember
+              render.message.teamMember
                 .flatMap { usercode =>
                   userLookup.get(usercode)
                     .filter(_.isFound)
                     .flatMap(_.name.full)
-                    .map { name => s"$name, ${message.team.getOrElse(enquiry.team).name} team" }
-                }.getOrElse(s"${message.team.getOrElse(enquiry.team).name} team"),
+                    .map { name => s"$name, ${render.message.team.getOrElse(enquiry.team).name} team" }
+                }.getOrElse(s"${render.message.team.getOrElse(enquiry.team).name} team"),
               f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key.get, f.id),
-              clientLastRead.filter(_ => message.sender == MessageSender.Team).map(_.isAfter(message.created))
+              clientLastRead.filter(_ => render.message.sender == MessageSender.Team).map(_.isAfter(render.message.created))
             )
           }
         </div>

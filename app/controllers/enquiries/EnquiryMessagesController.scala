@@ -107,7 +107,7 @@ class EnquiryMessagesController @Inject()(
 
   def download(enquiryKey: IssueKey, fileId: UUID): Action[AnyContent] = CanClientViewEnquiryAction(enquiryKey).async { implicit request =>
     service.getForRender(request.enquiry.id.get).successFlatMap { render =>
-      render.messages.flatMap { case (_, f) => f }.find(_.id == fileId)
+      render.messages.flatMap(_.files).find(_.id == fileId)
         .map(uploadedFileControllerHelper.serveFile)
         .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
     }

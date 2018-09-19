@@ -26,13 +26,15 @@ import scala.concurrent.{ExecutionContext, Future}
 object TeamEnquiryController {
   case class ReassignEnquiryData(
     team: Team,
-    version: OffsetDateTime
+    version: OffsetDateTime,
+    message: String
   )
 
   def reassignEnquiryForm(enquiry: Enquiry): Form[ReassignEnquiryData] = Form(
     mapping(
       "team" -> Teams.formField,
-      "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version)
+      "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version),
+      "message" -> nonEmptyText
     )(ReassignEnquiryData.apply)(ReassignEnquiryData.unapply)
   )
 
@@ -58,13 +60,13 @@ class TeamEnquiryController @Inject()(
   import canEditEnquiryActionRefiner._
   import canViewEnquiryActionRefiner._
 
-  private def renderMessages(enquiry: Enquiry, reassignForm: Form[ReassignEnquiryData], stateChangeForm: Form[OffsetDateTime], messageForm: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
+  private def renderMessages(enquiry: Enquiry, stateChangeForm: Form[OffsetDateTime], messageForm: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
     ServiceResults.zip(
       service.getForRender(enquiry.id.get),
       profiles.getProfile(enquiry.universityID).map(_.value),
       service.getOwners(Set(enquiry.id.get)),
     ).successFlatMap { case (render, profile, ownersMap) =>
-      val allUsers = render.messages.flatMap { case (m, _) => m.teamMember }.toSet ++ ownersMap.values.flatten
+      val allUsers = render.messages.flatMap(_.message.teamMember).toSet ++ ownersMap.values.flatten ++ render.notes.map(_.teamMember).toSet
       val userLookup = userLookupService.getUsers(allUsers.toSeq).getOrElse(Map())
 
       val getClientLastRead: Future[ServiceResult[Option[OffsetDateTime]]] =
@@ -76,10 +78,10 @@ class TeamEnquiryController @Inject()(
           render.enquiry,
           profile,
           render.messages,
+          render.notes,
           ownersMap.values.flatten.flatMap(userLookup.get).toSeq.sortBy { u => (u.name.last, u.name.first) },
           clientLastRead,
           userLookup,
-          reassignForm,
           stateChangeForm,
           messageForm
         ))
@@ -90,7 +92,6 @@ class TeamEnquiryController @Inject()(
   def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
     renderMessages(
       request.enquiry,
-      reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version)),
       stateChangeForm(request.enquiry).fill(request.enquiry.version),
       messageForm
     )
@@ -113,7 +114,6 @@ class TeamEnquiryController @Inject()(
           case _ =>
             renderMessages(
               request.enquiry,
-              reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version)),
               stateChangeForm(request.enquiry).fill(request.enquiry.version),
               formWithErrors
             )
@@ -143,7 +143,7 @@ class TeamEnquiryController @Inject()(
 
   def download(enquiryKey: IssueKey, fileId: UUID): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
     service.getForRender(request.enquiry.id.get).successFlatMap { render =>
-      render.messages.flatMap { case (_, f) => f }.find(_.id == fileId)
+      render.messages.flatMap(_.files).find(_.id == fileId)
         .map(uploadedFileControllerHelper.serveFile)
         .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
     }
@@ -161,7 +161,6 @@ class TeamEnquiryController @Inject()(
     stateChangeForm(request.enquiry).bindFromRequest().fold(
       formWithErrors => renderMessages(
         request.enquiry,
-        reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version)),
         formWithErrors,
         messageForm
       ),
@@ -191,7 +190,7 @@ class TeamEnquiryController @Inject()(
     }
 
   def reassignForm(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey) { implicit request =>
-    Ok(views.html.admin.enquiry.reassign(request.enquiry, reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version))))
+    Ok(views.html.admin.enquiry.reassign(request.enquiry, reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version, ""))))
   }
 
   def reassign(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
@@ -205,11 +204,17 @@ class TeamEnquiryController @Inject()(
       data =>
         if (data.team == request.enquiry.team) // No change
           Future.successful(Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey)))
-        else
-          service.reassign(request.enquiry, data.team, data.version).successMap { _ =>
+        else {
+          val note = EnquiryNoteSave(
+            s"Reassigned from ${request.enquiry.team}\n\n${data.message}",
+            request.context.user.get.usercode
+          )
+
+          service.reassign(request.enquiry, data.team, note, data.version).successMap { _ =>
             Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
               .flashing("success" -> Messages("flash.enquiry.reassigned", data.team.name))
           }
+        }
     )
   }
 

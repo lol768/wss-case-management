@@ -14,8 +14,8 @@
   <tr>
     <td>
       @clients.get(enquiry.id.get).flatMap(_.headOption).map {
-        case Left(universityID) => {<li><a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a></li>}
-        case Right(p) => {<li><a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a></li>}
+        case Left(universityID) => {<a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a>}
+        case Right(p) => {<a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>}
       }
     </td>
     <td>

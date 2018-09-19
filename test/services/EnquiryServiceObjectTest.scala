@@ -18,24 +18,24 @@ class EnquiryServiceObjectTest extends PlaySpec {
   "lastModified" should {
 
     "always use enquiry if no messages" in {
-      lastModified(EnquiryRender(enquiryLastWeek, Nil)) mustBe enquiryLastWeek.version
+      lastModified(EnquiryRender(enquiryLastWeek, Nil, Nil)) mustBe enquiryLastWeek.version
     }
 
     "use enquiry date if newer" in {
-      lastModified(EnquiryRender(enquiryToday, Seq((messageLastWeek, Nil), (messageLastWeek, Nil)))) mustBe enquiryToday.version
+      lastModified(EnquiryRender(enquiryToday, Seq(MessageRender(messageLastWeek, Nil), MessageRender(messageLastWeek, Nil)), Nil)) mustBe enquiryToday.version
     }
 
     "use most recent message if newer" in {
-      lastModified(EnquiryRender(enquiryLastWeek, Seq((messageLastWeek, Nil), (messageTomorrow, Nil)))) mustBe messageTomorrow.created
+      lastModified(EnquiryRender(enquiryLastWeek, Seq(MessageRender(messageLastWeek, Nil), MessageRender(messageTomorrow, Nil)), Nil)) mustBe messageTomorrow.created
     }
 
   }
 
   "sortByRecent" should {
     "sort descending" in {
-      val item1 = EnquiryRender(enquiryLastWeek, Nil)
-      val item2 = EnquiryRender(enquiryToday, Seq((messageLastWeek, Nil)))
-      val item3 = EnquiryRender(enquiryLastWeek, Seq((messageLastWeek, Nil), (messageTomorrow, Nil)))
+      val item1 = EnquiryRender(enquiryLastWeek, Nil, Nil)
+      val item2 = EnquiryRender(enquiryToday, Seq(MessageRender(messageLastWeek, Nil)), Nil)
+      val item3 = EnquiryRender(enquiryLastWeek, Seq(MessageRender(messageLastWeek, Nil), MessageRender(messageTomorrow, Nil)), Nil)
 
       sortByRecent(Seq(
         item3, item1, item2

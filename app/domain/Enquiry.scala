@@ -179,12 +179,20 @@ object Enquiry extends Versioning {
     def idx = index("idx_enquiry_note_version", (id, version))
   }
 
+  val enquiryNotes: VersionedTableQuery[StoredEnquiryNote, StoredEnquiryNoteVersion, EnquiryNotes, EnquiryNoteVersions] =
+    VersionedTableQuery(TableQuery[EnquiryNotes], TableQuery[EnquiryNoteVersions])
+
   implicit class EnquiryExtensions[C[_]](q: Query[Enquiries, Enquiry, C]) {
     def withMessages = q
       .joinLeft(Message.messages.table.withUploadedFiles)
       .on { case (e, (m, _)) =>
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
+    def withMessagesAndNotes =
+      withMessages
+        .joinLeft(enquiryNotes.table)
+        .on { case ((e, _), n) => e.id === n.enquiryID }
+        .map { case ((e, m), n) => (e, m, n) }
   }
 
   case class EnquirySearchQuery(

@@ -36,10 +36,10 @@
             <h4 class="panel-title">
                 <a class="@if(enquiries.head.enquiry != e.enquiry){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@e.enquiry.key.get.string" aria-expanded="true" aria-controls="collapse-@e.enquiry.key.get.string">
                 <div class="pull-right">
-                  @if(e.enquiry.version.isAfter(e.messages.last._1.created)) {
+                  @if(e.enquiry.version.isAfter(e.messages.last.message.created)) {
                     @JavaTime.Relative(e.enquiry.version)
                   } else {
-                    @JavaTime.Relative(e.messages.last._1.created)
+                    @JavaTime.Relative(e.messages.last.message.created)
                   }
                   <i class="fas fa-fw fa-angle-down"></i>
                   <i class="fas fa-fw fa-angle-up"></i>
@@ -52,8 +52,8 @@
 
           <div id="collapse-@e.enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head.enquiry == e.enquiry){in}" role="tabpanel" aria-labelledby="heading-@e.enquiry.key.get.string" data-ping="@controllers.enquiries.routes.EnquiryMessagesController.auditView(e.enquiry.key.get)">
             <div class="panel-body">
-              @e.messages.map { case (message, file) =>
-                @views.html.enquiry.enquiryMessage(e.enquiry, message, file, clientName = "You", s"${message.team.getOrElse(e.enquiry.team).name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(e.enquiry.key.get, f.id))
+              @e.messages.map { render =>
+                @views.html.enquiry.enquiryMessage(e.enquiry, render.message, render.files, clientName = "You", s"${render.message.team.getOrElse(e.enquiry.team).name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(e.enquiry.key.get, f.id))
               }
             </div>
               <div class="panel-footer">

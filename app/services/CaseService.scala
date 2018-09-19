@@ -424,7 +424,7 @@ object CaseService {
     val casesAndNotes =
       OneToMany.leftJoin(tuples.map { case (c, _, n) => (c, n.map(_.asCaseNote)) })(CaseNote.dateOrdering).toMap
 
-    sortByRecent(casesAndMessages.map { case (c, m) => (c, m, casesAndNotes.getOrElse(c, Nil)) })
+    sortByRecent(casesAndMessages.map { case (c, m) => (c, m.distinct, casesAndNotes.getOrElse(c, Nil)) })
   }
 
   /**

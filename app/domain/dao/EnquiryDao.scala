@@ -10,7 +10,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import ExtendedPostgresProfile.api._
-import domain.Enquiry.EnquirySearchQuery
+import domain.Enquiry.{EnquirySearchQuery, StoredEnquiryNote}
 import helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
@@ -20,6 +20,7 @@ import scala.concurrent.ExecutionContext
 trait EnquiryDao {
   def insert(enquiry: Enquiry): DBIO[Enquiry]
   def update(enquiry: Enquiry, version: OffsetDateTime): DBIO[Enquiry]
+  def insertNote(note: StoredEnquiryNote): DBIO[StoredEnquiryNote]
   def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findByIDsQuery(ids: Set[UUID]): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findByKeyQuery(key: IssueKey): Query[Enquiry.Enquiries, Enquiry, Seq]
@@ -43,6 +44,9 @@ class EnquiryDaoImpl @Inject() (
 
   override def update(enquiry: Enquiry, version: OffsetDateTime): DBIO[Enquiry] =
     Enquiry.enquiries.update(enquiry.copy(version = version))
+
+  override def insertNote(note: StoredEnquiryNote): DBIO[StoredEnquiryNote] =
+    Enquiry.enquiryNotes += note
 
   override def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq] =
     Enquiry.enquiries.table.filter(_.id === id)
