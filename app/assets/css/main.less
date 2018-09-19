@@ -212,16 +212,18 @@ section.indent {
       }
 
       button {
-        margin-left: @grid-gutter-width;
-        margin-right: @grid-gutter-width;
+        @diameter: 36px;
         padding: 0;
-        width: 36px;
-        height: 36px;
+        width: @diameter;
+        height: @diameter;
 
         border: 0;
-        border-radius: 0;
+        border-radius: 50%;
         i {
-          line-height: 36px;
+          line-height: @diameter;
+          width: @diameter;
+          height: @diameter;
+          margin-left: -2px; // get the airplane points equal distances from the circle edges :awyeah:
         }
       }
     }

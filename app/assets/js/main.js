@@ -22,7 +22,7 @@ function closePopover($popover) {
 $(() => {
   $('[data-toggle="popover"]').popover();
 
-  $('i.icon-tooltip').tooltip({
+  $('i.icon-tooltip, .btn-tooltip').tooltip({
     delay: { show: 500, hide: 100 },
     placement: 'auto top',
   });
