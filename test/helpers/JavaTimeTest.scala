@@ -53,13 +53,13 @@ class JavaTimeTest extends PlaySpec with MockitoSugar {
 
     "handle OffsetDateTime today" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2018, 3, 16).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault).toOffsetDateTime) must be ("11:13")
+        JavaTime.Relative(LocalDate.of(2018, 3, 16).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault).toOffsetDateTime) must be ("Today 11:13")
       }
     }
 
-    "handle OffsetDateTime today with Today" in {
+    "handle OffsetDateTime today without Today" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2018, 3, 16).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault).toOffsetDateTime, printToday = true) must be ("Today 11:13")
+        JavaTime.Relative(LocalDate.of(2018, 3, 16).atTime(11, 13, 14, 15).atZone(ZoneId.systemDefault).toOffsetDateTime, printToday = false) must be ("11:13")
       }
     }
 
