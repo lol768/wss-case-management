@@ -64,7 +64,7 @@ class AdminController @Inject()(
 
       profileService.getProfiles(clients.values.flatten.toSet).successMap { profiles =>
         val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-        Ok(views.html.admin.teamClosedEnquiries(teamRequest.team, enquiries, resolvedClients))
+        Ok(views.html.admin.closedEnquiries(enquiries, resolvedClients))
       }
     }
   }
@@ -74,7 +74,7 @@ class AdminController @Inject()(
       cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successFlatMap { clients =>
         profileService.getProfiles(clients.values.flatten.toSet).successMap { profiles =>
           val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-          Ok(views.html.admin.teamClosedCases(teamRequest.team, closedCases, resolvedClients))
+          Ok(views.html.admin.closedCases(closedCases, resolvedClients))
         }
       }
     }

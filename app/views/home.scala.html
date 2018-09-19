@@ -1,13 +1,19 @@
-@import domain.{EnquiryRender, IssueState, Registration}
+@import java.time.OffsetDateTime
+@import java.util.UUID
+
+@import controllers.IndexController.{ClientInformation, TeamMemberInformation}
+@import controllers.RequestContext
+@import domain.dao.CaseDao.Case
+@import domain.{Enquiry, EnquiryRender, MessageData, Registration, SitsProfile}
 @import helpers.JavaTime
+@import warwick.sso.UniversityID
 
 @(
-  teams: Seq[domain.Team],
-  enquiries: Seq[EnquiryRender],
-  registration: Option[Registration]
-)(implicit context: RequestContext, req: RequestHeader)
+  clientInformation: ClientInformation,
+  teamMemberInformation: Option[TeamMemberInformation],
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
-@main("Home") {
+@renderClientInformation(enquiries: Seq[EnquiryRender], registration: Option[Registration]) = {
   @registration.map { r =>
     <div class="pull-right">
       <a href="@controllers.registration.routes.RegisterController.form()" class="btn btn-default">
@@ -78,5 +84,53 @@
         </div>
       }
     </div>
+  }
+}
+
+@if(teamMemberInformation.isEmpty) {
+  @main("My enquiries", hidePageTitle = true) {
+    @renderClientInformation(clientInformation.enquiries, clientInformation.registration)
+  }
+} else {
+  @teamMemberInformation.map { info =>
+    @main(s"${context.user.flatMap(_.name.full).get}${if(info.teams.size == 1) s", ${info.teams.head.name} team" else ""}") {
+      <h4>Enquiries, cases and appointments assigned to me</h4>
+
+      <ul class="nav nav-tabs" role="tablist">
+        <li role="presentation" class="active">
+          <a href="#enquiries" aria-controls="enquiries" role="tab" data-toggle="tab">@tags.icons.enquiries() Enquiries</a>
+        </li>
+        <li role="presentation">
+          <a href="#cases" aria-controls="cases" role="tab" data-toggle="tab">@tags.icons.cases() Cases</a>
+        </li>
+        <li role="presentation">
+          <a href="#clients" aria-controls="clients" role="tab" data-toggle="tab">@tags.icons.clients() Clients</a>
+        </li>
+        <li role="presentation">
+          <a href="#appointments" aria-controls="appointments" role="tab" data-toggle="tab">@tags.icons.appointments() Appointments</a>
+        </li>
+        <li role="presentation">
+          <a href="#me" aria-controls="me" role="tab" data-toggle="tab">@tags.icons.myEnquiries() My enquiries</a>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="enquiries">
+          @views.html.admin.enquiriesTab(info.enquiriesRequiringAction, info.enquiriesAwaitingClient, info.closedEnquiries, info.clients, routes.IndexController.closedEnquiries)
+        </div>
+        <div role="tabpanel" class="tab-pane" id="cases">
+          @views.html.admin.casesTab(info.openCases, info.closedCases, info.clients, controllers.admin.routes.CaseController.createSelectTeam(None, None), routes.IndexController.closedCases)
+        </div>
+        <div role="tabpanel" class="tab-pane" id="clients">
+          @views.html.admin.clientsTab()
+        </div>
+        <div role="tabpanel" class="tab-pane" id="appointments">
+          @views.html.admin.appointmentsTab()
+        </div>
+        <div role="tabpanel" class="tab-pane" id="me">
+          @renderClientInformation(clientInformation.enquiries, clientInformation.registration)
+        </div>
+      </div>
+    }
   }
 }

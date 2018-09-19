@@ -6,10 +6,11 @@
 @import warwick.sso.UniversityID
 
 @(
-  team: Team,
   openCases: Seq[(Case, OffsetDateTime)],
   closedCases: Int,
-  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
+  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
+  createRoute: Call,
+  closedCasesRoute: Call
 )(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
 @b3.vertical.formCSRF(routes.CaseSearchController.search(), 'class -> "case-search") { implicit ifc =>
@@ -19,14 +20,14 @@
   }
 }
 
-<p><a href="@controllers.admin.routes.CaseController.createForm(team.id)" class="btn btn-default">Create a new case</a></p>
+<p><a href="@createRoute" class="btn btn-default">Create a new case</a></p>
 
 @views.html.admin.caseTable(Some("Open cases"), openCases, clients)
 
 @if(closedCases == 0) {
   No closed cases to show
 } else {
-  <details data-toggle="load" data-href="@controllers.admin.routes.AdminController.closedCases(team.id)" data-target=".content">
+  <details data-toggle="load" data-href="@closedCasesRoute" data-target=".content">
     <summary>Show @tags.p(closedCases, "closed case")()</summary>
     <div class="content">
       <i class="fas fa-spinner fa-spin"></i> Loading&hellip;

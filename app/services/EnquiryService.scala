@@ -68,6 +68,7 @@ trait EnquiryService {
   def findClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
   def countClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def findClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+  def countClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
   def countEnquiriesOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def countEnquiriesClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
@@ -271,6 +272,11 @@ class EnquiryServiceImpl @Inject() (
 
   override def findClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
     findEnquiriesWithLatestMessage(enquiryDao.findClosedQuery(owner))
+
+  override def countClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(
+      enquiryDao.findClosedQuery(owner).length.result
+    ).map(Right.apply)
 
   private def findEnquiriesWithLastSender(daoQuery: Query[Enquiry.Enquiries, Enquiry, Seq], lastSender: MessageSender)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
     val query = daoQuery
