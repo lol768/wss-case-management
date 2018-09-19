@@ -76,7 +76,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
 
   "ProfileService" should {
     "fetch a student profile" in  withProfileService() { profileService =>
-      val studentProfile = profileService.getProfile(UniversityID("1234567")).futureValue.value.right.get
+      val studentProfile = profileService.getProfile(UniversityID("1234567")).futureValue.value.right.get.get
       studentProfile.universityID mustBe UniversityID("1234567")
       studentProfile.fullName mustBe "Reiher Gwenyn"
       studentProfile.dateOfBirth mustBe LocalDate.parse("1995-08-23")
@@ -115,7 +115,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
     }
 
     "fetch an applicant profile" in  withProfileService() { profileService =>
-      val applicantProfile = profileService.getProfile(UniversityID("1812345")).futureValue.value.right.get
+      val applicantProfile = profileService.getProfile(UniversityID("1812345")).futureValue.value.right.get.get
       applicantProfile.universityID mustBe UniversityID("1812345")
       applicantProfile.fullName mustBe "Reynard Fox"
       applicantProfile.dateOfBirth mustBe LocalDate.parse("1996-02-08")
@@ -143,7 +143,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
     }
 
     "fetch a staff profile" in withProfileService() { profileService =>
-      val staffProfile = profileService.getProfile(UniversityID("1170836")).futureValue.value.right.get
+      val staffProfile = profileService.getProfile(UniversityID("1170836")).futureValue.value.right.get.get
       staffProfile.universityID mustBe UniversityID("1170836")
       staffProfile.fullName mustBe "Ritchie Allen"
       staffProfile.dateOfBirth mustBe LocalDate.parse("1986-08-23")

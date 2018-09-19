@@ -3,15 +3,18 @@
 
 @import domain.dao.CaseDao.Case
 @import domain.{SitsProfile, Team}
+@import warwick.sso.UniversityID
 
 @(
   team: Team,
   openCases: Seq[(Case, OffsetDateTime)],
-  clients: Map[UUID, Set[SitsProfile]]
+  closedCases: Int,
+  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
 )(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
 @b3.vertical.formCSRF(routes.CaseSearchController.search(), 'class -> "case-search") { implicit ifc =>
-  @b3.free() {
+  @b3.free('_class -> "search-default") {
+    <i class="fal fa-search"></i>
     <input type="text" class="form-control input-lg" placeholder="Search cases" />
   }
 }
@@ -20,9 +23,13 @@
 
 @views.html.admin.caseTable(Some("Open cases"), openCases, clients)
 
-<details data-toggle="load" data-href="@controllers.admin.routes.AdminController.closedCases(team.id)" data-target=".content">
-  <summary>Show closed cases</summary>
-  <div class="content">
-    <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
-  </div>
-</details>
+@if(closedCases == 0) {
+  No closed cases to show
+} else {
+  <details data-toggle="load" data-href="@controllers.admin.routes.AdminController.closedCases(team.id)" data-target=".content">
+    <summary>Show @tags.p(closedCases, "closed case")()</summary>
+    <div class="content">
+      <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
+    </div>
+  </details>
+}

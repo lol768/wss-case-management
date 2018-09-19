@@ -9,6 +9,7 @@ import play.api.routing.Router
 import play.api.{Application, Configuration, Environment}
 import uk.ac.warwick.sso.client.SSOClientHandler
 import warwick.accesslog.LogbackAccessModule
+import routes.EmptyRouter
 import warwick.sso._
 
 import scala.reflect._
@@ -41,7 +42,7 @@ object TestApplications extends MockitoSugar {
     * requires WSAPI which is a pain to build by hand.
     */
   def minimal(): Application =
-    minimalBuilder.build()
+    minimalWithRouter[EmptyRouter]()
 
   /**
     * As full an Application as can be created while still talking to

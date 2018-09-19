@@ -6,7 +6,7 @@
 
 @(
   c: Case.FullyJoined,
-  clients: Seq[SitsProfile],
+  clients: Seq[Either[UniversityID, SitsProfile]],
   owners: Seq[User],
   caseNotes: Seq[(CaseNote, Option[User])],
   originalEnquiry: Option[Enquiry],
@@ -34,26 +34,35 @@
 @main(s"${c.clientCase.key.get.string} ${c.clientCase.subject}") {
   <div class="row">
     <div class="col-md-4 col-md-push-8">
-      @clients.map { profile =>
-        <div class="row">
-          @profile.photo.map { photo =>
-            <div class="col-sm-4">
-              <p class="photo">
-                <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">
-                  <img src="@photo" class="img-thumbnail img-circle">
-                </a>
-              </p>
-            </div>
-          }
-          <div class="col-sm-8">
+      @clients.map {
+        case Left(universityID) => {
+          <div>
             <p>
-              <strong>University ID: </strong> <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.universityID.string</a><br />
-              <strong>Full name: </strong> @profile.fullName<br />
-              <strong>Department: </strong> @profile.department.name<br />
-              <strong>Warwick email address: </strong> @profile.warwickEmail
+              <strong>University ID: </strong> <a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a>
             </p>
           </div>
-        </div>
+        }
+        case Right(profile) => {
+          <div class="row">
+            @profile.photo.map { photo =>
+              <div class="col-sm-4">
+                <p class="photo">
+                  <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">
+                    <img src="@photo" class="img-thumbnail img-circle">
+                  </a>
+                </p>
+              </div>
+            }
+            <div class="col-sm-8">
+              <p>
+                <strong>University ID: </strong> <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.universityID.string</a><br />
+                <strong>Full name: </strong> @profile.fullName<br />
+                <strong>Department: </strong> @profile.department.name<br />
+                <strong>Warwick email address: </strong> @profile.warwickEmail
+              </p>
+            </div>
+          </div>
+        }
       }
     </div>
     <div class="col-md-8 col-md-pull-4">

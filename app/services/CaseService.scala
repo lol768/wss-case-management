@@ -48,6 +48,7 @@ trait CaseService {
   def listOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
   def listOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
   def listClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
+  def countClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def listClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
   def countOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def countClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
@@ -58,7 +59,7 @@ trait CaseService {
   def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]]
   def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]]
   def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
-  def reassign(c: Case, team: Team, caseType: Option[CaseType], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
+  def reassign(c: Case, team: Team, caseType: Option[CaseType], note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
 }
 
 @Singleton
@@ -322,6 +323,11 @@ class CaseServiceImpl @Inject() (
         })
     ).map(Right.apply)
 
+  override def countClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(
+      dao.listQuery(Some(team), None, IssueStateFilter.Closed).length.result
+    ).map(Right.apply)
+
   override def listClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]] =
     daoRunner.run(
       dao.listQuery(None, Some(owner), IssueStateFilter.Closed)
@@ -399,14 +405,15 @@ class CaseServiceImpl @Inject() (
       } yield done).map(Right.apply)
     }
 
-  override def reassign(c: Case, team: Team, caseType: Option[CaseType], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] =
+  override def reassign(c: Case, team: Team, caseType: Option[CaseType], note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] =
     auditService.audit('CaseReassign, c.id.get.toString, 'Case, Json.obj("team" -> team.id, "caseType" -> caseType.map(_.entryName).orNull[String])) {
-      daoRunner.run(
-        dao.update(c.copy(team = team, caseType = caseType), version)
-      ).map(Right.apply)
+      daoRunner.run(DBIO.seq(
+          dao.update(c.copy(team = team, caseType = caseType), version),
+          addNoteDBIO(c.id.get, CaseNoteType.Referral, note)
+      )).map(Right.apply)
     }.flatMap(_.fold(
       errors => Future.successful(Left(errors)),
-      clientCase => notificationService.caseReassign(clientCase).map(_.right.map(_ => clientCase))
+      _ => notificationService.caseReassign(c).map(_.right.map(_ => c))
     ))
 }
 

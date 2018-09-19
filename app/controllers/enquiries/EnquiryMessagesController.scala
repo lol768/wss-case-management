@@ -7,12 +7,14 @@ import controllers.enquiries.EnquiryMessagesController._
 import controllers.refiners.{CanAddClientMessageToEnquiryActionRefiner, CanClientViewEnquiryActionRefiner, EnquirySpecificRequest}
 import controllers.{API, BaseController, UploadedFileControllerHelper}
 import domain._
+import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
+import services.tabula.ProfileService
 import services.{AuditService, EnquiryService}
 import warwick.sso.UserLookupService
 
@@ -27,6 +29,7 @@ class EnquiryMessagesController @Inject()(
   canClientViewEnquiryActionRefiner: CanClientViewEnquiryActionRefiner,
   canAddClientMessageToEnquiryActionRefiner: CanAddClientMessageToEnquiryActionRefiner,
   service: EnquiryService,
+  profiles: ProfileService,
   audit: AuditService,
   userLookupService: UserLookupService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
@@ -36,12 +39,15 @@ class EnquiryMessagesController @Inject()(
   import canClientViewEnquiryActionRefiner._
 
   private def renderMessages(enquiry: Enquiry, f: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] =
-    service.getForRender(enquiry.id.get).successMap { render =>
+    ServiceResults.zip(
+      service.getForRender(enquiry.id.get),
+      profiles.getProfile(enquiry.universityID).map(_.value),
+    ).successMap { case (render, client) =>
       Ok(views.html.enquiry.messages(
         render.enquiry,
+        client,
         render.messages,
-        f,
-        userLookupService.getUsers(Seq(render.enquiry.universityID)).toOption.getOrElse(Map())
+        f
       ))
     }
 

@@ -109,14 +109,16 @@ object CaseController {
   case class ReassignCaseData(
     team: Team,
     caseType: Option[CaseType],
-    version: OffsetDateTime
+    version: OffsetDateTime,
+    message: String
   )
 
   def caseReassignForm(clientCase: Case) = Form(
     mapping(
       "team" -> Teams.formField,
       "caseType" -> optional(CaseType.formField),
-      "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == clientCase.version)
+      "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == clientCase.version),
+      "message" -> nonEmptyText
     )(ReassignCaseData.apply)(ReassignCaseData.unapply)
   )
 }
@@ -156,7 +158,17 @@ class CaseController @Inject()(
       val ownerUsers = userLookup.filterKeys(owners.contains).values.toSeq.sortBy { u => (u.name.last, u.name.first) }
 
       profiles.getProfiles(c.clients).successMap { clientProfiles =>
-        Ok(views.html.admin.cases.view(c, clientProfiles.values.toSeq.sortBy(_.fullName), ownerUsers, caseNotes, originalEnquiry, userLookup, caseNoteForm))
+        Ok(views.html.admin.cases.view(
+          c,
+          c.clients.toSeq
+            .map { id => clientProfiles.get(id).map(Right.apply).getOrElse(Left(id)) }
+            .sortBy { e => (e.isLeft, e.right.map(_.fullName).toOption) },
+          ownerUsers,
+          caseNotes,
+          originalEnquiry,
+          userLookup,
+          caseNoteForm
+        ))
       }
     }
   }
@@ -465,7 +477,8 @@ class CaseController @Inject()(
     Ok(views.html.admin.cases.reassign(caseRequest.`case`, caseReassignForm(caseRequest.`case`).fill(ReassignCaseData(
       team = caseRequest.`case`.team,
       caseType = caseRequest.`case`.caseType,
-      version = caseRequest.`case`.version
+      version = caseRequest.`case`.version,
+      message = null
     ))))
   }
 
@@ -486,7 +499,7 @@ class CaseController @Inject()(
           if (data.team == caseRequest.`case`.team) // No change
             Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(data.team.id)))
           else
-            cases.reassign(caseRequest.`case`, data.team, data.caseType, data.version).successMap { _ =>
+            cases.reassign(caseRequest.`case`, data.team, data.caseType, CaseNoteSave(data.message, caseRequest.context.user.get.usercode), data.version).successMap { _ =>
               Redirect(controllers.admin.routes.AdminController.teamHome(caseRequest.`case`.team.id))
                 .flashing("success" -> Messages("flash.case.reassigned", data.team.name))
             }

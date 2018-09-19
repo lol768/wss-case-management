@@ -7,7 +7,7 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Edit case ${clientCase.key.get.string}") {
-  @b3.vertical.formCSRF(controllers.admin.routes.CaseController.edit(clientCase.key.get), 'class -> "dirty-check") { implicit ifc =>
+  @b3.vertical.formCSRF(controllers.admin.routes.CaseController.edit(clientCase.key.get)) { implicit ifc =>
     @b3.validatedHidden(form, "version")
 
     @caseFields(clientCase.team, form)

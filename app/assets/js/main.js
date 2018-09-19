@@ -22,6 +22,11 @@ function closePopover($popover) {
 $(() => {
   $('[data-toggle="popover"]').popover();
 
+  $('i.icon-tooltip').tooltip({
+    delay: { show: 500, hide: 100 },
+    placement: 'auto top',
+  });
+
   UserListPopovers();
 
   $('.field-history').each((i, container) => {
@@ -69,7 +74,7 @@ $(() => {
       }
     });
 
-  $('form.dirty-check').areYouSure();
+  $('form').not('.no-dirty-check').areYouSure();
 
   $('.toggle-element').each((i, container) => {
     const $this = $(container);
@@ -101,6 +106,22 @@ $(() => {
 
     $checkbox.on('input change', update);
     update();
+  });
+
+  $('input[type="radio"][data-toggle="optional-subform"][data-target]').each((i, el) => {
+    const $radio = $(el);
+    const $target = $($radio.data('target'));
+
+    const update = () => {
+      if ($radio.val() === $radio.data('toggle-value')) {
+        $target.show().find(':input').prop('disabled', false);
+      } else {
+        $target.hide().find(':input').prop('disabled', true);
+      }
+    };
+
+    $radio.on('input change', update);
+    if ($radio.is(':checked')) update();
   });
 
   $('details[data-toggle="load"][data-href][data-target]').on('toggle', function load() {
