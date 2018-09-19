@@ -328,7 +328,7 @@ object EnquiryService {
               .map { case (m, f) => MessageRender(m, f.map(_.asUploadedFile)) }
         }
     val enquiriesAndNotes =
-      OneToMany.leftJoin(tuples.map { case (e, _, n) => (e, n.map(_.asEnquiryNote)) })(EnquiryNote.dateOrdering).toMap
+      OneToMany.leftJoin(tuples.map { case (e, _, n) => (e, n.map(_.asEnquiryNote)) }.distinct)(EnquiryNote.dateOrdering).toMap
 
     sortByRecent(enquiriesAndMessages.map { case (e, m) =>
       EnquiryRender(

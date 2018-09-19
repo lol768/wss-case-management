@@ -422,7 +422,7 @@ object CaseService {
     val casesAndMessages =
       OneToMany.leftJoin(tuples.map { case (c, m, _) => (c, m) })(MessageData.dateOrdering)
     val casesAndNotes =
-      OneToMany.leftJoin(tuples.map { case (c, _, n) => (c, n.map(_.asCaseNote)) })(CaseNote.dateOrdering).toMap
+      OneToMany.leftJoin(tuples.map { case (c, _, n) => (c, n.map(_.asCaseNote)) }.distinct)(CaseNote.dateOrdering).toMap
 
     sortByRecent(casesAndMessages.map { case (c, m) => (c, m.distinct, casesAndNotes.getOrElse(c, Nil)) })
   }
