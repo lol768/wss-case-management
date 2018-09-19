@@ -53,7 +53,7 @@ trait HtmlNavigation {
       }
 
     lazy val pageHeading: String =
-      html.selectSingleNode("//div[@class='id7-page-title']/h1").getText.trim
+      html.selectSingleNode("//div[contains(@class,'id7-page-title')]/h1").getText.trim
   }
 
   private def xpathNodes(html: Document, path: String): Seq[Node] =
