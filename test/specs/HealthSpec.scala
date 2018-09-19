@@ -7,8 +7,8 @@ class HealthSpec extends BaseSpec {
 
   "The application" should {
 
-    "send 404 on a bad request" in {
-      status(req("/service/boom").get()) mustEqual NOT_FOUND
+    "redirect on a bad request if the user isn't authenticated" in {
+      status(req("/service/boom").get()) mustEqual SEE_OTHER
     }
 
     "respond to GTG" in {
