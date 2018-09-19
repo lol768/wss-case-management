@@ -206,7 +206,7 @@ class TeamEnquiryController @Inject()(
           Future.successful(Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey)))
         else {
           val note = EnquiryNoteSave(
-            s"Reassigned from ${request.enquiry.team}\n\n${data.message}",
+            views.txt.notes.enquiryreassign(request.enquiry.team, data.message).toString,
             request.context.user.get.usercode
           )
 
