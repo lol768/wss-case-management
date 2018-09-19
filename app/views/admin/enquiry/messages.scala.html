@@ -26,9 +26,9 @@
       <h5>
         <div class="pull-right">
           @if(enquiry.version.isAfter(messages.last._1.created)) {
-            @JavaTime.Relative(enquiry.version, printToday = true)
+            @JavaTime.Relative(enquiry.version)
           } else {
-            @JavaTime.Relative(messages.last._1.created, printToday = true)
+            @JavaTime.Relative(messages.last._1.created)
           }
         </div>
 

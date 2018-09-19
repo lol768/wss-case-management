@@ -37,9 +37,9 @@
                 <a class="@if(enquiries.head.enquiry != e.enquiry){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@e.enquiry.key.get.string" aria-expanded="true" aria-controls="collapse-@e.enquiry.key.get.string">
                 <div class="pull-right">
                   @if(e.enquiry.version.isAfter(e.messages.last._1.created)) {
-                    @JavaTime.Relative(e.enquiry.version, printToday = true)
+                    @JavaTime.Relative(e.enquiry.version)
                   } else {
-                    @JavaTime.Relative(e.messages.last._1.created, printToday = true)
+                    @JavaTime.Relative(e.messages.last._1.created)
                   }
                   <i class="fas fa-fw fa-angle-down"></i>
                   <i class="fas fa-fw fa-angle-up"></i>

@@ -238,13 +238,13 @@
       @c.messages.map { message =>
         @if(message.sender == MessageSender.Client) {
           <div class="message message-client">
-            <div class="date pull-right">@helpers.JavaTime.Relative(message.created, printToday = true)</div>
+            <div class="date pull-right">@helpers.JavaTime.Relative(message.created)</div>
             <div class="message--author">Client @* TODO *@</div>
             @views.utils.nl2br(message.text)
           </div>
         } else {
           <div class="message message-team">
-            <div class="date pull-right">@helpers.JavaTime.Relative(message.created, printToday = true)</div>
+            <div class="date pull-right">@helpers.JavaTime.Relative(message.created)</div>
             <div class="message--author">@message.teamMember.flatMap(usercode => userLookup.get(usercode).filter(_.isFound).flatMap(_.name.full)).getOrElse("Team member")</div>
             @views.utils.nl2br(message.text)
           </div>
