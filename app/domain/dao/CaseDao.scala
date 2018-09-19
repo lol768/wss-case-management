@@ -352,11 +352,6 @@ object CaseDao {
       .on { (c, m) =>
         c.id === m.ownerId && m.ownerType === (MessageOwner.Case: MessageOwner)
       }
-    def withMessagesAndNotes =
-      withMessages
-        .joinLeft(caseNotes.table)
-        .on { case ((c, _), n) => c.id === n.caseId }
-        .map { case ((c, m), n) => (c, m, n) }
     def withLastUpdated = q
       .joinLeft(Message.messages.table)
       .on((c, m) =>

@@ -188,11 +188,9 @@ object Enquiry extends Versioning {
       .on { case (e, (m, _)) =>
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
-    def withMessagesAndNotes =
-      withMessages
-        .joinLeft(enquiryNotes.table)
-        .on { case ((e, _), n) => e.id === n.enquiryID }
-        .map { case ((e, m), n) => (e, m, n) }
+    def withNotes = q
+      .joinLeft(enquiryNotes.table)
+      .on { case (e, n) => e.id === n.enquiryID }
   }
 
   case class EnquirySearchQuery(
