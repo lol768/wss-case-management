@@ -211,7 +211,7 @@ class TeamEnquiryController @Inject()(
           )
 
           service.reassign(request.enquiry, data.team, note, data.version).successMap { _ =>
-            Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
+            Redirect(controllers.admin.routes.AdminController.teamHome(request.enquiry.team.id))
               .flashing("success" -> Messages("flash.enquiry.reassigned", data.team.name))
           }
         }
