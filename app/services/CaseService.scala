@@ -57,7 +57,7 @@ trait CaseService {
   def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
   def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]]
   def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[UniversityID]]]
-  def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]]
+  def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]]
   def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]]
   def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
   def reassign(c: Case, team: Team, caseType: Option[CaseType], note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
@@ -374,7 +374,7 @@ class CaseServiceImpl @Inject() (
     getClients(Set(id)).map(_.right.map(_.getOrElse(id, Set.empty)))
   }
 
-  override def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]] =
+  override def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]] =
     auditService.audit('CaseAddDocument, caseID.toString, 'Case, Json.obj()) {
       val documentID = UUID.randomUUID()
       daoRunner.run(for {
@@ -388,6 +388,7 @@ class CaseServiceImpl @Inject() (
           JavaTime.offsetDateTime,
           JavaTime.offsetDateTime
         ))
+        _ <- addNoteDBIO(caseID, CaseNoteType.DocumentNote, caseNote)
       } yield doc.asCaseDocument(f)).map(Right.apply)
     }
 

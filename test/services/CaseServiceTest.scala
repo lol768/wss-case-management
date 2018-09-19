@@ -81,7 +81,8 @@ class CaseServiceTest extends AbstractDaoTest {
         clientCase.id.get,
         CaseDocumentSave(CaseDocumentType.SpecificLearningDifficultyDocument, Usercode("cuscav")),
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav")),
+        CaseNoteSave("I hate herons", Usercode("cuscav"))
       ).serviceValue
 
       val fullyJoined = service.findFull(clientCase.key.get).serviceValue
@@ -92,9 +93,10 @@ class CaseServiceTest extends AbstractDaoTest {
       fullyJoined.outgoingCaseLinks.exists { l => l.linkType == CaseLinkType.Related && l.outgoing == clientCase && l.incoming == c2 } mustBe true
       fullyJoined.incomingCaseLinks.size mustBe 1
       fullyJoined.incomingCaseLinks.exists { l => l.linkType == CaseLinkType.Related && l.outgoing == c1 && l.incoming == clientCase } mustBe true
-      fullyJoined.notes.size mustBe 2
-      fullyJoined.notes(0).text mustBe "clientCase is related to c2"
-      fullyJoined.notes(1).text mustBe "c1 is related to clientCase"
+      fullyJoined.notes.size mustBe 3
+      fullyJoined.notes(0).text mustBe "I hate herons"
+      fullyJoined.notes(1).text mustBe "clientCase is related to c2"
+      fullyJoined.notes(2).text mustBe "c1 is related to clientCase"
       fullyJoined.documents.size mustBe 1
       fullyJoined.documents.head.documentType mustBe CaseDocumentType.SpecificLearningDifficultyDocument
     }
@@ -219,7 +221,8 @@ class CaseServiceTest extends AbstractDaoTest {
         c.id.get,
         CaseDocumentSave(CaseDocumentType.SpecificLearningDifficultyDocument, Usercode("cuscav")),
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav")),
+        CaseNoteSave("I hate herons", Usercode("cuscav"))
       ).serviceValue
       saved.documentType mustBe CaseDocumentType.SpecificLearningDifficultyDocument
       saved.file.fileName mustBe "problem.txt"
