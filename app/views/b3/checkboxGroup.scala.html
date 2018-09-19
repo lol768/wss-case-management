@@ -9,13 +9,15 @@
 @b3.free('_label -> label,
   '_class -> form(field).error.map(_ => "has-error").getOrElse("")
 ) {
+
   @items.map { item =>
     @b3.checkbox(form(s"$field[]"),
       'id -> s"$idPrefix-${item.id}",
       'value -> item.id,
       '_text -> item.description,
       'checked -> form(field).indexes.exists(i => form(s"$field[$i]").value.contains(item.id))
-    )
+    )(b3.clear.fieldConstructorSpecific, messagesProvider)
+    @* pass clear FC to the checkboxes so they aren't each wrapped in a form group *@
   }
 
   @form(field).error.map { error =>
