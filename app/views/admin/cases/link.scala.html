@@ -8,26 +8,34 @@
   form: Form[CaseLinkFormData]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
+@implicitFieldConstructor = @{ views.b3.wellbeing.vertical.fieldConstructor() }
+
 @main(s"Link ${c.key.get.string} to another case") {
-  @b3.horizontal.formCSRF(
-    controllers.admin.routes.CaseController.link(c.key.get),
-    "col-sm-2", "col-sm-5"
-  ) { implicit ifc =>
-    @b3.select(form("linkType"),
-      options = CaseLinkType.values.map { t => t.entryName -> t.outwardDescription },
-      '_label -> "This case",
-      '_default -> "",
-      'required -> true
-    )
+  <div class="row">
+    <div class="col-md-5">
+      @b3.formCSRF(controllers.admin.routes.CaseController.link(c.key.get)) {
+        @b3.select(form("linkType"),
+          options = CaseLinkType.values.map { t => t.entryName -> t.outwardDescription },
+          '_label -> "This case",
+          '_default -> "",
+          'required -> true
+        )
 
-    @b3.text(form("targetKey"),
-      '_label -> "Case",
-      'class -> "case-picker",
-      '_class -> "case-picker-container"
-    )
+        @b3.text(form("targetKey"),
+          '_label -> "Case",
+          'class -> "case-picker",
+          '_class -> "case-picker-container"
+        )
 
-    @b3.textarea(form("message"), '_label -> "Description")
+        @b3.textarea(
+          form("message"),
+          '_label -> "Associated case note",
+          '_help -> "(why is this case being linked to another case?)",
+          'helpOnTop -> true
+        )
 
-    @tags.submitOrCancel("Link", controllers.admin.routes.CaseController.view(c.key.get))
-  }
+        @tags.submitOrCancel("Link", controllers.admin.routes.CaseController.view(c.key.get))
+      }
+    </div>
+  </div>
 }
