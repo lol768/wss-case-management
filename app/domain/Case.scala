@@ -3,9 +3,10 @@ package domain
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import domain.dao.CaseDao.Case
+import domain.dao.CaseDao.{Case, CaseVersion}
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.JavaTime
+import play.api.libs.json.{JsValue, Json, Writes}
 import warwick.sso.Usercode
 
 import scala.collection.immutable
@@ -144,3 +145,67 @@ object CaseDocumentType extends PlayEnum[CaseDocumentType] {
 
   override def values: immutable.IndexedSeq[CaseDocumentType] = findValues
 }
+
+object CaseHistory {
+
+  val writer: Writes[CaseHistory] = (r: CaseHistory) => Json.obj(
+    "subject" -> toJson(r.subject),
+    "team" -> toJson(r.team)(Teams.writer),
+    "state" -> toJson(r.state),
+    "incidentDate" -> toJson(r.incidentDate.map { case (date, v) => (date.map(JavaTime.Relative.apply(_)), v) }),
+    "onCampus" -> toJson(r.onCampus.map { case (onCampus, v) => (onCampus.map(isOnCampus => if (isOnCampus) "On-campus" else "Off-campus"), v) }),
+    "notifiedPolice" -> toJson(r.notifiedPolice),
+    "notifiedAmbulance" -> toJson(r.notifiedAmbulance),
+    "notifiedFire" -> toJson(r.notifiedFire),
+    "originalEnquiry" -> toJson(r.originalEnquiry),
+    "caseType" -> toJson(r.caseType.map { case (caseType, v) => (caseType.map(_.description), v) }),
+    "cause" -> toJson(r.cause.map { case (cause, v) => (cause.description, v) })
+  )
+
+  def apply(history: Seq[CaseVersion]): CaseHistory = CaseHistory(
+    subject = flatten(history.map(c => (c.subject, c.version)).toList),
+    team = flatten(history.map(c => (c.team, c.version)).toList),
+    state = flatten(history.map(c => (c.state, c.version)).toList),
+    incidentDate = flatten(history.map(c => (c.incidentDate, c.version)).toList),
+    onCampus = flatten(history.map(c => (c.onCampus, c.version)).toList),
+    notifiedPolice = flatten(history.map(c => (c.notifiedPolice, c.version)).toList),
+    notifiedAmbulance = flatten(history.map(c => (c.notifiedAmbulance, c.version)).toList),
+    notifiedFire = flatten(history.map(c => (c.notifiedFire, c.version)).toList),
+    originalEnquiry = flatten(history.map(c => (c.originalEnquiry, c.version)).toList),
+    caseType = flatten(history.map(c => (c.caseType, c.version)).toList),
+    cause = flatten(history.map(c => (c.cause, c.version)).toList)
+  )
+
+  private def flatten[A](items: List[(A, OffsetDateTime)]): Seq[(A, OffsetDateTime)] = (items match {
+    case Nil => Nil
+    case head :: Nil => Seq(head)
+    case head :: tail => tail.foldLeft(Seq(head)) { (foldedItems, item) =>
+      if (foldedItems.last._1 != item._1) {
+        foldedItems ++ Seq(item)
+      } else {
+        foldedItems
+      }
+    }
+  }).reverse
+
+  private def toJson[A](items: Seq[(A, OffsetDateTime)])(implicit itemWriter: Writes[A]): JsValue =
+    Json.toJson(items.map { case (item, version) => Json.obj(
+      "value" -> Json.toJson(item),
+      "version" -> version
+    ) })
+
+}
+
+case class CaseHistory(
+  subject: Seq[(String, OffsetDateTime)],
+  team: Seq[(Team, OffsetDateTime)],
+  state: Seq[(IssueState, OffsetDateTime)],
+  incidentDate: Seq[(Option[OffsetDateTime], OffsetDateTime)],
+  onCampus: Seq[(Option[Boolean], OffsetDateTime)],
+  notifiedPolice: Seq[(Option[Boolean], OffsetDateTime)],
+  notifiedAmbulance: Seq[(Option[Boolean], OffsetDateTime)],
+  notifiedFire: Seq[(Option[Boolean], OffsetDateTime)],
+  originalEnquiry: Seq[(Option[UUID], OffsetDateTime)],
+  caseType: Seq[(Option[CaseType], OffsetDateTime)],
+  cause: Seq[(CaseCause, OffsetDateTime)],
+)

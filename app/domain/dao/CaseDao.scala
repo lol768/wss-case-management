@@ -51,6 +51,7 @@ trait CaseDao {
   def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime): DBIO[Done]
   def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq]
   def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, Case, Seq]
+  def getHistory(key: IssueKey): DBIO[Seq[CaseVersion]]
 }
 
 @Singleton
@@ -191,6 +192,18 @@ class CaseDaoImpl @Inject()(
       }
       teamFilter && stateFilter
     })
+  }
+
+  override def getHistory(key: IssueKey): DBIO[Seq[CaseVersion]] = {
+    cases.versionsTable
+      .filter(c =>
+        c.key === key && (
+          c.operation === (DatabaseOperation.Insert:DatabaseOperation) ||
+          c.operation === (DatabaseOperation.Update:DatabaseOperation)
+        )
+      )
+      .sortBy(_.timestamp)
+      .result
   }
 }
 

@@ -7,6 +7,7 @@ import akka.Done
 import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.CaseDao.{Case, _}
 import domain.dao.UploadedFileDao.StoredUploadedFile
@@ -16,7 +17,6 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import services.CaseService._
-import domain.ExtendedPostgresProfile.api._
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
 
@@ -61,6 +61,7 @@ trait CaseService {
   def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]]
   def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
   def reassign(c: Case, team: Team, caseType: Option[CaseType], note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
+  def getHistory(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[CaseHistory]]
 }
 
 @Singleton
@@ -421,6 +422,10 @@ class CaseServiceImpl @Inject() (
       errors => Future.successful(Left(errors)),
       _ => notificationService.caseReassign(c).map(_.right.map(_ => c))
     ))
+
+  override def getHistory(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[CaseHistory]] = {
+    daoRunner.run(dao.getHistory(caseKey)).map(CaseHistory.apply).map(Right.apply)
+  }
 }
 
 object CaseService {

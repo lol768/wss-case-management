@@ -14,6 +14,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, Result}
 import services.{CaseService, EnquiryService, PermissionService}
 import services.tabula.ProfileService
@@ -150,8 +151,9 @@ class CaseController @Inject()(
     ServiceResults.zip(
       cases.findFull(caseKey),
       cases.getOwners(Set(request.`case`.id.get)).map(_.right.map(_.getOrElse(request.`case`.id.get, Set.empty))),
-      fetchOriginalEnquiry
-    ).successFlatMap { case (c, owners, originalEnquiry) =>
+      fetchOriginalEnquiry,
+      cases.getHistory(caseKey)
+    ).successFlatMap { case (c, owners, originalEnquiry, history) =>
       val usercodes = (c.notes.map(_.teamMember) ++ owners ++ c.messages.flatMap(_.teamMember.toSeq)).distinct
       val userLookup = userLookupService.getUsers(usercodes).toOption.getOrElse(Map())
       val caseNotes = c.notes.map { note => (note, userLookup.get(note.teamMember)) }
@@ -167,7 +169,8 @@ class CaseController @Inject()(
           caseNotes,
           originalEnquiry,
           userLookup,
-          caseNoteForm
+          caseNoteForm,
+          history
         ))
       }
     }
