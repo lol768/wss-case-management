@@ -95,8 +95,9 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
       val cache = new NeverExpiringMemoryAsyncCacheApi()
 
       // get a String value put in the cache
+      // (wrapped in a ServiceResult, so the top level type doesn't change, to check we're checking the full type and not just the erased class)
       private val oldWrapper: AsyncVariableTtlCacheHelper[ServiceResult[String]] = VariableTtlCacheHelper.async(cache, Logger("test"), 1.second, 1.minute, 1.hour, new NullTimingService)
-        oldWrapper.getOrElseUpdate("mykey")(Future.successful(Right("oldvalue"))).futureValue
+      oldWrapper.getOrElseUpdate("mykey")(Future.successful(Right("oldvalue"))).futureValue
 
       val wrapper: AsyncVariableTtlCacheHelper[ServiceResult[Option[String]]] = VariableTtlCacheHelper.async(cache, Logger("test"), 1.second, 1.minute, 1.hour, new NullTimingService)
     }
