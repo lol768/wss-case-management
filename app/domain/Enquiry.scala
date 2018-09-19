@@ -6,11 +6,15 @@ import java.util.UUID
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain.IssueState.{Open, Reopened}
+import enumeratum.{EnumEntry, PlayEnum}
+import helpers.JavaTime
 import helpers.StringUtils._
 import play.api.data.Form
 import play.api.data.Forms._
-import warwick.sso.UniversityID
+import slick.lifted.ProvenShape
+import warwick.sso.{UniversityID, Usercode}
 
+import scala.collection.immutable
 import scala.language.higherKinds
 
 case class Enquiry(
@@ -94,12 +98,101 @@ object Enquiry extends Versioning {
   val enquiries: VersionedTableQuery[Enquiry, EnquiryVersion, Enquiries, EnquiryVersions] =
     VersionedTableQuery(TableQuery[Enquiries], TableQuery[EnquiryVersions])
 
+  case class StoredEnquiryNote(
+    id: UUID,
+    enquiryID: UUID,
+    noteType: EnquiryNoteType,
+    text: String,
+    teamMember: Usercode,
+    created: OffsetDateTime,
+    version: OffsetDateTime
+  ) extends Versioned[StoredEnquiryNote] {
+    def asEnquiryNote = EnquiryNote(
+      id,
+      noteType,
+      text,
+      teamMember,
+      created,
+      version
+    )
+
+    override def atVersion(at: OffsetDateTime): StoredEnquiryNote = copy(version = at)
+
+    override def storedVersion[B <: StoredVersion[StoredEnquiryNote]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+      StoredEnquiryNoteVersion(
+        id,
+        enquiryID,
+        noteType,
+        text,
+        teamMember,
+        created,
+        version,
+        operation,
+        timestamp
+      ).asInstanceOf[B]
+  }
+
+  case class StoredEnquiryNoteVersion(
+    id: UUID,
+    enquiryID: UUID,
+    noteType: EnquiryNoteType,
+    text: String,
+    teamMember: Usercode,
+    created: OffsetDateTime,
+    version: OffsetDateTime,
+    operation: DatabaseOperation,
+    timestamp: OffsetDateTime
+  ) extends StoredVersion[StoredEnquiryNote]
+
+  trait CommonNoteProperties { self: Table[_] =>
+    def enquiryID = column[UUID]("enquiry_id")
+    def noteType = column[EnquiryNoteType]("note_type")
+    def text = column[String]("text")
+    def searchableText = toTsVector(text, Some("english"))
+    def teamMember = column[Usercode]("team_member")
+    def created = column[OffsetDateTime]("created_utc")
+    def version = column[OffsetDateTime]("version_utc")
+  }
+
+  class EnquiryNotes(tag: Tag) extends Table[StoredEnquiryNote](tag, "enquiry_note")
+    with VersionedTable[StoredEnquiryNote]
+    with CommonNoteProperties {
+    override def matchesPrimaryKey(other: StoredEnquiryNote): Rep[Boolean] = id === other.id
+    def id = column[UUID]("id", O.PrimaryKey)
+
+    override def * : ProvenShape[StoredEnquiryNote] =
+      (id, enquiryID, noteType, text, teamMember, created, version).mapTo[StoredEnquiryNote]
+    def fk = foreignKey("fk_enquiry_note", enquiryID, enquiries.table)(_.id)
+    def idx = index("idx_enquiry_note", enquiryID)
+  }
+
+  class EnquiryNoteVersions(tag: Tag) extends Table[StoredEnquiryNoteVersion](tag, "enquiry_note_version")
+    with StoredVersionTable[StoredEnquiryNote]
+    with CommonNoteProperties {
+    def id = column[UUID]("id")
+    def operation = column[DatabaseOperation]("version_operation")
+    def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+
+    override def * : ProvenShape[StoredEnquiryNoteVersion] =
+      (id, enquiryID, noteType, text, teamMember, created, version, operation, timestamp).mapTo[StoredEnquiryNoteVersion]
+    def pk = primaryKey("pk_enquiry_note_version", (id, timestamp))
+    def idx = index("idx_enquiry_note_version", (id, version))
+  }
+
+  val enquiryNotes: VersionedTableQuery[StoredEnquiryNote, StoredEnquiryNoteVersion, EnquiryNotes, EnquiryNoteVersions] =
+    VersionedTableQuery(TableQuery[EnquiryNotes], TableQuery[EnquiryNoteVersions])
+
   implicit class EnquiryExtensions[C[_]](q: Query[Enquiries, Enquiry, C]) {
     def withMessages = q
       .joinLeft(Message.messages.table.withUploadedFiles)
       .on { case (e, (m, _)) =>
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
+    def withMessagesAndNotes =
+      withMessages
+        .joinLeft(enquiryNotes.table)
+        .on { case ((e, _), n) => e.id === n.enquiryID }
+        .map { case ((e, m), n) => (e, m, n) }
   }
 
   case class EnquirySearchQuery(
@@ -121,7 +214,8 @@ object Enquiry extends Versioning {
 
 case class EnquiryRender(
   enquiry: Enquiry,
-  messages: Seq[(MessageData, Seq[UploadedFile])]
+  messages: Seq[MessageRender],
+  notes: Seq[EnquiryNote]
 )
 
 case class EnquiryVersion(
@@ -137,6 +231,34 @@ case class EnquiryVersion(
   timestamp: OffsetDateTime
 ) extends StoredVersion[Enquiry]
 
+case class EnquiryNote(
+  id: UUID,
+  noteType: EnquiryNoteType,
+  text: String,
+  teamMember: Usercode,
+  created: OffsetDateTime = OffsetDateTime.now(),
+  lastUpdated: OffsetDateTime = OffsetDateTime.now()
+)
 
+object EnquiryNote {
+  // oldest first
+  val dateOrdering: Ordering[EnquiryNote] = Ordering.by[EnquiryNote, OffsetDateTime](_.created)(JavaTime.dateTimeOrdering)
+}
+
+/**
+  * Just the data of a enquiry note required to save it. Other properties
+  * are derived from other objects passed in to the service method.
+  */
+case class EnquiryNoteSave(
+  text: String,
+  teamMember: Usercode
+)
+
+sealed abstract class EnquiryNoteType(val description: String) extends EnumEntry
+object EnquiryNoteType extends PlayEnum[EnquiryNoteType] {
+  case object Referral extends EnquiryNoteType("Referral")
+
+  override def values: immutable.IndexedSeq[EnquiryNoteType] = findValues
+}
 
 

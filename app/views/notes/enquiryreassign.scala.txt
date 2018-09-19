@@ -1,0 +1,5 @@
+@import domain.Team
+@(previousTeam: Team, message: String)
+Reassigned from @previousTeam.name
+
+@message

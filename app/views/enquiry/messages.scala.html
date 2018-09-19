@@ -1,22 +1,20 @@
-@import domain.{Enquiry, IssueState, MessageData, MessageSender, UploadedFile}
+@import domain.{Enquiry, IssueState, MessageRender, SitsProfile}
 @import helpers.JavaTime
-@import warwick.sso.{UniversityID, User, Usercode}
 
-@import domain.SitsProfile
 @(
   enquiry: Enquiry,
   client: Option[SitsProfile],
-  messages: Seq[(MessageData, Seq[UploadedFile])],
+  messages: Seq[MessageRender],
   f: Form[String],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@main(s"${enquiry.team.name} enquiry from ${client.map(c => s"${c.fullName} (${enquiry.universityID.string})").getOrElse(enquiry.universityID.string)}") {
+@main(s"${enquiry.team.name} enquiry from ${client.map { c => s"${c.fullName} (${enquiry.universityID.string})" }.getOrElse(enquiry.universityID.string)}") {
   <h2>
     <div class="pull-right">
-      @if(enquiry.version.isAfter(messages.last._1.created)) {
+      @if(enquiry.version.isAfter(messages.last.message.created)) {
         @JavaTime.Relative(enquiry.version)
       } else {
-        @JavaTime.Relative(messages.last._1.created)
+        @JavaTime.Relative(messages.last.message.created)
       }
     </div>
     @tags.icons.enquiryState(enquiry.state)
@@ -24,8 +22,8 @@
   </h2>
   <div class="enquiry enquiry--client panel panel-default">
     <div class="panel-body">
-      @messages.map { case (message, file) =>
-        @views.html.enquiry.enquiryMessage(enquiry, message, file, "You", s"${message.team.getOrElse(enquiry.team).name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(enquiry.key.get, f.id))
+      @messages.map { render =>
+        @views.html.enquiry.enquiryMessage(enquiry, render.message, render.files, "You", s"${render.message.team.getOrElse(enquiry.team).name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(enquiry.key.get, f.id))
       }
     </div>
     <div class="panel-footer">
