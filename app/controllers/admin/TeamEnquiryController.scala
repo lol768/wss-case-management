@@ -111,7 +111,7 @@ class TeamEnquiryController @Inject()(
           case Accepts.Json() =>
             Future.successful(
               BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
-                formWithErrors.errors.map(error => API.Error(error.getClass.getSimpleName, error.message))
+                formWithErrors.errors.map(error => API.Error(error.getClass.getSimpleName, error.format))
               )))
             )
           case _ =>

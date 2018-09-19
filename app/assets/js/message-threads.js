@@ -75,6 +75,9 @@ export default function MessageThreads(container) {
         $form.find('.alert-danger').empty().html(error.message).removeClass('hidden');
         $form.find(':input').prop('readonly', false);
         $form.find('button').prop('disabled', false);
+      })
+      .finally(() => {
+        checkAndUpdateSendButton();
       });
   });
 }
