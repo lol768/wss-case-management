@@ -1,3 +1,4 @@
+import controllers.RequestContext
 import helpers.Json._
 import javax.inject.{Inject, Singleton}
 import play.api.Environment
@@ -17,20 +18,25 @@ class ErrorHandler @Inject()(
 ) extends HttpErrorHandler with Results with Status with Logging with Rendering with AcceptExtractors with ImplicitRequestContext {
 
   def onClientError(request: RequestHeader, statusCode: Int, message: String): Future[Result] = {
-    implicit val requestHeader: RequestHeader = request
+    implicit val context: RequestContext = requestContext(request)
 
-    Future.successful(
-      statusCode match {
-        case NOT_FOUND => render {
-          case Accepts.Json() => NotFound(Json.toJson(JsonClientError(status = "not_found", errors = Seq(message))))
-          case _ => NotFound(views.html.errors.notFound())
-        }(request)
-        case _ => render {
-          case Accepts.Json() => Status(statusCode)(Json.toJson(JsonClientError(status = statusCode.toString, errors = Seq(message))))
-          case _ => Status(statusCode)(views.html.errors.clientError(statusCode, message))
-        }(request)
-      }
-    )
+    // If we don't have a valid user, force login anyway
+    // (don't give unauthenticated users information about what's a 404 and what isn't)
+    if (context.user.isEmpty)
+      Future.successful(Redirect(context.loginUrl))
+    else
+      Future.successful(
+        statusCode match {
+          case NOT_FOUND => render {
+            case Accepts.Json() => NotFound(Json.toJson(JsonClientError(status = "not_found", errors = Seq(message))))
+            case _ => NotFound(views.html.errors.notFound())
+          }(request)
+          case _ => render {
+            case Accepts.Json() => Status(statusCode)(Json.toJson(JsonClientError(status = statusCode.toString, errors = Seq(message))))
+            case _ => Status(statusCode)(views.html.errors.clientError(statusCode, message))
+          }(request)
+        }
+      )
   }
 
   def onServerError(request: RequestHeader, exception: Throwable): Future[Result] = {
