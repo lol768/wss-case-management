@@ -85,7 +85,7 @@ val appDeps = Seq(
 
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
 
-  "org.dom4j" % "dom4j" % "2.1.1",
+  "org.dom4j" % "dom4j" % "2.1.1"
 )
 
 val testDeps = Seq(
