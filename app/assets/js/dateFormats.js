@@ -69,7 +69,7 @@ export function formatTimeMoment(then) {
  */
 function formatDateTimeMoment(then, now, options = NO_OPTIONS) {
   const {
-    printToday = false,
+    printToday = true,
     onlyWeekday = false,
     shortDates = true,
   } = options;

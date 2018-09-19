@@ -3,7 +3,7 @@
 @import domain.dao.CaseDao.Case
 @import domain._
 @import warwick.sso._
-
+@import play.api.libs.json.Json
 @(
   c: Case.FullyJoined,
   clients: Seq[Either[UniversityID, SitsProfile]],
@@ -11,7 +11,8 @@
   caseNotes: Seq[(CaseNote, Option[User])],
   originalEnquiry: Option[Enquiry],
   userLookup: Map[Usercode, User],
-  noteForm: Form[CaseNoteFormData]
+  noteForm: Form[CaseNoteFormData],
+  history: CaseHistory
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @caseLinks(links: Seq[CaseLink], description: CaseLinkType => String, target: CaseLink => Case) = {
@@ -65,27 +66,60 @@
         }
       }
     </div>
-    <div class="col-md-8 col-md-pull-4">
-      @* TODO history? *@
+    <div class="col-md-8 col-md-pull-4 field-history" data-field-history="@Json.stringify(Json.toJson(history)(CaseHistory.writer))">
+      <div class="hidden" data-field-history-field="subject" data-field-history-target=".id7-page-title h1"></div>
       <dl class="dl-horizontal">
         <dt>Team</dt>
-        <dd>@c.clientCase.team.name @* TODO CASE-80 Reassign button *@</dd>
+        <dd data-field-history-field="team">@c.clientCase.team.name @* TODO CASE-80 Reassign button *@</dd>
 
         <dt>Date raised</dt>
         <dd>@helpers.JavaTime.Relative(c.clientCase.created)</dd>
 
         <dt>State</dt>
-        <dd>@c.clientCase.state @* TODO Transition buttons *@</dd>
+        <dd data-field-history-field="state">@c.clientCase.state @* TODO Transition buttons *@</dd>
 
-        @c.clientCase.incidentDate.map { incidentDate =>
+        @if(c.clientCase.incidentDate.nonEmpty) {
+          @* If currently related to an incident... *@
           <dt>Incident</dt>
           <dd>
-            @helpers.JavaTime.Relative(incidentDate)
-            @if(c.clientCase.onCampus.contains(true)) { On-campus } else { Off-campus }
-            @if(c.clientCase.notifiedPolice.contains(true)) { <span class="label label-info">Police notified</span> }
-            @if(c.clientCase.notifiedAmbulance.contains(true)) { <span class="label label-info">Ambulance called</span> }
-            @if(c.clientCase.notifiedFire.contains(true)) { <span class="label label-info">Fire service called</span> }
+            <span data-field-history-field="incidentDate">@helpers.JavaTime.Relative(c.clientCase.incidentDate.get)</span>
+
+            <span data-field-history-field="onCampus">@if(c.clientCase.onCampus.contains(true)) { On-campus } else { Off-campus }</span>
+
+            @if(c.clientCase.notifiedPolice.contains(true)) {
+              <span data-field-history-field="notifiedPolice">
+                <span class="label label-info">Police notified</span>
+              </span>
+            } else if (history.notifiedPolice.exists(_._1.contains(true))) {
+              <span data-field-history-field="notifiedPolice">
+                <span class="label label-info"><s>Police notified</s></span>
+              </span>
+            }
+
+            @if(c.clientCase.notifiedAmbulance.contains(true)) {
+              <span data-field-history-field="notifiedAmbulance">
+                <span class="label label-info">Ambulance called</span>
+              </span>
+            } else if (history.notifiedAmbulance.exists(_._1.contains(true))) {
+              <span data-field-history-field="notifiedAmbulance">
+                <span class="label label-info"><s>Ambulance called</s></span>
+              </span>
+            }
+
+            @if(c.clientCase.notifiedFire.contains(true)) {
+              <span data-field-history-field="notifiedFire">
+                <span class="label label-info">Fire service called</span>
+              </span>
+            } else if (history.notifiedFire.exists(_._1.contains(true))) {
+              <span data-field-history-field="notifiedFire">
+                <span class="label label-info"><s>Fire service called</s></span>
+              </span>
+            }
+
           </dd>
+        } else if(history.incidentDate.exists(_._1.nonEmpty)) {
+          @* If not currently related to an incident but was previously... *@
+          <span data-field-history-field="incidentDate">Not currently related to an incident</span>
         }
 
         @originalEnquiry.map { enquiry =>
@@ -98,11 +132,11 @@
         }
 
         <dt>Cause</dt>
-        <dd>@c.clientCase.cause.description</dd>
+        <dd data-field-history-field="cause">@c.clientCase.cause.description</dd>
 
         @c.clientCase.caseType.map { caseType =>
           <dt>Case type</dt>
-          <dd>@caseType.description</dd>
+          <dd data-field-history-field="caseType">@caseType.description</dd>
         }
 
         @if(c.tags.nonEmpty) {

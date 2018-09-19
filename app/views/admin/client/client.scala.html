@@ -132,17 +132,17 @@
       <dl class="dl-horizontal field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(universityID)">
         <dt>Registered</dt>
         <dd>@helpers.JavaTime.Relative(registration.updatedDate)</dd>
-        <dt data-field-history="gp">GP</dt>
+        <dt data-field-history-field="gp">GP</dt>
         <dd>@registration.data.gp</dd>
-        <dt data-field-history="tutor">Tutor</dt>
+        <dt data-field-history-field="tutor">Tutor</dt>
         <dd>@registration.data.tutor</dd>
-        <dt data-field-history="disabilities">Disabilities</dt>
+        <dt data-field-history-field="disabilities">Disabilities</dt>
         <dd>@registration.data.disabilities.map(_.description).mkString(", ")</dd>
-        <dt data-field-history="medications">Medication</dt>
+        <dt data-field-history-field="medications">Medication</dt>
         <dd>@registration.data.medications.map(_.description).mkString(", ")</dd>
-        <dt data-field-history="appointmentAdjustments">Appointment adjustments</dt>
+        <dt data-field-history-field="appointmentAdjustments">Appointment adjustments</dt>
         <dd>@views.utils.nl2br(registration.data.appointmentAdjustments)</dd>
-        <dt data-field-history="referrals">Referrals</dt>
+        <dt data-field-history-field="referrals">Referrals</dt>
         <dd>@registration.data.referrals.map(_.description).mkString(", ")</dd>
       </dl>
     }.getOrElse {
