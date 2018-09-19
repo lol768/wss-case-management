@@ -1,0 +1,5 @@
+@import domain.CaseDocumentType
+@(documentType: CaseDocumentType, documentName: String, documentDescription: String)
+@{documentType} - @{documentName}
+
+@documentDescription

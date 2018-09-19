@@ -13,7 +13,7 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 
-@main("Reassign case") {
+@main(s"Reassign ${clientCase.key.get.string}") {
 
   @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.CaseController.reassign(clientCase.key.get)) { implicit fc =>
     @b3.validatedHidden(form, "version")

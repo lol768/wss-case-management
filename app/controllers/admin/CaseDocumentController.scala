@@ -21,9 +21,13 @@ import services.CaseService
 import scala.concurrent.{ExecutionContext, Future}
 
 object CaseDocumentController {
-  val form = Form(single(
+
+  case class DocumentForm(documentType: CaseDocumentType, description: String)
+
+  val form = Form(mapping(
     "documentType" -> CaseDocumentType.formField,
-  ))
+    "description" -> nonEmptyText
+  )(DocumentForm.apply)(DocumentForm.unapply))
 
   def deleteForm(version: OffsetDateTime): Form[OffsetDateTime] = Form(single(
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
@@ -56,13 +60,12 @@ class CaseDocumentController @Inject()(
       formWithErrors => Future.successful(
         Ok(views.html.admin.cases.addDocument(caseKey, formWithErrors))
       ),
-      documentType =>
+      formData =>
         caseRequest.body.file("file").filter(_.filename.nonEmpty).map { file =>
-          // TODO should this add a case note?
           cases.addDocument(
             caseID = caseRequest.`case`.id.get,
             document = CaseDocumentSave(
-              documentType,
+              formData.documentType,
               caseRequest.context.user.get.usercode
             ),
             in = Files.asByteSource(file.ref),
@@ -71,7 +74,8 @@ class CaseDocumentController @Inject()(
               file.ref.length(),
               file.contentType.getOrElse("application/octet-stream"),
               caseRequest.context.user.get.usercode
-            )
+            ),
+            caseNote = CaseNoteSave(views.txt.notes.casedocument(formData.documentType, file.filename, formData.description).toString, caseRequest.context.user.get.usercode)
           ).successMap { _ =>
             Redirect(controllers.admin.routes.CaseController.view(caseKey))
               .flashing("success" -> Messages("flash.case.documentAdded"))

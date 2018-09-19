@@ -98,6 +98,7 @@ sealed abstract class CaseNoteType(val description: String) extends EnumEntry
 object CaseNoteType extends PlayEnum[CaseNoteType] {
   case object AppointmentNote extends CaseNoteType("Appointment note")
   case object AssociatedCase extends CaseNoteType("Associated case")
+  case object DocumentNote extends CaseNoteType("Document added")
   case object CaseClosed extends CaseNoteType("Case closed")
   case object CaseReopened extends CaseNoteType("Case reopened")
   case object GeneralNote extends CaseNoteType("General note")
