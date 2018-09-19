@@ -1,11 +1,12 @@
 @import java.util.UUID
 
 @import domain.{Enquiry, MessageData, SitsProfile, Team}
+@import warwick.sso.UniversityID
 
 @(
   team: Team,
   enquiries: Seq[(Enquiry, MessageData)],
-  clients: Map[UUID, Set[SitsProfile]]
+  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
 )(implicit context: RequestContext)
 
 @views.html.admin.enquiryTable(None, enquiries, clients, Some("There are no closed enquiries"))

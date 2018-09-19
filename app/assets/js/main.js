@@ -22,6 +22,11 @@ function closePopover($popover) {
 $(() => {
   $('[data-toggle="popover"]').popover();
 
+  $('i.icon-tooltip').tooltip({
+    delay: { show: 500, hide: 100 },
+    placement: 'auto top',
+  });
+
   UserListPopovers();
 
   $('.field-history').each((i, container) => {
@@ -69,7 +74,7 @@ $(() => {
       }
     });
 
-  $('form.dirty-check').areYouSure();
+  $('form').not('.no-dirty-check').areYouSure();
 
   $('.toggle-element').each((i, container) => {
     const $this = $(container);

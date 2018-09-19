@@ -10,9 +10,10 @@ import helpers.JavaTime
 import play.api.libs.json.{JsValue, Json}
 import ExtendedPostgresProfile.api._
 import slick.jdbc.{JdbcProfile, JdbcType}
+import warwick.slick.jdbctypes.JdbcDateTypesUtc
 import warwick.sso.{GroupName, UniversityID, Usercode}
 
-object CustomJdbcTypes extends SlickEnumSupport {
+object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
   override val profile: JdbcProfile = ExtendedPostgresProfile
   import profile._
 
@@ -40,26 +41,6 @@ object CustomJdbcTypes extends SlickEnumSupport {
     k => k.string,
     s => IssueKey(s)
   )
-
-  implicit val offsetDateTimeTypeMapper: JdbcType[OffsetDateTime] = new DriverJdbcType[OffsetDateTime]() {
-    private[this] val referenceCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-    private[this] val literalDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
-
-    private[this] def map(v: OffsetDateTime): Timestamp = Timestamp.from(v.toInstant)
-    private[this] def comap(ts: Timestamp): OffsetDateTime = OffsetDateTime.ofInstant(ts.toInstant, JavaTime.timeZone)
-
-    def sqlType: Int = java.sql.Types.TIMESTAMP
-    def setValue(v: OffsetDateTime, p: PreparedStatement, idx: Int): Unit = p.setTimestamp(idx, map(v), referenceCalendar)
-    def getValue(r: ResultSet, idx: Int): OffsetDateTime = {
-      val v = r.getTimestamp(idx, referenceCalendar)
-
-      if ((v eq null) || wasNull(r, idx)) null
-      else comap(v)
-    }
-    def updateValue(v: OffsetDateTime, r: ResultSet, idx: Int): Unit = r.updateTimestamp(idx, map(v))
-    override def valueToSQLLiteral(value: OffsetDateTime): String =
-      s"{ts '${value.atZoneSameInstant(ZoneOffset.UTC).format(literalDateTimeFormatter)}'}"
-  }
 
   implicit val jsonTypeMapper: JdbcType[JsValue] = MappedColumnType.base[JsValue, String](Json.stringify, Json.parse)
 

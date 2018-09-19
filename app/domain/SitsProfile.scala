@@ -4,8 +4,9 @@ import java.time.LocalDate
 
 import enumeratum.EnumEntry.CapitalWords
 import enumeratum.{Enum, EnumEntry}
+import helpers.JavaTime
 import helpers.StringUtils._
-import warwick.sso.{UniversityID, Usercode}
+import warwick.sso.{Department, Name, UniversityID, User, Usercode}
 
 import scala.collection.immutable
 
@@ -37,7 +38,27 @@ case class SitsProfile(
   personalTutors: Seq[SitsProfile],
   researchSupervisors: Seq[SitsProfile],
   userType: UserType
-)
+) {
+  def asUser: User = User(
+    usercode = usercode,
+    universityId = Some(universityID),
+    name = Name(fullName.split(' ').headOption, fullName.split(' ').lastOption),
+    email = warwickEmail,
+    department = Some(Department(None, Some(department.name), Some(department.code.toUpperCase))),
+    userSource = Some("Tabula"),
+    isStaffOrPGR = group.isEmpty || group.contains(StudentGroup.PGR),
+    isStaffNotPGR = group.isEmpty,
+    isStudent = userType == UserType.Student,
+    isAlumni = false,
+    isUndergraduate = group.contains(StudentGroup.Undergraduate) || group.contains(StudentGroup.Foundation),
+    isPGT = group.contains(StudentGroup.PGT),
+    isPGR = group.contains(StudentGroup.PGR),
+    isFound = true,
+    isVerified = true,
+    isLoginDisabled = endDate.exists(_.isAfter(JavaTime.localDate)),
+    rawProperties = Map()
+  )
+}
 
 case class Course (
   code: String,

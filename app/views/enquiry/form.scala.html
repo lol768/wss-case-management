@@ -9,7 +9,7 @@
   @b3.horizontal.formCSRF(
     controllers.enquiries.routes.EnquiryController.submit(),
     "col-sm-2", "col-sm-5",
-    'class -> "dirty-check", 'enctype -> "multipart/form-data"
+    'enctype -> "multipart/form-data"
   ) { implicit ifc =>
     @b3.free('_label -> "Name") {
       <p class="form-control-static">@context.user.flatMap(_.name.full)</p>

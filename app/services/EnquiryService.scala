@@ -66,6 +66,7 @@ trait EnquiryService {
   def findEnquiriesAwaitingClient(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
 
   def findClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+  def countClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def findClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
 
   def countEnquiriesOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
@@ -113,7 +114,7 @@ class EnquiryServiceImpl @Inject() (
     ))
   }
 
-  private def addMessageDBIO(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)]): DBIO[(Message, Seq[UploadedFile])] =
+  private def addMessageDBIO(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit t: TimingContext): DBIO[(Message, Seq[UploadedFile])] =
     for {
       message <- messageDao.insert(Message(
         id = UUID.randomUUID(),
@@ -247,6 +248,11 @@ class EnquiryServiceImpl @Inject() (
 
   override def findClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
     findEnquiriesWithLatestMessage(enquiryDao.findClosedQuery(team))
+
+  override def countClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(
+      enquiryDao.findClosedQuery(team).length.result
+    ).map(Right.apply)
 
   override def findClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
     findEnquiriesWithLatestMessage(enquiryDao.findClosedQuery(owner))

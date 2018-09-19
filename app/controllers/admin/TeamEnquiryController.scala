@@ -8,6 +8,7 @@ import controllers.admin.TeamEnquiryController._
 import controllers.refiners.{CanAddTeamMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
 import controllers.{API, BaseController, UploadedFileControllerHelper}
 import domain._
+import helpers.ServiceResults.ServiceResult
 import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -58,31 +59,31 @@ class TeamEnquiryController @Inject()(
   import canViewEnquiryActionRefiner._
 
   private def renderMessages(enquiry: Enquiry, reassignForm: Form[ReassignEnquiryData], stateChangeForm: Form[OffsetDateTime], messageForm: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
-    val clientUsercode = userLookupService.getUsers(Seq(enquiry.universityID)).getOrElse(Map()).values.map(_.usercode).headOption
-    val findClientLastRead =
-      clientUsercode.map(service.findLastViewDate(enquiry.id.get, _))
-        .getOrElse(Future.successful(Right(None)))
-
     ServiceResults.zip(
       service.getForRender(enquiry.id.get),
       profiles.getProfile(enquiry.universityID).map(_.value),
       service.getOwners(Set(enquiry.id.get)),
-      findClientLastRead
-    ).successMap { case (render, profile, ownersMap, clientLastRead) =>
+    ).successFlatMap { case (render, profile, ownersMap) =>
       val allUsers = render.messages.flatMap { case (m, _) => m.teamMember }.toSet ++ ownersMap.values.flatten
       val userLookup = userLookupService.getUsers(allUsers.toSeq).getOrElse(Map())
 
-      Ok(views.html.admin.enquiry.messages(
-        render.enquiry,
-        profile,
-        render.messages,
-        ownersMap.values.flatten.flatMap(userLookup.get).toSeq.sortBy { u => (u.name.last, u.name.first) },
-        clientLastRead,
-        userLookup,
-        reassignForm,
-        stateChangeForm,
-        messageForm
-      ))
+      val getClientLastRead: Future[ServiceResult[Option[OffsetDateTime]]] =
+        profile.map { p => service.findLastViewDate(enquiry.id.get, p.usercode) }
+          .getOrElse(Future.successful(Right(None)))
+
+      getClientLastRead.successMap { clientLastRead =>
+        Ok(views.html.admin.enquiry.messages(
+          render.enquiry,
+          profile,
+          render.messages,
+          ownersMap.values.flatten.flatMap(userLookup.get).toSeq.sortBy { u => (u.name.last, u.name.first) },
+          clientLastRead,
+          userLookup,
+          reassignForm,
+          stateChangeForm,
+          messageForm
+        ))
+      }
     }
   }
 

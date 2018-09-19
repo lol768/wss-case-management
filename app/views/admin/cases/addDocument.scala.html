@@ -10,7 +10,7 @@
   @b3.horizontal.formCSRF(
     controllers.admin.routes.CaseDocumentController.addDocument(caseKey),
     "col-sm-2", "col-sm-5",
-    'class -> "dirty-check", 'enctype -> "multipart/form-data"
+    'enctype -> "multipart/form-data"
   ) { implicit ifc =>
     @b3.select(form("documentType"),
       options = CaseDocumentType.values.map { t => t.entryName -> t.description },

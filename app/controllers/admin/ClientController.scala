@@ -41,7 +41,7 @@ class ClientController @Inject()(
     "reasonable-adjustments" -> set(ReasonableAdjustment.formField)
   )(ClientSummaryData.apply)(ClientSummaryData.unapply))
 
-  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(SitsProfile, Option[Registration], Option[ClientSummary], Seq[EnquiryRender], Seq[(Case, Seq[MessageData], Seq[CaseNote])])]] = {
+  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], Seq[EnquiryRender], Seq[(Case, Seq[MessageData], Seq[CaseNote])])]] = {
     val profile = profileService.getProfile(universityID).map(_.value)
     val registration = registrationService.get(universityID)
     val clientSummary = clientSummaryService.get(universityID)
@@ -58,14 +58,14 @@ class ClientController @Inject()(
         case _ => form
       }
 
-      Ok(views.html.admin.client.client(profile, registration, clientSummary, enquiries, cases, f, inMentalHealthTeam))
+      Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, enquiries, cases, f, inMentalHealthTeam))
     }
   }
 
   def updateSummary(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     clientInformation(universityID).successFlatMap { case (profile, registration, clientSummary, enquiries, cases) =>
       form.bindFromRequest.fold(
-        formWithErrors => Future.successful(Ok(views.html.admin.client.client(profile, registration, clientSummary, enquiries, cases, formWithErrors, inMentalHealthTeam))),
+        formWithErrors => Future.successful(Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, enquiries, cases, formWithErrors, inMentalHealthTeam))),
         data => {
           val processedData = if (inMentalHealthTeam) data else data.copy(highMentalHealthRisk = clientSummary.flatMap(_.data.highMentalHealthRisk))
           val f =
