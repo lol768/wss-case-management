@@ -138,16 +138,15 @@ class CaseServiceImpl @Inject() (
       findFullyJoined(dao.findByKeyQuery(caseKey))
     }
 
-  override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, Seq[MessageData], Seq[CaseNote])]]] =
-    daoRunner.run(
-      dao.findByClientQuery(universityID)
-        .withMessagesAndNotes
-        .sortBy { case (c, m, n) => (c.version.reverse, m.map(_.created), n.map(_.created)) }
-        .map { case (c, m, n) => (c, m.map(_.messageData), n) }
-        .result
-    ).map { tuples => // Seq[(Case, Option[MessageData], Option[StoredCaseNote])]
-      Right(groupTuples(tuples))
+  override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, Seq[MessageData], Seq[CaseNote])]]] = {
+    val clientCases = dao.findByClientQuery(universityID)
+    daoRunner.run(for {
+      withMessages <- clientCases.withMessages.map { case (c, m) => (c, m.map(_.messageData)) }.result
+      withNotes <- clientCases.withNotes.result
+    } yield (withMessages, withNotes)).map { case (withMessages, withNotes) =>
+      Right(groupTuples(withMessages, withNotes))
     }
+  }
 
   override def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
     auditService.findRecentTargetIDsByOperation('CaseView, teamMember, limit).flatMap(_.fold(
@@ -425,11 +424,11 @@ class CaseServiceImpl @Inject() (
 }
 
 object CaseService {
-  def groupTuples(tuples: Seq[(Case, Option[MessageData], Option[StoredCaseNote])]): Seq[(Case, Seq[MessageData], Seq[CaseNote])] = {
+  def groupTuples(messagesTuples: Seq[(Case, Option[MessageData])], notesTuples: Seq[(Case, Option[StoredCaseNote])]): Seq[(Case, Seq[MessageData], Seq[CaseNote])] = {
     val casesAndMessages =
-      OneToMany.leftJoin(tuples.map { case (c, m, _) => (c, m) })(MessageData.dateOrdering)
+      OneToMany.leftJoin(messagesTuples)(MessageData.dateOrdering)
     val casesAndNotes =
-      OneToMany.leftJoin(tuples.map { case (c, _, n) => (c, n.map(_.asCaseNote)) })(CaseNote.dateOrdering).toMap
+      OneToMany.leftJoin(notesTuples.map { case (c, n) => (c, n.map(_.asCaseNote)) })(CaseNote.dateOrdering).toMap
 
     sortByRecent(casesAndMessages.map { case (c, m) => (c, m.distinct, casesAndNotes.getOrElse(c, Nil)) })
   }

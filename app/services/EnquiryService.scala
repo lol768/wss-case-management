@@ -177,20 +177,14 @@ class EnquiryServiceImpl @Inject() (
   }
 
   override def findEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryRender]]] = {
-    val query = enquiryDao.findByClientQuery(client).withMessagesAndNotes
-      .sortBy {
-        case (e, mf, n) => (e.version.reverse, mf.map { case (m, _) => m.created }, n.map(_.created))
-      }
-      .map {
-        case (e, mf, n) => (e, mf.map { case (m, f) => (m.messageData, f) }, n)
-      }
-
-    // Don't think it's possible within Slick to take a one-to-many mapping
-    // and get a collection of (Enquiry, Seq[Message]), so this happens
-    // in plain Scala after we've got our (Enquiry, Message) tuples back.
-
-    daoRunner.run(query.result).map { tuples =>
-      Right(groupTuples(tuples))
+    val enquiries = enquiryDao.findByClientQuery(client)
+    daoRunner.run(for {
+      withMessages <- enquiries.withMessages.map {
+        case (e, mf) => (e, mf.map { case (m, f) => (m.messageData, f) })
+      }.result
+      withNotes <- enquiries.withNotes.result
+    } yield (withMessages, withNotes)).map { case (withMessages, withNotes) =>
+      Right(groupTuples(withMessages, withNotes))
     }
   }
 
@@ -210,25 +204,29 @@ class EnquiryServiceImpl @Inject() (
   override def get(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Enquiry]] =
     daoRunner.run(enquiryDao.findByKeyQuery(enquiryKey).result.head).map(Right.apply)
 
-  private def getWithMessagesAndNotesQuery(query: Query[Enquiry.Enquiries, Enquiry, Seq]) =
-    query.withMessagesAndNotes
-      .map { case (e, mf, n) => (e, mf.map { case (m, f) => (m.messageData, f) }, n) }
+  private def getWithMessagesAndNotes(query: Query[Enquiry.Enquiries, Enquiry, Seq]) =
+    for {
+      withMessages <- query.withMessages.map {
+        case (e, mf) => (e, mf.map { case (m, f) => (m.messageData, f) })
+      }.result
+      withNotes <- query.withNotes.result
+    } yield (withMessages, withNotes)
 
   override def getForRender(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]] =
     auditService.audit('EnquiryView, id.toString, 'Enquiry, Json.obj()) {
-      val query = getWithMessagesAndNotesQuery(enquiryDao.findByIDQuery(id))
+      val action = getWithMessagesAndNotes(enquiryDao.findByIDQuery(id))
 
-      daoRunner.run(query.result).map { tuples =>
-        Right(groupTuples(tuples).head)
+      daoRunner.run(action).map { case (withMessages, withNotes) =>
+        Right(groupTuples(withMessages, withNotes).head)
       }
     }
 
   override def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]] =
     auditService.audit[EnquiryRender]('EnquiryView, (r: EnquiryRender) => r.enquiry.id.get.toString, 'Enquiry, Json.obj()) {
-      val query = getWithMessagesAndNotesQuery(enquiryDao.findByKeyQuery(enquiryKey))
+      val action = getWithMessagesAndNotes(enquiryDao.findByKeyQuery(enquiryKey))
 
-      daoRunner.run(query.result).map { tuples =>
-        Right(groupTuples(tuples).head)
+      daoRunner.run(action).map { case (withMessages, withNotes) =>
+        Right(groupTuples(withMessages, withNotes).head)
       }
     }
 
@@ -324,9 +322,9 @@ class EnquiryServiceImpl @Inject() (
 }
 
 object EnquiryService {
-  def groupTuples(tuples: Seq[(Enquiry, Option[(MessageData, Option[StoredUploadedFile])], Option[StoredEnquiryNote])]): Seq[EnquiryRender] = {
+  def groupTuples(messageTuples: Seq[(Enquiry, Option[(MessageData, Option[StoredUploadedFile])])], noteTuples: Seq[(Enquiry, Option[StoredEnquiryNote])]): Seq[EnquiryRender] = {
     val enquiriesAndMessages =
-      OneToMany.leftJoin(tuples.map { case (e, m, _) => (e, m) })(MessageData.dateOrderingWithFile)
+      OneToMany.leftJoin(messageTuples)(MessageData.dateOrderingWithFile)
         .map { case (enquiry, mf) =>
           enquiry ->
             OneToMany.leftJoin(mf.distinct)(StoredUploadedFile.dateOrdering)
@@ -334,7 +332,7 @@ object EnquiryService {
               .map { case (m, f) => MessageRender(m, f.map(_.asUploadedFile)) }
         }
     val enquiriesAndNotes =
-      OneToMany.leftJoin(tuples.map { case (e, _, n) => (e, n.map(_.asEnquiryNote)) })(EnquiryNote.dateOrdering).toMap
+      OneToMany.leftJoin(noteTuples.map { case (e, n) => (e, n.map(_.asEnquiryNote)) }.distinct)(EnquiryNote.dateOrdering).toMap
 
     sortByRecent(enquiriesAndMessages.map { case (e, m) =>
       EnquiryRender(
