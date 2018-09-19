@@ -3,6 +3,7 @@ package helpers.caching
 import java.time.OffsetDateTime
 
 import helpers.JavaTimeTest
+import helpers.ServiceResults.ServiceResult
 import javax.inject.Provider
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
@@ -94,23 +95,21 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
       val cache = new NeverExpiringMemoryAsyncCacheApi()
 
       // get a String value put in the cache
-      private val oldWrapper = VariableTtlCacheHelper.async[String](cache, Logger("test"), 1.second, 1.minute, 1.hour, new NullTimingService)
-      Await.ready(
-        oldWrapper.getOrElseUpdate("mykey")(Future.successful("oldvalue")),
-        Duration.Inf
-      )
+      // (wrapped in a ServiceResult, so the top level type doesn't change, to check we're checking the full type and not just the erased class)
+      private val oldWrapper: AsyncVariableTtlCacheHelper[ServiceResult[String]] = VariableTtlCacheHelper.async(cache, Logger("test"), 1.second, 1.minute, 1.hour, new NullTimingService)
+      oldWrapper.getOrElseUpdate("mykey")(Future.successful(Right("oldvalue"))).futureValue
 
-      val wrapper: AsyncVariableTtlCacheHelper[Option[String]] = VariableTtlCacheHelper.async[Option[String]](cache, Logger("test"), 1.second, 1.minute, 1.hour, new NullTimingService)
+      val wrapper: AsyncVariableTtlCacheHelper[ServiceResult[Option[String]]] = VariableTtlCacheHelper.async(cache, Logger("test"), 1.second, 1.minute, 1.hour, new NullTimingService)
     }
 
     "handle a class change in getOrElseUpdateElement" in new ClassChangeContext {
-      val result: CacheElement[Option[String]] = wrapper.getOrElseUpdateElement("mykey", CacheOptions.default)(Future.successful(Some("newvalue"))).futureValue
-      result.value mustBe Some("newvalue")
+      val result: CacheElement[ServiceResult[Option[String]]] = wrapper.getOrElseUpdateElement("mykey", CacheOptions.default)(Future((Right(Some("newvalue"))))).futureValue
+      result.value mustBe Right(Some("newvalue"))
     }
 
     "handle a class change in getOrElseUpdate" in new ClassChangeContext {
-      val result: Option[String]  = wrapper.getOrElseUpdate("mykey")(Future.successful(Some("newvalue"))).futureValue
-      result mustBe Some("newvalue")
+      val result: ServiceResult[Option[String]] = wrapper.getOrElseUpdate("mykey")(Future.successful(Right(Some("newvalue")))).futureValue
+      result mustBe Right(Some("newvalue"))
     }
 
   }
