@@ -1,0 +1,30 @@
+@import domain.Enquiry
+@(
+    action: Call,
+    enquiry: Enquiry,
+    messageForm: Form[String],
+    rows: Int = 5,
+)(implicit messagesProvider: MessagesProvider, requestHeader: RequestHeader)
+
+@b3.vertical.formCSRF(action, 'enctype -> "multipart/form-data") { implicit ifc =>
+  @b3.free('_label -> "Add a message", '_class -> messageForm("text").error.map(_ => "has-error").getOrElse("")) {
+    <div class="flex">
+      @b3.textarea(messageForm("text"), 'rows -> rows)(b3.clear.fieldConstructorSpecific, messagesProvider)
+      @tags.messages.sendButton()
+    </div>
+
+    @if(messageForm("text").hasErrors) {
+      <div class="help-block">
+      @messageForm("text").errors.map { error =>
+        @error.format
+      }
+      </div>
+    }
+  }
+  @* TODO - move file uploads into a modal *@
+  <div class="form-group">
+    <div class="row">
+      <div class="col-md-5"><input type="file" name="file" class="form-control" multiple></div>
+    </div>
+  </div>
+}

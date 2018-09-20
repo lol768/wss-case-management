@@ -6,6 +6,8 @@
 @import domain.dao.CaseDao.Case
 @import domain.{Enquiry, EnquiryRender, MessageData, Registration, SitsProfile}
 @import helpers.JavaTime
+@import play.api.data.Form
+@import play.api.data.Forms._
 @import warwick.sso.UniversityID
 
 @(
@@ -65,23 +67,10 @@
               }
             </div>
               <div class="panel-footer">
-                @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(e.enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
-                  <div class="form-group">
-                    <label for="textarea-@e.enquiry.key.get.string">
-                      Add a message
-                    </label>
-                    <div class="flex">
-                      <textarea id="textarea-@e.enquiry.key.get.string" class="form-control" rows="1" name="text"></textarea>
-
-                      @* Styling TBC *@
-                      <input type="file" name="file" class="form-control" multiple>
-
-                      @tags.messages.sendButton()
-                    </div>
-                  </div>
-                  <div class="alert alert-danger hidden"></div>
+                @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
+                  @tags.messages.messageForm(controllers.enquiries.routes.EnquiryMessagesController.addMessage(e.enquiry.key.get), e.enquiry, form, rows = 1)
+                }
               </div>
-            }
           </div>
         </div>
       }

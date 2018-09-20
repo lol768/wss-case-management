@@ -208,13 +208,19 @@ section.indent {
     }
 
     .form-group {
-      input[type="file"] {
-        margin: 0 @grid-gutter-width;
+      &:last-child {
+        margin-bottom: 0;
+      }
 
-        + button { margin-left: 0; }
+      input[type="file"] {
+        background-color: transparent;
+        border: none;
+        box-shadow: none;
+        padding-left: 0;
       }
 
       button {
+        margin-left: @grid-gutter-width;
         @diameter: 36px;
         padding: 0;
         width: @diameter;
