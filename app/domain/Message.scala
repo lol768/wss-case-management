@@ -22,6 +22,7 @@ case class Message (
   id: UUID,
   text: String,
   sender: MessageSender,
+  client: UniversityID,
   teamMember: Option[Usercode],
   team: Option[Team],
   ownerId: UUID,
@@ -36,6 +37,7 @@ case class Message (
       id,
       text,
       sender,
+      client,
       teamMember,
       team,
       ownerId,
@@ -46,15 +48,6 @@ case class Message (
       timestamp
     ).asInstanceOf[B]
 }
-
-/**
-  * One-to-many mapping of message to client
-  */
-private[domain] case class MessageClient (
-  id: UUID,
-  client: UniversityID,
-  message: UUID
-)
 
 object Message extends Versioning {
   def tupled = (apply _).tupled
@@ -67,6 +60,7 @@ object Message extends Versioning {
     def text = column[String]("text")
     def searchableText = toTsVector(text, Some("english"))
     def sender = column[MessageSender]("sender")
+    def client = column[UniversityID]("university_id")
     def teamMember = column[Option[Usercode]]("team_member")
     def team = column[Option[Team]]("team_id")
     def created = column[OffsetDateTime]("created_utc")
@@ -80,7 +74,7 @@ object Message extends Versioning {
 
     def id = column[UUID]("id", O.PrimaryKey)
 
-    def * = (id, text, sender, teamMember, team, ownerId, ownerType, created, version).mapTo[Message]
+    def * = (id, text, sender, client, teamMember, team, ownerId, ownerType, created, version).mapTo[Message]
     def messageData = (text, sender, created, teamMember, team).mapTo[MessageData]
   }
 
@@ -89,19 +83,9 @@ object Message extends Versioning {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
 
-    def * = (id, text, sender, teamMember, team, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
+    def * = (id, text, sender, client, teamMember, team, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
     def pk = primaryKey("pk_messageversions", (id, timestamp))
     def idx = index("idx_messageversions", (id, version))
-  }
-
-  class MessageClients(tag: Tag) extends Table[MessageClient](tag, "message_client") {
-    def id = column[UUID]("id")
-    def universityId = column[UniversityID]("university_id")
-    def messageId = column[UUID]("message_id")
-
-    def * = (id, universityId, messageId).mapTo[MessageClient]
-
-    def message = foreignKey("fk_client_message", messageId, messages.table)(m => m.id)
   }
 
   implicit class MessageExtensions[C[_]](q: Query[Messages, Message, C]) {
@@ -115,14 +99,13 @@ object Message extends Versioning {
   val messages: VersionedTableQuery[Message, MessageVersion, Messages, MessageVersions] =
     VersionedTableQuery(TableQuery[Messages], TableQuery[MessageVersions])
 
-  val messageClients = TableQuery[MessageClients]
-
 }
 
 case class MessageVersion (
   id: UUID,
   text: String,
   sender: MessageSender,
+  client: UniversityID,
   teamMember: Option[Usercode],
   team: Option[Team],
   ownerId: UUID,

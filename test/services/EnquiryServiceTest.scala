@@ -55,8 +55,7 @@ class EnquiryServiceTest extends AbstractDaoTest {
         Enquiry.enquiries.table.delete andThen
         Enquiry.enquiries.versionsTable.delete andThen
         Message.messages.table.delete andThen
-        Message.messages.versionsTable.delete andThen
-        Message.messageClients.delete
+        Message.messages.versionsTable.delete
       ).futureValue
     }
   }

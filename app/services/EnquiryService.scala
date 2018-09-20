@@ -121,11 +121,12 @@ class EnquiryServiceImpl @Inject() (
         id = UUID.randomUUID(),
         text = message.text,
         sender = message.sender,
+        client = enquiry.universityID,
         teamMember = message.teamMember,
         team = message.teamMember.map(_ => enquiry.team), // Only store Team if there is an explicit team member
         ownerId = enquiry.id.get,
         ownerType = MessageOwner.Enquiry
-      ), Seq(enquiry.universityID))
+      ))
       f <- DBIO.sequence(files.map { case (in, metadata) =>
         uploadedFileService.storeDBIO(in, metadata, message.id, UploadedFileOwner.Message)
       })
