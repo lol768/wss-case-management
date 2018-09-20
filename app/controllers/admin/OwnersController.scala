@@ -66,6 +66,20 @@ class OwnersController @Inject()(
     )
   }
 
+  def enquirySubmitSelf(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
+    enquiryService.getOwners(Set(request.enquiry.id.get)).successFlatMap { ownerMap =>
+      val currentOwners = ownerMap.getOrElse(request.enquiry.id.get, Set())
+      if (currentOwners.contains(currentUser.usercode)) {
+        Future.successful(Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key.get)))
+      } else {
+        enquiryService.setOwners(request.enquiry.id.get, currentOwners + currentUser.usercode).successMap(_ =>
+          Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key.get))
+            .flashing("success" -> Messages("flash.enquiry.owners.updated"))
+        )
+      }
+    }
+  }
+
   def caseSubmit(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit request =>
     bindAndVerifyOwners.fold(
       errors => Future.successful(showErrors(errors)),
@@ -78,7 +92,7 @@ class OwnersController @Inject()(
             caseService.setOwners(request.`case`.id.get, data.toSet).successFlatMap { updatedOwners =>
               val newOwners = updatedOwners -- previousOwners.getOrElse(request.`case`.id.get, Set())
               notificationService.newCaseOwner(newOwners, request.`case`).successMap(_ =>
-                Redirect(controllers.admin.routes.AdminController.teamHome(request.`case`.team.id))
+                Redirect(controllers.admin.routes.CaseController.view(request.`case`.key.get))
                   .flashing("success" -> Messages("flash.case.owners.updated"))
               )
             }
@@ -86,6 +100,20 @@ class OwnersController @Inject()(
         }
       )
     )
+  }
+
+  def caseSubmitSelf(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit request =>
+    caseService.getOwners(Set(request.`case`.id.get)).successFlatMap { ownerMap =>
+      val currentOwners = ownerMap.getOrElse(request.`case`.id.get, Set())
+      if (currentOwners.contains(currentUser.usercode)) {
+        Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(request.`case`.team.id)))
+      } else {
+        caseService.setOwners(request.`case`.id.get, currentOwners + currentUser.usercode).successMap { _ =>
+          Redirect(controllers.admin.routes.CaseController.view(request.`case`.key.get))
+            .flashing("success" -> Messages("flash.case.owners.updated"))
+        }
+      }
+    }
   }
 
   /**

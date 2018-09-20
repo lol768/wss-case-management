@@ -163,6 +163,9 @@
                       }
                     </div>
                     <div class="modal-footer spaced-buttons">
+                      @if(!owners.contains(context.user.get)) {
+                        <button type="submit" class="btn btn-primary" formaction="@controllers.admin.routes.OwnersController.enquirySubmitSelf(enquiry.key.get)">Add me</button>
+                      }
                       <button type="submit" class="btn btn-primary">Add owner</button>
                       <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                     </div>
