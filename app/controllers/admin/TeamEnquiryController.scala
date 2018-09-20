@@ -17,7 +17,7 @@ import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
-import services.{EnquiryService, PermissionService}
+import services.{CaseService, EnquiryService, PermissionService}
 import services.tabula.ProfileService
 import warwick.sso.UserLookupService
 
@@ -54,6 +54,7 @@ class TeamEnquiryController @Inject()(
   userLookupService: UserLookupService,
   profiles: ProfileService,
   permissionService: PermissionService,
+  caseService: CaseService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
@@ -66,8 +67,9 @@ class TeamEnquiryController @Inject()(
       service.getForRender(enquiry.id.get),
       profiles.getProfile(enquiry.universityID).map(_.value),
       service.getOwners(Set(enquiry.id.get)),
-      permissionService.canViewTeamFuture(currentUser.usercode, enquiry.team)
-    ).successFlatMap { case (render, profile, ownersMap, canViewTeam) =>
+      permissionService.canViewTeamFuture(currentUser.usercode, enquiry.team),
+      caseService.findFromOriginalEnquiry(enquiry.id.get)
+    ).successFlatMap { case (render, profile, ownersMap, canViewTeam, linkedCases) =>
       val allUsers = render.messages.flatMap(_.message.teamMember).toSet ++ ownersMap.values.flatten ++ render.notes.map(_.teamMember).toSet
       val userLookup = userLookupService.getUsers(allUsers.toSeq).getOrElse(Map())
 
@@ -86,7 +88,8 @@ class TeamEnquiryController @Inject()(
           userLookup,
           stateChangeForm,
           messageForm,
-          canViewTeam
+          canViewTeam,
+          linkedCases
         ))
       }
     }

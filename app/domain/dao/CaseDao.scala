@@ -52,6 +52,7 @@ trait CaseDao {
   def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq]
   def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, Case, Seq]
   def getHistory(key: IssueKey): DBIO[Seq[CaseVersion]]
+  def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, Case, Seq]
 }
 
 @Singleton
@@ -204,6 +205,10 @@ class CaseDaoImpl @Inject()(
       )
       .sortBy(_.timestamp)
       .result
+  }
+
+  override def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, Case, Seq] = {
+    cases.table.filter(c => c.originalEnquiry.map(_ === enquiryId))
   }
 }
 
