@@ -28,27 +28,7 @@
     </div>
     <div class="panel-footer">
       @if(enquiry.state != IssueState.Closed) {
-        @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
-          @b3.free('_label -> "Add a message", '_class -> f("text").error.map(_ => "has-error").getOrElse("")) {
-            <div class="flex">
-              @b3.textarea(f("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
-              @tags.messages.sendButton()
-            </div>
-            @if(f("text").hasErrors) {
-              <div class="help-block">
-                @f("text").errors.map { error =>
-                  @error.format
-                }
-              </div>
-            }
-          }
-          @* TODO - move file uploads into a modal *@
-          <div class="form-group">
-            <div class="row">
-              <div class="col-md-5"><input type="file" name="file" class="form-control" multiple></div>
-            </div>
-          </div>
-        }
+        @tags.messages.messageForm(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get), enquiry, f)
       }
     </div>
   </div>
