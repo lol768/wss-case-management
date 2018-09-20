@@ -28,14 +28,10 @@
     </div>
     <div class="panel-footer">
       @if(enquiry.state != IssueState.Closed) {
-        @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
+        @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
           @b3.free('_label -> "Add a message", '_class -> f("text").error.map(_ => "has-error").getOrElse("")) {
             <div class="flex">
               @b3.textarea(f("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
-
-              @* Styling TBC *@
-              <input type="file" name="file" class="form-control" multiple>
-
               @tags.messages.sendButton()
             </div>
             @if(f("text").hasErrors) {
@@ -46,6 +42,12 @@
               </div>
             }
           }
+          @* TODO - move file uploads into a modal *@
+          <div class="form-group">
+            <div class="row">
+              <div class="col-md-5"><input type="file" name="file" class="form-control" multiple></div>
+            </div>
+          </div>
         }
       }
     </div>

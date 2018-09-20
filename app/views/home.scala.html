@@ -65,23 +65,25 @@
               }
             </div>
               <div class="panel-footer">
-                @b3.inline.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(e.enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
+                @b3.vertical.formCSRF(controllers.enquiries.routes.EnquiryMessagesController.addMessage(e.enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
                   <div class="form-group">
                     <label for="textarea-@e.enquiry.key.get.string">
                       Add a message
                     </label>
                     <div class="flex">
                       <textarea id="textarea-@e.enquiry.key.get.string" class="form-control" rows="1" name="text"></textarea>
-
-                      @* Styling TBC *@
-                      <input type="file" name="file" class="form-control" multiple>
-
                       @tags.messages.sendButton()
                     </div>
                   </div>
                   <div class="alert alert-danger hidden"></div>
+                  @* TODO - move file uploads into a modal *@
+                  <div class="form-group">
+                    <div class="row">
+                      <div class="col-md-5"><input type="file" name="file" class="form-control" multiple></div>
+                    </div>
+                  </div>
+                }
               </div>
-            }
           </div>
         </div>
       }

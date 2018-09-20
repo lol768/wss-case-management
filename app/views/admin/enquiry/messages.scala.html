@@ -248,14 +248,10 @@
         </div>
         @if(enquiry.state != IssueState.Closed) {
           <div class="panel-footer">
-            @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
+            @b3.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key.get), 'enctype -> "multipart/form-data") { implicit ifc =>
               @b3.free('_label -> "Add a message", '_class -> messageForm("text").error.map(_ => "has-error").getOrElse("")) {
                 <div class="flex">
                   @b3.textarea(messageForm("text"), 'rows -> 5)(b3.clear.fieldConstructorSpecific, messagesProvider)
-
-                  @* Styling TBC *@
-                  <input type="file" name="file" class="form-control" multiple>
-
                   @tags.messages.sendButton()
                 </div>
 
@@ -267,6 +263,12 @@
                   </div>
                 }
               }
+              @* TODO - move file uploads into a modal *@
+              <div class="form-group">
+                <div class="row">
+                  <div class="col-md-5"><input type="file" name="file" class="form-control" multiple></div>
+                </div>
+              </div>
             }
           </div>
         }
