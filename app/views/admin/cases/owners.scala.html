@@ -19,6 +19,12 @@
       @tags.flexipicker(values = form.data.values.toSeq, name = "owners[]", placeholder = "Search for users", multiple = true)
     }
 
-    @tags.submitOrCancel("Save", controllers.admin.routes.AdminController.teamHome(clientCase.team.id))
+    @b3.free('_class -> "spaced-buttons") {
+      @if(!form.value.exists(_.contains(context.user.get.usercode))) {
+        <button type="submit" class="btn btn-primary" formaction="@controllers.admin.routes.OwnersController.caseSubmitSelf(clientCase.key.get)">Add me</button>
+      }
+      <button type="submit" class="btn btn-primary">Save</button>
+      <a href="@controllers.admin.routes.AdminController.teamHome(clientCase.team.id)" class="btn btn-default">Cancel</a>
+    }
   }
 }
