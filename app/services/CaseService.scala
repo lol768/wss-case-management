@@ -62,6 +62,7 @@ trait CaseService {
   def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
   def reassign(c: Case, team: Team, caseType: Option[CaseType], note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def getHistory(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[CaseHistory]]
+  def findFromOriginalEnquiry(enquiryId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
 }
 
 @Singleton
@@ -425,6 +426,10 @@ class CaseServiceImpl @Inject() (
 
   override def getHistory(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[CaseHistory]] = {
     daoRunner.run(dao.getHistory(caseKey)).map(CaseHistory.apply).map(Right.apply)
+  }
+
+  override def findFromOriginalEnquiry(enquiryId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] = {
+    daoRunner.run(dao.findByOriginalEnquiryQuery(enquiryId).result).map(Right.apply)
   }
 }
 
