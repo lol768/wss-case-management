@@ -4,13 +4,14 @@ import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import domain.dao.{DaoRunner, OwnerDao}
-import domain.{CaseOwner, EnquiryOwner, Owner}
+import domain.{CaseOwner, EnquiryOwner, Owner, OwnerVersion}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsString, Json}
 import warwick.core.timing.TimingContext
 import warwick.sso.Usercode
 import domain.ExtendedPostgresProfile.api._
+import helpers.JavaTime
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -18,6 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 trait OwnerService {
   def getCaseOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
   def setCaseOwners(caseId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
+  def getCaseOwnerHistory(caseId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[OwnerVersion]]]
   def getEnquiryOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
   def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
 }
@@ -46,6 +48,7 @@ class OwnerServiceImpl @Inject()(
   }
 
   override def setCaseOwners(caseId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]] = {
+    val now = JavaTime.offsetDateTime
     auditService.audit('CaseSetOwners, caseId.toString, 'Case, Json.arr(owners.map(o => JsString(o.string)))) {
       setOwners(
         owners,
@@ -53,7 +56,8 @@ class OwnerServiceImpl @Inject()(
         caseId,
         u => CaseOwner(
           caseId = caseId,
-          userId = u
+          userId = u,
+          version = now,
         )
       )
     }
@@ -61,13 +65,15 @@ class OwnerServiceImpl @Inject()(
 
   override def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]] = {
     auditService.audit('EnquirySetOwners, enquiryId.toString, 'Enquiry, Json.arr(owners.map(o => JsString(o.string)))) {
+      val now = JavaTime.offsetDateTime
       setOwners(
         owners,
         ownerDao.findEnquiryOwnersQuery(Set(enquiryId)),
         enquiryId,
         u => EnquiryOwner(
           enquiryId = enquiryId,
-          userId = u
+          userId = u,
+          version = now,
         )
       )
     }
@@ -87,6 +93,10 @@ class OwnerServiceImpl @Inject()(
     daoRunner.run(DBIO.seq(removals, additions)).flatMap(_ =>
       daoRunner.run(existingQuery.result).map(_.map(_.userId).toSet)
     ).map(Right.apply)
+  }
+
+  override def getCaseOwnerHistory(caseId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[OwnerVersion]]] = {
+    daoRunner.run(ownerDao.getCaseOwnerHistory(caseId)).map(Right.apply)
   }
 
 }

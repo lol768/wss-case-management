@@ -33,7 +33,7 @@
 }
 
 @main(s"${c.clientCase.key.get.string} ${c.clientCase.subject}") {
-  <div class="row">
+  <div class="row field-history" data-field-history="@Json.stringify(Json.toJson(history)(CaseHistory.writer))">
     <div class="col-md-4 col-md-push-8">
       @clients.map {
         case Left(universityID) => {
@@ -65,8 +65,9 @@
           </div>
         }
       }
+      <div class="pull-right" data-field-history-field="clients"></div>
     </div>
-    <div class="col-md-8 col-md-pull-4 field-history" data-field-history="@Json.stringify(Json.toJson(history)(CaseHistory.writer))">
+    <div class="col-md-8 col-md-pull-4">
       <div class="hidden" data-field-history-field="subject" data-field-history-target=".id7-page-title h1"></div>
       <dl class="dl-horizontal">
         <dt>Team</dt>
@@ -139,9 +140,15 @@
           <dd data-field-history-field="caseType">@caseType.description</dd>
         }
 
-        @if(c.tags.nonEmpty) {
+        @if(c.tags.nonEmpty || history.tags.size > 1) {
           <dt>Tags</dt>
-          <dd>@c.tags.toSeq.map(_.description).sorted.mkString(", ")</dd>
+          <dd data-field-history-field="tags">
+            @if(c.tags.nonEmpty) {
+              @c.tags.toSeq.map(_.description).sorted.mkString(", ")
+            } else {
+              None
+            }
+          </dd>
         }
 
         <dt>Owners</dt>
@@ -149,7 +156,11 @@
           @if(owners.nonEmpty) {
             <ul class="list-unstyled">
               @owners.map { owner =>
-                <li>@owner.name.full.getOrElse(owner.usercode.string)</li>
+                @if(owners.last == owner) {
+                  <li data-field-history-field="owners">@owner.name.full.getOrElse(owner.usercode.string)</li>
+                } else {
+                  <li>@owner.name.full.getOrElse(owner.usercode.string)</li>
+                }
               }
             </ul>
           } else {
