@@ -248,11 +248,10 @@
     </div>
 
     <div class="enquiry-details--messages">
-      <div class="enquiry enquiry--team panel">
+      <div class="thread thread--team panel">
         <div class="panel-body">
           @messages.map { render =>
-            @views.html.enquiry.enquiryMessage(
-              enquiry,
+            @views.html.tags.messages.message(
               render.message,
               render.files,
               client.map(_.fullName).getOrElse(enquiry.universityID.string),
@@ -270,7 +269,7 @@
         </div>
         @if(enquiry.state != IssueState.Closed) {
           <div class="panel-footer">
-            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key.get), enquiry, messageForm)
+            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key.get), messageForm)
           </div>
         }
       </div>

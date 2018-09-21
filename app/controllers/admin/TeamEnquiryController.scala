@@ -128,16 +128,17 @@ class TeamEnquiryController @Inject()(
       messageText => {
         val message = messageData(messageText, request)
         val files = uploadedFiles(request)
+        val enquiry = request.enquiry
 
-        service.addMessage(request.enquiry, message, files).successMap { case (m, f) =>
-          val messageData = MessageData(m.text, m.sender, m.created, m.teamMember, m.team)
+        service.addMessage(enquiry, message, files).successMap { case (m, f) =>
+          val messageData = MessageData(m.text, m.sender, enquiry.universityID, m.created, m.teamMember, m.team)
           render {
             case Accepts.Json() =>
               val clientName = "Client"
               val teamName = message.teamMember.flatMap(usercode => userLookupService.getUser(usercode).toOption.filter(_.isFound).flatMap(_.name.full)).getOrElse(s"${request.enquiry.team.name} team")
 
               Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
-                "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, f, clientName, teamName, f => routes.TeamEnquiryController.download(enquiryKey, f.id)).toString()
+                "message" -> views.html.tags.messages.message(messageData, f, clientName, teamName, f => routes.TeamEnquiryController.download(enquiryKey, f.id)).toString()
               ))))
             case _ =>
               Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))

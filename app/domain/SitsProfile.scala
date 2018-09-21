@@ -60,6 +60,10 @@ case class SitsProfile(
   )
 }
 
+object SitsProfile {
+  def universityId(e: Either[UniversityID, SitsProfile]): UniversityID = e.fold(identity, _.universityID)
+}
+
 case class Course (
   code: String,
   name: String

@@ -10,6 +10,9 @@ import play.twirl.api._
   */
 package object utils {
 
+  private val BR: Html = html"<br />"
+
+
   /**
     * If you are using a set of checkboxes to build a seq type field, this
     * returns whether the value is present (and so whether the checkbox should
@@ -34,6 +37,6 @@ package object utils {
     }
 
   def nl2br(text: String): Content = HtmlFormat.fill(text.split("\n").flatMap { line =>
-    Seq(HtmlFormat.escape(line), html"<br />")
+    Seq(HtmlFormat.escape(line), BR)
   }.toList)
 }

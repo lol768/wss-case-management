@@ -1,8 +1,7 @@
 @import domain.Enquiry
 @(
     action: Call,
-    enquiry: Enquiry,
-    messageForm: Form[String],
+    messageForm: Form[_],
     rows: Int = 5,
 )(implicit messagesProvider: MessagesProvider, requestHeader: RequestHeader)
 
