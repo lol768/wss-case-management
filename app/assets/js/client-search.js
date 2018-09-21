@@ -63,6 +63,23 @@ export default function ClientSearch(container) {
     },
   });
 
+  // You can change the 'appendTo' option on the typeahead,
+  // but it positions in a stupid way, so lets do it properly
+  const instance = $typeahead.data('typeahead');
+  instance.show = () => {
+    const pos = $.extend({}, instance.$element.position(), {
+      height: instance.$element[0].offsetHeight,
+    });
+
+    instance.$menu.appendTo($container).show().css({
+      top: pos.top + pos.height,
+      left: pos.left,
+    });
+
+    instance.shown = true;
+    return this;
+  };
+
   $container.on('submit', (e) => {
     e.preventDefault();
   });
