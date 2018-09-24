@@ -34,6 +34,7 @@ object Fixtures {
     def newMessage(
       ownerId: UUID,
       ownerType: MessageOwner,
+      client: UniversityID,
       sender: MessageSender = MessageSender.Client,
       teamMember: Option[Usercode] = None,
       team: Option[Team] = None
@@ -41,15 +42,17 @@ object Fixtures {
       id = UUID.randomUUID(),
       text = "Hello",
       sender = sender,
+      client = client,
       teamMember = teamMember,
       team = team,
       ownerId = ownerId,
       ownerType = ownerType
     )
 
-    def newEnquiryMessage(enquiry: UUID) = newMessage(
+    def newEnquiryMessage(enquiry: UUID, client: UniversityID) = newMessage(
       ownerId = enquiry,
-      ownerType = MessageOwner.Enquiry
+      ownerType = MessageOwner.Enquiry,
+      client = client
     )
   }
 

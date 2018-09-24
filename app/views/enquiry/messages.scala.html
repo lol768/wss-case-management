@@ -20,15 +20,15 @@
     @tags.icons.enquiryState(enquiry.state)
     @enquiry.subject
   </h2>
-  <div class="enquiry enquiry--client panel panel-default">
+  <div class="thread thread--client panel panel-default">
     <div class="panel-body">
-      @messages.map { render =>
-        @views.html.enquiry.enquiryMessage(enquiry, render.message, render.files, "You", s"${render.message.team.getOrElse(enquiry.team).name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(enquiry.key.get, f.id))
+      @messages.map { message =>
+        @views.html.tags.messages.message(message.message, message.files, "You", s"${message.message.team.getOrElse(enquiry.team).name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(enquiry.key.get, f.id))
       }
     </div>
     <div class="panel-footer">
       @if(enquiry.state != IssueState.Closed) {
-        @tags.messages.messageForm(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get), enquiry, f)
+        @tags.messages.messageForm(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get), f)
       }
     </div>
   </div>

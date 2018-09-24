@@ -127,7 +127,7 @@ class CaseServiceImpl @Inject() (
       docs.map { case (d, f) => d.asCaseDocument(f.asUploadedFile) },
       outgoingCaseLinks,
       incomingCaseLinks,
-      messages
+      CaseMessages(messages)
     )).map(Right(_))
 
   override def findFull(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]] =

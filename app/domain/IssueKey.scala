@@ -1,6 +1,5 @@
 package domain
 
-import domain.Teams.Formatter
 import enumeratum.{Enum, EnumEntry}
 import helpers.StringUtils._
 import play.api.data.{FormError, Forms, Mapping}
