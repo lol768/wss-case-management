@@ -56,7 +56,7 @@ class EnquiryMessagesController @Inject()(
   }
 
   def addMessage(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanAddClientMessageToEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>
-    Form(single("text" -> nonEmptyText)).bindFromRequest().fold(
+    form.bindFromRequest().fold(
       formWithErrors => {
         render.async {
           case Accepts.Json() =>
@@ -72,9 +72,10 @@ class EnquiryMessagesController @Inject()(
       messageText => {
         val message = messageData(messageText, request)
         val files = uploadedFiles(request)
+        val enquiry = request.enquiry
 
-        service.addMessage(request.enquiry, message, files).successMap { case (m, f) =>
-          val messageData = MessageData(m.text, m.sender, m.created, m.teamMember, m.team)
+        service.addMessage(enquiry, message, files).successMap { case (m, f) =>
+          val messageData = MessageData(m.text, m.sender, enquiry.universityID, m.created, m.teamMember, m.team)
 
           render {
             case Accepts.Json() =>
@@ -82,7 +83,7 @@ class EnquiryMessagesController @Inject()(
               val teamName = s"${messageData.team.getOrElse(request.enquiry.team).name} team"
 
               Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
-                "message" -> views.html.enquiry.enquiryMessage(request.enquiry, messageData, f, clientName, teamName, f => routes.EnquiryMessagesController.download(enquiryKey, f.id)).toString()
+                "message" -> views.html.tags.messages.message(messageData, f, clientName, teamName, f => routes.EnquiryMessagesController.download(enquiryKey, f.id)).toString()
               ))))
             case _ =>
               Redirect(routes.EnquiryMessagesController.messages(enquiryKey))

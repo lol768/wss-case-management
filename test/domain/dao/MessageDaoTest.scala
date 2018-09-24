@@ -14,14 +14,12 @@ class MessageDaoTest extends AbstractDaoTest {
 
   "MessageDao" should {
     "save clients" in {
-      val message = Fixtures.messages.newEnquiryMessage(UUID.randomUUID())
-
       val client1 = UniversityID("01234567")
-      val client2 = UniversityID("01234568")
       val client3 = UniversityID("9999999")
+      val message = Fixtures.messages.newEnquiryMessage(UUID.randomUUID(), client1)
 
       exec(for {
-        _ <- dao.insert(message, Seq(client1, client2))
+        _ <- dao.insert(message)
         client1Messages <- dao.findByClientQuery(client1).result
         client3Messages <- dao.findByClientQuery(client3).result
         _ <- DBIO.from(Future {

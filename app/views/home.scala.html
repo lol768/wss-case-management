@@ -40,7 +40,7 @@
 
     <div class="panel-group enquiries" id="enquiries-accordion" role="tablist" aria-multiselectable="true">
       @enquiries.map { e =>
-        <div class="panel panel-default enquiry enquiry--client state-@e.enquiry.state.entryName">
+        <div class="panel panel-default thread thread--client state-@e.enquiry.state.entryName">
 
           <div class="panel-heading" role="tab" id="heading-@e.enquiry.key.get.string">
             <h4 class="panel-title">
@@ -63,12 +63,12 @@
           <div id="collapse-@e.enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head.enquiry == e.enquiry){in}" role="tabpanel" aria-labelledby="heading-@e.enquiry.key.get.string" data-ping="@controllers.enquiries.routes.EnquiryMessagesController.auditView(e.enquiry.key.get)">
             <div class="panel-body">
               @e.messages.map { render =>
-                @views.html.enquiry.enquiryMessage(e.enquiry, render.message, render.files, clientName = "You", s"${render.message.team.getOrElse(e.enquiry.team).name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(e.enquiry.key.get, f.id))
+                @views.html.tags.messages.message(render.message, render.files, clientName = "You", s"${render.message.team.getOrElse(e.enquiry.team).name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(e.enquiry.key.get, f.id))
               }
             </div>
               <div class="panel-footer">
                 @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
-                  @tags.messages.messageForm(controllers.enquiries.routes.EnquiryMessagesController.addMessage(e.enquiry.key.get), e.enquiry, form, rows = 1)
+                  @tags.messages.messageForm(controllers.enquiries.routes.EnquiryMessagesController.addMessage(e.enquiry.key.get), form, rows = 1)
                 }
               </div>
           </div>

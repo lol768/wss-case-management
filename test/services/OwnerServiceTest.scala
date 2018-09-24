@@ -50,7 +50,6 @@ class OwnerServiceTest extends AbstractDaoTest {
         Enquiry.enquiries.versionsTable.delete andThen
         Message.messages.table.delete andThen
         Message.messages.versionsTable.delete andThen
-        Message.messageClients.delete andThen
         Owner.owners.table.delete andThen
         Owner.owners.versionsTable.delete
       ).futureValue

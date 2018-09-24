@@ -300,8 +300,13 @@ object CaseDao {
       //    relatedAppointments: Seq[Appointment],
       outgoingCaseLinks: Seq[CaseLink],
       incomingCaseLinks: Seq[CaseLink],
-      messages: Seq[MessageData]
+      messages: CaseMessages
     )
+  }
+
+  case class CaseMessages(data: Seq[MessageData]) {
+    lazy val byClient: Map[UniversityID, Seq[MessageData]] = data.groupBy(_.client)
+    lazy val teamMembers: Set[Usercode] = data.flatMap(_.teamMember).toSet
   }
 
   case class CaseVersion(

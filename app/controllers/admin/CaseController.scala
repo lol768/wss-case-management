@@ -140,8 +140,9 @@ class CaseController @Inject()(
   import canEditCaseActionRefiner._
   import canViewCaseActionRefiner._
   import canViewTeamActionRefiner._
+  import CaseMessageController.messageForm
 
-  private def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData])(implicit request: CaseSpecificRequest[AnyContent]): Future[Result] = {
+  private def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData], messageForm: Form[String])(implicit request: CaseSpecificRequest[AnyContent]): Future[Result] = {
     val fetchOriginalEnquiry: Future[ServiceResult[Option[Enquiry]]] =
       request.`case`.originalEnquiry.map { enquiryId =>
         enquiries.get(enquiryId).map(_.right.map(Some(_)))
@@ -153,7 +154,7 @@ class CaseController @Inject()(
       fetchOriginalEnquiry,
       cases.getHistory(request.`case`.id.get)
     ).successFlatMap { case (c, owners, originalEnquiry, history) =>
-      val usercodes = (c.notes.map(_.teamMember) ++ owners ++ c.messages.flatMap(_.teamMember.toSeq)).distinct
+      val usercodes = c.notes.map(_.teamMember) ++ owners ++ c.messages.teamMembers
       val userLookup = userLookupService.getUsers(usercodes).toOption.getOrElse(Map())
       val caseNotes = c.notes.map { note => (note, userLookup.get(note.teamMember)) }
       val ownerUsers = userLookup.filterKeys(owners.contains).values.toSeq.sortBy { u => (u.name.last, u.name.first) }
@@ -169,6 +170,7 @@ class CaseController @Inject()(
           originalEnquiry,
           userLookup,
           caseNoteForm,
+          messageForm,
           history
         ))
       }
@@ -176,7 +178,11 @@ class CaseController @Inject()(
   }
 
   def view(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
-    renderCase(caseKey, caseNoteForm(caseRequest.`case`.version).fill(CaseNoteFormData("", caseRequest.`case`.version)))
+    renderCase(
+      caseKey,
+      caseNoteForm(caseRequest.`case`.version).fill(CaseNoteFormData("", caseRequest.`case`.version)),
+      messageForm
+    )
   }
 
   def createSelectTeam(fromEnquiry: Option[IssueKey], client: Option[UniversityID]): Action[AnyContent] = AnyTeamMemberRequiredAction { implicit request =>
@@ -380,7 +386,7 @@ class CaseController @Inject()(
 
   def addNote(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
-      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
+      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version)), messageForm),
       data =>
         // We don't do anything with data.version here, it's validated but we don't lock the case when adding a general note
         cases.addGeneralNote(caseRequest.`case`.id.get, CaseNoteSave(data.text, caseRequest.context.user.get.usercode)).successMap { _ =>
@@ -392,7 +398,7 @@ class CaseController @Inject()(
 
   def close(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
-      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
+      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version)), messageForm),
       data => {
         val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
 
@@ -406,7 +412,7 @@ class CaseController @Inject()(
 
   def reopen(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
-      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version))),
+      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version)), messageForm),
       data => {
         val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
 

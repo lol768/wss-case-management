@@ -92,6 +92,7 @@ POST        /team/case/:caseKey/document            @controllers.admin.CaseDocum
 GET         /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.download(caseKey: domain.IssueKey, id: java.util.UUID)
 POST        /team/case/:caseKey/document/:id/delete @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
+POST        /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.addMessage(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
 
 ## Admins ##
 
