@@ -83,7 +83,7 @@ class EnquiryDaoImpl @Inject() (
       .map { case (e, _) => e }
 
   override def searchQuery(q: EnquirySearchQuery): Query[Enquiry.Enquiries, Enquiry, Seq] = {
-    def queries(e: Enquiry.Enquiries, m: Rep[Option[Message.Messages]], f: Rep[Option[UploadedFileDao.UploadedFiles]]): Seq[Rep[Option[Boolean]]] =
+    def queries(e: Enquiry.Enquiries, m: Rep[Option[Message.Messages]], f: Rep[Option[UploadedFileDao.UploadedFiles]], o: Rep[Option[Owner.Owners]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
           val query = plainToTsQuery(queryStr.bind, Some("english"))
@@ -96,6 +96,7 @@ class EnquiryDaoImpl @Inject() (
         q.createdAfter.map { d => e.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => e.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.team.map { team => e.team.? === team },
+        q.member.map { member => o.map(_.userId === member) },
         q.state.flatMap {
           case IssueStateFilter.All => None
           case IssueStateFilter.Open => Some(e.isOpen.?)
@@ -105,8 +106,10 @@ class EnquiryDaoImpl @Inject() (
 
     Enquiry.enquiries.table
       .withMessages
-      .filter { case (e, mf) => queries(e, mf.map(_._1), mf.flatMap(_._2)).reduce(_ && _) }
-      .map { case (e, _) => (e, e.isOpen) }
+      .joinLeft(Owner.owners.table)
+      .on { case ((e, _), o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Enquiry:Owner.EntityType) }
+      .filter { case ((e, mf), o) => queries(e, mf.map(_._1), mf.flatMap(_._2), o).reduce(_ && _) }
+      .map { case ((e, _), _) => (e, e.isOpen) }
       .sortBy { case (e, isOpen) => (isOpen.desc, e.created.desc) }
       .distinct
       .map { case (e, _) => e }

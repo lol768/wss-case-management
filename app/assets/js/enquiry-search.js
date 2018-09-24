@@ -8,10 +8,12 @@ export default function EnquirySearch(container) {
   let currentQuery = null;
   const $container = $(container);
   const url = $container.prop('action');
+  const searchScope = $container.data('searchScope');
+  const searchScopeValue = $container.data('searchScopeValue');
 
   function doSearch(query, callback) {
     currentQuery = query;
-    postJsonWithCredentials(url, { query })
+    postJsonWithCredentials(url, { query, [searchScope]: searchScopeValue })
       .then(response => response.json())
       .catch((e) => {
         log.error(e);

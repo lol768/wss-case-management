@@ -90,7 +90,7 @@ class CaseDaoImpl @Inject()(
       .map { case (c, _) => c }
 
   override def searchQuery(q: CaseSearchQuery): Query[Cases, Case, Seq] = {
-    def queries(c: Cases, n: Rep[Option[CaseNotes]]): Seq[Rep[Option[Boolean]]] =
+    def queries(c: Cases, n: Rep[Option[CaseNotes]], o: Rep[Option[Owner.Owners]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
           val query = plainToTsQuery(queryStr.bind, Some("english"))
@@ -103,6 +103,7 @@ class CaseDaoImpl @Inject()(
         q.createdAfter.map { d => c.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => c.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.team.map { team => c.team.? === team },
+        q.member.map { member => o.map(_.userId === member) },
         q.caseType.map { caseType => c.caseType === caseType },
         q.state.flatMap {
           case IssueStateFilter.All => None
@@ -113,8 +114,10 @@ class CaseDaoImpl @Inject()(
 
     cases.table
       .withNotes
-      .filter { case (c, n) => queries(c, n).reduce(_ && _) }
-      .map { case (c, _) => (c, c.isOpen) }
+      .joinLeft(Owner.owners.table)
+      .on { case ((e, _), o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Case:Owner.EntityType) }
+      .filter { case ((c, n), o) => queries(c, n, o).reduce(_ && _) }
+      .map { case ((c, _), _) => (c, c.isOpen) }
       .sortBy { case (c, isOpen) => (isOpen.desc, c.created.desc) }
       .distinct
       .map { case (c, _) => c }
@@ -746,6 +749,7 @@ object CaseDao {
     createdAfter: Option[LocalDate] = None,
     createdBefore: Option[LocalDate] = None,
     team: Option[Team] = None,
+    member: Option[Usercode] = None,
     caseType: Option[CaseType] = None,
     state: Option[IssueStateFilter] = None
   ) {
@@ -755,6 +759,7 @@ object CaseDao {
       createdAfter.nonEmpty ||
       createdBefore.nonEmpty ||
       team.nonEmpty ||
+      member.nonEmpty ||
       caseType.nonEmpty ||
       state.nonEmpty
   }
