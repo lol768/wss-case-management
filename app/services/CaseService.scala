@@ -72,6 +72,7 @@ class CaseServiceImpl @Inject() (
   ownerService: OwnerService,
   uploadedFileService: UploadedFileService,
   notificationService: NotificationService,
+  appointmentService: AppointmentService,
   userLookupService: UserLookupService,
   profileService: ProfileService,
   daoRunner: DaoRunner,
@@ -97,7 +98,7 @@ class CaseServiceImpl @Inject() (
   override def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]] =
     daoRunner.run(dao.find(id)).map(Right(_))
 
-  def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
+  override def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
     daoRunner.run(dao.find(ids.toSet)).map { cases =>
       val lookup = cases.groupBy(_.id.get).mapValues(_.head)
 

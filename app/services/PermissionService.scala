@@ -34,6 +34,7 @@ trait PermissionService {
   def canAddTeamMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canAddClientMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
+  def canViewAppointment(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
   def webgroupFor(team: Team): GroupName
 }
@@ -163,6 +164,12 @@ class PermissionServiceImpl @Inject() (
       // No Uni ID; client of nothing
       Future.successful(Right(false))
     }
+
+  override def canViewAppointment(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    Future.sequence(Seq(
+      isAdmin(user),
+      inAnyTeam(user)
+    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
 
   override def webgroupFor(team: Team): GroupName =
     GroupName(s"$webgroupPrefix${team.id}")

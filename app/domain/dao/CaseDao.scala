@@ -300,7 +300,6 @@ object CaseDao {
       tags: Set[CaseTag],
       notes: Seq[CaseNote],
       documents: Seq[CaseDocument],
-      //    relatedAppointments: Seq[Appointment],
       outgoingCaseLinks: Seq[CaseLink],
       incomingCaseLinks: Seq[CaseLink],
       messages: CaseMessages

@@ -210,6 +210,9 @@
 
     <p><a class="btn btn-default" href="@controllers.admin.routes.CaseController.createSelectTeam(client = Some(universityID))">Create a case</a></p>
 
+    @* TODO List upcoming appointments *@
+    <p><a class="btn btn-default" href="@controllers.admin.routes.AppointmentController.createSelectTeam(client = Some(universityID))">Create an appointment</a></p>
+
     @if(enquiries.isEmpty) {
       <p>No open or closed enquiries</p>
     } else {

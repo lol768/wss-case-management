@@ -94,6 +94,11 @@ POST        /team/case/:caseKey/document/:id/delete @controllers.admin.CaseDocum
 DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 POST        /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.addMessage(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
 
+GET         /team/appointment/create                @controllers.admin.AppointmentController.createSelectTeam(forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
+GET         /team/appointment/create/:teamId        @controllers.admin.AppointmentController.createForm(teamId: String, forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
+POST        /team/appointment/create/:teamId        @controllers.admin.AppointmentController.create(teamId: String)
+GET         /team/appointment/:appointmentKey       @controllers.admin.AppointmentController.view(appointmentKey: domain.IssueKey)
+
 ## Admins ##
 
 GET         /admin                                  @controllers.IndexController.redirectToPath(path = "/admin/reports")

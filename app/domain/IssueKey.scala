@@ -2,9 +2,9 @@ package domain
 
 import enumeratum.{Enum, EnumEntry}
 import helpers.StringUtils._
-import play.api.data.{FormError, Forms, Mapping}
 import play.api.data.format.Formats.parsing
 import play.api.data.format.Formatter
+import play.api.data.{FormError, Forms, Mapping}
 import play.api.mvc.{PathBindable, QueryStringBindable}
 
 import scala.collection.immutable
@@ -53,6 +53,7 @@ sealed abstract class IssueKeyType(val code: String, val prefix: Char) extends E
 object IssueKeyType extends Enum[IssueKeyType] {
   case object Case extends IssueKeyType("CAS", 'C')
   case object Enquiry extends IssueKeyType("ENQ", 'E')
+  case object Appointment extends IssueKeyType("APP", 'A')
 
   override def values: immutable.IndexedSeq[IssueKeyType] = findValues
 

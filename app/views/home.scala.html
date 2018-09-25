@@ -110,7 +110,7 @@
           @views.html.admin.enquiriesTab(info.enquiriesRequiringAction, info.enquiriesAwaitingClient, info.closedEnquiries, info.clients, routes.IndexController.closedEnquiries, "member", context.user.get.usercode.string, " assigned to me")
         </div>
         <div role="tabpanel" class="tab-pane" id="cases">
-          @views.html.admin.casesTab(info.openCases, info.closedCases, info.clients, controllers.admin.routes.CaseController.createSelectTeam(None, None), routes.IndexController.closedCases, "member", context.user.get.usercode.string, " assigned to me")
+          @views.html.admin.casesTab(info.openCases, info.closedCases, info.clients, controllers.admin.routes.CaseController.createSelectTeam(), routes.IndexController.closedCases, "member", context.user.get.usercode.string, " assigned to me")
         </div>
         <div role="tabpanel" class="tab-pane" id="clients">
           @views.html.admin.clientsTab()

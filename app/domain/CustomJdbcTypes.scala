@@ -1,17 +1,13 @@
 package domain
 
-import java.sql.{PreparedStatement, ResultSet, Timestamp}
-import java.time.format.DateTimeFormatter
-import java.time.{OffsetDateTime, ZoneOffset}
-import java.util.{Calendar, TimeZone}
-
+import domain.ExtendedPostgresProfile.api._
 import enumeratum.SlickEnumSupport
-import helpers.JavaTime
 import play.api.libs.json.{JsValue, Json}
-import ExtendedPostgresProfile.api._
 import slick.jdbc.{JdbcProfile, JdbcType}
 import warwick.slick.jdbctypes.JdbcDateTypesUtc
 import warwick.sso.{GroupName, UniversityID, Usercode}
+
+import java.time.Duration
 
 object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
   override val profile: JdbcProfile = ExtendedPostgresProfile
@@ -42,9 +38,16 @@ object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
     s => IssueKey(s)
   )
 
+  implicit val locationMapper: JdbcType[Location] = MappedColumnType.base[Location, String](
+    Location.toFormattedString,
+    Location.fromFormattedString
+  )
+
   implicit val jsonTypeMapper: JdbcType[JsValue] = MappedColumnType.base[JsValue, String](Json.stringify, Json.parse)
 
   implicit val symbolTypeMapper: JdbcType[Symbol] = MappedColumnType.base[Symbol, String](_.name, Symbol.apply)
+
+  implicit val durationMapper: JdbcType[Duration] = MappedColumnType.base[Duration, Long](_.getSeconds, Duration.ofSeconds)
 
   // Enum[] mappings
   implicit lazy val databaseOperationTypeMapper: JdbcType[DatabaseOperation] = mappedColumnTypeForEnum(DatabaseOperation)
@@ -60,4 +63,7 @@ object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
   implicit lazy val ownerEntityTypeMapper: JdbcType[Owner.EntityType] = mappedColumnTypeForEnum(Owner.EntityType)
   implicit lazy val uploadedFileOwnerMapper: JdbcType[UploadedFileOwner] = mappedColumnTypeForEnum(UploadedFileOwner)
   implicit lazy val enquiryNoteTypeMapper: JdbcType[EnquiryNoteType] = mappedColumnTypeForEnum(EnquiryNoteType)
+  implicit lazy val appointmentTypeMapper: JdbcType[AppointmentType] = mappedColumnTypeForEnum(AppointmentType)
+  implicit lazy val appointmentStateMapper: JdbcType[AppointmentState] = mappedColumnTypeForEnum(AppointmentState)
+  implicit lazy val appointmentCancellationReasonMapper: JdbcType[AppointmentCancellationReason] = mappedColumnTypeForEnum(AppointmentCancellationReason)
 }
