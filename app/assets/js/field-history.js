@@ -42,6 +42,7 @@ function handleData($container, data) {
       html: true,
       trigger: 'manual',
       selector: true,
+      placement: $i.parent().hasClass('pull-right') ? 'left' : 'right',
     }).popover('show');
   });
 }

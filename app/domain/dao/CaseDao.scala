@@ -51,7 +51,9 @@ trait CaseDao {
   def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime): DBIO[Done]
   def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq]
   def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, Case, Seq]
-  def getHistory(key: IssueKey): DBIO[Seq[CaseVersion]]
+  def getHistory(id: UUID): DBIO[Seq[CaseVersion]]
+  def getTagHistory(caseID: UUID): DBIO[Seq[StoredCaseTagVersion]]
+  def getClientHistory(caseID: UUID): DBIO[Seq[CaseClientVersion]]
   def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, Case, Seq]
 }
 
@@ -195,16 +197,24 @@ class CaseDaoImpl @Inject()(
     })
   }
 
-  override def getHistory(key: IssueKey): DBIO[Seq[CaseVersion]] = {
+  override def getHistory(id: UUID): DBIO[Seq[CaseVersion]] = {
     cases.versionsTable
       .filter(c =>
-        c.key === key && (
+        c.id === id && (
           c.operation === (DatabaseOperation.Insert:DatabaseOperation) ||
           c.operation === (DatabaseOperation.Update:DatabaseOperation)
         )
       )
       .sortBy(_.timestamp)
       .result
+  }
+
+  override def getTagHistory(caseID: UUID): DBIO[Seq[StoredCaseTagVersion]] = {
+    caseTags.versionsTable.filter(t => t.caseId === caseID).result
+  }
+
+  override def getClientHistory(caseID: UUID): DBIO[Seq[CaseClientVersion]] = {
+    caseClients.versionsTable.filter(c => c.caseId === caseID).result
   }
 
   override def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, Case, Seq] = {
