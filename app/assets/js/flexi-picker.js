@@ -1,5 +1,6 @@
 import $ from 'jquery';
 import log from 'loglevel';
+import _ from 'lodash-es';
 import 'bootstrap-3-typeahead';
 import { postJsonWithCredentials } from './serverpipe';
 import RichResultField from './rich-result-field';
@@ -56,12 +57,12 @@ export default class FlexiPicker {
           return `
             <div class="flexi-picker-result">
               <div class="media-left">
-                <img class="media-object" src="${item.photo}" />
+                <img class="media-object" src="${_.escape(item.photo)}" />
               </div>
               <div class="media-body">
-                <span class="title">${item.title}</span>
+                <span class="title">${_.escape(item.title)}</span>
                 <div class="description">
-                  ${(typeof (item.description) !== 'undefined' ? item.description : '')}
+                  ${(typeof (item.description) !== 'undefined' ? _.escape(item.description) : '')}
                 </div>
               </div>
             </div>`;
@@ -70,10 +71,10 @@ export default class FlexiPicker {
         return `
           <div class="flexi-picker-result">
             <i class="fa ${icon}"></i>
-            <span class="title">${item.title}</span>
-            <span class="type">${item.type}</span>
+            <span class="title">${_.escape(item.title)}</span>
+            <span class="type">${_.escape(item.type)}</span>
             <div class="description">
-              ${(typeof (item.description) !== 'undefined' ? item.description : '')}
+              ${(typeof (item.description) !== 'undefined' ? _.escape(item.description) : '')}
             </div>
           </div>`;
       },
@@ -81,10 +82,10 @@ export default class FlexiPicker {
       changeInputOnMove: false,
       afterSelect: (item) => {
         const description = (
-          typeof (item.description) !== 'undefined' ? ` (${item.description})` : ''
+          typeof (item.description) !== 'undefined' ? ` (${_.escape(item.description)})` : ''
         );
         const text = `${item.title}${description}`;
-        self.richResultField.store(item.value, text);
+        self.richResultField.store(item.value, _.escape(text));
         $element.data('item', item);
       },
     });
@@ -98,7 +99,7 @@ export default class FlexiPicker {
         ? currentValue.substring(this.prefixGroups.length) : currentValue;
       this.doSearch(searchQuery, { exact: true }, (results) => {
         if (results.length > 0) {
-          self.richResultField.storeText(`${results[0].title} (${results[0].description})`);
+          self.richResultField.storeText(`${_.escape(results[0].title)} (${_.escape(results[0].description)})`);
         }
       });
     }
