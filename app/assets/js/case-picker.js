@@ -1,5 +1,6 @@
 import $ from 'jquery';
 import log from 'loglevel';
+import _ from 'lodash-es';
 import 'bootstrap-3-typeahead';
 import { postJsonWithCredentials } from './serverpipe';
 import RichResultField from './rich-result-field';
@@ -50,9 +51,9 @@ export default function CasePicker(element) {
             <i class="fal fa-clipboard-list fa-fw"></i>
           </div>
           <div class="media-body">
-            <span class="title">${item.key}</span>
-            <span class="type">${item.team}</span>
-            <div class="description">${item.subject}</div>
+            <span class="title">${_.escape(item.key)}</span>
+            <span class="type">${_.escape(item.team)}</span>
+            <div class="description">${_.escape(item.subject)}</div>
           </div>
         </div>`,
     highlighter: html => html,
@@ -61,7 +62,7 @@ export default function CasePicker(element) {
     afterSelect: (item) => {
       if (item) {
         const text = displayItem(item);
-        richResultField.store(item.key, text);
+        richResultField.store(item.key, _.escape(text));
         $element.data('item', item);
       }
     },
@@ -76,6 +77,6 @@ export default function CasePicker(element) {
         log.error(e);
         return [];
       })
-      .then(response => richResultField.storeText(`${displayItem(response.data.results[0])}`));
+      .then(response => richResultField.storeText(`${_.escape(displayItem(response.data.results[0]))}`));
   }
 }
