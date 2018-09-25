@@ -8,13 +8,20 @@
   awaitingClient: Seq[(Enquiry, MessageData)],
   closedEnquiries: Int,
   clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
-  closedEnquiriesRoute: Call
+  closedEnquiriesRoute: Call,
+  searchScope: String,
+  searchScopeValue: String,
+  placeholderSuffix: String
 )(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
-@b3.vertical.formCSRF(routes.EnquirySearchController.search(), 'class -> "enquiry-search") { implicit ifc =>
+@b3.vertical.formCSRF(routes.EnquirySearchController.search(),
+  'class -> "enquiry-search",
+  Symbol("data-search-scope") -> searchScope,
+  Symbol("data-search-scope-value") -> searchScopeValue
+) { implicit ifc =>
   @b3.free('_class -> "search-default") {
     <i class="fal fa-search"></i>
-    <input type="text" class="form-control input-lg" placeholder="Search enquiries" />
+    <input type="text" class="form-control input-lg" placeholder="Search enquiries@placeholderSuffix" />
   }
 }
 
