@@ -48,7 +48,7 @@
         case Right(profile) => {
           <div class="row">
             @profile.photo.map { photo =>
-              <div class="col-sm-4">
+              <div class="col-xs-4 col-sm-2 col-md-4">
                 <p class="photo">
                   <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">
                     <img src="@photo" class="img-thumbnail img-circle">
@@ -56,7 +56,7 @@
                 </p>
               </div>
             }
-            <div class="col-sm-8">
+            <div class="col-xs-8 col-sm-10 col-md-8">
               <p>
                 <strong>University ID: </strong> <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.universityID.string</a><br />
                 <strong>Full name: </strong> @profile.fullName<br />
