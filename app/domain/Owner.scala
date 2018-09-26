@@ -6,7 +6,9 @@ import java.util.UUID
 import domain.CustomJdbcTypes._
 import enumeratum.{EnumEntry, PlayEnum}
 import ExtendedPostgresProfile.api._
+import services.AuditLogContext
 import warwick.sso.Usercode
+
 import scala.collection.immutable
 import scala.language.higherKinds
 
@@ -18,14 +20,15 @@ case class Owner(
 ) extends Versioned[Owner] {
 
   override def atVersion(at: OffsetDateTime): Owner = copy(version = at)
-  override def storedVersion[B <: StoredVersion[Owner]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+  override def storedVersion[B <: StoredVersion[Owner]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
     OwnerVersion(
       entityId,
       entityType,
       userId,
       version,
       operation,
-      timestamp
+      timestamp,
+      ac.usercode
     ).asInstanceOf[B]
 
 }
@@ -73,8 +76,9 @@ object Owner extends Versioning {
   class OwnerVersions(tag: Tag) extends Table[OwnerVersion](tag, "owner_version") with StoredVersionTable[Owner] with OwnerProperties {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
-    def * = (entityId, entityType, userId, version, operation, timestamp).mapTo[OwnerVersion]
+    def * = (entityId, entityType, userId, version, operation, timestamp, auditUser).mapTo[OwnerVersion]
     def pk = primaryKey("pk_ownerversions", (entityId, entityType, userId, timestamp))
     def idx = index("idx_ownerversions", (entityId, entityType, userId, version))
   }
@@ -90,5 +94,6 @@ case class OwnerVersion(
   userId: Usercode,
   version: OffsetDateTime = OffsetDateTime.now(),
   operation: DatabaseOperation,
-  timestamp: OffsetDateTime
+  timestamp: OffsetDateTime,
+  auditUser: Option[Usercode]
 ) extends StoredVersion[Owner]
