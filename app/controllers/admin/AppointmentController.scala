@@ -47,7 +47,7 @@ object AppointmentController {
         "appointment" -> mapping(
           "subject" -> nonEmptyText(maxLength = Appointment.SubjectMaxLength),
           "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", _.isAfter(JavaTime.offsetDateTime)),
-          "duration" -> number(min = 1, max = 120).transform[Duration](n => Duration.ofSeconds(n.toLong), _.getSeconds.toInt),
+          "duration" -> number(min = 60, max = 120 * 60).transform[Duration](n => Duration.ofSeconds(n.toLong), _.getSeconds.toInt),
           "location" -> optional(Location.formField),
           "teamMember" -> nonEmptyText.transform[Usercode](Usercode.apply, _.string), // TODO validate
           "appointmentType" -> AppointmentType.formField
