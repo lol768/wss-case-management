@@ -53,12 +53,7 @@ class EnquiryServiceTest extends AbstractDaoTest {
     }
 
     override def teardown(): Unit = {
-      runner.run(
-        Enquiry.enquiries.table.delete andThen
-        Enquiry.enquiries.versionsTable.delete andThen
-        Message.messages.table.delete andThen
-        Message.messages.versionsTable.delete
-      ).futureValue
+      execWithCommit(Fixtures.schemas.truncateAndReset)
     }
   }
 
