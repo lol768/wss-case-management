@@ -14,10 +14,13 @@ import org.mockito.Matchers._
 import org.mockito.Mockito._
 import warwick.core.timing.TimingService
 import warwick.objectstore.ObjectStorageService
+import warwick.sso.Usercode
 
 import scala.util.Try
 
 class UploadedFileServiceTest extends AbstractDaoTest {
+
+  override implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
 
   private class TestFixture extends DataFixture[(UploadedFileService, ObjectStorageService)] {
     override def setup(): (UploadedFileService, ObjectStorageService) =

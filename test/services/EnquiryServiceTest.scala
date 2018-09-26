@@ -6,11 +6,13 @@ import helpers.{DataFixture, JavaTime}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.ac.warwick.util.core.DateTimeUtils
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, Usercode}
 
 import scala.util.Random
 
 class EnquiryServiceTest extends AbstractDaoTest {
+
+  override implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
 
   override def fakeApplicationBuilder: GuiceApplicationBuilder =
     super.fakeApplicationBuilder

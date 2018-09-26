@@ -14,6 +14,8 @@ import scala.util.Random
 
 class OwnerServiceTest extends AbstractDaoTest {
 
+  override implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
+
   override def fakeApplicationBuilder: GuiceApplicationBuilder =
     super.fakeApplicationBuilder
       .overrides(
