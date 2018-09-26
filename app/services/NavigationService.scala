@@ -65,7 +65,7 @@ class NavigationServiceImpl @Inject() (
   private def teamHome(team: Team) = NavigationPage(s"${team.name} team", controllers.admin.routes.AdminController.teamHome(team.id))
 
   private def adminLinks(loginContext: LoginContext): Seq[Navigation] =
-    if (loginContext.actualUserHasRole(Admin))
+    if (loginContext.userHasRole(Admin))
       Seq(admin)
     else
       Nil
