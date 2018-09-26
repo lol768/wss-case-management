@@ -200,6 +200,7 @@ object Enquiry extends Versioning {
     createdAfter: Option[LocalDate] = None,
     createdBefore: Option[LocalDate] = None,
     team: Option[Team] = None,
+    member: Option[Usercode] = None,
     state: Option[IssueStateFilter] = None
   ) {
     def isEmpty: Boolean = !nonEmpty
@@ -208,6 +209,7 @@ object Enquiry extends Versioning {
       createdAfter.nonEmpty ||
       createdBefore.nonEmpty ||
       team.nonEmpty ||
+      member.nonEmpty ||
       state.nonEmpty
   }
 }

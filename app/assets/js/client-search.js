@@ -1,5 +1,6 @@
 /* eslint-env browser */
 import $ from 'jquery';
+import _ from 'lodash-es';
 import 'bootstrap-3-typeahead';
 
 function transformItem(input) {
@@ -40,12 +41,12 @@ export default function ClientSearch(container) {
     displayText: item => `<div class="client-search-result">
       <div class="media">
         <div class="media-left">
-            ${(item.photo) ? `<img class="media-object" src="${item.photo}" />` : ''}
+            ${(item.photo) ? `<img class="media-object" src="${_.escape(item.photo)}" />` : ''}
         </div>
         <div class="media-body">
-          <span class="title">${item.title}</span>
+          <span class="title">${_.escape(item.title)}</span>
           <div class="description">
-            ${(typeof (item.description) !== 'undefined' ? item.description : '')}
+            ${(typeof (item.description) !== 'undefined' ? _.escape(item.description) : '')}
           </div>
         </div>
       </div>
@@ -57,7 +58,7 @@ export default function ClientSearch(container) {
     openLinkInNewTab: true,
     selectOnBlur: false,
     showHintOnFocus: true,
-    itemLink: item => `/team/client/${item.value}`,
+    itemLink: item => `/team/client/${_.escape(item.value)}`,
     afterSelect: () => {
       $typeahead.trigger('blur');
     },

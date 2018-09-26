@@ -1,6 +1,7 @@
 /* eslint-env browser */
 import $ from 'jquery';
 import log from 'loglevel';
+import _ from 'lodash-es';
 import 'bootstrap-3-typeahead';
 import { postJsonWithCredentials } from './serverpipe';
 
@@ -8,10 +9,12 @@ export default function EnquirySearch(container) {
   let currentQuery = null;
   const $container = $(container);
   const url = $container.prop('action');
+  const searchScope = $container.data('searchScope');
+  const searchScopeValue = $container.data('searchScopeValue');
 
   function doSearch(query, callback) {
     currentQuery = query;
-    postJsonWithCredentials(url, { query })
+    postJsonWithCredentials(url, { query, [searchScope]: searchScopeValue })
       .then(response => response.json())
       .catch((e) => {
         log.error(e);
@@ -37,9 +40,9 @@ export default function EnquirySearch(container) {
             <i class="fal fw ${item.state === 'Closed' ? 'fa-comment-check' : 'fa-comment-dots'} fa-fw"></i>
           </div>
           <div class="media-body">
-            <span class="title">${item.key}</span>
-            <span class="type">${item.team}</span>
-            <div class="description">${item.subject}</div>
+            <span class="title">${_.escape(item.key)}</span>
+            <span class="type">${_.escape(item.team)}</span>
+            <div class="description">${_.escape(item.subject)}</div>
           </div>
         </div>`,
     highlighter: html => html,
@@ -51,7 +54,7 @@ export default function EnquirySearch(container) {
     showHintOnFocus: true,
     itemLink: (item) => {
       if (item) {
-        return `/team/enquiry/${item.key}`;
+        return `/team/enquiry/${_.escape(item.key)}`;
       }
 
       return undefined;

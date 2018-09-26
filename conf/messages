@@ -38,3 +38,4 @@ flash.case.owners.updated=Case owners updated
 flash.case.documentAdded=The case document has been uploaded
 flash.case.documentDeleted=The case document has been deleted
 flash.case.reassigned=The case has been reassigned to {0}
+flash.appointment.created=The appointment has been created ({0})

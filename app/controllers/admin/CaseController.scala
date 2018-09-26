@@ -3,7 +3,7 @@ package controllers.admin
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import controllers.BaseController
+import controllers.{BaseController, UploadedFileControllerHelper}
 import controllers.admin.CaseController._
 import controllers.refiners._
 import domain._
@@ -15,8 +15,8 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Result}
-import services.{CaseService, EnquiryService, PermissionService}
 import services.tabula.ProfileService
+import services.{CaseService, EnquiryService, PermissionService}
 import warwick.core.timing.TimingContext
 import warwick.sso._
 
@@ -136,13 +136,14 @@ class CaseController @Inject()(
   anyTeamActionRefiner: AnyTeamActionRefiner,
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   canViewCaseActionRefiner: CanViewCaseActionRefiner,
-  canEditCaseActionRefiner: CanEditCaseActionRefiner
+  canEditCaseActionRefiner: CanEditCaseActionRefiner,
+  uploadedFileControllerHelper: UploadedFileControllerHelper
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import anyTeamActionRefiner._
+  import canEditCaseActionRefiner._
   import canViewCaseActionRefiner._
   import canViewTeamActionRefiner._
-  import canEditCaseActionRefiner._
   import CaseMessageController.messageForm
 
   def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData], messageForm: Form[String])(implicit request: CaseSpecificRequest[_]): Future[Result] = {
@@ -155,7 +156,7 @@ class CaseController @Inject()(
       cases.findFull(caseKey),
       cases.getOwners(Set(request.`case`.id.get)).map(_.right.map(_.getOrElse(request.`case`.id.get, Set.empty))),
       fetchOriginalEnquiry,
-      cases.getHistory(caseKey)
+      cases.getHistory(request.`case`.id.get)
     ).successFlatMap { case (c, owners, originalEnquiry, history) =>
       val usercodes = c.notes.map(_.teamMember) ++ owners ++ c.messages.teamMembers
       val userLookup = userLookupService.getUsers(usercodes).toOption.getOrElse(Map())
@@ -174,7 +175,8 @@ class CaseController @Inject()(
           userLookup,
           caseNoteForm,
           messageForm,
-          history
+          history,
+          uploadedFileControllerHelper.supportedMimeTypes
         ))
       }
     }

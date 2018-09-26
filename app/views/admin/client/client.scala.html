@@ -11,36 +11,10 @@
   clientSummary: Option[ClientSummary],
   enquiries: Seq[EnquiryRender],
   cases: Seq[(Case, Seq[MessageRender], Seq[CaseNote])],
-  form: Form[ClientSummaryData],
+  form: Form[ClientSummarySave],
   inMentalHealthTeam: Boolean,
   success: Option[String] = None
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
-
-@agents(name: String, profiles: Seq[SitsProfile]) = {
-  <h3>@name</h3>
-
-  <div class="row">
-    @profiles.map { profile =>
-      <div class="col-sm-6 col-md-4">
-        <div class="row">
-          @profile.photo.map { photo =>
-            <div class="col-sm-4">
-              <div class="photo">
-                <img src="@photo" class="img-thumbnail img-circle">
-              </div>
-            </div>
-          }
-          <div class="col-sm-8">
-            <strong>University ID: </strong> @profile.universityID.string<br />
-            <strong>Full name: </strong> @profile.fullName<br />
-            <strong>Department: </strong> @profile.department.name<br />
-            <strong>Warwick email address: </strong> @profile.warwickEmail<br />
-          </div>
-        </div>
-      </div>
-    }
-  </div>
-}
 
 @main("Client profile") {
   <h2>@profile.map(_.fullName).getOrElse(universityID.string)</h2>
@@ -58,13 +32,13 @@
   @profile.map { profile =>
     <div class="row">
       @profile.photo.map { photo =>
-        <div class="col-md-4 col-lg-3">
+        <div class="col-xs-6 col-md-4 col-lg-3">
           <div class="photo">
             <img src="@photo" class="img-thumbnail img-circle">
           </div>
         </div>
       }
-      <div class="col-md-8">
+      <div class="col-xs-6 col-md-8 col-lg-9">
         @profile.userType match {
           case UserType.Student => {
             <p>
@@ -106,10 +80,10 @@
           }
         }
 
-        @if(inMentalHealthTeam && clientSummary.exists(_.data.highMentalHealthRisk.contains(true))) {
+        @if(inMentalHealthTeam && clientSummary.exists(_.highMentalHealthRisk.contains(true))) {
           <p><span class="label label-danger">High mental health risk</span></p>
         }
-        @clientSummary.flatMap(_.data.riskStatus).map {
+        @clientSummary.flatMap(_.riskStatus).map {
           case ClientRiskStatus.Low => {
             <p><span class="label label-success">Low risk status</span></p>
           }
@@ -235,6 +209,9 @@
     }
 
     <p><a class="btn btn-default" href="@controllers.admin.routes.CaseController.createSelectTeam(client = Some(universityID))">Create a case</a></p>
+
+    @* TODO List upcoming appointments *@
+    <p><a class="btn btn-default" href="@controllers.admin.routes.AppointmentController.createSelectTeam(client = Some(universityID))">Create an appointment</a></p>
 
     @if(enquiries.isEmpty) {
       <p>No open or closed enquiries</p>

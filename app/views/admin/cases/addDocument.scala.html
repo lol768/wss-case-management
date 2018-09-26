@@ -1,10 +1,11 @@
 @import controllers.admin.CaseDocumentController.DocumentForm
-@import domain.CaseDocumentType
-@import domain.IssueKey
+@import domain.{CaseDocumentType, IssueKey}
+@import org.apache.tika.mime.MediaType
 
 @(
   caseKey: IssueKey,
-  form: Form[DocumentForm]
+  form: Form[DocumentForm],
+  supportedMimeTypes: Seq[MediaType]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Add a document to ${caseKey.string}") {
@@ -24,7 +25,7 @@
     @b3.free('_label -> "File", '_class -> form.error("file").map(_ => "has-error")) {
       <div class="row">
         <div class="col-md-6">
-          <input type="file" id="file" name="file" class="form-control">
+          <input type="file" id="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" class="form-control">
           @b3.errors(form("file"))
         </div>
       </div>

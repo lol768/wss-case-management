@@ -30,20 +30,7 @@ case class UploadedFileSave(
   fileName: String,
   contentLength: Long,
   contentType: String,
-  uploadedBy: Usercode,
 )
-
-object UploadedFileSave {
-  def seqFromRequest(request: AuthenticatedRequest[MultipartFormData[TemporaryFile]]): Seq[(ByteSource, UploadedFileSave)] =
-    request.body.files.filter(_.filename.nonEmpty).map { file =>
-      (Files.asByteSource(file.ref), UploadedFileSave(
-        file.filename,
-        file.ref.length(),
-        file.contentType.getOrElse("application/octet-stream"),
-        request.context.user.get.usercode
-      ))
-    }
-}
 
 sealed trait UploadedFileOwner extends EnumEntry
 object UploadedFileOwner extends PlayEnum[UploadedFileOwner] {

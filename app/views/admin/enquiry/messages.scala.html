@@ -1,10 +1,11 @@
 @import java.time.OffsetDateTime
 
+@import domain.dao.CaseDao.Case
 @import domain.{Enquiry, EnquiryNote, EnquiryNoteType, IssueState, MessageRender, MessageSender, SitsProfile, UserType}
 @import helpers.JavaTime
+@import org.apache.tika.mime.MediaType
 @import warwick.sso.{User, Usercode}
 
-@import domain.dao.CaseDao.Case
 @(
   enquiry: Enquiry,
   client: Option[SitsProfile],
@@ -16,7 +17,8 @@
   stateChangeForm: Form[OffsetDateTime],
   messageForm: Form[String],
   canViewEnquiryTeam: Boolean,
-  linkedCases: Seq[Case]
+  linkedCases: Seq[Case],
+  supportedMimeTypes: Seq[MediaType],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
@@ -269,7 +271,7 @@
         </div>
         @if(enquiry.state != IssueState.Closed) {
           <div class="panel-footer">
-            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key.get), messageForm)
+            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key.get), messageForm, supportedMimeTypes)
           </div>
         }
       </div>

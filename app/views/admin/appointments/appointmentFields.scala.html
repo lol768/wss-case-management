@@ -1,0 +1,46 @@
+@import controllers.admin.AppointmentController.AppointmentFormData
+@import domain.{Appointment, AppointmentType}
+@import views.html.b3.B3FieldConstructor
+
+@(
+  form: Form[AppointmentFormData]
+)(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
+
+@b3.validatedHidden(form, "case")
+
+@b3.text(form("appointment.subject"),
+  '_label -> "Subject"
+)
+
+@b3.free('_label -> "Clients", '_class -> form.error("clients").map(_ => "has-error")) {
+  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for clients", multiple = true, universityId = true)
+  @b3.errors(form("clients"))
+}
+
+@b3.datetimeLocal(form("appointment.start"),
+  '_label -> "Start date/time"
+)
+
+@* TODO probably just make this a drop-down with common options *@
+@b3.select(form("appointment.duration"),
+  options = Appointment.DurationOptions.map { case (s, d) => d.getSeconds.toString -> s },
+  '_label -> "Duration",
+  '_default -> "",
+  'required -> true
+)
+
+@* TODO location picker *@
+@b3.text(form("appointment.location"),
+  '_label -> "Location"
+)
+
+@b3.free('_label -> "Team member", '_class -> form.error("appointment.teamMember").map(_ => "has-error")) {
+  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("appointment.teamMember") && v.nonEmpty }.values.toSeq, name = "appointment.teamMember", placeholder = "Search for a user", multiple = false)
+}
+
+@b3.select(form("appointment.appointmentType"),
+  options = AppointmentType.values.map { t => t.entryName -> t.description },
+  '_label -> "Appointment type",
+  '_default -> "",
+  'required -> true
+)

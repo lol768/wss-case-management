@@ -1,11 +1,13 @@
 @import domain.{Enquiry, IssueState, MessageRender, SitsProfile}
 @import helpers.JavaTime
+@import org.apache.tika.mime.MediaType
 
 @(
   enquiry: Enquiry,
   client: Option[SitsProfile],
   messages: Seq[MessageRender],
   f: Form[String],
+  supportedMimeTypes: Seq[MediaType],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"${enquiry.team.name} enquiry from ${client.map { c => s"${c.fullName} (${enquiry.universityID.string})" }.getOrElse(enquiry.universityID.string)}") {
@@ -28,7 +30,7 @@
     </div>
     <div class="panel-footer">
       @if(enquiry.state != IssueState.Closed) {
-        @tags.messages.messageForm(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get), f)
+        @tags.messages.messageForm(controllers.enquiries.routes.EnquiryMessagesController.addMessage(enquiry.key.get), f, supportedMimeTypes)
       }
     </div>
   </div>

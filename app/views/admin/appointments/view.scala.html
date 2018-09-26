@@ -1,0 +1,76 @@
+@import domain.{Appointment, AppointmentClient, SitsProfile}
+@import domain.dao.CaseDao.Case
+@import warwick.sso.{UniversityID, User, Usercode}
+@import domain.AppointmentRender
+
+@(
+  a: AppointmentRender,
+  clients: Seq[(AppointmentClient, Either[UniversityID, SitsProfile])],
+  userLookup: Map[Usercode, User],
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"${a.appointment.key.string} ${a.appointment.subject}") {
+  <div class="row">
+    <div class="col-md-4 col-md-push-8">
+      @clients.map { case (client, p) =>
+        @p match {
+          case Left(universityID) => {
+            <div>
+              <p>
+                <strong>University ID: </strong> <a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a>
+              </p>
+              <p><span class="label label-@client.state.labelType">@client.state</span> @client.cancellationReason.map { r => {(@r.description)} }</p>
+            </div>
+          }
+          case Right(profile) => {
+            <div class="row">
+              @profile.photo.map { photo =>
+                <div class="col-sm-4">
+                  <p class="photo">
+                    <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">
+                      <img src="@photo" class="img-thumbnail img-circle">
+                    </a>
+                  </p>
+                </div>
+              }
+              <div class="col-sm-8">
+                <p>
+                  <strong>University ID: </strong> <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.universityID.string</a><br />
+                  <strong>Full name: </strong> @profile.fullName<br />
+                  <strong>Department: </strong> @profile.department.name<br />
+                  <strong>Warwick email address: </strong> @profile.warwickEmail
+                </p>
+                <p><span class="label label-@client.state.labelType">@client.state</span> @client.cancellationReason.map { r => {(@r.description)} }</p>
+              </div>
+            </div>
+          }
+        }
+      }
+    </div>
+    <div class="col-md-8 col-md-pull-4"> @* TODO history *@
+      <dl class="dl-horizontal">
+        <dt>Date/time</dt>
+        <dd>@helpers.JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))</dd>
+
+        <dt>Duration</dt>
+        <dd>@a.appointment.duration</dd>
+
+        @a.appointment.location.map { loc =>
+          <dt>Location</dt>
+          <dd>@loc.name</dd> @* TODO campus map link *@
+        }
+
+        <dt>Team member</dt>
+        <dd>@userLookup.get(a.appointment.teamMember).flatMap(_.name.full).getOrElse(s"Unknown (${a.appointment.teamMember.string})")</dd>
+
+        <dt>Appointment type</dt>
+        <dd>@a.appointment.appointmentType.description</dd>
+
+        @a.clientCase.map { clientCase =>
+          <dt>Case</dt>
+          <dd><a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">@clientCase.key.get.string @clientCase.subject</a></dd>
+        }
+      </dl>
+    </div>
+  </div>
+}

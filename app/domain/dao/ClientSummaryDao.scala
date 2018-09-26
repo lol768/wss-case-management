@@ -2,16 +2,17 @@ package domain.dao
 
 import java.time.OffsetDateTime
 
+import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.ClientSummaryDao.PersistedClientSummary
+import domain.dao.ClientSummaryDao.StoredClientSummary
+import domain.dao.ClientSummaryDao.StoredClientSummary.{ClientSummaries, ReasonableAdjustments, StoredReasonableAdjustment}
 import helpers.JavaTime
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import play.api.libs.json.JsValue
 import slick.jdbc.JdbcProfile
-import ExtendedPostgresProfile.api._
 import slick.lifted.{Index, PrimaryKey, ProvenShape}
 import warwick.sso.UniversityID
 
@@ -19,83 +20,156 @@ import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[ClientSummaryDaoImpl])
 trait ClientSummaryDao {
-  def insert(universityID: UniversityID, data: ClientSummaryData): DBIO[PersistedClientSummary]
-  def update(universityID: UniversityID, data: ClientSummaryData, version: OffsetDateTime): DBIO[PersistedClientSummary]
-  def get(universityID: UniversityID): DBIO[Option[PersistedClientSummary]]
-  def all: DBIO[Seq[PersistedClientSummary]]
+  def insert(summary: StoredClientSummary): DBIO[StoredClientSummary]
+  def update(summary: StoredClientSummary, version: OffsetDateTime): DBIO[StoredClientSummary]
+  def insertReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment]): DBIO[Seq[StoredReasonableAdjustment]]
+  def insertReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment): DBIO[StoredReasonableAdjustment]
+  def deleteReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment): DBIO[Done]
+  def get(universityID: UniversityID): DBIO[Option[StoredClientSummary]]
+  def getByAlternativeEmailAddress(email: String): DBIO[Option[StoredClientSummary]]
+  def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq]
+  def findAtRiskQuery(highMentalHealth: Option[Boolean], riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq]
 }
 
 object ClientSummaryDao {
-  case class PersistedClientSummary(
+  case class StoredClientSummary(
     universityID: UniversityID,
     highMentalHealthRisk: Option[Boolean],
-    data: JsValue,
+    notes: String,
+    alternativeContactNumber: String,
+    alternativeEmailAddress: String,
+    riskStatus: Option[ClientRiskStatus],
     version: OffsetDateTime = JavaTime.offsetDateTime
-  ) extends Versioned[PersistedClientSummary] {
-    override def atVersion(at: OffsetDateTime): PersistedClientSummary = copy(version = at)
+  ) extends Versioned[StoredClientSummary] {
+    override def atVersion(at: OffsetDateTime): StoredClientSummary = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[PersistedClientSummary]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
-      PersistedClientSummaryVersion(
+    override def storedVersion[B <: StoredVersion[StoredClientSummary]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+      StoredClientSummaryVersion(
         universityID,
         highMentalHealthRisk,
-        data,
+        notes,
+        alternativeContactNumber,
+        alternativeEmailAddress,
+        riskStatus,
         version,
         operation,
         timestamp
       ).asInstanceOf[B]
 
-    def parsed = ClientSummary(
+    def asClientSummary(reasonableAdjustments: Set[ReasonableAdjustment]) = ClientSummary(
       universityID = universityID,
-      updatedDate = version,
-      data = ClientSummaryData(
-        highMentalHealthRisk = highMentalHealthRisk,
-        notes = (data \ "notes").as[String],
-        alternativeContactNumber = (data \ "alternativeContactNumber").as[String],
-        alternativeEmailAddress = (data \ "alternativeEmailAddress").as[String],
-        riskStatus = (data \ "riskStatus").asOpt[ClientRiskStatus],
-        reasonableAdjustments = (data \ "reasonableAdjustments").as[Set[ReasonableAdjustment]]
-      )
+      highMentalHealthRisk = highMentalHealthRisk,
+      notes = notes,
+      alternativeContactNumber = alternativeContactNumber,
+      alternativeEmailAddress = alternativeEmailAddress,
+      riskStatus = riskStatus,
+      reasonableAdjustments = reasonableAdjustments,
+      updatedDate = version
     )
   }
 
-  case class PersistedClientSummaryVersion(
+  case class StoredClientSummaryVersion(
     universityId: UniversityID,
     highMentalHealthRisk: Option[Boolean],
-    data: JsValue,
+    notes: String,
+    alternativeContactNumber: String,
+    alternativeEmailAddress: String,
+    riskStatus: Option[ClientRiskStatus],
     version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
     timestamp: OffsetDateTime
-  ) extends StoredVersion[PersistedClientSummary]
+  ) extends StoredVersion[StoredClientSummary]
 
-  object PersistedClientSummary extends Versioning {
-    def tupled: ((UniversityID, Option[Boolean], JsValue, OffsetDateTime)) => PersistedClientSummary = (PersistedClientSummary.apply _).tupled
+  object StoredClientSummary extends Versioning {
+    def tupled: ((UniversityID, Option[Boolean], String, String, String, Option[ClientRiskStatus], OffsetDateTime)) => StoredClientSummary = (StoredClientSummary.apply _).tupled
 
-    sealed trait CommonProperties { self: Table[_] =>
+    sealed trait CommonClientSummaryProperties { self: Table[_] =>
       def highMentalHealthRisk: Rep[Option[Boolean]] = column[Option[Boolean]]("mental_health_risk")
-      def data: Rep[JsValue] = column[JsValue]("data")
+      def notes: Rep[String] = column[String]("notes")
+      def alternativeContactNumber: Rep[String] = column[String]("alt_contact_number")
+      def alternativeEmailAddress: Rep[String] = column[String]("alt_email")
+      def riskStatus: Rep[Option[ClientRiskStatus]] = column[Option[ClientRiskStatus]]("risk_status")
       def version: Rep[OffsetDateTime] = column[OffsetDateTime]("version_utc")
     }
 
-    class PersistedClientSummaries(tag: Tag) extends Table[PersistedClientSummary](tag, "client_summary") with VersionedTable[PersistedClientSummary] with CommonProperties {
-      override def matchesPrimaryKey(other: PersistedClientSummary): Rep[Boolean] = universityID === other.universityID
+    class ClientSummaries(tag: Tag) extends Table[StoredClientSummary](tag, "client_summary") with VersionedTable[StoredClientSummary] with CommonClientSummaryProperties {
+      override def matchesPrimaryKey(other: StoredClientSummary): Rep[Boolean] = universityID === other.universityID
 
       def universityID: Rep[UniversityID] = column[UniversityID]("university_id", O.PrimaryKey)
 
-      def * : ProvenShape[PersistedClientSummary] = (universityID, highMentalHealthRisk, data, version).mapTo[PersistedClientSummary]
+      def * : ProvenShape[StoredClientSummary] = (universityID, highMentalHealthRisk, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, version).mapTo[StoredClientSummary]
     }
 
-    class PersistedClientSummaryVersions(tag: Tag) extends Table[PersistedClientSummaryVersion](tag, "client_summary_version") with StoredVersionTable[PersistedClientSummary] with CommonProperties {
+    class ClientSummaryVersions(tag: Tag) extends Table[StoredClientSummaryVersion](tag, "client_summary_version") with StoredVersionTable[StoredClientSummary] with CommonClientSummaryProperties {
       def universityID: Rep[UniversityID] = column[UniversityID]("university_id")
       def operation: Rep[DatabaseOperation] = column[DatabaseOperation]("version_operation")
       def timestamp: Rep[OffsetDateTime] = column[OffsetDateTime]("version_timestamp_utc")
 
-      def * : ProvenShape[PersistedClientSummaryVersion] = (universityID, highMentalHealthRisk, data, version, operation, timestamp).mapTo[PersistedClientSummaryVersion]
+      def * : ProvenShape[StoredClientSummaryVersion] = (universityID, highMentalHealthRisk, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, version, operation, timestamp).mapTo[StoredClientSummaryVersion]
       def pk: PrimaryKey = primaryKey("pk_client_summary_version", (universityID, timestamp))
       def idx: Index = index("idx_client_summary_version", (universityID, version))
     }
 
-    val clientSummaries: VersionedTableQuery[PersistedClientSummary, PersistedClientSummaryVersion, PersistedClientSummaries, PersistedClientSummaryVersions] =
-      VersionedTableQuery[PersistedClientSummary, PersistedClientSummaryVersion, PersistedClientSummaries, PersistedClientSummaryVersions](TableQuery[PersistedClientSummaries], TableQuery[PersistedClientSummaryVersions])
+    val clientSummaries: VersionedTableQuery[StoredClientSummary, StoredClientSummaryVersion, ClientSummaries, ClientSummaryVersions] =
+      VersionedTableQuery[StoredClientSummary, StoredClientSummaryVersion, ClientSummaries, ClientSummaryVersions](TableQuery[ClientSummaries], TableQuery[ClientSummaryVersions])
+
+    case class StoredReasonableAdjustment(
+      universityID: UniversityID,
+      reasonableAdjustment: ReasonableAdjustment,
+      version: OffsetDateTime = OffsetDateTime.now()
+    ) extends Versioned[StoredReasonableAdjustment] {
+      override def atVersion(at: OffsetDateTime): StoredReasonableAdjustment = copy(version = at)
+      override def storedVersion[B <: StoredVersion[StoredReasonableAdjustment]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+        StoredReasonableAdjustmentVersion(
+          universityID,
+          reasonableAdjustment,
+          version,
+          operation,
+          timestamp
+        ).asInstanceOf[B]
+    }
+
+    case class StoredReasonableAdjustmentVersion(
+      universityID: UniversityID,
+      reasonableAdjustment: ReasonableAdjustment,
+      version: OffsetDateTime = OffsetDateTime.now(),
+      operation: DatabaseOperation,
+      timestamp: OffsetDateTime
+    ) extends StoredVersion[StoredReasonableAdjustment]
+
+    trait CommonStoredReasonableAdjustmentProperties { self: Table[_] =>
+      def universityID: Rep[UniversityID] = column[UniversityID]("university_id")
+      def reasonableAdjustment = column[ReasonableAdjustment]("reasonable_adjustment")
+      def version = column[OffsetDateTime]("version_utc")
+    }
+
+    class ReasonableAdjustments(tag: Tag) extends Table[StoredReasonableAdjustment](tag, "reasonable_adjustment")
+      with VersionedTable[StoredReasonableAdjustment]
+      with CommonStoredReasonableAdjustmentProperties {
+      override def matchesPrimaryKey(other: StoredReasonableAdjustment): Rep[Boolean] =
+        universityID === other.universityID && reasonableAdjustment === other.reasonableAdjustment
+
+      override def * : ProvenShape[StoredReasonableAdjustment] =
+        (universityID, reasonableAdjustment, version).mapTo[StoredReasonableAdjustment]
+      def pk = primaryKey("pk_reasonable_adjustment", (universityID, reasonableAdjustment))
+      def fk = foreignKey("fk_reasonable_adjustment", universityID, clientSummaries.table)(_.universityID)
+      def idx = index("idx_reasonable_adjustment", universityID)
+    }
+
+    class ReasonableAdjustmentVersions(tag: Tag) extends Table[StoredReasonableAdjustmentVersion](tag, "reasonable_adjustment_version")
+      with StoredVersionTable[StoredReasonableAdjustment]
+      with CommonStoredReasonableAdjustmentProperties {
+      def operation = column[DatabaseOperation]("version_operation")
+      def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+
+      override def * : ProvenShape[StoredReasonableAdjustmentVersion] =
+        (universityID, reasonableAdjustment, version, operation, timestamp).mapTo[StoredReasonableAdjustmentVersion]
+      def pk = primaryKey("pk_reasonable_adjustment_version", (universityID, reasonableAdjustment, timestamp))
+      def idx = index("idx_reasonable_adjustment_version", (universityID, reasonableAdjustment, version))
+    }
+
+    val reasonableAdjustments: VersionedTableQuery[StoredReasonableAdjustment, StoredReasonableAdjustmentVersion, ReasonableAdjustments, ReasonableAdjustmentVersions] =
+      VersionedTableQuery[StoredReasonableAdjustment, StoredReasonableAdjustmentVersion, ReasonableAdjustments, ReasonableAdjustmentVersions](TableQuery[ReasonableAdjustments], TableQuery[ReasonableAdjustmentVersions])
   }
 }
 
@@ -104,29 +178,39 @@ class ClientSummaryDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit executionContext: ExecutionContext) extends ClientSummaryDao with HasDatabaseConfigProvider[JdbcProfile] {
 
-  import PersistedClientSummary._
+  import StoredClientSummary._
   import dbConfig.profile.api._
 
-  override def insert(universityID: UniversityID, data: ClientSummaryData): DBIO[PersistedClientSummary] =
-    clientSummaries.insert(PersistedClientSummary(
-      universityID,
-      data.highMentalHealthRisk,
-      data.getJsonFields
-    ))
+  override def insert(summary: StoredClientSummary): DBIO[StoredClientSummary] =
+    clientSummaries.insert(summary)
 
-  override def update(universityID: UniversityID, data: ClientSummaryData, version: OffsetDateTime): DBIO[PersistedClientSummary] =
-    clientSummaries.update(PersistedClientSummary(
-      universityID,
-      data.highMentalHealthRisk,
-      data.getJsonFields,
-      version
-    ))
+  override def update(summary: StoredClientSummary, version: OffsetDateTime): DBIO[StoredClientSummary] =
+    clientSummaries.update(summary.copy(version = version))
 
-  override def get(universityID: UniversityID): DBIO[Option[PersistedClientSummary]] =
+  override def insertReasonableAdjustments(adjustments: Set[StoredReasonableAdjustment]): DBIO[Seq[StoredReasonableAdjustment]] =
+    reasonableAdjustments.insertAll(adjustments.toSeq)
+
+  override def insertReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment): DBIO[StoredReasonableAdjustment] =
+    reasonableAdjustments.insert(reasonableAdjustment)
+
+  override def deleteReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment): DBIO[Done] =
+    reasonableAdjustments.delete(reasonableAdjustment)
+
+  override def get(universityID: UniversityID): DBIO[Option[StoredClientSummary]] =
     clientSummaries.table.filter(_.universityID === universityID).take(1).result.headOption
 
-  override def all: DBIO[Seq[PersistedClientSummary]] =
-    clientSummaries.table.result
+  override def getByAlternativeEmailAddress(email: String): DBIO[Option[StoredClientSummary]] =
+    clientSummaries.table.filter(_.alternativeEmailAddress === email).take(1).result.headOption
+
+  override def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq] =
+    reasonableAdjustments.table
+      .filter(_.universityID === universityID)
+
+  override def findAtRiskQuery(highMentalHealth: Option[Boolean], riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq] =
+    clientSummaries.table
+      .filter(c =>
+        c.riskStatus.inSet(riskStatues) || LiteralColumn(highMentalHealth.nonEmpty) && c.highMentalHealthRisk === highMentalHealth
+      )
 
 }
 

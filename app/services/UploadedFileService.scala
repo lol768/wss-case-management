@@ -17,13 +17,14 @@ import play.api.mvc.{BodyParser, DefaultPlayBodyParsers}
 import system.TimingCategories
 import warwick.core.timing.{TimingContext, TimingService}
 import warwick.objectstore.ObjectStorageService
+import warwick.sso.Usercode
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[UploadedFileServiceImpl])
 trait UploadedFileService {
-  def storeDBIO(in: ByteSource, metadata: UploadedFileSave)(implicit t: TimingContext): DBIO[UploadedFile]
-  def storeDBIO(in: ByteSource, metadata: UploadedFileSave, ownerId: UUID, ownerType: UploadedFileOwner)(implicit t: TimingContext): DBIO[UploadedFile]
+  def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode)(implicit t: TimingContext): DBIO[UploadedFile]
+  def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode, ownerId: UUID, ownerType: UploadedFileOwner)(implicit t: TimingContext): DBIO[UploadedFile]
   def store(in: ByteSource, metadata: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]]
   def store(in: ByteSource, metadata: UploadedFileSave, ownerId: UUID, ownerType: UploadedFileOwner)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]]
 
@@ -42,7 +43,7 @@ class UploadedFileServiceImpl @Inject()(
 
   import timing._
 
-  private def storeDBIO(id: UUID, in: ByteSource, metadata: UploadedFileSave, ownerId: Option[UUID], ownerType: Option[UploadedFileOwner])(implicit t: TimingContext): DBIO[UploadedFile] = {
+  private def storeDBIO(id: UUID, in: ByteSource, metadata: UploadedFileSave, uploader: Usercode, ownerId: Option[UUID], ownerType: Option[UploadedFileOwner])(implicit t: TimingContext): DBIO[UploadedFile] = {
     for {
       // Treat the ObjectStorageService put as DBIO so we force a rollback if it fails (even though it won't delete the object)
       _ <- DBIO.from(time(TimingCategories.ObjectStorageWrite) {
@@ -59,7 +60,7 @@ class UploadedFileServiceImpl @Inject()(
         metadata.fileName,
         metadata.contentLength,
         metadata.contentType,
-        metadata.uploadedBy,
+        uploader,
         ownerId,
         ownerType,
         JavaTime.offsetDateTime,
@@ -68,20 +69,20 @@ class UploadedFileServiceImpl @Inject()(
     } yield file.asUploadedFile
   }
 
-  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave)(implicit t: TimingContext): DBIO[UploadedFile] =
-    storeDBIO(UUID.randomUUID(), in, metadata, None, None)
+  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode)(implicit t: TimingContext): DBIO[UploadedFile] =
+    storeDBIO(UUID.randomUUID(), in, metadata, uploader, None, None)
 
-  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave, ownerId: UUID, ownerType: UploadedFileOwner)(implicit t: TimingContext): DBIO[UploadedFile] =
-    storeDBIO(UUID.randomUUID(), in, metadata, Some(ownerId), Some(ownerType))
+  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode, ownerId: UUID, ownerType: UploadedFileOwner)(implicit t: TimingContext): DBIO[UploadedFile] =
+    storeDBIO(UUID.randomUUID(), in, metadata, uploader, Some(ownerId), Some(ownerType))
 
   override def store(in: ByteSource, metadata: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]] =
     auditService.audit[UploadedFile]('UploadedFileStore, (f: UploadedFile) => f.id.toString, 'UploadedFile, Json.obj()) {
-      daoRunner.run(storeDBIO(in, metadata)).map(Right.apply)
+      daoRunner.run(storeDBIO(in, metadata, ac.usercode.get)).map(Right.apply)
     }
 
   override def store(in: ByteSource, metadata: UploadedFileSave, ownerId: UUID, ownerType: UploadedFileOwner)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]] =
     auditService.audit[UploadedFile]('UploadedFileStore, (f: UploadedFile) => f.id.toString, 'UploadedFile, Json.obj()) {
-      daoRunner.run(storeDBIO(in, metadata, ownerId, ownerType)).map(Right.apply)
+      daoRunner.run(storeDBIO(in, metadata, ac.usercode.get, ownerId, ownerType)).map(Right.apply)
     }
 
   override def deleteDBIO(id: UUID): DBIO[Done] =

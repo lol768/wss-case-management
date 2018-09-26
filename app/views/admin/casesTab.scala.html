@@ -10,13 +10,20 @@
   closedCases: Int,
   clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
   createRoute: Call,
-  closedCasesRoute: Call
+  closedCasesRoute: Call,
+  searchScope: String,
+  searchScopeValue: String,
+  placeholderSuffix: String
 )(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
-@b3.vertical.formCSRF(routes.CaseSearchController.search(), 'class -> "case-search") { implicit ifc =>
+@b3.vertical.formCSRF(routes.CaseSearchController.search(),
+  'class -> "case-search",
+  Symbol("data-search-scope") -> searchScope,
+  Symbol("data-search-scope-value") -> searchScopeValue
+) { implicit ifc =>
   @b3.free('_class -> "search-default") {
     <i class="fal fa-search"></i>
-    <input type="text" class="form-control input-lg" placeholder="Search cases" />
+    <input type="text" class="form-control input-lg" placeholder="Search cases@placeholderSuffix" />
   }
 }
 

@@ -96,7 +96,7 @@ class EnquiryServiceImpl @Inject() (
       daoRunner.run(for {
         nextId <- sql"SELECT nextval('SEQ_ENQUIRY_KEY')".as[Int].head
         e <- enquiryDao.insert(enquiry.copy(id = Some(id), key = Some(IssueKey(IssueKeyType.Enquiry, nextId))))
-        _ <- addMessageDBIO(e, message, files)
+        _ <- addMessageDBIO(e, message, files, ac.usercode.get)
       } yield e).map(Right.apply)
     }.flatMap(_.fold(
       errors => Future.successful(Left(errors)),
@@ -107,7 +107,7 @@ class EnquiryServiceImpl @Inject() (
   override def addMessage(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(Message, Seq[UploadedFile])]] = {
     auditService.audit('EnquiryAddMessage, enquiry.id.get.toString, 'Enquiry, Json.obj()) {
       daoRunner.run(
-        addMessageDBIO(enquiry, message, files)
+        addMessageDBIO(enquiry, message, files, ac.usercode.get)
       ).map(Right.apply)
     }.flatMap(_.fold(
       errors => Future.successful(Left(errors)),
@@ -115,7 +115,7 @@ class EnquiryServiceImpl @Inject() (
     ))
   }
 
-  private def addMessageDBIO(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit t: TimingContext): DBIO[(Message, Seq[UploadedFile])] =
+  private def addMessageDBIO(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], uploader: Usercode)(implicit t: TimingContext): DBIO[(Message, Seq[UploadedFile])] =
     for {
       message <- messageDao.insert(message.toMessage(
         client = enquiry.universityID,
@@ -124,7 +124,7 @@ class EnquiryServiceImpl @Inject() (
         ownerType = MessageOwner.Enquiry
       ))
       f <- DBIO.sequence(files.map { case (in, metadata) =>
-        uploadedFileService.storeDBIO(in, metadata, message.id, UploadedFileOwner.Message)
+        uploadedFileService.storeDBIO(in, metadata, uploader, message.id, UploadedFileOwner.Message)
       })
     } yield (message, f)
 
@@ -163,7 +163,7 @@ class EnquiryServiceImpl @Inject() (
   def updateStateWithMessage(enquiry: Enquiry, targetState: IssueState, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
     auditService.audit(Symbol(s"Enquiry${targetState.entryName}WithMessage"), enquiry.id.get.toString, 'Enquiry, Json.obj()) {
       daoRunner.run(
-        addMessageDBIO(enquiry, message, files).andThen(
+        addMessageDBIO(enquiry, message, files, ac.usercode.get).andThen(
           enquiryDao.update(enquiry.copy(state = targetState), version)
         )
       ).map(Right.apply)

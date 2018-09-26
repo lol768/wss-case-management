@@ -3,7 +3,7 @@ package controllers
 import domain.{IssueKey, Teams}
 import helpers.ServiceResults.ServiceResult
 import play.api.mvc._
-import services.{CaseService, EnquiryService}
+import services.{AppointmentService, CaseService, EnquiryService}
 import system.Roles
 import warwick.sso.AuthenticatedRequest
 
@@ -38,6 +38,22 @@ package object refiners {
         caseService.find(caseKey).map {
           case Right(c) =>
             Right(new CaseSpecificRequest[A](c, request))
+          case _ =>
+            Left(Results.NotFound(views.html.errors.notFound()))
+        }
+      }
+
+      override protected def executionContext: ExecutionContext = ec
+    }
+
+  def WithAppointment(appointmentKey: IssueKey)(implicit appointmentService: AppointmentService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, AppointmentSpecificRequest] =
+    new ActionRefiner[AuthenticatedRequest, AppointmentSpecificRequest] {
+      override protected def refine[A](request: AuthenticatedRequest[A]): Future[Either[Result, AppointmentSpecificRequest[A]]] = {
+        implicit val requestContext: RequestContext = requestContextBuilder(request)
+
+        appointmentService.find(appointmentKey).map {
+          case Right(appointment) =>
+            Right(new AppointmentSpecificRequest[A](appointment, request))
           case _ =>
             Left(Results.NotFound(views.html.errors.notFound()))
         }

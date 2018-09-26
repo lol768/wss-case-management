@@ -43,6 +43,7 @@ class CaseServiceTest extends AbstractDaoTest {
         UploadedFileDao.uploadedFiles.versionsTable.delete andThen
         CaseDao.cases.table.delete andThen
         CaseDao.cases.versionsTable.delete andThen
+        AuditEvent.auditEvents.delete andThen
         sql"ALTER SEQUENCE SEQ_CASE_ID RESTART WITH 1000".asUpdate
       )
     }
@@ -66,6 +67,8 @@ class CaseServiceTest extends AbstractDaoTest {
     }
 
     "findFull" in withData(new CaseFixture()) { c1 =>
+      implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
+
       val clients = Set(UniversityID("0672089"), UniversityID("0672088"))
       val tags: Set[CaseTag] = Set(CaseTag.Antisocial, CaseTag.Bullying)
 
@@ -81,7 +84,7 @@ class CaseServiceTest extends AbstractDaoTest {
         clientCase.id.get,
         CaseDocumentSave(CaseDocumentType.SpecificLearningDifficultyDocument, Usercode("cuscav")),
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav")),
+        UploadedFileSave("problem.txt", 11, "text/plain"),
         CaseNoteSave("I hate herons", Usercode("cuscav"))
       ).serviceValue
 
@@ -217,11 +220,13 @@ class CaseServiceTest extends AbstractDaoTest {
     }
 
     "get and set documents" in withData(new CaseFixture()) { c =>
+      implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
+
       val saved = service.addDocument(
         c.id.get,
         CaseDocumentSave(CaseDocumentType.SpecificLearningDifficultyDocument, Usercode("cuscav")),
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav")),
+        UploadedFileSave("problem.txt", 11, "text/plain"),
         CaseNoteSave("I hate herons", Usercode("cuscav"))
       ).serviceValue
       saved.documentType mustBe CaseDocumentType.SpecificLearningDifficultyDocument

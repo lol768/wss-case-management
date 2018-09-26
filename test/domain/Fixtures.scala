@@ -1,7 +1,9 @@
 package domain
 
+import java.time.Duration
 import java.util.UUID
 
+import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
 import domain.dao.CaseDao.Case
 import helpers.JavaTime
 import warwick.sso._
@@ -73,6 +75,33 @@ object Fixtures {
       None,
       Some(CaseType.MentalHealthAssessment),
       CaseCause.New
+    )
+  }
+
+  object appointments {
+    def newStoredAppointment(issueKey: Int = 1234): StoredAppointment = StoredAppointment(
+      UUID.randomUUID(),
+      IssueKey(IssueKeyType.Appointment, issueKey),
+      None,
+      "Mental health consultation",
+      JavaTime.offsetDateTime
+        .withHour(14).withMinute(0).withSecond(0).withNano(0),
+      Duration.ofMinutes(45),
+      Some(MapLocation("W0.01", "4128")),
+      Teams.MentalHealth,
+      Usercode("mentalhealth-counsellor"),
+      AppointmentType.FaceToFace,
+      JavaTime.offsetDateTime,
+      JavaTime.offsetDateTime,
+    )
+
+    def newStoredClient(appointmentID: UUID): StoredAppointmentClient = StoredAppointmentClient(
+      UniversityID("1234567"),
+      appointmentID: UUID,
+      AppointmentState.Provisional,
+      None,
+      JavaTime.offsetDateTime,
+      JavaTime.offsetDateTime,
     )
   }
 }

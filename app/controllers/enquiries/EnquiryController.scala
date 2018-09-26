@@ -1,15 +1,14 @@
 package controllers.enquiries
 
-import com.google.common.io.Files
-import controllers.BaseController
+import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.refiners.CanViewEnquiryActionRefiner
+import controllers.{BaseController, UploadedFileControllerHelper}
 import domain.Enquiry.{FormData => Data}
 import domain._
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.data.Form
 import play.api.i18n.Messages
-import play.api.libs.Files.TemporaryFile
 import play.api.mvc.{Action, AnyContent, MultipartFormData, RequestHeader}
 import services.{EnquiryService, SecurityService}
 
@@ -20,7 +19,8 @@ class EnquiryController @Inject()(
   enquirySpecificActionRefiner: CanViewEnquiryActionRefiner,
   securityService: SecurityService,
   service: EnquiryService,
-  config: Configuration
+  config: Configuration,
+  uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import securityService._
@@ -28,13 +28,13 @@ class EnquiryController @Inject()(
   private val initialTeam: Team = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
 
   private def render(f: Form[Data])(implicit req: RequestHeader) =
-    Ok(views.html.enquiry.form(f))
+    Ok(views.html.enquiry.form(f, uploadedFileControllerHelper.supportedMimeTypes))
 
   def form(): Action[AnyContent] = SigninRequiredAction { implicit request =>
     render(Enquiry.form)
   }
 
-  def submit(): Action[MultipartFormData[TemporaryFile]] = SigninRequiredAction(parse.multipartFormData).async { implicit request =>
+  def submit(): Action[MultipartFormData[TemporaryUploadedFile]] = SigninRequiredAction(uploadedFileControllerHelper.bodyParser).async { implicit request =>
     Enquiry.form.bindFromRequest().fold(
       formWithErrors => Future.successful(render(formWithErrors)),
       formData => {
@@ -51,9 +51,9 @@ class EnquiryController @Inject()(
           teamMember = None
         )
 
-        val files = UploadedFileSave.seqFromRequest(request)
+        val files = request.body.files.map(_.ref)
 
-        service.save(enquiry, message, files).successMap { _ =>
+        service.save(enquiry, message, files.map { f => (f.in, f.metadata) }).successMap { _ =>
           Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.enquiry.received"))
         }
 

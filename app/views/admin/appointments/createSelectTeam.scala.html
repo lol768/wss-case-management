@@ -1,0 +1,19 @@
+@import domain.Team
+@import domain.IssueKey
+@import warwick.sso.UniversityID
+
+@(
+  teams: Seq[Team],
+  forCase: Option[IssueKey],
+  client: Option[UniversityID]
+)(implicit context: RequestContext)
+
+@main("Create an appointment - select team") {
+  <p>Select a team to assign the appointment to:</p>
+
+  <ul>
+    @teams.map { team =>
+      <li><a href="@controllers.admin.routes.AppointmentController.createForm(team.id, forCase, client)">@team.name</a></li>
+    }
+  </ul>
+}

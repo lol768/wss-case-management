@@ -2,7 +2,7 @@ package controllers.enquiries
 
 import java.util.UUID
 
-import com.google.common.io.{ByteSource, Files}
+import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.enquiries.EnquiryMessagesController._
 import controllers.refiners.{CanAddClientMessageToEnquiryActionRefiner, CanClientViewEnquiryActionRefiner, EnquirySpecificRequest}
 import controllers.{API, BaseController, UploadedFileControllerHelper}
@@ -11,7 +11,6 @@ import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.tabula.ProfileService
@@ -47,7 +46,8 @@ class EnquiryMessagesController @Inject()(
         render.enquiry,
         client,
         render.messages,
-        f
+        f,
+        uploadedFileControllerHelper.supportedMimeTypes
       ))
     }
 
@@ -55,7 +55,7 @@ class EnquiryMessagesController @Inject()(
     renderMessages(request.enquiry, form)
   }
 
-  def addMessage(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanAddClientMessageToEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>
+  def addMessage(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryUploadedFile]] = CanAddClientMessageToEnquiryAction(enquiryKey)(uploadedFileControllerHelper.bodyParser).async { implicit request =>
     form.bindFromRequest().fold(
       formWithErrors => {
         render.async {
@@ -71,10 +71,10 @@ class EnquiryMessagesController @Inject()(
       },
       messageText => {
         val message = messageData(messageText, request)
-        val files = UploadedFileSave.seqFromRequest(request)
+        val files = request.body.files.map(_.ref)
         val enquiry = request.enquiry
 
-        service.addMessage(enquiry, message, files).successMap { case (m, f) =>
+        service.addMessage(enquiry, message, files.map { f => (f.in, f.metadata) }).successMap { case (m, f) =>
           val messageData = MessageData(m.text, m.sender, enquiry.universityID, m.created, m.teamMember, m.team)
 
           render {
@@ -120,5 +120,4 @@ class EnquiryMessagesController @Inject()(
       sender = MessageSender.Client,
       teamMember = None
     )
-
 }

@@ -19,6 +19,7 @@ trait OwnerDao {
   def delete(owner: Owner): DBIO[Done]
   def findEnquiryOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq]
   def findCaseOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq]
+  def getCaseOwnerHistory(id: UUID): DBIO[Seq[OwnerVersion]]
 }
 
 @Singleton
@@ -40,5 +41,10 @@ class OwnerDaoImpl @Inject() (
   override def findEnquiryOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq] =
     Owner.owners.table
       .filter(o => o.entityId.inSet(ids) && o.entityType === (Owner.EntityType.Enquiry:Owner.EntityType))
+
+  override def getCaseOwnerHistory(id: UUID): DBIO[Seq[OwnerVersion]] =
+    Owner.owners.versionsTable
+      .filter(o => o.entityId === id && o.entityType === (Owner.EntityType.Case:Owner.EntityType))
+      .result
 
 }
