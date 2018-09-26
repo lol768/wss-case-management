@@ -51,13 +51,13 @@ class CaseDocumentController @Inject()(
   }
 
   def addDocumentForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
-    Ok(views.html.admin.cases.addDocument(caseKey, form))
+    Ok(views.html.admin.cases.addDocument(caseKey, form, uploadedFileControllerHelper.supportedMimeTypes))
   }
 
   def addDocument(caseKey: IssueKey): Action[MultipartFormData[TemporaryUploadedFile]] = CanEditCaseAction(caseKey)(uploadedFileControllerHelper.bodyParser).async { implicit caseRequest =>
     form.bindFromRequest().fold(
       formWithErrors => Future.successful(
-        Ok(views.html.admin.cases.addDocument(caseKey, formWithErrors))
+        Ok(views.html.admin.cases.addDocument(caseKey, formWithErrors, uploadedFileControllerHelper.supportedMimeTypes))
       ),
       formData =>
         caseRequest.body.file("file").map { file =>
@@ -75,7 +75,7 @@ class CaseDocumentController @Inject()(
               .flashing("success" -> Messages("flash.case.documentAdded"))
           }
         }.getOrElse(Future.successful(
-          Ok(views.html.admin.cases.addDocument(caseKey, form.withError("file", "error.required")))
+          Ok(views.html.admin.cases.addDocument(caseKey, form.withError("file", "error.required"), uploadedFileControllerHelper.supportedMimeTypes))
         ))
     )
   }

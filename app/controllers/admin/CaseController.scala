@@ -3,7 +3,7 @@ package controllers.admin
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import controllers.BaseController
+import controllers.{BaseController, UploadedFileControllerHelper}
 import controllers.admin.CaseController._
 import controllers.refiners._
 import domain._
@@ -133,7 +133,8 @@ class CaseController @Inject()(
   anyTeamActionRefiner: AnyTeamActionRefiner,
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   canViewCaseActionRefiner: CanViewCaseActionRefiner,
-  canEditCaseActionRefiner: CanEditCaseActionRefiner
+  canEditCaseActionRefiner: CanEditCaseActionRefiner,
+  uploadedFileControllerHelper: UploadedFileControllerHelper
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import anyTeamActionRefiner._
@@ -171,7 +172,8 @@ class CaseController @Inject()(
           userLookup,
           caseNoteForm,
           messageForm,
-          history
+          history,
+          uploadedFileControllerHelper.supportedMimeTypes
         ))
       }
     }

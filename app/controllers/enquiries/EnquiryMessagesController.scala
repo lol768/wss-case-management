@@ -46,7 +46,8 @@ class EnquiryMessagesController @Inject()(
         render.enquiry,
         client,
         render.messages,
-        f
+        f,
+        uploadedFileControllerHelper.supportedMimeTypes
       ))
     }
 

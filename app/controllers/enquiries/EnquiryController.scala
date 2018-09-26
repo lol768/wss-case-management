@@ -28,7 +28,7 @@ class EnquiryController @Inject()(
   private val initialTeam: Team = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
 
   private def render(f: Form[Data])(implicit req: RequestHeader) =
-    Ok(views.html.enquiry.form(f))
+    Ok(views.html.enquiry.form(f, uploadedFileControllerHelper.supportedMimeTypes))
 
   def form(): Action[AnyContent] = SigninRequiredAction { implicit request =>
     render(Enquiry.form)

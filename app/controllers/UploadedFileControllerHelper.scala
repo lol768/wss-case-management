@@ -28,6 +28,7 @@ import scala.concurrent.{ExecutionContext, Future}
 trait UploadedFileControllerHelper {
   def serveFile(uploadedFile: UploadedFile)(implicit request: AuthenticatedRequest[_], t: TimingContext): Future[Result]
   def bodyParser: BodyParser[MultipartFormData[TemporaryUploadedFile]]
+  def supportedMimeTypes: Seq[MediaType]
 }
 
 object UploadedFileControllerHelper {
@@ -153,5 +154,7 @@ class UploadedFileControllerHelperImpl @Inject()(
           }
         }
     }
+
+  override def supportedMimeTypes: Seq[MediaType] = config.allowedMimeTypes
 
 }

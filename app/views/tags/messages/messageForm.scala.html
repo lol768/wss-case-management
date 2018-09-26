@@ -1,8 +1,10 @@
 @import domain.Enquiry
+@import org.apache.tika.mime.MediaType
 @(
-    action: Call,
-    messageForm: Form[_],
-    rows: Int = 5,
+  action: Call,
+  messageForm: Form[_],
+  supportedMimeTypes: Seq[MediaType],
+  rows: Int = 5,
 )(implicit messagesProvider: MessagesProvider, requestHeader: RequestHeader)
 
 @b3.vertical.formCSRF(action, 'enctype -> "multipart/form-data") { implicit ifc =>
@@ -23,7 +25,7 @@
   @* TODO - move file uploads into a modal *@
   <div class="form-group">
     <div class="row">
-      <div class="col-md-5"><input type="file" name="file" class="form-control" multiple></div>
+      <div class="col-md-5"><input type="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" class="form-control" multiple></div>
     </div>
   </div>
 }

@@ -1,18 +1,15 @@
-@import java.time.OffsetDateTime
-@import java.util.UUID
-
 @import controllers.IndexController.{ClientInformation, TeamMemberInformation}
 @import controllers.RequestContext
-@import domain.dao.CaseDao.Case
-@import domain.{Enquiry, EnquiryRender, MessageData, Registration, SitsProfile}
+@import domain.{EnquiryRender, Registration}
 @import helpers.JavaTime
+@import org.apache.tika.mime.MediaType
 @import play.api.data.Form
 @import play.api.data.Forms._
-@import warwick.sso.UniversityID
 
 @(
   clientInformation: ClientInformation,
   teamMemberInformation: Option[TeamMemberInformation],
+  supportedMimeTypes: Seq[MediaType],
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @renderClientInformation(enquiries: Seq[EnquiryRender], registration: Option[Registration]) = {
@@ -68,7 +65,7 @@
             </div>
               <div class="panel-footer">
                 @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
-                  @tags.messages.messageForm(controllers.enquiries.routes.EnquiryMessagesController.addMessage(e.enquiry.key.get), form, rows = 1)
+                  @tags.messages.messageForm(controllers.enquiries.routes.EnquiryMessagesController.addMessage(e.enquiry.key.get), form, supportedMimeTypes, rows = 1)
                 }
               </div>
           </div>

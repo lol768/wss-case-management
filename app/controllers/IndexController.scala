@@ -45,6 +45,7 @@ class IndexController @Inject()(
   audit: AuditService,
   cases: CaseService,
   profiles: ProfileService,
+  uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
   import securityService._
   import anyTeamActionRefiner._
@@ -109,7 +110,7 @@ class IndexController @Inject()(
       clientHome,
       teamMemberHome
     ).successMap { case (clientInformation, teamMemberInformation) =>
-      Ok(views.html.home(clientInformation, teamMemberInformation))
+      Ok(views.html.home(clientInformation, teamMemberInformation, uploadedFileControllerHelper.supportedMimeTypes))
     }
   }
 
