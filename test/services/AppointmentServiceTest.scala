@@ -50,7 +50,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
       // Create a case to link to
       val c = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase()))
 
-      val created2 = service.create(AppointmentSave("Skype call", JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.StudentSupport, Some(c.id.get)).serviceValue
+      val created2 = service.create(AppointmentSave("Skype call", JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, Some(c.id.get)).serviceValue
       created2.id must not be created.id
       created2.key.string mustBe "APP-1001"
     }
@@ -63,7 +63,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
     "find by client" in withData(new AppointmentFixture) { _ =>
       val created = service.create(AppointmentSave("App 1", JavaTime.offsetDateTime, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, None).serviceValue
-      val created2 = service.create(AppointmentSave("App 2", JavaTime.offsetDateTime.minusHours(1), Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.StudentSupport, None).serviceValue
+      val created2 = service.create(AppointmentSave("App 2", JavaTime.offsetDateTime.minusHours(1), Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, None).serviceValue
 
       service.findForClient(UniversityID("0672089")).serviceValue.map(_.appointment) mustBe Seq(created2, created)
       service.findForClient(UniversityID("0672088")).serviceValue.map(_.appointment) mustBe Seq(created2)
@@ -84,7 +84,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
       // Create a case to link to
       val c = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase()))
 
-      val multipleClientsWithCase = service.create(AppointmentSave("Skype call", JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.StudentSupport, Some(c.id.get)).serviceValue
+      val multipleClientsWithCase = service.create(AppointmentSave("Skype call", JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, Some(c.id.get)).serviceValue
 
       service.findForRender(multipleClientsWithCase.key).serviceValue mustBe AppointmentRender(
         multipleClientsWithCase,

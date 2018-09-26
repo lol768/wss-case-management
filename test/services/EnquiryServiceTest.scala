@@ -32,7 +32,7 @@ class EnquiryServiceTest extends AbstractDaoTest {
         val enquiry = enquiryService.save(Enquiry(
           universityID = uniId1,
           subject = "Enquiry",
-          team = Teams.StudentSupport,
+          team = Teams.WellbeingSupport,
           version = enquiryDate,
           created = enquiryDate
         ), MessageSave(
