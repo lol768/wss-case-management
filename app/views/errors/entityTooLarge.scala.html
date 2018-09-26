@@ -1,0 +1,16 @@
+@import UploadedFileControllerHelper._
+
+@(
+  file: TemporaryUploadedFile,
+  config: UploadedFileConfiguration
+)(implicit context: RequestContext)
+
+@main("Uploaded file too large") {
+  <p>Sorry, the attachment you tried to upload (@file.metadata.fileName) is larger than the
+    maximum allowable attachment size.</p>
+
+  <p>
+    The uploaded file was @helpers.humanReadableSize(file.metadata.contentLength) but the maximum
+    allowable size for an individual attachment is @helpers.humanReadableSize(config.maxIndividualFileSizeBytes).
+  </p>
+}

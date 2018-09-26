@@ -1,6 +1,6 @@
 package controllers.admin
 
-import controllers.BaseController
+import controllers.{BaseController, UploadedFileControllerHelper}
 import controllers.refiners.CaseMessageActionFilters
 import domain.IssueKey
 import javax.inject.{Inject, Singleton}
@@ -16,7 +16,8 @@ object CaseMessageController {
 
 @Singleton
 class CaseMessageController @Inject() (
-  actions: CaseMessageActionFilters
+  actions: CaseMessageActionFilters,
+  uploadedFileControllerHelper: UploadedFileControllerHelper,
 ) (implicit
   executionContext: ExecutionContext,
   caseService: CaseService
@@ -24,7 +25,7 @@ class CaseMessageController @Inject() (
 
   import actions._
 
-  def addMessage(caseKey: IssueKey, client: UniversityID) = CanPostAsTeamAction(caseKey)(parse.multipartFormData) { implicit request =>
+  def addMessage(caseKey: IssueKey, client: UniversityID) = CanPostAsTeamAction(caseKey)(uploadedFileControllerHelper.bodyParser) { implicit request =>
     // TODO try to reuse enquiry message adding stuff
     NotImplemented(views.html.defaultpages.todo())
   }

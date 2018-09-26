@@ -26,7 +26,6 @@ case class UploadedFileSave(
   fileName: String,
   contentLength: Long,
   contentType: String,
-  uploadedBy: Usercode,
 )
 
 sealed trait UploadedFileOwner extends EnumEntry

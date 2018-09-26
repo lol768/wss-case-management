@@ -14,7 +14,6 @@ import org.mockito.Matchers._
 import org.mockito.Mockito._
 import warwick.core.timing.TimingService
 import warwick.objectstore.ObjectStorageService
-import warwick.sso.Usercode
 
 import scala.util.Try
 
@@ -56,7 +55,7 @@ class UploadedFileServiceTest extends AbstractDaoTest {
     "store uploaded files" in withData(new TestFixture) { case (service, objectStorageService) =>
       val saved = service.store(
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+        UploadedFileSave("problem.txt", 11, "text/plain")
       ).serviceValue
       saved.fileName mustBe "problem.txt"
       saved.contentLength mustBe 11
@@ -79,7 +78,7 @@ class UploadedFileServiceTest extends AbstractDaoTest {
 
       Try(service.store(
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+        UploadedFileSave("problem.txt", 11, "text/plain")
       ).serviceValue).isFailure mustBe true
 
       exec(UploadedFileDao.uploadedFiles.table.length.result) mustBe 0
@@ -89,7 +88,7 @@ class UploadedFileServiceTest extends AbstractDaoTest {
     "delete but keep object in object store" in withData(new TestFixture) { case (service, objectStorageService) =>
       val saved = service.store(
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+        UploadedFileSave("problem.txt", 11, "text/plain")
       ).serviceValue
 
       objectStorageService.keyExists(saved.id.toString) mustBe true
