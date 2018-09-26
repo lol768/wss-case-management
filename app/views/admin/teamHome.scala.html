@@ -6,13 +6,16 @@
 @import domain.{Enquiry, MessageData, SitsProfile, Team}
 @import warwick.sso.UniversityID
 
+@import domain.AtRiskClient
+@import domain.Teams
 @(team: Team,
   enquiriesRequiringAction: Seq[(Enquiry, MessageData)],
   enquiriesAwaitingClient: Seq[(Enquiry, MessageData)],
   closedEnquiries: Int,
   openCases: Seq[(Case, OffsetDateTime)],
   closedCases: Int,
-  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
+  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
+  atRiskClients: Set[AtRiskClient]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main(s"${team.name} team") {
@@ -39,7 +42,7 @@
       @views.html.admin.casesTab(openCases, closedCases, clients, controllers.admin.routes.CaseController.createForm(team.id), controllers.admin.routes.AdminController.closedCases(team.id), "team", team.id, s" assigned to ${team.name}")
     </div>
     <div role="tabpanel" class="tab-pane" id="clients">
-      @views.html.admin.clientsTab()
+      @views.html.admin.clientsTab(atRiskClients, team == Teams.MentalHealth)
     </div>
     <div role="tabpanel" class="tab-pane" id="appointments">
       @views.html.admin.appointmentsTab()
