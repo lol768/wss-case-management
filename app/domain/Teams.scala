@@ -10,9 +10,9 @@ object Teams {
   case object Counselling extends Team("counselling", "Counselling Service")
   case object Disability extends Team("disability", "Disability Services")
   case object MentalHealth extends Team("mentalhealth", "Mental Health")
-  case object StudentSupport extends Team("studentsupport", "Student Support & Wellbeing")
+  case object WellbeingSupport extends Team("wellbeing", "Wellbeing Support")
 
-  val all: Seq[Team] = Seq(Counselling, Disability, MentalHealth, StudentSupport)
+  val all: Seq[Team] = Seq(Counselling, Disability, MentalHealth, WellbeingSupport)
 
   def fromId(id: String): Team =
     all.find(_.id == id).getOrElse {
