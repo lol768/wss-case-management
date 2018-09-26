@@ -374,7 +374,7 @@ class CaseServiceImpl @Inject() (
     auditService.audit('CaseAddDocument, caseID.toString, 'Case, Json.obj()) {
       val documentID = UUID.randomUUID()
       daoRunner.run(for {
-        f <- uploadedFileService.storeDBIO(in, file)
+        f <- uploadedFileService.storeDBIO(in, file, ac.usercode.get)
         doc <- dao.insertDocument(StoredCaseDocument(
           documentID,
           caseID,

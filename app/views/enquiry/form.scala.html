@@ -1,7 +1,10 @@
-@import domain.Team
 @import domain.Enquiry.FormData
+@import org.apache.tika.mime.MediaType
 @import play.twirl.api._
-@(form: Form[FormData])(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+@(
+  form: Form[FormData],
+  supportedMimeTypes: Seq[MediaType]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Make an enquiry") {
   @* There's a bug in play-bootstrap where b3.free labels will be the wrong
@@ -25,7 +28,7 @@
     )
 
     @b3.free('_label -> "Attachment", '_class -> form.error("file").map(_ => "has-error")) {
-      <input type="file" id="file" name="file" class="form-control">
+      <input type="file" id="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" class="form-control">
       @b3.errors(form("file"))
     }
 

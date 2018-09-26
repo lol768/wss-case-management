@@ -46,10 +46,11 @@ class IndexController @Inject()(
   audit: AuditService,
   cases: CaseService,
   profiles: ProfileService,
-  clientSummaries: ClientSummaryService
+  clientSummaries: ClientSummaryService,
+  uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
-  import securityService._
   import anyTeamActionRefiner._
+  import securityService._
 
   private def clientHome(implicit request: AuthenticatedRequest[AnyContent]): Future[ServiceResult[ClientInformation]] = {
     val client = request.context.user.get.universityId.get
@@ -113,7 +114,7 @@ class IndexController @Inject()(
       clientHome,
       teamMemberHome
     ).successMap { case (clientInformation, teamMemberInformation) =>
-      Ok(views.html.home(clientInformation, teamMemberInformation))
+      Ok(views.html.home(clientInformation, teamMemberInformation, uploadedFileControllerHelper.supportedMimeTypes))
     }
   }
 

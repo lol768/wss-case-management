@@ -1,10 +1,11 @@
-@import controllers.admin.{CaseController, CaseDocumentController}
 @import controllers.admin.CaseController.CaseNoteFormData
-@import domain.dao.CaseDao.Case
+@import controllers.admin.{CaseController, CaseDocumentController}
 @import domain._
-@import warwick.sso._
-@import play.api.libs.json.Json
+@import domain.dao.CaseDao.Case
 @import helpers.JavaTime
+@import org.apache.tika.mime.MediaType
+@import play.api.libs.json.Json
+@import warwick.sso._
 @(
   c: Case.FullyJoined,
   clients: Seq[Either[UniversityID, SitsProfile]],
@@ -14,7 +15,8 @@
   userLookup: Map[Usercode, User],
   noteForm: Form[CaseNoteFormData],
   messageForm: Form[String],
-  history: CaseHistory
+  history: CaseHistory,
+  supportedMimeTypes: Seq[MediaType]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @caseLinks(links: Seq[CaseLink], description: CaseLinkType => String, target: CaseLink => Case) = {
@@ -328,7 +330,7 @@
                   </div>
                   <div class="panel-footer">
                     @if(c.clientCase.state != IssueState.Closed) {
-                      @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.clientCase.key.get, universityId), messageForm)
+                      @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.clientCase.key.get, universityId), messageForm, supportedMimeTypes)
                     }
                   </div>
                 </div>

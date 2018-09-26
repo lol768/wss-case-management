@@ -20,6 +20,8 @@ import scala.util.Try
 
 class UploadedFileServiceTest extends AbstractDaoTest {
 
+  override implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
+
   private class TestFixture extends DataFixture[(UploadedFileService, ObjectStorageService)] {
     override def setup(): (UploadedFileService, ObjectStorageService) =
       (get[UploadedFileService], get[ObjectStorageService])
@@ -56,7 +58,7 @@ class UploadedFileServiceTest extends AbstractDaoTest {
     "store uploaded files" in withData(new TestFixture) { case (service, objectStorageService) =>
       val saved = service.store(
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+        UploadedFileSave("problem.txt", 11, "text/plain")
       ).serviceValue
       saved.fileName mustBe "problem.txt"
       saved.contentLength mustBe 11
@@ -79,7 +81,7 @@ class UploadedFileServiceTest extends AbstractDaoTest {
 
       Try(service.store(
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+        UploadedFileSave("problem.txt", 11, "text/plain")
       ).serviceValue).isFailure mustBe true
 
       exec(UploadedFileDao.uploadedFiles.table.length.result) mustBe 0
@@ -89,7 +91,7 @@ class UploadedFileServiceTest extends AbstractDaoTest {
     "delete but keep object in object store" in withData(new TestFixture) { case (service, objectStorageService) =>
       val saved = service.store(
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain", Usercode("cuscav"))
+        UploadedFileSave("problem.txt", 11, "text/plain")
       ).serviceValue
 
       objectStorageService.keyExists(saved.id.toString) mustBe true

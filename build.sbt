@@ -85,7 +85,9 @@ val appDeps = Seq(
 
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
 
-  "org.dom4j" % "dom4j" % "2.1.1"
+  "org.dom4j" % "dom4j" % "2.1.1",
+  "org.apache.tika" % "tika-core" % "1.19",
+  "org.apache.tika" % "tika-parsers" % "1.19"
 )
 
 val testDeps = Seq(
@@ -110,6 +112,8 @@ libraryDependencies ++= (appDeps ++ testDeps).map(_.excludeAll(
   // brought in by warwick utils, pulls in old XML shit
   ExclusionRule(organization = "rome"),
   ExclusionRule(organization = "dom4j"),
+  // Tika pulls in slf4j-log4j12
+  ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
 ))
 
 libraryDependencies += specs2 % Test
@@ -129,6 +133,12 @@ dependencyOverrides += "com.google.code.gson" % "gson" % "2.5"
 
 // Fix a dependency warning
 dependencyOverrides += "org.json" % "json" % "20171018"
+
+// https://github.com/sbt/sbt/issues/3618
+val workaround: Unit = {
+  sys.props += "packaging.type" -> "jar"
+  ()
+}
 
 // Make built output available as Play assets.
 unmanagedResourceDirectories in Assets += baseDirectory.value / "target/assets"

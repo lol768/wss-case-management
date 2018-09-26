@@ -3,10 +3,10 @@ package controllers.admin
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import com.google.common.io.Files
-import controllers.{BaseController, UploadedFileControllerHelper}
+import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.admin.CaseDocumentController._
 import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CaseSpecificRequest}
+import controllers.{BaseController, UploadedFileControllerHelper}
 import domain._
 import helpers.JavaTime
 import helpers.ServiceResults.ServiceError
@@ -14,7 +14,6 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import play.api.libs.Files.TemporaryFile
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.CaseService
 
@@ -52,36 +51,31 @@ class CaseDocumentController @Inject()(
   }
 
   def addDocumentForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
-    Ok(views.html.admin.cases.addDocument(caseKey, form))
+    Ok(views.html.admin.cases.addDocument(caseKey, form, uploadedFileControllerHelper.supportedMimeTypes))
   }
 
-  def addDocument(caseKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanEditCaseAction(caseKey)(parse.multipartFormData).async { implicit caseRequest =>
+  def addDocument(caseKey: IssueKey): Action[MultipartFormData[TemporaryUploadedFile]] = CanEditCaseAction(caseKey)(uploadedFileControllerHelper.bodyParser).async { implicit caseRequest =>
     form.bindFromRequest().fold(
       formWithErrors => Future.successful(
-        Ok(views.html.admin.cases.addDocument(caseKey, formWithErrors))
+        Ok(views.html.admin.cases.addDocument(caseKey, formWithErrors, uploadedFileControllerHelper.supportedMimeTypes))
       ),
       formData =>
-        caseRequest.body.file("file").filter(_.filename.nonEmpty).map { file =>
+        caseRequest.body.file("file").map { file =>
           cases.addDocument(
             caseID = caseRequest.`case`.id.get,
             document = CaseDocumentSave(
               formData.documentType,
               caseRequest.context.user.get.usercode
             ),
-            in = Files.asByteSource(file.ref),
-            file = UploadedFileSave(
-              file.filename,
-              file.ref.length(),
-              file.contentType.getOrElse("application/octet-stream"),
-              caseRequest.context.user.get.usercode
-            ),
+            in = file.ref.in,
+            file = file.ref.metadata,
             caseNote = CaseNoteSave(views.txt.notes.casedocument(formData.documentType, file.filename, formData.description).toString, caseRequest.context.user.get.usercode)
           ).successMap { _ =>
             Redirect(controllers.admin.routes.CaseController.view(caseKey))
               .flashing("success" -> Messages("flash.case.documentAdded"))
           }
         }.getOrElse(Future.successful(
-          Ok(views.html.admin.cases.addDocument(caseKey, form.withError("file", "error.required")))
+          Ok(views.html.admin.cases.addDocument(caseKey, form.withError("file", "error.required"), uploadedFileControllerHelper.supportedMimeTypes))
         ))
     )
   }

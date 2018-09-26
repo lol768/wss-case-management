@@ -3,9 +3,9 @@ package controllers.admin
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import com.google.common.io.{ByteSource, Files}
+import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.admin.TeamEnquiryController._
-import controllers.refiners.{CanAddTeamMessageToEnquiryActionRefiner, CanEditEnquiryActionRefiner, CanViewEnquiryActionRefiner, EnquirySpecificRequest}
+import controllers.refiners._
 import controllers.{API, BaseController, UploadedFileControllerHelper}
 import domain._
 import helpers.ServiceResults.ServiceResult
@@ -14,11 +14,10 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
-import services.{CaseService, EnquiryService, PermissionService}
 import services.tabula.ProfileService
+import services.{CaseService, EnquiryService, PermissionService}
 import warwick.sso.UserLookupService
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -89,7 +88,8 @@ class TeamEnquiryController @Inject()(
           stateChangeForm,
           messageForm,
           canViewTeam,
-          linkedCases
+          linkedCases,
+          uploadedFileControllerHelper.supportedMimeTypes
         ))
       }
     }
@@ -107,7 +107,7 @@ class TeamEnquiryController @Inject()(
     Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
   }
 
-  def addMessage(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryFile]] = CanAddTeamMessageToEnquiryAction(enquiryKey)(parse.multipartFormData).async { implicit request =>
+  def addMessage(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryUploadedFile]] = CanAddTeamMessageToEnquiryAction(enquiryKey)(uploadedFileControllerHelper.bodyParser).async { implicit request =>
     messageForm.bindFromRequest().fold(
       formWithErrors => {
         render.async {
@@ -127,10 +127,10 @@ class TeamEnquiryController @Inject()(
       },
       messageText => {
         val message = messageData(messageText, request)
-        val files = uploadedFiles(request)
+        val files = request.body.files.map(_.ref)
         val enquiry = request.enquiry
 
-        service.addMessage(enquiry, message, files).successMap { case (m, f) =>
+        service.addMessage(enquiry, message, files.map { f => (f.in, f.metadata) }).successMap { case (m, f) =>
           val messageData = MessageData(m.text, m.sender, enquiry.universityID, m.created, m.teamMember, m.team)
           render {
             case Accepts.Json() =>
@@ -185,16 +185,6 @@ class TeamEnquiryController @Inject()(
       sender = MessageSender.Team,
       teamMember = request.context.user.map(_.usercode)
     )
-
-  private def uploadedFiles(request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Seq[(ByteSource, UploadedFileSave)] =
-    request.body.files.filter(_.filename.nonEmpty).map { file =>
-      (Files.asByteSource(file.ref), UploadedFileSave(
-        file.filename,
-        file.ref.length(),
-        file.contentType.getOrElse("application/octet-stream"),
-        request.context.user.get.usercode
-      ))
-    }
 
   def reassignForm(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey) { implicit request =>
     Ok(views.html.admin.enquiry.reassign(request.enquiry, reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version, ""))))
