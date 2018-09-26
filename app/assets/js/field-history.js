@@ -30,7 +30,7 @@ function handleData($container, data) {
       content: _.map($i.data('field-history-data'), item => `
             <dl>
               <dt>${DateFormats.formatDateTime(item.version)}</dt>
-              <dd>${getValue(item.value)}</dd>
+              <dd>${_.escape(getValue(item.value))}</dd>
             </dl>
           `),
       template: `
