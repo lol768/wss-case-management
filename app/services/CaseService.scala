@@ -250,7 +250,7 @@ class CaseServiceImpl @Inject() (
   override def getLinks(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[(Seq[CaseLink], Seq[CaseLink])]] =
     daoRunner.run(getLinksDBIO(caseID)).map(Right.apply)
 
-  private def addNoteDBIO(caseID: UUID, noteType: CaseNoteType, note: CaseNoteSave): DBIO[StoredCaseNote] =
+  private def addNoteDBIO(caseID: UUID, noteType: CaseNoteType, note: CaseNoteSave)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
     dao.insertNote(
       StoredCaseNote(
         id = UUID.randomUUID(),

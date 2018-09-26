@@ -10,8 +10,9 @@ import helpers.JavaTime
 import javax.inject.Singleton
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{JsValue, Json}
+import services.AuditLogContext
 import slick.jdbc.JdbcProfile
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext
 
@@ -25,13 +26,14 @@ object RegistrationDao {
 
     override def atVersion(at: OffsetDateTime): Registration = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[Registration]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[Registration]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       RegistrationVersion(
         universityID,
         data,
         version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
 
     def parsed = domain.Registration(
@@ -46,7 +48,8 @@ object RegistrationDao {
     data: JsValue,
     version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
-    timestamp: OffsetDateTime
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[Registration]
 
   object Registration extends Versioning {
@@ -69,8 +72,9 @@ object RegistrationDao {
       def universityID = column[UniversityID]("university_id")
       def operation = column[DatabaseOperation]("version_operation")
       def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+      def auditUser = column[Option[Usercode]]("version_user")
 
-      def * = (universityID, data, version, operation, timestamp).mapTo[RegistrationVersion]
+      def * = (universityID, data, version, operation, timestamp, auditUser).mapTo[RegistrationVersion]
       def pk = primaryKey("pk_user_registration_versions", (universityID, timestamp))
       def idx = index("idx_user_registration_versions", (universityID, version))
     }
@@ -84,9 +88,9 @@ object RegistrationDao {
 @ImplementedBy(classOf[RegistrationDaoImpl])
 trait RegistrationDao {
 
-  def insert(universityID: UniversityID, data: domain.RegistrationData): DBIO[RegistrationDao.Registration]
+  def insert(universityID: UniversityID, data: domain.RegistrationData)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration]
 
-  def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime): DBIO[RegistrationDao.Registration]
+  def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration]
 
   def get(universityID: UniversityID): DBIO[Option[RegistrationDao.Registration]]
 
@@ -102,13 +106,13 @@ class RegistrationDaoImpl @Inject()(
 
   import dbConfig.profile.api._
 
-  override def insert(universityID: UniversityID, data: domain.RegistrationData): DBIO[RegistrationDao.Registration] =
+  override def insert(universityID: UniversityID, data: domain.RegistrationData)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration] =
     RegistrationDao.Registration.registrations.insert(RegistrationDao.Registration(
       universityID,
       Json.toJson(data)(domain.RegistrationData.formatter)
     ))
 
-  override def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime): DBIO[RegistrationDao.Registration] =
+  override def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration] =
     RegistrationDao.Registration.registrations.update(RegistrationDao.Registration(
       universityID,
       Json.toJson(data)(domain.RegistrationData.formatter),
