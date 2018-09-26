@@ -39,7 +39,7 @@ class ClientController @Inject()(
     "alternative-email-address" -> text,
     "risk-status" -> optional(ClientRiskStatus.formField),
     "reasonable-adjustments" -> set(ReasonableAdjustment.formField)
-  )(ClientSummaryData.apply)(ClientSummaryData.unapply))
+  )(ClientSummarySave.apply)(ClientSummarySave.unapply))
 
   private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], Seq[EnquiryRender], Seq[(Case, Seq[MessageData], Seq[CaseNote])])]] = {
     val profile = profileService.getProfile(universityID).map(_.value)
@@ -54,7 +54,7 @@ class ClientController @Inject()(
   def client(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     clientInformation(universityID).successMap { case (profile, registration, clientSummary, enquiries, cases) =>
       val f = clientSummary match {
-        case Some(cs) => form.fill(cs.data)
+        case Some(cs) => form.fill(cs.toSave)
         case _ => form
       }
 
@@ -67,7 +67,7 @@ class ClientController @Inject()(
       form.bindFromRequest.fold(
         formWithErrors => Future.successful(Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, enquiries, cases, formWithErrors, inMentalHealthTeam))),
         data => {
-          val processedData = if (inMentalHealthTeam) data else data.copy(highMentalHealthRisk = clientSummary.flatMap(_.data.highMentalHealthRisk))
+          val processedData = if (inMentalHealthTeam) data else data.copy(highMentalHealthRisk = clientSummary.flatMap(_.highMentalHealthRisk))
           val f =
             if (clientSummary.isEmpty) clientSummaryService.save(universityID, processedData)
             else clientSummaryService.update(universityID, processedData, clientSummary.get.updatedDate)

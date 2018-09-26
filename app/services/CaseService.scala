@@ -164,18 +164,6 @@ class CaseServiceImpl @Inject() (
   override def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
     daoRunner.run(dao.searchQuery(query).take(limit).result).map(Right.apply)
 
-  private def updateDifferencesDBIO[A, B](items: Set[B], query: Query[Table[A], A, Seq], map: A => B, comap: B => A, insert: A => DBIO[A], delete: A => DBIO[Done]): DBIO[Unit] = {
-    val existing = query.result
-
-    val needsRemoving = existing.map(_.filterNot(e => items.contains(map(e))))
-    val removals = needsRemoving.flatMap(r => DBIO.sequence(r.map(delete)))
-
-    val needsAdding = existing.map(e => items.toSeq.filterNot(e.map(map).contains))
-    val additions = needsAdding.flatMap(a => DBIO.sequence(a.map(comap).map(insert)))
-
-    DBIO.seq(removals, additions)
-  }
-
   override def update(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
     auditService.audit('CaseUpdate, c.id.get.toString, 'Case, Json.obj()) {
       val now = JavaTime.offsetDateTime

@@ -3,37 +3,42 @@ package domain
 import java.time.OffsetDateTime
 
 import enumeratum.{EnumEntry, PlayEnum}
-import helpers.JavaTime
-import play.api.libs.json.{Format, JsValue, Json}
+import play.api.libs.json.{Format, Json}
 import warwick.sso.UniversityID
 
 import scala.collection.immutable
 
 case class ClientSummary(
   universityID: UniversityID,
-  data: ClientSummaryData,
-  updatedDate: OffsetDateTime = JavaTime.offsetDateTime,
-)
-
-object ClientSummaryData {
-  val formatter: Format[ClientSummaryData] = Json.format[ClientSummaryData]
+  highMentalHealthRisk: Option[Boolean],
+  notes: String,
+  alternativeContactNumber: String,
+  alternativeEmailAddress: String,
+  riskStatus: Option[ClientRiskStatus],
+  reasonableAdjustments: Set[ReasonableAdjustment],
+  updatedDate: OffsetDateTime
+) {
+  def toSave = ClientSummarySave(
+    highMentalHealthRisk = highMentalHealthRisk,
+    notes = notes,
+    alternativeContactNumber = alternativeContactNumber,
+    alternativeEmailAddress = alternativeEmailAddress,
+    riskStatus = riskStatus,
+    reasonableAdjustments = reasonableAdjustments
+  )
 }
 
-case class ClientSummaryData(
+case class ClientSummarySave(
   highMentalHealthRisk: Option[Boolean],
   notes: String,
   alternativeContactNumber: String,
   alternativeEmailAddress: String,
   riskStatus: Option[ClientRiskStatus],
   reasonableAdjustments: Set[ReasonableAdjustment]
-) {
-  def getJsonFields: JsValue = Json.obj(
-    "notes" -> notes,
-    "alternativeContactNumber" -> alternativeContactNumber,
-    "alternativeEmailAddress" -> alternativeEmailAddress,
-    "riskStatus" -> riskStatus,
-    "reasonableAdjustments" -> reasonableAdjustments
-  )
+)
+
+object ClientSummarySave {
+  val formatter: Format[ClientSummarySave] = Json.format[ClientSummarySave]
 }
 
 sealed trait ClientRiskStatus extends EnumEntry
