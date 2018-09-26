@@ -11,7 +11,7 @@
   clientSummary: Option[ClientSummary],
   enquiries: Seq[EnquiryRender],
   cases: Seq[(Case, Seq[MessageData], Seq[CaseNote])],
-  form: Form[ClientSummaryData],
+  form: Form[ClientSummarySave],
   inMentalHealthTeam: Boolean,
   success: Option[String] = None
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
@@ -80,10 +80,10 @@
           }
         }
 
-        @if(inMentalHealthTeam && clientSummary.exists(_.data.highMentalHealthRisk.contains(true))) {
+        @if(inMentalHealthTeam && clientSummary.exists(_.highMentalHealthRisk.contains(true))) {
           <p><span class="label label-danger">High mental health risk</span></p>
         }
-        @clientSummary.flatMap(_.data.riskStatus).map {
+        @clientSummary.flatMap(_.riskStatus).map {
           case ClientRiskStatus.Low => {
             <p><span class="label label-success">Low risk status</span></p>
           }

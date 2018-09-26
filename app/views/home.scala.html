@@ -6,6 +6,7 @@
 @import play.api.data.Form
 @import play.api.data.Forms._
 
+@import domain.Teams
 @(
   clientInformation: ClientInformation,
   teamMemberInformation: Option[TeamMemberInformation],
@@ -110,7 +111,7 @@
           @views.html.admin.casesTab(info.openCases, info.closedCases, info.clients, controllers.admin.routes.CaseController.createSelectTeam(), routes.IndexController.closedCases, "member", context.user.get.usercode.string, " assigned to me")
         </div>
         <div role="tabpanel" class="tab-pane" id="clients">
-          @views.html.admin.clientsTab()
+          @views.html.admin.clientsTab(info.atRiskClients, info.teams.contains(Teams.MentalHealth))
         </div>
         <div role="tabpanel" class="tab-pane" id="appointments">
           @views.html.admin.appointmentsTab()
