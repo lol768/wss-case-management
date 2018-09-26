@@ -8,7 +8,7 @@ import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.ClientSummaryDao.StoredClientSummary
-import domain.dao.ClientSummaryDao.StoredClientSummary.{ReasonableAdjustments, StoredReasonableAdjustment}
+import domain.dao.ClientSummaryDao.StoredClientSummary.{ClientSummaries, ReasonableAdjustments, StoredReasonableAdjustment}
 import helpers.JavaTime
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -28,7 +28,7 @@ trait ClientSummaryDao {
   def get(universityID: UniversityID): DBIO[Option[StoredClientSummary]]
   def getByAlternativeEmailAddress(email: String): DBIO[Option[StoredClientSummary]]
   def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq]
-  def all: DBIO[Seq[StoredClientSummary]]
+  def findAtRiskQuery(highMentalHealth: Option[Boolean], riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq]
 }
 
 object ClientSummaryDao {
@@ -206,8 +206,11 @@ class ClientSummaryDaoImpl @Inject()(
     reasonableAdjustments.table
       .filter(_.universityID === universityID)
 
-  override def all: DBIO[Seq[StoredClientSummary]] =
-    clientSummaries.table.result
+  override def findAtRiskQuery(highMentalHealth: Option[Boolean], riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq] =
+    clientSummaries.table
+      .filter(c =>
+        c.riskStatus.inSet(riskStatues) || LiteralColumn(highMentalHealth.nonEmpty) && c.highMentalHealthRisk === highMentalHealth
+      )
 
 }
 

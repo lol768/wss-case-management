@@ -6,12 +6,12 @@ import java.util.UUID
 import controllers.BaseController
 import controllers.refiners.{CanViewTeamActionRefiner, TeamSpecificRequest}
 import domain.dao.CaseDao.Case
-import domain.{Enquiry, MessageData}
+import domain.{AtRiskClient, Enquiry, MessageData, Teams}
 import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.mvc.{Action, AnyContent, Result}
 import services.tabula.ProfileService
-import services.{CaseService, EnquiryService}
+import services.{CaseService, ClientSummaryService, EnquiryService}
 import warwick.sso.{UniversityID, UserLookupService}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -21,6 +21,7 @@ class AdminController @Inject()(
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   enquiries: EnquiryService,
   cases: CaseService,
+  clientSummaryService: ClientSummaryService,
   profileService: ProfileService,
   userLookupService: UserLookupService
 )(implicit executionContext: ExecutionContext) extends BaseController {
@@ -28,10 +29,10 @@ class AdminController @Inject()(
   import canViewTeamActionRefiner._
 
   def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    findEnquiriesAndCases { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, clients) => {
+    findEnquiriesAndCases { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, clients, atRiskClients) => {
      profileService.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
         val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-        Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, resolvedClients))
+        Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, resolvedClients, atRiskClients))
       })
     }}
   }
@@ -42,18 +43,20 @@ class AdminController @Inject()(
       Int,
       Seq[(Case, OffsetDateTime)],
       Int,
-      Map[UUID, Set[UniversityID]]
+      Map[UUID, Set[UniversityID]],
+      Set[AtRiskClient]
     ) => Future[Result])(implicit teamRequest: TeamSpecificRequest[_]) = {
     ServiceResults.zip(
       enquiries.findEnquiriesNeedingReply(teamRequest.team),
       enquiries.findEnquiriesAwaitingClient(teamRequest.team),
       enquiries.countClosedEnquiries(teamRequest.team),
       cases.listOpenCases(teamRequest.team),
-      cases.countClosedCases(teamRequest.team)
-    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases) =>
+      cases.countClosedCases(teamRequest.team),
+      clientSummaryService.findAtRisk(teamRequest.team == Teams.MentalHealth)
+    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, atRiskClients) =>
       cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successFlatMap { caseClients =>
         val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map{ case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients
-        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, clients)
+        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, clients, atRiskClients)
       }
     }
   }

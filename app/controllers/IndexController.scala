@@ -31,7 +31,8 @@ object IndexController {
     closedEnquiries: Int,
     openCases: Seq[(Case, OffsetDateTime)],
     closedCases: Int,
-    clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
+    clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
+    atRiskClients: Set[AtRiskClient]
   )
 }
 
@@ -45,6 +46,7 @@ class IndexController @Inject()(
   audit: AuditService,
   cases: CaseService,
   profiles: ProfileService,
+  clientSummaries: ClientSummaryService
 )(implicit executionContext: ExecutionContext) extends BaseController {
   import securityService._
   import anyTeamActionRefiner._
@@ -80,8 +82,9 @@ class IndexController @Inject()(
           enquiries.findEnquiriesAwaitingClient(usercode),
           enquiries.countClosedEnquiries(usercode),
           cases.listOpenCases(usercode),
-          cases.countClosedCases(usercode)
-        ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases) =>
+          cases.countClosedCases(usercode),
+          clientSummaries.findAtRisk(teams.contains(Teams.MentalHealth))
+        ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, atRiskClients) =>
           cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successFlatMapTo { caseClients =>
             val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map{ case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients
 
@@ -95,7 +98,8 @@ class IndexController @Inject()(
                 closedEnquiries,
                 openCases,
                 closedCases,
-                resolvedClients
+                resolvedClients,
+                atRiskClients
               ))
             }
           }

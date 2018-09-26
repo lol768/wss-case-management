@@ -1,8 +1,70 @@
-@()(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
+@import domain.AtRiskClient
+@import domain.ClientRiskStatus
+@import helpers.JavaTime
+@(atRiskClients: Set[AtRiskClient], showMentalHealth: Boolean)(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
 @b3.vertical.formCSRF(routes.ClientSearchController.search(), 'class -> "client-search") { implicit ifc =>
   @b3.free('_class -> "search-default") {
     <i class="fal fa-search"></i>
     <input type="text" class="form-control input-lg" placeholder="Search clients" />
   }
+}
+
+@if(atRiskClients.nonEmpty) {
+  <table class="table table-default">
+    <caption>At risk clients</caption>
+    <thead>
+      <tr>
+        @if(showMentalHealth) {
+          <th class="col-sm-4">Client</th>
+          <th class="col-sm-2"></th>
+          <th class="col-sm-2"></th>
+          <th class="col-sm-2">Last case updated</th>
+          <th class="col-sm-2">Last enquiry updated</th>
+        } else {
+          <th class="col-sm-4">Client</th>
+          <th class="col-sm-2"></th>
+          <th class="col-sm-3">Last case updated</th>
+          <th class="col-sm-3">Last enquiry updated</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @atRiskClients.toSeq.sorted.map { case AtRiskClient(summary, profile, lastCaseUpdated, lastEnquiryUpdated) =>
+        <tr>
+          <td>
+            <a href="@controllers.admin.routes.ClientController.client(summary.universityID)">
+              @profile.map(_.fullName).getOrElse(summary.universityID.string)
+            </a>
+          </td>
+          @if(showMentalHealth) {
+            <td>
+              @summary.highMentalHealthRisk.filter(r => r).map { r =>
+                <span class="label label-danger">High mental health risk</span>
+              }
+            </td>
+          }
+          <td>
+            @summary.riskStatus.map {
+              case ClientRiskStatus.Low => {
+                <span class="label label-success">Low risk status</span>
+              }
+              case ClientRiskStatus.Medium => {
+                <span class="label label-warning">Medium risk status</span>
+              }
+              case ClientRiskStatus.High => {
+                <span class="label label-danger">High risk status</span>
+              }
+            }
+          </td>
+          <td>
+            @lastCaseUpdated.map(d => JavaTime.Relative(d))
+          </td>
+          <td>
+            @lastEnquiryUpdated.map(d => JavaTime.Relative(d))
+        </td>
+        </tr>
+      }
+    </tbody>
+  </table>
 }

@@ -1,8 +1,10 @@
 package domain
 
-import java.time.OffsetDateTime
+import java.time.{Instant, OffsetDateTime}
 
+import domain.ClientRiskStatus.{High, Medium}
 import enumeratum.{EnumEntry, PlayEnum}
+import helpers.JavaTime
 import play.api.libs.json.{Format, Json}
 import warwick.sso.UniversityID
 
@@ -48,4 +50,34 @@ object ClientRiskStatus extends PlayEnum[ClientRiskStatus] {
   case object High extends ClientRiskStatus
 
   val values: immutable.IndexedSeq[ClientRiskStatus] = findValues
+}
+
+case class AtRiskClient(
+  summary: ClientSummary,
+  profile: Option[SitsProfile],
+  lastUpdatedEnquiry: Option[OffsetDateTime],
+  lastUpdatedCase: Option[OffsetDateTime]
+) extends Ordered[AtRiskClient] {
+  override def compare(that: AtRiskClient): Int = {
+    if (this.summary.highMentalHealthRisk.contains(true) && !that.summary.highMentalHealthRisk.contains(true)) {
+      -1
+    } else if (!this.summary.highMentalHealthRisk.contains(true) && that.summary.highMentalHealthRisk.contains(true)) {
+      1
+    } else if (this.summary.riskStatus.contains(High) && !that.summary.riskStatus.contains(High)) {
+      -1      
+    } else if (!this.summary.riskStatus.contains(High) && that.summary.riskStatus.contains(High)) {
+      1
+    } else if (this.summary.riskStatus.contains(Medium) && !that.summary.riskStatus.contains(Medium)) {
+      -1
+    } else if (!this.summary.riskStatus.contains(Medium) && that.summary.riskStatus.contains(Medium)) {
+      1
+    } else {
+      val thePast = OffsetDateTime.ofInstant(Instant.ofEpochMilli(0), JavaTime.timeZone)
+      JavaTime.dateTimeOrdering.compare(
+        // Reverse this and that = newest first
+        Seq(that.lastUpdatedCase.getOrElse(thePast), that.lastUpdatedEnquiry.getOrElse(thePast)).max(JavaTime.dateTimeOrdering),
+        Seq(this.lastUpdatedCase.getOrElse(thePast), this.lastUpdatedEnquiry.getOrElse(thePast)).max(JavaTime.dateTimeOrdering)
+      )
+    }
+  }
 }
