@@ -124,7 +124,23 @@ case class MessageSave (
   text: String,
   sender: MessageSender,
   teamMember: Option[Usercode]
-)
+) {
+  def toMessage(
+    client: UniversityID,
+    team: Team,
+    ownerId: UUID,
+    ownerType: MessageOwner
+  ): Message = Message(
+    id = UUID.randomUUID(),
+    text = this.text,
+    sender = this.sender,
+    client = client,
+    teamMember = this.teamMember,
+    team = this.teamMember.map(_ => team), // Only store Team if there is an explicit team member
+    ownerId = ownerId,
+    ownerType = ownerType
+  )
+}
 
 /**
   * Just enough Message to render with.
@@ -148,8 +164,22 @@ object MessageData {
 
   // oldest first
   val dateOrdering: Ordering[MessageData] = Ordering.by[MessageData, OffsetDateTime](data => data.created)(JavaTime.dateTimeOrdering)
-  val dateOrderingWithFile: Ordering[(MessageData, Option[StoredUploadedFile])] = Ordering.by[(MessageData, Option[StoredUploadedFile]), OffsetDateTime] { case (data, _) => data.created }(JavaTime.dateTimeOrdering)
-  val dateOrderingWithFiles: Ordering[(MessageData, Seq[StoredUploadedFile])] = Ordering.by[(MessageData, Seq[StoredUploadedFile]), OffsetDateTime] { case (data, _) => data.created }(JavaTime.dateTimeOrdering)
+  val dateOrderingWithFile: Ordering[(MessageData, Option[StoredUploadedFile])] = dateOrdering.on(_._1)
+  val dateOrderingWithFiles: Ordering[(MessageData, Seq[StoredUploadedFile])] = dateOrdering.on(_._1)
+
+
+  def groupOwnerAndMessage[A](messageTuples: Seq[(A, Option[(MessageData, Option[StoredUploadedFile])])]): Seq[(A, Seq[MessageRender])] = {
+    OneToMany.leftJoin(messageTuples)(MessageData.dateOrderingWithFile)
+      .map { case (a, mf) =>
+        a -> groupMessagesAndAttachments(mf)
+      }
+  }
+
+  def groupMessagesAndAttachments(mf: Seq[(MessageData, Option[StoredUploadedFile])]): Seq[MessageRender] = {
+    OneToMany.leftJoin(mf.distinct)(StoredUploadedFile.dateOrdering)
+      .sorted(MessageData.dateOrderingWithFiles)
+      .map { case (m, f) => MessageRender(m, f.map(_.asUploadedFile)) }
+  }
 }
 
 sealed trait MessageSender extends EnumEntry

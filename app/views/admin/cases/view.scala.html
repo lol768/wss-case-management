@@ -273,42 +273,42 @@
   <div class="panel-group" id="messages-accordion" role="tablist" aria-multiselectable="true">
     @clients.map { maybeClient =>
         @defining(SitsProfile.universityId(maybeClient)) { universityId: UniversityID =>
-            @defining(c.messages.byClient.getOrElse(universityId, Nil)) { messages: Seq[MessageData] =>
+            @defining(c.messages.byClient.getOrElse(universityId, Nil)) { messages: Seq[MessageRender] =>
               <div class="thread panel panel-default">
                 <div class="panel-heading" role="tab" id="thread-heading-@universityId.string">
                   <h4 class="panel-title">
                     <a class="collapsed" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-thread-@universityId.string" aria-expanded="true" aria-controls="collapse-thread-@universityId">
                       <div class="pull-right">
                         @messages.lastOption.map { m =>
-                          @JavaTime.Relative(m.created)
+                          @JavaTime.Relative(m.message.created)
                         }
                         <i class="fas fa-fw fa-angle-down"></i>
                         <i class="fas fa-fw fa-angle-up"></i>
                       </div>
                       @* @tags.icons.enquiryState(e.enquiry.state) *@
-                      @views.tags.clientFullName(maybeClient)
+                      @tags.clientFullName(maybeClient)
                       @if(messages.isEmpty) {
                         (No messages)
                       } else {
-                        @tags.p(messages.length, "message")()
+                        (@tags.p(messages.length, "message")())
                       }
                     </a>
                   </h4>
                 </div>
                 <div id="collapse-thread-@universityId.string" class="panel-collapse collapse" role="tabpanel" aria-labelledby="thread-heading-@universityId.string">
                   <div class="panel-body">
-                  @messages.map { message =>
-                    @if(message.sender == MessageSender.Client) {
+                  @messages.map { render =>
+                    @if(render.message.sender == MessageSender.Client) {
                       <div class="message message-client">
-                        <div class="date pull-right">@helpers.JavaTime.Relative(message.created)</div>
+                        <div class="date pull-right">@helpers.JavaTime.Relative(render.message.created)</div>
                         <div class="message--author">Client @* TODO *@</div>
-                        @views.utils.nl2br(message.text)
+                        @views.utils.nl2br(render.message.text)
                       </div>
                     } else {
                       <div class="message message-team">
-                        <div class="date pull-right">@helpers.JavaTime.Relative(message.created)</div>
-                        <div class="message--author">@message.teamMember.flatMap(userLookup.get).map(_.name.full).getOrElse("Team member")</div>
-                        @views.utils.nl2br(message.text)
+                        <div class="date pull-right">@helpers.JavaTime.Relative(render.message.created)</div>
+                        <div class="message--author">@render.message.teamMember.flatMap(userLookup.get).map(_.name.full).getOrElse("Team member")</div>
+                        @views.utils.nl2br(render.message.text)
                       </div>
                     }
                   }

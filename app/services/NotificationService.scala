@@ -8,6 +8,7 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.mailer.Email
+import play.api.mvc.Call
 import services.tabula.ProfileService
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
@@ -27,6 +28,7 @@ trait NotificationService {
   def enquiryReassign(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]]
   def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit t: TimingContext): Future[ServiceResult[Activity]]
   def caseReassign(clientCase: Case)(implicit t: TimingContext): Future[ServiceResult[Activity]]
+  def caseMessage(`case`: Case, client: UniversityID, sender: MessageSender)(implicit t: TimingContext): Future[ServiceResult[Activity]]
 }
 
 @Singleton
@@ -123,56 +125,98 @@ class NotificationServiceImpl @Inject()(
 
   override def enquiryMessage(enquiry: Enquiry, sender: MessageSender)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
     if (sender == MessageSender.Client) {
-      withTeamUsers(enquiry.team) { users =>
-        val url = s"https://$domain${controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).url}"
-
-        emailService.queue(
-          Email(
-            subject = "Case Management: Enquiry message from client received",
-            from = "no-reply@warwick.ac.uk",
-            bodyText = Some(views.txt.emails.enquirymessagefromclient(url).toString.trim)
-          ),
-          users
-        ).flatMap {
-          case Left(errors) => Future.successful(Left(errors))
-          case _ =>
-            val activity = new Activity(
-              Set[String]().asJava,
-              Set(permissionService.webgroupFor(enquiry.team).string).asJava,
-              "Enquiry message from client received",
-              url,
-              null,
-              "enquiry-message-from-client"
-            )
-            sendAndHandleResponse(activity)
-        }
-      }
+      enquiryMessageToTeam(enquiry)
     } else {
-      withUser(enquiry.universityID) { user =>
-        val url = s"https://$domain${controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get).url}"
+      messageToClient(enquiry.universityID, enquiry.team, controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get))
+    }
 
-        emailService.queue(
-          Email(
-            subject = s"A message from the ${enquiry.team.name} team has been received",
-            from = "no-reply@warwick.ac.uk",
-            bodyText = Some(views.txt.emails.enquirymessagefromteam(user, enquiry.team, url).toString.trim)
-          ),
-          Seq(user)
-        ).flatMap {
-          case Left(errors) => Future.successful(Left(errors))
-          case _ =>
-            val activity = new Activity(
-              Set(user.usercode.string).asJava,
-              Set[String]().asJava,
-              s"The ${enquiry.team.name} team has replied to your enquiry",
-              url,
-              null,
-              "enquiry-message-from-team"
-            )
-            sendAndHandleResponse(activity)
-        }
+  private def enquiryMessageToTeam(enquiry: Enquiry)(implicit t: TimingContext) = {
+    withTeamUsers(enquiry.team) { users =>
+      val url = s"https://$domain${controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).url}"
+
+      emailService.queue(
+        Email(
+          subject = "Case Management: Enquiry message from client received",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.enquirymessagefromclient(url).toString.trim)
+        ),
+        users
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            Set[String]().asJava,
+            Set(permissionService.webgroupFor(enquiry.team).string).asJava,
+            "Enquiry message from client received",
+            url,
+            null,
+            "enquiry-message-from-client"
+          )
+          sendAndHandleResponse(activity)
       }
     }
+  }
+
+  private def messageToClient(client: UniversityID, team: Team, link: Call)(implicit t: TimingContext) = {
+    withUser(client) { user =>
+      val url = s"https://$domain${link.url}"
+
+      emailService.queue(
+        Email(
+          subject = s"A message from the ${team.name} team has been received",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.messagefromteam(user, team, url).toString.trim)
+        ),
+        Seq(user)
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            Set(user.usercode.string).asJava,
+            Set[String]().asJava,
+            s"The ${team.name} team has sent a message",
+            url,
+            null,
+            "enquiry-message-from-team" // TODO change alert type
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
+  }
+
+  override def caseMessage(c: Case, client: UniversityID, sender: MessageSender)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
+    if (sender == MessageSender.Client)
+      caseMessageToTeam(c)
+    else {
+      messageToClient(client, c.team, controllers.routes.IndexController.home()) // TODO no dedicated case message thread viewer atm; should there be?
+    }
+
+  private def caseMessageToTeam(c: Case)(implicit t: TimingContext) = {
+    withTeamUsers(c.team) { users =>
+      val url = s"https://$domain${controllers.admin.routes.CaseController.view(c.key.get).url}"
+
+      emailService.queue(
+        Email(
+          subject = "Case Management: Enquiry message from client received",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.casemessagefromclient(url).toString.trim)
+        ),
+        users
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            Set[String]().asJava,
+            Set(permissionService.webgroupFor(c.team).string).asJava,
+            "Case message from client received",
+            url,
+            null,
+            "case-message-from-client"
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
+  }
 
   override def enquiryReassign(enquiry: Enquiry)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
     withTeamUsers(enquiry.team) { users =>

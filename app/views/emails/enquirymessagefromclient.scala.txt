@@ -1,5 +1,5 @@
 @(url: String)
 
 @email() {
-  A new message from the client has been added to their enquiry: @url
+  A client has added a new message to their enquiry: @url
 }

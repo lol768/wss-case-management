@@ -71,7 +71,7 @@ class EnquiryMessagesController @Inject()(
       },
       messageText => {
         val message = messageData(messageText, request)
-        val files = uploadedFiles(request)
+        val files = UploadedFileSave.seqFromRequest(request)
         val enquiry = request.enquiry
 
         service.addMessage(enquiry, message, files).successMap { case (m, f) =>
@@ -121,13 +121,4 @@ class EnquiryMessagesController @Inject()(
       teamMember = None
     )
 
-  private def uploadedFiles(request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Seq[(ByteSource, UploadedFileSave)] =
-    request.body.files.filter(_.filename.nonEmpty).map { file =>
-      (Files.asByteSource(file.ref), UploadedFileSave(
-        file.filename,
-        file.ref.length(),
-        file.contentType.getOrElse("application/octet-stream"),
-        request.context.user.get.usercode
-      ))
-    }
 }

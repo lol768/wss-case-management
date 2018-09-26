@@ -1,15 +1,23 @@
 package controllers
 
+import play.api.data.Form
+import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json.Reads._
 import play.api.libs.json.Writes._
 import play.api.libs.json._
+import play.api.mvc.Results
 
 /**
   * Builder for API response objects.
   */
 object API {
+
+  def badRequestJson(formWithErrors: Form[_])(implicit messages: Messages) =
+    Results.BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
+      formWithErrors.errors.map(error => API.Error(error.getClass.getSimpleName, error.format))
+    )))
 
   sealed abstract class Response[A: Reads : Writes](val success: Boolean, status: String) {
     implicit def reads: Reads[Response[A]] = Response.reads[A]

@@ -95,12 +95,15 @@ class TeamEnquiryController @Inject()(
     }
   }
 
-  def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
+  def renderMessages()(implicit request: EnquirySpecificRequest[_]): Future[Result] =
     renderMessages(
       request.enquiry,
       stateChangeForm(request.enquiry).fill(request.enquiry.version),
       messageForm
     )
+
+  def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
+    renderMessages()(request)
   }
 
   def redirectToMessages(enquiryKey: IssueKey): Action[AnyContent] = Action {
@@ -112,22 +115,14 @@ class TeamEnquiryController @Inject()(
       formWithErrors => {
         render.async {
           case Accepts.Json() =>
-            Future.successful(
-              BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
-                formWithErrors.errors.map(error => API.Error(error.getClass.getSimpleName, error.format))
-              )))
-            )
+            Future.successful(API.badRequestJson(formWithErrors))
           case _ =>
-            renderMessages(
-              request.enquiry,
-              stateChangeForm(request.enquiry).fill(request.enquiry.version),
-              formWithErrors
-            )
+            renderMessages()
         }
       },
       messageText => {
         val message = messageData(messageText, request)
-        val files = uploadedFiles(request)
+        val files = UploadedFileSave.seqFromRequest(request)
         val enquiry = request.enquiry
 
         service.addMessage(enquiry, message, files).successMap { case (m, f) =>
@@ -185,16 +180,6 @@ class TeamEnquiryController @Inject()(
       sender = MessageSender.Team,
       teamMember = request.context.user.map(_.usercode)
     )
-
-  private def uploadedFiles(request: EnquirySpecificRequest[MultipartFormData[TemporaryFile]]): Seq[(ByteSource, UploadedFileSave)] =
-    request.body.files.filter(_.filename.nonEmpty).map { file =>
-      (Files.asByteSource(file.ref), UploadedFileSave(
-        file.filename,
-        file.ref.length(),
-        file.contentType.getOrElse("application/octet-stream"),
-        request.context.user.get.usercode
-      ))
-    }
 
   def reassignForm(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey) { implicit request =>
     Ok(views.html.admin.enquiry.reassign(request.enquiry, reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version, ""))))

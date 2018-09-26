@@ -41,7 +41,7 @@ class ClientController @Inject()(
     "reasonable-adjustments" -> set(ReasonableAdjustment.formField)
   )(ClientSummaryData.apply)(ClientSummaryData.unapply))
 
-  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], Seq[EnquiryRender], Seq[(Case, Seq[MessageData], Seq[CaseNote])])]] = {
+  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], Seq[EnquiryRender], Seq[(Case, Seq[MessageRender], Seq[CaseNote])])]] = {
     val profile = profileService.getProfile(universityID).map(_.value)
     val registration = registrationService.get(universityID)
     val clientSummary = clientSummaryService.get(universityID)

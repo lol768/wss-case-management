@@ -102,6 +102,9 @@ object CaseController {
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
   )(CaseNoteFormData.apply)(CaseNoteFormData.unapply))
 
+  def caseNoteFormPrefilled(version: OffsetDateTime): Form[CaseNoteFormData] =
+    caseNoteForm(version).fill(CaseNoteFormData("", version))
+
   def deleteNoteForm(version: OffsetDateTime): Form[OffsetDateTime] = Form(single(
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
   ))
@@ -142,7 +145,7 @@ class CaseController @Inject()(
   import canEditCaseActionRefiner._
   import CaseMessageController.messageForm
 
-  private def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData], messageForm: Form[String])(implicit request: CaseSpecificRequest[AnyContent]): Future[Result] = {
+  def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData], messageForm: Form[String])(implicit request: CaseSpecificRequest[_]): Future[Result] = {
     val fetchOriginalEnquiry: Future[ServiceResult[Option[Enquiry]]] =
       request.`case`.originalEnquiry.map { enquiryId =>
         enquiries.get(enquiryId).map(_.right.map(Some(_)))
@@ -177,12 +180,17 @@ class CaseController @Inject()(
     }
   }
 
-  def view(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+  def renderCase()(implicit request: CaseSpecificRequest[_]): Future[Result] = {
+    import request.{`case` => c}
     renderCase(
-      caseKey,
-      caseNoteForm(caseRequest.`case`.version).fill(CaseNoteFormData("", caseRequest.`case`.version)),
+      c.key.get,
+      caseNoteFormPrefilled(c.version),
       messageForm
     )
+  }
+
+  def view(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+    renderCase()
   }
 
   def createSelectTeam(fromEnquiry: Option[IssueKey], client: Option[UniversityID]): Action[AnyContent] = AnyTeamMemberRequiredAction { implicit request =>
