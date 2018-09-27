@@ -12,7 +12,7 @@ import org.scalatestplus.play.PlaySpec
 import services.NoAuditLogging
 import services.tabula.ProfileService
 import uk.ac.warwick.util.core.DateTimeUtils
-import warwick.sso.{UniversityID, User, UserLookupService, Usercode}
+import warwick.sso.{UniversityID, User, UserLookupService, Usercode, Users}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -22,6 +22,7 @@ class CaseHistoryTest extends PlaySpec with MockitoSugar with ScalaFutures with 
 
   private val userLookupService = mock[UserLookupService](RETURNS_SMART_NULLS)
   when(userLookupService.getUsers(Seq.empty[Usercode])).thenReturn(Try(Map.empty[Usercode, User]))
+  when(userLookupService.getUsers(Seq(Usercode("cusfal")))).thenReturn(Try(Map(Usercode("cusfal") -> Users.create(Usercode("cusfal")))))
   private val profileService = mock[ProfileService](RETURNS_SMART_NULLS)
   when(profileService.getProfiles(Set.empty[UniversityID])).thenReturn(Future.successful(Right(Map.empty[UniversityID, SitsProfile])))
 
