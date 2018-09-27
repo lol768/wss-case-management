@@ -18,7 +18,7 @@ class HomeSpec extends BaseSpec {
 
       val html = contentAsHtml(home)
       html.navigationPages mustBe 'empty
-      html.pageHeading mustBe "My enquiries"
+      html.pageHeading mustBe "My messages"
     }
 
     // FIXME H2 doesn't like the query for getting open enquiries
