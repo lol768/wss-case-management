@@ -13,7 +13,7 @@ import org.apache.tika.io.{IOUtils, TikaInputStream}
 import org.apache.tika.metadata.{HttpHeaders, Metadata, TikaMetadataKeys}
 import org.apache.tika.mime.{MediaType, MimeTypes}
 import play.api.Configuration
-import play.api.http.FileMimeTypes
+import play.api.http.{FileMimeTypes, HeaderNames}
 import play.api.libs.Files.TemporaryFileCreator
 import play.api.mvc.Results._
 import play.api.mvc._
@@ -101,15 +101,29 @@ class UploadedFileControllerHelperImpl @Inject()(
       }
     }
 
-    Future {
-      val temporaryFile = temporaryFileCreator.create(prefix = uploadedFile.fileName, suffix = request.context.actualUser.get.usercode.string)
-      val file = temporaryFile.path.toFile
-      source.copyTo(Files.asByteSink(file))
+    if (request.headers.get(HeaderNames.IF_NONE_MATCH).contains(toEtag(uploadedFile))) {
+      Future.successful(NotModified)
+    } else {
+      Future {
+        val temporaryFile = temporaryFileCreator.create(prefix = uploadedFile.fileName, suffix = request.context.actualUser.get.usercode.string)
+        val file = temporaryFile.path.toFile
+        source.copyTo(Files.asByteSink(file))
 
-      Ok.sendFile(content = file, inline = config.isServeInline(MediaType.parse(uploadedFile.contentType)), fileName = _ => uploadedFile.fileName, onClose = () => temporaryFileCreator.delete(temporaryFile))
-        .as(uploadedFile.contentType)
+        Ok.sendFile(
+          content = file,
+          inline = config.isServeInline(MediaType.parse(uploadedFile.contentType)),
+          fileName = _ => uploadedFile.fileName,
+          onClose = () => temporaryFileCreator.delete(temporaryFile))
+          .as(uploadedFile.contentType)
+          .withHeaders(
+            HeaderNames.CACHE_CONTROL -> "private",
+            HeaderNames.ETAG -> toEtag(uploadedFile)
+          )
+      }
     }
   }
+
+  private def toEtag(uploadedFile: UploadedFile) = s""""${uploadedFile.id.toString}""""
 
   private def isOversized(file: TemporaryUploadedFile): Boolean =
     file.metadata.contentLength > config.maxIndividualFileSizeBytes
