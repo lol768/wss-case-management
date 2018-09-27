@@ -373,10 +373,10 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
           line-height: 1.5;
         }
 
-        @media (min-width: @screen-sm) {
+        @media (min-width: @screen-sm-min) {
           width: percentage(2/12);
         }
-        @media (min-width: @screen-md) {
+        @media (min-width: @screen-md-min) {
           // need to keep the labels in line with the labels in the left column of .case-details--actions
           // the left column is col-5 with a nested row containing col-5 for the label
           // this means the label is 5/12 * 5/12 of a page wide = 25/144

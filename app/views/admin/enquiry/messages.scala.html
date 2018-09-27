@@ -39,7 +39,7 @@
         @client.map { c =>
           <a href="@controllers.admin.routes.ClientController.client(c.universityID)">@c.fullName</a>,
           @c.universityID.string,
-          @tags.profiles.typeAndDepartment(c)
+          @views.tags.profiles.typeAndDepartment(c)
         }.getOrElse {
           <a href="@controllers.admin.routes.ClientController.client(enquiry.universityID)">
             @enquiry.universityID.string
