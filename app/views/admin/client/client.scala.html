@@ -10,7 +10,7 @@
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
   enquiries: Seq[EnquiryRender],
-  cases: Seq[(Case, Seq[MessageData], Seq[CaseNote])],
+  cases: Seq[(Case, Seq[MessageRender], Seq[CaseNote])],
   form: Form[ClientSummarySave],
   inMentalHealthTeam: Boolean,
   success: Option[String] = None
@@ -167,7 +167,7 @@
               </tr>
             </thead>
             <tbody>
-              @defining(cases.filter { case (c, _, _) => c.state != IssueState.Closed }) { open: Seq[(Case, Seq[MessageData], Seq[CaseNote])] =>
+              @defining(cases.filter { case (c, _, _) => c.state != IssueState.Closed }) { open: Seq[(Case, Seq[MessageRender], Seq[CaseNote])] =>
                 @open.map { case (c, messages, notes) =>
                   <tr>
                     <td><a href="@controllers.admin.routes.CaseController.view(c.key.get)" target="_blank">@c.key.get.string</a></td>
@@ -192,7 +192,7 @@
               </tr>
             </thead>
             <tbody>
-            @defining(cases.filter { case (c, _, _) => c.state == IssueState.Closed }) { closed: Seq[(Case, Seq[MessageData], Seq[CaseNote])] =>
+            @defining(cases.filter { case (c, _, _) => c.state == IssueState.Closed }) { closed: Seq[(Case, Seq[MessageRender], Seq[CaseNote])] =>
               @closed.map { case (c, _, _) =>
                 <tr>
                   <td><a href="@controllers.admin.routes.CaseController.view(c.key.get)" target="_blank">@c.key.get.string</a></td>

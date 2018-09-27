@@ -12,12 +12,12 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.Logger
-import services.{NoTimeTracking, NullTimingService}
+import services.{NoAuditLogging, NullTimingService}
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 
-class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with ScalaFutures with NoTimeTracking {
+class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with ScalaFutures with NoAuditLogging {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -103,7 +103,7 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
     }
 
     "handle a class change in getOrElseUpdateElement" in new ClassChangeContext {
-      val result: CacheElement[ServiceResult[Option[String]]] = wrapper.getOrElseUpdateElement("mykey", CacheOptions.default)(Future((Right(Some("newvalue"))))).futureValue
+      val result: CacheElement[ServiceResult[Option[String]]] = wrapper.getOrElseUpdateElement("mykey", CacheOptions.default)(Future(Right(Some("newvalue")))).futureValue
       result.value mustBe Right(Some("newvalue"))
     }
 

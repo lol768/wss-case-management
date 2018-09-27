@@ -10,6 +10,7 @@ import helpers.JavaTime
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import domain.ExtendedPostgresProfile.api._
+import services.AuditLogContext
 import warwick.sso.{GroupName, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -23,7 +24,7 @@ object VersioningSpec {
     version: OffsetDateTime = JavaTime.offsetDateTime
   ) extends Versioned[Account] {
     override def atVersion(at: OffsetDateTime): Account = copy(version = at)
-    override def storedVersion[B <: StoredVersion[Account]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[Account]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       AccountVersion.versioned(this, operation, timestamp).asInstanceOf[B]
   }
 
@@ -32,19 +33,21 @@ object VersioningSpec {
     webgroup: GroupName,
     version: OffsetDateTime,
     operation: DatabaseOperation,
-    timestamp: OffsetDateTime
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[Account]
 
   object AccountVersion {
     def tupled = (apply _).tupled
 
-    def versioned(account: Account, operation: DatabaseOperation, timestamp: OffsetDateTime): AccountVersion =
+    def versioned(account: Account, operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): AccountVersion =
       AccountVersion(
         account.usercode,
         account.webgroup,
         account.version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       )
   }
 
@@ -70,8 +73,9 @@ object VersioningSpec {
       def usercode = column[Usercode]("USERCODE")
       def operation = column[DatabaseOperation]("VERSION_OPERATION")
       def timestamp = column[OffsetDateTime]("VERSION_TIMESTAMP_UTC")
+      def auditUser = column[Option[Usercode]]("VERSION_USER")
 
-      def * = (usercode, webgroup, version, operation, timestamp).mapTo[AccountVersion]
+      def * = (usercode, webgroup, version, operation, timestamp, auditUser).mapTo[AccountVersion]
       def pk = primaryKey("pk_accountversions", (usercode, timestamp))
       def idx = index("idx_accountversions", (usercode, version))
     }
@@ -95,14 +99,14 @@ object VersioningSpec {
       db.run(accounts.result.transactionally)
     }
 
-    def insert(account: Account): Future[Account] =
+    def insert(account: Account)(implicit ac: AuditLogContext): Future[Account] =
       db.run((accounts += account).transactionally)
 
-    def update(account: Account): Future[Account] = {
+    def update(account: Account)(implicit ac: AuditLogContext): Future[Account] = {
       db.run(accounts.update(account).transactionally)
     }
 
-    def delete(account: Account): Future[Done] = {
+    def delete(account: Account)(implicit ac: AuditLogContext): Future[Done] = {
       db.run(accounts.delete(account).transactionally)
     }
   }
@@ -128,7 +132,7 @@ class VersioningSpec extends AbstractDaoTest {
     "insert a row into the versions table on insert" in new EmptyDatabaseFixture {
       val account = Account(Usercode("cuscav"), GroupName("in-webdev"))
 
-      val insertedAccount = accountDao.insert(account).futureValue
+      private val insertedAccount = accountDao.insert(account).futureValue
       insertedAccount.usercode mustBe account.usercode
       insertedAccount.webgroup mustBe account.webgroup
 
@@ -141,12 +145,12 @@ class VersioningSpec extends AbstractDaoTest {
     }
 
     "insert a row into the versions table on update" in new EmptyDatabaseFixture {
-      val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
+      private val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
 
       // Just the I
       db.run(accounts.versionsTable.result).futureValue.length mustBe 1
 
-      val updatedAccount = accountDao.update(account.copy(webgroup = GroupName("in-elab"))).futureValue
+      private val updatedAccount = accountDao.update(account.copy(webgroup = GroupName("in-elab"))).futureValue
       updatedAccount.usercode mustBe account.usercode
       updatedAccount.webgroup mustBe GroupName("in-elab")
 
@@ -154,7 +158,7 @@ class VersioningSpec extends AbstractDaoTest {
       db.run(accounts.versionsTable.result).futureValue.length mustBe 2 // I, U
 
       // Go back to the original group name
-      val updatedAccount2 = accountDao.update(updatedAccount.copy(webgroup = GroupName("in-webdev"))).futureValue
+      private val updatedAccount2 = accountDao.update(updatedAccount.copy(webgroup = GroupName("in-webdev"))).futureValue
       updatedAccount2.usercode mustBe account.usercode
       updatedAccount2.webgroup mustBe GroupName("in-webdev")
 
@@ -163,7 +167,7 @@ class VersioningSpec extends AbstractDaoTest {
     }
 
     "fail optimistic locking if trying to update a row with the wrong version" in new EmptyDatabaseFixture {
-      val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
+      private val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
       accountDao.update(account.copy(webgroup = GroupName("in-elab"))).futureValue
 
       db.run(accounts.versionsTable.result).futureValue.length mustBe 2 // I, U
@@ -175,7 +179,7 @@ class VersioningSpec extends AbstractDaoTest {
     }
 
     "insert a row into the versions table on delete" in new EmptyDatabaseFixture {
-      val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
+      private val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
 
       // Just the I
       db.run(accounts.versionsTable.result).futureValue.length mustBe 1
@@ -189,7 +193,7 @@ class VersioningSpec extends AbstractDaoTest {
     }
 
     "fail optimistic locking if trying to delete a row with the wrong version" in new EmptyDatabaseFixture {
-      val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
+      private val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
       accountDao.update(account.copy(webgroup = GroupName("in-elab"))).futureValue
 
       db.run(accounts.versionsTable.result).futureValue.length mustBe 2 // I, U

@@ -1,3 +1,4 @@
+
 # Routes
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
@@ -98,6 +99,7 @@ GET         /team/case/:caseKey/document/:id        @controllers.admin.CaseDocum
 POST        /team/case/:caseKey/document/:id/delete @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 POST        /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.addMessage(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
+GET         /team/case/:caseKey/attachments/:fileId @controllers.admin.CaseMessageController.download(caseKey: domain.IssueKey, fileId: java.util.UUID)
 
 GET         /team/appointment/create                @controllers.admin.AppointmentController.createSelectTeam(forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
 GET         /team/appointment/create/:teamId        @controllers.admin.AppointmentController.createForm(teamId: String, forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)

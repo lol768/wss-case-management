@@ -1,0 +1,5 @@
+@(url: String)
+
+@email() {
+  A client has added a new message to their case: @url
+}

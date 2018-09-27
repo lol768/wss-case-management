@@ -7,6 +7,7 @@ import domain.ExtendedPostgresProfile.api._
 import domain.{Message, MessageOwner}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import warwick.sso.UniversityID
 
@@ -14,8 +15,9 @@ import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[MessageDaoImpl])
 trait MessageDao {
-  def insert(message: Message): DBIO[Message]
+  def insert(message: Message)(implicit ac: AuditLogContext): DBIO[Message]
 
+  // TODO never used in code and doesn't filter by owner
   def findByClientQuery(client: UniversityID): Query[Message.Messages, Message, Seq]
 
   def latestForEnquiryQuery(enquiry: Enquiries): Query[Message.Messages, Message, Seq]
@@ -27,7 +29,7 @@ class MessageDaoImpl @Inject() (
 )(implicit ec: ExecutionContext)
   extends MessageDao with HasDatabaseConfigProvider[JdbcProfile] {
 
-  override def insert(message: Message): DBIO[Message] =
+  override def insert(message: Message)(implicit ac: AuditLogContext): DBIO[Message] =
     Message.messages += message
 
   override def findByClientQuery(client: UniversityID): Query[Message.Messages, Message, Seq] = {

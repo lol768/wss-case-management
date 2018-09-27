@@ -18,16 +18,16 @@ import play.api.routing.sird._
 import play.api.test.WsTestClient
 import play.api.{Configuration, Environment}
 import play.core.server.Server
-import services.{NoTimeTracking, NullTimingService, PhotoServiceImpl}
+import services.{NoAuditLogging, NullTimingService, PhotoServiceImpl}
 import uk.ac.warwick.sso.client.trusted.TrustedApplication.HEADER_ERROR_CODE
 import uk.ac.warwick.sso.client.trusted.{CurrentApplication, EncryptedCertificate, TrustedApplicationsManager}
 import warwick.sso.UniversityID
 
 import scala.concurrent.ExecutionContext
 
-class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar with ScalaFutures with NoTimeTracking {
+class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar with ScalaFutures with NoAuditLogging {
 
-  implicit val ec = get[ExecutionContext]
+  implicit val ec: ExecutionContext = get[ExecutionContext]
   override implicit val patienceConfig: PatienceConfig =
     PatienceConfig(scaled(Span(2000, Millis)), scaled(Span(15, Millis)))
   private val env = Environment.simple()

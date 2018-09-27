@@ -13,6 +13,7 @@ import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import ExtendedPostgresProfile.api._
 import helpers.JavaTime
+import services.AuditLogContext
 import slick.lifted.ProvenShape
 import warwick.sso.Usercode
 
@@ -21,8 +22,8 @@ import scala.concurrent.ExecutionContext
 @ImplementedBy(classOf[UploadedFileDaoImpl])
 trait UploadedFileDao {
   def find(id: UUID): DBIO[StoredUploadedFile]
-  def insert(file: StoredUploadedFile): DBIO[StoredUploadedFile]
-  def delete(file: StoredUploadedFile): DBIO[Done]
+  def insert(file: StoredUploadedFile)(implicit ac: AuditLogContext): DBIO[StoredUploadedFile]
+  def delete(file: StoredUploadedFile)(implicit ac: AuditLogContext): DBIO[Done]
 }
 
 @Singleton
@@ -33,10 +34,10 @@ class UploadedFileDaoImpl @Inject()(
   override def find(id: UUID): DBIO[StoredUploadedFile] =
     uploadedFiles.table.filter(_.id === id).result.head
 
-  override def insert(file: StoredUploadedFile): DBIO[StoredUploadedFile] =
+  override def insert(file: StoredUploadedFile)(implicit ac: AuditLogContext): DBIO[StoredUploadedFile] =
     uploadedFiles.insert(file)
 
-  override def delete(file: StoredUploadedFile): DBIO[Done] =
+  override def delete(file: StoredUploadedFile)(implicit ac: AuditLogContext): DBIO[Done] =
     uploadedFiles.delete(file)
 
 }
@@ -69,7 +70,7 @@ object UploadedFileDao {
 
     override def atVersion(at: OffsetDateTime): StoredUploadedFile = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[StoredUploadedFile]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[StoredUploadedFile]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredUploadedFileVersion(
         id,
         fileName,
@@ -81,7 +82,8 @@ object UploadedFileDao {
         created,
         version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
   }
 
@@ -103,7 +105,8 @@ object UploadedFileDao {
     created: OffsetDateTime,
     version: OffsetDateTime,
     operation: DatabaseOperation,
-    timestamp: OffsetDateTime
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[StoredUploadedFile]
 
   trait CommonProperties { self: Table[_] =>
@@ -134,9 +137,10 @@ object UploadedFileDao {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredUploadedFileVersion] =
-      (id, fileName, contentLength, contentType, uploadedBy, ownerId, ownerType, created, version, operation, timestamp).mapTo[StoredUploadedFileVersion]
+      (id, fileName, contentLength, contentType, uploadedBy, ownerId, ownerType, created, version, operation, timestamp, auditUser).mapTo[StoredUploadedFileVersion]
     def pk = primaryKey("pk_uploaded_file_version", (id, timestamp))
     def idx = index("idx_uploaded_file_version", (id, version))
   }

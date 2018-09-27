@@ -11,6 +11,7 @@ import helpers.JavaTime
 import helpers.StringUtils._
 import play.api.data.Form
 import play.api.data.Forms._
+import services.AuditLogContext
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
 
@@ -29,7 +30,7 @@ case class Enquiry(
 ) extends Versioned[Enquiry] {
 
   override def atVersion(at: OffsetDateTime): Enquiry = copy(version = at)
-  override def storedVersion[B <: StoredVersion[Enquiry]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+  override def storedVersion[B <: StoredVersion[Enquiry]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
     EnquiryVersion(
       id.get,
       key.get,
@@ -40,7 +41,8 @@ case class Enquiry(
       version,
       created,
       operation,
-      timestamp
+      timestamp,
+      ac.usercode
     ).asInstanceOf[B]
 
 }
@@ -89,8 +91,9 @@ object Enquiry extends Versioning {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
-    def * = (id, key, universityId, subject, team, state, version, created, operation, timestamp).mapTo[EnquiryVersion]
+    def * = (id, key, universityId, subject, team, state, version, created, operation, timestamp, auditUser).mapTo[EnquiryVersion]
     def pk = primaryKey("pk_enquiryversions", (id, timestamp))
     def idx = index("idx_enquiryversions", (id, version))
   }
@@ -118,7 +121,7 @@ object Enquiry extends Versioning {
 
     override def atVersion(at: OffsetDateTime): StoredEnquiryNote = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[StoredEnquiryNote]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[StoredEnquiryNote]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredEnquiryNoteVersion(
         id,
         enquiryID,
@@ -128,7 +131,8 @@ object Enquiry extends Versioning {
         created,
         version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
   }
 
@@ -141,7 +145,8 @@ object Enquiry extends Versioning {
     created: OffsetDateTime,
     version: OffsetDateTime,
     operation: DatabaseOperation,
-    timestamp: OffsetDateTime
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[StoredEnquiryNote]
 
   trait CommonNoteProperties { self: Table[_] =>
@@ -172,9 +177,10 @@ object Enquiry extends Versioning {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredEnquiryNoteVersion] =
-      (id, enquiryID, noteType, text, teamMember, created, version, operation, timestamp).mapTo[StoredEnquiryNoteVersion]
+      (id, enquiryID, noteType, text, teamMember, created, version, operation, timestamp, auditUser).mapTo[StoredEnquiryNoteVersion]
     def pk = primaryKey("pk_enquiry_note_version", (id, timestamp))
     def idx = index("idx_enquiry_note_version", (id, version))
   }
@@ -192,6 +198,8 @@ object Enquiry extends Versioning {
       .joinLeft(enquiryNotes.table)
       .on { case (e, n) => e.id === n.enquiryID }
   }
+
+
 
   case class EnquirySearchQuery(
     query: Option[String] = None,
@@ -228,7 +236,8 @@ case class EnquiryVersion(
   version: OffsetDateTime = OffsetDateTime.now(),
   created: OffsetDateTime = OffsetDateTime.now(),
   operation: DatabaseOperation,
-  timestamp: OffsetDateTime
+  timestamp: OffsetDateTime,
+  auditUser: Option[Usercode]
 ) extends StoredVersion[Enquiry]
 
 case class EnquiryNote(

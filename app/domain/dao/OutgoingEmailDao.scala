@@ -14,15 +14,16 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.libs.mailer.Email
 import slick.jdbc.JdbcProfile
 import ExtendedPostgresProfile.api._
+import services.AuditLogContext
 import warwick.sso.Usercode
 
 import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[OutgoingEmailDaoImpl])
 trait OutgoingEmailDao {
-  def insert(email: OutgoingEmail): DBIO[PersistedOutgoingEmail]
-  def insertAll(emails: Seq[OutgoingEmail]): DBIO[Seq[PersistedOutgoingEmail]]
-  def update(email: OutgoingEmail, version: OffsetDateTime): DBIO[PersistedOutgoingEmail]
+  def insert(email: OutgoingEmail)(implicit ac: AuditLogContext): DBIO[PersistedOutgoingEmail]
+  def insertAll(emails: Seq[OutgoingEmail])(implicit ac: AuditLogContext): DBIO[Seq[PersistedOutgoingEmail]]
+  def update(email: OutgoingEmail, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[PersistedOutgoingEmail]
   def get(id: UUID): DBIO[Option[PersistedOutgoingEmail]]
   def countUnsentEmails(): DBIO[Int]
 }
@@ -40,7 +41,7 @@ object OutgoingEmailDao {
     version: OffsetDateTime = JavaTime.offsetDateTime
   ) extends Versioned[PersistedOutgoingEmail] {
     override def atVersion(at: OffsetDateTime): PersistedOutgoingEmail = copy(version = at)
-    override def storedVersion[B <: StoredVersion[PersistedOutgoingEmail]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[PersistedOutgoingEmail]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       PersistedOutgoingEmailVersion.versioned(this, operation, timestamp).asInstanceOf[B]
 
     def parsed: OutgoingEmail = OutgoingEmail(
@@ -67,13 +68,14 @@ object OutgoingEmailDao {
     failureReason: Option[String],
     version: OffsetDateTime,
     operation: DatabaseOperation,
-    timestamp: OffsetDateTime
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[PersistedOutgoingEmail]
 
   object PersistedOutgoingEmailVersion {
     def tupled = (apply _).tupled
 
-    def versioned(email: PersistedOutgoingEmail, operation: DatabaseOperation, timestamp: OffsetDateTime): PersistedOutgoingEmailVersion =
+    def versioned(email: PersistedOutgoingEmail, operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): PersistedOutgoingEmailVersion =
       PersistedOutgoingEmailVersion(
         email.id,
         email.created,
@@ -85,7 +87,8 @@ object OutgoingEmailDao {
         email.failureReason,
         email.version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       )
   }
 
@@ -117,8 +120,9 @@ object OutgoingEmailDao {
       def id = column[UUID]("id")
       def operation = column[DatabaseOperation]("version_operation")
       def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+      def auditUser = column[Option[Usercode]]("version_user")
 
-      def * = (id, created, email, recipient.?, emailAddress.?, sent.?, lastSendAttempt.?, failureReason.?, version, operation, timestamp).mapTo[PersistedOutgoingEmailVersion]
+      def * = (id, created, email, recipient.?, emailAddress.?, sent.?, lastSendAttempt.?, failureReason.?, version, operation, timestamp, auditUser).mapTo[PersistedOutgoingEmailVersion]
       def pk = primaryKey("pk_outgoing_email_version", (id, timestamp))
       def idx = index("idx_outgoing_email_version", (id, version))
     }
@@ -136,7 +140,7 @@ class OutgoingEmailDaoImpl @Inject()(
   import PersistedOutgoingEmail._
   import dbConfig.profile.api._
 
-  override def insert(email: OutgoingEmail): DBIO[PersistedOutgoingEmail] =
+  override def insert(email: OutgoingEmail)(implicit ac: AuditLogContext): DBIO[PersistedOutgoingEmail] =
     outgoingEmails.insert(PersistedOutgoingEmail(
       UUID.randomUUID(),
       email.created,
@@ -149,7 +153,7 @@ class OutgoingEmailDaoImpl @Inject()(
     ))
 
 
-  override def insertAll(emails: Seq[OutgoingEmail]): DBIO[Seq[PersistedOutgoingEmail]] =
+  override def insertAll(emails: Seq[OutgoingEmail])(implicit ac: AuditLogContext): DBIO[Seq[PersistedOutgoingEmail]] =
     outgoingEmails.insertAll(emails.map { email =>
       PersistedOutgoingEmail(
         UUID.randomUUID(),
@@ -163,7 +167,7 @@ class OutgoingEmailDaoImpl @Inject()(
       )
     })
 
-  override def update(email: OutgoingEmail, version: OffsetDateTime): DBIO[PersistedOutgoingEmail] =
+  override def update(email: OutgoingEmail, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[PersistedOutgoingEmail] =
     outgoingEmails.update(PersistedOutgoingEmail(
       email.id.get,
       email.created,

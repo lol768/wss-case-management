@@ -95,12 +95,15 @@ class TeamEnquiryController @Inject()(
     }
   }
 
-  def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
+  def renderMessages()(implicit request: EnquirySpecificRequest[_]): Future[Result] =
     renderMessages(
       request.enquiry,
       stateChangeForm(request.enquiry).fill(request.enquiry.version),
       messageForm
     )
+
+  def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
+    renderMessages()(request)
   }
 
   def redirectToMessages(enquiryKey: IssueKey): Action[AnyContent] = Action {
@@ -112,17 +115,9 @@ class TeamEnquiryController @Inject()(
       formWithErrors => {
         render.async {
           case Accepts.Json() =>
-            Future.successful(
-              BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
-                formWithErrors.errors.map(error => API.Error(error.getClass.getSimpleName, error.format))
-              )))
-            )
+            Future.successful(API.badRequestJson(formWithErrors))
           case _ =>
-            renderMessages(
-              request.enquiry,
-              stateChangeForm(request.enquiry).fill(request.enquiry.version),
-              formWithErrors
-            )
+            renderMessages()
         }
       },
       messageText => {

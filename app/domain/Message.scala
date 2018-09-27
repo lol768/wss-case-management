@@ -9,6 +9,7 @@ import domain.dao.UploadedFileDao
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import enumeratum._
 import helpers.JavaTime
+import services.AuditLogContext
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.collection.immutable
@@ -32,7 +33,7 @@ case class Message (
 ) extends Versioned[Message] {
   override def atVersion(at: OffsetDateTime): Message = copy(version = at)
 
-  override def storedVersion[B <: StoredVersion[Message]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+  override def storedVersion[B <: StoredVersion[Message]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
     MessageVersion(
       id,
       text,
@@ -45,7 +46,8 @@ case class Message (
       created,
       version,
       operation,
-      timestamp
+      timestamp,
+      ac.usercode
     ).asInstanceOf[B]
 }
 
@@ -82,8 +84,9 @@ object Message extends Versioning {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
-    def * = (id, text, sender, client, teamMember, team, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
+    def * = (id, text, sender, client, teamMember, team, ownerId, ownerType, created, version, operation, timestamp, auditUser).mapTo[MessageVersion]
     def pk = primaryKey("pk_messageversions", (id, timestamp))
     def idx = index("idx_messageversions", (id, version))
   }
@@ -113,7 +116,8 @@ case class MessageVersion (
   created: OffsetDateTime,
   version: OffsetDateTime = OffsetDateTime.now(),
   operation: DatabaseOperation,
-  timestamp: OffsetDateTime
+  timestamp: OffsetDateTime,
+  auditUser: Option[Usercode]
 ) extends StoredVersion[Message]
 
 /**
@@ -124,7 +128,23 @@ case class MessageSave (
   text: String,
   sender: MessageSender,
   teamMember: Option[Usercode]
-)
+) {
+  def toMessage(
+    client: UniversityID,
+    team: Team,
+    ownerId: UUID,
+    ownerType: MessageOwner
+  ): Message = Message(
+    id = UUID.randomUUID(),
+    text = this.text,
+    sender = this.sender,
+    client = client,
+    teamMember = this.teamMember,
+    team = this.teamMember.map(_ => team), // Only store Team if there is an explicit team member
+    ownerId = ownerId,
+    ownerType = ownerType
+  )
+}
 
 /**
   * Just enough Message to render with.
@@ -148,8 +168,22 @@ object MessageData {
 
   // oldest first
   val dateOrdering: Ordering[MessageData] = Ordering.by[MessageData, OffsetDateTime](data => data.created)(JavaTime.dateTimeOrdering)
-  val dateOrderingWithFile: Ordering[(MessageData, Option[StoredUploadedFile])] = Ordering.by[(MessageData, Option[StoredUploadedFile]), OffsetDateTime] { case (data, _) => data.created }(JavaTime.dateTimeOrdering)
-  val dateOrderingWithFiles: Ordering[(MessageData, Seq[StoredUploadedFile])] = Ordering.by[(MessageData, Seq[StoredUploadedFile]), OffsetDateTime] { case (data, _) => data.created }(JavaTime.dateTimeOrdering)
+  val dateOrderingWithFile: Ordering[(MessageData, Option[StoredUploadedFile])] = dateOrdering.on(_._1)
+  val dateOrderingWithFiles: Ordering[(MessageData, Seq[StoredUploadedFile])] = dateOrdering.on(_._1)
+
+
+  def groupOwnerAndMessage[A](messageTuples: Seq[(A, Option[(MessageData, Option[StoredUploadedFile])])]): Seq[(A, Seq[MessageRender])] = {
+    OneToMany.leftJoin(messageTuples)(MessageData.dateOrderingWithFile)
+      .map { case (a, mf) =>
+        a -> groupMessagesAndAttachments(mf)
+      }
+  }
+
+  def groupMessagesAndAttachments(mf: Seq[(MessageData, Option[StoredUploadedFile])]): Seq[MessageRender] = {
+    OneToMany.leftJoin(mf.distinct)(StoredUploadedFile.dateOrdering)
+      .sorted(MessageData.dateOrderingWithFiles)
+      .map { case (m, f) => MessageRender(m, f.map(_.asUploadedFile)) }
+  }
 }
 
 sealed trait MessageSender extends EnumEntry

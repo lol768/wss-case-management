@@ -7,8 +7,10 @@ import domain.CustomJdbcTypes._
 import helpers.JavaTime
 import slick.dbio.Effect
 import ExtendedPostgresProfile.api._
+import services.AuditLogContext
 import slick.lifted.Rep
 import slick.sql.FixedSqlStreamingAction
+import warwick.sso.Usercode
 
 import scala.concurrent.ExecutionContext
 
@@ -16,13 +18,14 @@ trait Versioned[A <: Versioned[A]] {
   def version: OffsetDateTime
 
   def atVersion(at: OffsetDateTime): A
-  def storedVersion[B <: StoredVersion[A]](operation: DatabaseOperation, timestamp: OffsetDateTime): B
+  def storedVersion[B <: StoredVersion[A]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B
 }
 
 trait StoredVersion[A <: Versioned[A]] {
   def version: OffsetDateTime
   def operation: DatabaseOperation
   def timestamp: OffsetDateTime
+  def auditUser: Option[Usercode]
 }
 
 trait VersionedTable[A <: Versioned[A]] {
@@ -34,6 +37,7 @@ trait StoredVersionTable[A <: Versioned[A]] {
   def version: Rep[OffsetDateTime]
   def operation: Rep[DatabaseOperation]
   def timestamp: Rep[OffsetDateTime]
+  def auditUser: Rep[Option[Usercode]]
 }
 
 object VersionedTableQuery {
@@ -47,7 +51,7 @@ class VersionedTableQuery[A <: Versioned[A], B <: StoredVersion[A], C <: Table[A
 ) {
   def result: FixedSqlStreamingAction[Seq[A], A, Effect.Read] = table.result
 
-  def insert(value: A)(implicit ec: ExecutionContext): DBIO[A] = {
+  def insert(value: A)(implicit ec: ExecutionContext, ac: AuditLogContext): DBIO[A] = {
     // We ignore the version passed through
     val versionTimestamp = JavaTime.offsetDateTime
     val versionedValue = value.atVersion(versionTimestamp)
@@ -58,9 +62,9 @@ class VersionedTableQuery[A <: Versioned[A], B <: StoredVersion[A], C <: Table[A
       _ <- versionsTable += storedVersion
     } yield versionedValue
   }
-  def +=(value: A)(implicit ec: ExecutionContext): DBIO[A] = insert(value)
+  def +=(value: A)(implicit ec: ExecutionContext, ac: AuditLogContext): DBIO[A] = insert(value)
 
-  def insertAll(values: Seq[A])(implicit ec: ExecutionContext): DBIO[Seq[A]] = {
+  def insertAll(values: Seq[A])(implicit ec: ExecutionContext, ac: AuditLogContext): DBIO[Seq[A]] = {
     // We ignore the versions passed through
     val versionTimestamp = JavaTime.offsetDateTime
     val versionedValues = values.map(_.atVersion(versionTimestamp))
@@ -71,7 +75,7 @@ class VersionedTableQuery[A <: Versioned[A], B <: StoredVersion[A], C <: Table[A
       _ <- versionsTable ++= storedVersions
     } yield versionedValues
   }
-  def ++=(values: Seq[A])(implicit ec: ExecutionContext): DBIO[Seq[A]] = insertAll(values)
+  def ++=(values: Seq[A])(implicit ec: ExecutionContext, ac: AuditLogContext): DBIO[Seq[A]] = insertAll(values)
 
   private[this] def optimisticLockingException(value: A)(implicit ec: ExecutionContext): DBIO[Nothing] =
     table.filter(_.matchesPrimaryKey(value)).result.flatMap {
@@ -79,7 +83,7 @@ class VersionedTableQuery[A <: Versioned[A], B <: StoredVersion[A], C <: Table[A
       case _ => DBIO.failed(new Exception("Optimistic locking failed"))
     }
 
-  def update(value: A)(implicit ec: ExecutionContext): DBIO[A] = {
+  def update(value: A)(implicit ec: ExecutionContext, ac: AuditLogContext): DBIO[A] = {
     val originalVersion = value.version
     val versionTimestamp = JavaTime.offsetDateTime
     val versionedValue = value.atVersion(versionTimestamp)
@@ -97,7 +101,7 @@ class VersionedTableQuery[A <: Versioned[A], B <: StoredVersion[A], C <: Table[A
     } yield updated
   }
 
-  def delete(value: A)(implicit ec: ExecutionContext): DBIO[Done] = {
+  def delete(value: A)(implicit ec: ExecutionContext, ac: AuditLogContext): DBIO[Done] = {
     val storedVersion = value.storedVersion[B](DatabaseOperation.Delete, JavaTime.offsetDateTime)
 
     val deleteAction =
@@ -111,7 +115,7 @@ class VersionedTableQuery[A <: Versioned[A], B <: StoredVersion[A], C <: Table[A
       _ <- versionsTable += storedVersion
     } yield deleted
   }
-  def -=(value: A)(implicit ec: ExecutionContext): DBIO[Done] = delete(value)
+  def -=(value: A)(implicit ec: ExecutionContext, ac: AuditLogContext): DBIO[Done] = delete(value)
 }
 
 trait Versioning {
