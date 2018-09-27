@@ -530,6 +530,7 @@ object CaseDao {
   }
 
   case class StoredCaseLink(
+    id: UUID,
     linkType: CaseLinkType,
     outgoingCaseID: UUID,
     incomingCaseID: UUID,
@@ -539,6 +540,7 @@ object CaseDao {
 
     override def storedVersion[B <: StoredVersion[StoredCaseLink]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredCaseLinkVersion(
+        id,
         linkType,
         outgoingCaseID,
         incomingCaseID,
@@ -550,6 +552,7 @@ object CaseDao {
   }
 
   case class StoredCaseLinkVersion(
+    id: UUID,
     linkType: CaseLinkType,
     outgoingCaseID: UUID,
     incomingCaseID: UUID,
@@ -569,12 +572,13 @@ object CaseDao {
   class CaseLinks(tag: Tag) extends Table[StoredCaseLink](tag, "client_case_link")
     with VersionedTable[StoredCaseLink]
     with CommonLinkProperties {
-    override def matchesPrimaryKey(other: StoredCaseLink): Rep[Boolean] =
-      linkType === other.linkType && outgoingCaseID === other.outgoingCaseID && incomingCaseID === other.incomingCaseID
+
+    def id = column[UUID]("id", O.PrimaryKey)
+
+    override def matchesPrimaryKey(other: StoredCaseLink): Rep[Boolean] = id === other.id
 
     override def * : ProvenShape[StoredCaseLink] =
-      (linkType, outgoingCaseID, incomingCaseID, version).mapTo[StoredCaseLink]
-    def pk = primaryKey("pk_case_link", (linkType, outgoingCaseID, incomingCaseID))
+      (id, linkType, outgoingCaseID, incomingCaseID, version).mapTo[StoredCaseLink]
     def outgoingFK = foreignKey("fk_case_link_outgoing", outgoingCaseID, cases.table)(_.id)
     def incomingFK = foreignKey("fk_case_link_incoming", incomingCaseID, cases.table)(_.id)
     def outgoingCaseIndex = index("idx_case_link_outgoing", outgoingCaseID)
@@ -584,12 +588,13 @@ object CaseDao {
   class CaseLinkVersions(tag: Tag) extends Table[StoredCaseLinkVersion](tag, "client_case_link_version")
     with StoredVersionTable[StoredCaseLink]
     with CommonLinkProperties {
+    def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseLinkVersion] =
-      (linkType, outgoingCaseID, incomingCaseID, version, operation, timestamp, auditUser).mapTo[StoredCaseLinkVersion]
+      (id, linkType, outgoingCaseID, incomingCaseID, version, operation, timestamp, auditUser).mapTo[StoredCaseLinkVersion]
     def pk = primaryKey("pk_case_link_version", (linkType, outgoingCaseID, incomingCaseID, timestamp))
     def idx = index("idx_case_link_version", (linkType, outgoingCaseID, incomingCaseID, version))
   }

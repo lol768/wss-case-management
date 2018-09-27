@@ -8,6 +8,7 @@ import controllers.admin.CaseController._
 import controllers.refiners._
 import domain._
 import domain.dao.CaseDao.Case
+import domain.CaseNoteType._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{FormHelpers, JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
@@ -79,15 +80,15 @@ object CaseController {
     message: String
   )
 
-  def caseLinkForm(sourceKey: IssueKey, caseService: CaseService)(implicit t: TimingContext): Form[CaseLinkFormData] = {
-    def isValid(key: IssueKey): Boolean =
-      key.keyType == IssueKeyType.Case &&
-        Try(Await.result(caseService.find(key), 5.seconds))
-          .toOption.exists(_.isRight)
+  private def isValid(key: IssueKey, caseService: CaseService)(implicit t: TimingContext): Boolean =
+    key.keyType == IssueKeyType.Case &&
+      Try(Await.result(caseService.find(key), 5.seconds))
+        .toOption.exists(_.isRight)
 
+  def caseLinkForm(sourceKey: IssueKey, caseService: CaseService)(implicit t: TimingContext): Form[CaseLinkFormData] = {
     Form(mapping(
       "linkType" -> CaseLinkType.formField,
-      "targetKey" -> IssueKey.formField.verifying("error.linkTarget.same", _ != sourceKey).verifying("error.required", key => isValid(key)),
+      "targetKey" -> IssueKey.formField.verifying("error.linkTarget.same", _ != sourceKey).verifying("error.required", key => isValid(key, caseService)),
       "message" -> nonEmptyText
     )(CaseLinkFormData.apply)(CaseLinkFormData.unapply))
   }
@@ -105,7 +106,7 @@ object CaseController {
   def caseNoteFormPrefilled(version: OffsetDateTime): Form[CaseNoteFormData] =
     caseNoteForm(version).fill(CaseNoteFormData("", version))
 
-  def deleteNoteForm(version: OffsetDateTime): Form[OffsetDateTime] = Form(single(
+  def deleteForm(version: OffsetDateTime): Form[OffsetDateTime] = Form(single(
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
   ))
 
@@ -160,8 +161,13 @@ class CaseController @Inject()(
     ).successFlatMap { case (c, owners, originalEnquiry, history) =>
       val usercodes = c.notes.map(_.teamMember) ++ owners ++ c.messages.teamMembers
       val userLookup = userLookupService.getUsers(usercodes).toOption.getOrElse(Map())
-      val caseNotes = c.notes.map { note => (note, userLookup.get(note.teamMember)) }
       val ownerUsers = userLookup.filterKeys(owners.contains).values.toSeq.sortBy { u => (u.name.last, u.name.first) }
+
+      val caseNotes = c.notes.map { note => (note, userLookup.get(note.teamMember)) }
+
+      val generalNoteTypes = Seq(GeneralNote, CaseClosed, CaseReopened)
+      val (generalNotes, sectionNotes) = caseNotes.partition{ case (note, _) => generalNoteTypes.contains(note.noteType) }
+      val sectionNotesByType = sectionNotes.groupBy{ case (note, _) => note.noteType }
 
       profiles.getProfiles(c.clients).successMap { clientProfiles =>
         Ok(views.html.admin.cases.view(
@@ -170,7 +176,8 @@ class CaseController @Inject()(
             .map { id => clientProfiles.get(id).map(Right.apply).getOrElse(Left(id)) }
             .sortBy { e => (e.isLeft, e.right.map(_.fullName).toOption) },
           ownerUsers,
-          caseNotes,
+          generalNotes,
+          sectionNotesByType,
           originalEnquiry,
           userLookup,
           caseNoteForm,
@@ -394,6 +401,28 @@ class CaseController @Inject()(
     )
   }
 
+  def deleteLink(caseKey: IssueKey, linkId: UUID): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
+    withCaseLink(linkId) { link =>
+      deleteForm(link.updatedDate).bindFromRequest().fold(
+        formWithErrors => Future.successful(
+          // Nowhere to show a validation error so just fall back to an error page
+          showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
+        ),
+        version =>
+          cases.deleteLink(caseRequest.`case`.id.get, linkId, version).successMap { _ =>
+            Redirect(controllers.admin.routes.CaseController.view(caseKey))
+              .flashing("success" -> Messages("flash.case.linkDeleted"))
+          }
+      )
+    }
+  }
+
+  private def withCaseLink(id: UUID)(f: CaseLink => Future[Result])(implicit caseRequest: CaseSpecificRequest[AnyContent]): Future[Result] =
+    cases.getLinks(caseRequest.`case`.id.get).successFlatMap { case (outgoing, incoming) =>
+      (outgoing ++ incoming).find(_.id == id).map(f)
+        .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
+    }
+
   def addNote(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
       formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version)), messageForm),
@@ -406,9 +435,15 @@ class CaseController @Inject()(
     )
   }
 
+  def closeForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
+    Ok(views.html.admin.cases.close(caseRequest.`case`, caseNoteForm(caseRequest.`case`.version).fill(CaseNoteFormData("", caseRequest.`case`.version))))
+  }
+
   def close(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
-      formWithErrors => renderCase(caseKey, formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", caseRequest.`case`.version)), messageForm),
+      formWithErrors => Future.successful(
+        Ok(views.html.admin.cases.close(caseRequest.`case`, formWithErrors))
+      ),
       data => {
         val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
 
@@ -471,7 +506,7 @@ class CaseController @Inject()(
 
   def deleteNote(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     withCaseNote(id) { note =>
-      deleteNoteForm(note.lastUpdated).bindFromRequest().fold(
+      deleteForm(note.lastUpdated).bindFromRequest().fold(
         formWithErrors => Future.successful(
           // Nowhere to show a validation error so just fall back to an error page
           showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })

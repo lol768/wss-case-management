@@ -1,0 +1,36 @@
+@import controllers.admin.CaseController.CaseNoteFormData
+@import domain._
+@import domain.dao.CaseDao.Case
+@import domain.CaseLink
+@import domain.CaseLinkType
+
+@(
+  c: Case,
+  form: Form[CaseNoteFormData]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@defining(if (c.state != IssueState.Closed) "Close" else "Reopen") { verb =>
+  @main(s"$verb ${c.key.get.string}") {
+    @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.CaseController.close(c.key.get)) { implicit fc =>
+
+      @b3.validatedHidden(form, "version")
+
+      @b3.textarea(
+        form("text"),
+        'colClass -> "col-md-6",
+        '_label -> "Associated case note",
+        '_help -> s"(why is this case being ${verb}ed?)",
+        'helpOnTop -> true
+      )
+
+      @b3.free('_class -> "spaced-buttons") {
+        @if(c.state != IssueState.Closed) {
+          <button type="submit" class="btn btn-primary">@verb case</button>
+        } else {
+          <button type="submit" formaction="@controllers.admin.routes.CaseController.reopen(c.key.get)" class="btn btn-primary"> @verb case</button>
+        }
+        <a href="@controllers.admin.routes.CaseController.view(c.key.get)" class="btn btn-default">Cancel</a>
+      }
+    }
+  }
+}

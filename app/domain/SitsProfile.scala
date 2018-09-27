@@ -112,7 +112,7 @@ object StudentGroup extends Enum[StudentGroup] {
 
   val values: immutable.IndexedSeq[StudentGroup] = findValues
 
-  case object Foundation extends StudentGroup("F", "Foundation course")
+  case object Foundation extends StudentGroup("F", "Foundation student")
   case object Undergraduate extends StudentGroup("UG", "Undergraduate")
   case object PGT extends StudentGroup("PG(T)", "Postgraduate (taught)")
   case object PGR extends StudentGroup("PG(R)", "Postgraduate (research)")

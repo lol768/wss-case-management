@@ -36,23 +36,10 @@
           }
         </div>
 
-        @client.map { client =>
-          <a href="@controllers.admin.routes.ClientController.client(client.universityID)">@client.fullName</a>,
-          @client.universityID.string,
-          @client.userType match {
-            case UserType.Student => {
-              @client.yearOfStudy.map(_.level) match {
-                case Some("1") => {First year}
-                case Some("2") => {Second year}
-                case Some("3") => {Third year}
-                case Some("4") => {Fourth year}
-                case Some(level) => {@{level}th year}
-                case _ => {}
-              }
-              @client.group student, @client.department.name
-            }
-            case _ => {@client.userType, @client.department.name}
-          }
+        @client.map { c =>
+          <a href="@controllers.admin.routes.ClientController.client(c.universityID)">@c.fullName</a>,
+          @c.universityID.string,
+          @tags.profiles.typeAndDepartment(c)
         }.getOrElse {
           <a href="@controllers.admin.routes.ClientController.client(enquiry.universityID)">
             @enquiry.universityID.string
@@ -132,57 +119,11 @@
           </div>
         </div>
 
-        <div class="row form-horizontal">
-          <div class="col-sm-4 control-label">
-            Owners
-          </div>
-          <div class="col-sm-8">
-            @b3.horizontal.formCSRF(controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key.get), "col-sm-0", "col-sm-12", 'class -> "form-control-static") { implicit ifc =>
-              @if(owners.nonEmpty) {
-                @owners.map { owner =>
-                  <div class="clearfix">
-                    <button type="button" class="pull-right btn btn-sm btn-link" data-toggle="remove-submit" data-target="div">
-                      <i class="fas fa-times-circle"></i>
-                    </button>
-                    <input type="hidden" name="owners[]" value="@owner.usercode.string">
-                    @owner.name.full
-                  </div>
-                }
-              } else {
-                <div>None</div>
-              }
-
-              <div>
-                <a role="button" href="#add-owner-modal" data-toggle="modal" data-target="#add-owner-modal">
-                  Add an owner
-                </a>
-              </div>
-
-              <div class="modal fade" id="add-owner-modal" tabindex="-1" role="dialog" aria-labelledby="add-owner-modal-label">
-                <div class="modal-dialog" role="document">
-                  <div class="modal-content">
-                    <div class="modal-header">
-                      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                      <h4 class="modal-title" id="add-owner-modal-label">Add an owner</h4>
-                    </div>
-                    <div class="modal-body">
-                      @b3.free() {
-                        @tags.flexipicker(values = Nil, name = "owners[]", placeholder = "Search for a user", multiple = false)
-                      }
-                    </div>
-                    <div class="modal-footer spaced-buttons">
-                      @if(!owners.contains(context.user.get)) {
-                        <button type="submit" class="btn btn-primary" formaction="@controllers.admin.routes.OwnersController.enquirySubmitSelf(enquiry.key.get)">Add me</button>
-                      }
-                      <button type="submit" class="btn btn-primary">Add owner</button>
-                      <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
+        @tags.manageOwners(
+          owners,
+          controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key.get),
+          controllers.admin.routes.OwnersController.enquirySubmitSelf(enquiry.key.get)
+        )
 
         @if(linkedCases.nonEmpty) {
           <div class="row form-horizontal">

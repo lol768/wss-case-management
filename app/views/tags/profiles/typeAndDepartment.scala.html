@@ -1,0 +1,17 @@
+@import domain.{SitsProfile, UserType}
+@(client: SitsProfile)
+
+@client.userType match {
+  case UserType.Student => {
+    @client.yearOfStudy.map(_.level) match {
+      case Some("1") => {First year}
+      case Some("2") => {Second year}
+      case Some("3") => {Third year}
+      case Some("4") => {Fourth year}
+      case Some(level) => {@{level}th year}
+      case _ => {}
+    }
+    @client.group student, @client.department.name
+  }
+  case _ => { @client.userType, @client.department.name }
+}

@@ -62,6 +62,7 @@ object CaseCause extends PlayEnum[CaseCause] {
 }
 
 case class CaseLink(
+  id: UUID,
   linkType: CaseLinkType,
   outgoing: Case,
   incoming: Case,
