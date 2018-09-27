@@ -108,5 +108,64 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
       service.findRecentlyViewed(Usercode("cuscav"), 5).serviceValue mustBe Seq(a)
     }
+
+    "update appointment state when a client accepts an appointment" in withData(new AppointmentFixture) { a =>
+      val universityID = UniversityID("1234567") // Must match Fixtures.appointments.newStoredClient
+
+      a.state mustBe AppointmentState.Provisional
+
+      val updated = service.clientAccept(a.id, universityID).serviceValue
+      updated.id mustBe a.id
+      updated.lastUpdated mustNot be (a.lastUpdated)
+      updated.state mustBe AppointmentState.Confirmed
+
+      val client1 = UniversityID("0672089")
+      val client2 = UniversityID("0672088")
+      val multiClient = service.create(AppointmentSave("Skype call", JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(client1, client2), Teams.WellbeingSupport, None).serviceValue
+
+      multiClient.state mustBe AppointmentState.Provisional
+
+      val multiClientUpdate1 = service.clientAccept(multiClient.id, client1).serviceValue
+      multiClientUpdate1.state mustBe AppointmentState.Confirmed // Any client has accepted
+
+      val multiClientUpdate2 = service.clientAccept(multiClient.id, client2).serviceValue
+      multiClientUpdate2.state mustBe AppointmentState.Confirmed // All clients have accepted
+    }
+
+    "update appointment state when a client rejects an appointment" in withData(new AppointmentFixture) { a =>
+      val universityID = UniversityID("1234567") // Must match Fixtures.appointments.newStoredClient
+
+      a.state mustBe AppointmentState.Provisional
+
+      val updated = service.clientReject(a.id, universityID, AppointmentCancellationReason.Clash).serviceValue
+      updated.id mustBe a.id
+
+      // This is a no-op because a client rejecting doesn't cancel the appointment - only a team member can do that
+      updated.lastUpdated mustBe a.lastUpdated
+      updated.state mustBe AppointmentState.Provisional
+
+      // Accepting the appointment should confirm it
+      val updated2 = service.clientAccept(a.id, universityID).serviceValue
+      updated2.state mustBe AppointmentState.Confirmed
+
+      // Rejecting a confirmed appointment should set it back to provisional
+      val updated3 = service.clientReject(a.id, universityID, AppointmentCancellationReason.Clash).serviceValue
+      updated3.state mustBe AppointmentState.Provisional
+
+      val client1 = UniversityID("0672089")
+      val client2 = UniversityID("0672088")
+      val multiClient = service.create(AppointmentSave("Skype call", JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(client1, client2), Teams.WellbeingSupport, None).serviceValue
+
+      multiClient.state mustBe AppointmentState.Provisional
+
+      val multiClientUpdate1 = service.clientAccept(multiClient.id, client1).serviceValue
+      multiClientUpdate1.state mustBe AppointmentState.Confirmed // Any client has accepted
+
+      val multiClientUpdate2 = service.clientReject(multiClient.id, client2, AppointmentCancellationReason.Clash).serviceValue
+      multiClientUpdate2.state mustBe AppointmentState.Confirmed // Any clients has accepted, even though one has rejected
+
+      val multiClientUpdate3 = service.clientReject(multiClient.id, client1, AppointmentCancellationReason.UnableToAttend).serviceValue
+      multiClientUpdate3.state mustBe AppointmentState.Provisional // All clients have rejected
+    }
   }
 }
