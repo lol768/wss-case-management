@@ -15,6 +15,7 @@ import play.api.Configuration
 import play.api.libs.mailer.Email
 import services.tabula.ProfileService
 import uk.ac.warwick.util.mywarwick.MyWarwickService
+import uk.ac.warwick.util.mywarwick.model.request.Activity
 import uk.ac.warwick.util.mywarwick.model.response.Response
 import warwick.sso.{Department, Group, GroupName, GroupService, UniversityID, User, UserLookupService, Usercode}
 
@@ -24,20 +25,20 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Success
 
-class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutures with NoTimeTracking {
+class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutures with NoAuditLogging {
 
   private trait Fixture {
-    val config = Configuration.from(Map(
+    val config: Configuration = Configuration.from(Map(
       "domain" -> "wss.warwick.ac.uk",
       "app.enquiries.initialTeamId" -> "disability"
     ))
 
-    val profileService = mock[ProfileService](RETURNS_SMART_NULLS)
-    val emailService = mock[EmailService](RETURNS_SMART_NULLS)
-    val myWarwickService = mock[MyWarwickService](RETURNS_SMART_NULLS)
-    val groupService = mock[GroupService](RETURNS_SMART_NULLS)
-    val userLookupService = mock[UserLookupService](RETURNS_SMART_NULLS)
-    val permissionService = mock[PermissionService](RETURNS_SMART_NULLS)
+    val profileService: ProfileService = mock[ProfileService](RETURNS_SMART_NULLS)
+    val emailService: EmailService = mock[EmailService](RETURNS_SMART_NULLS)
+    val myWarwickService: MyWarwickService = mock[MyWarwickService](RETURNS_SMART_NULLS)
+    val groupService: GroupService = mock[GroupService](RETURNS_SMART_NULLS)
+    val userLookupService: UserLookupService = mock[UserLookupService](RETURNS_SMART_NULLS)
+    val permissionService: PermissionService = mock[PermissionService](RETURNS_SMART_NULLS)
 
     val notificationService = new NotificationServiceImpl(
       myWarwickService,
@@ -79,7 +80,7 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
       ).asJava)).toCompletableFuture)
 
       val universityID = UniversityID("0672089")
-      val activity = notificationService.newRegistration(universityID).futureValue.right.get
+      val activity: Activity = notificationService.newRegistration(universityID).futureValue.right.get
 
       activity.getRecipients.getUsers.asScala mustBe Set()
       activity.getRecipients.getGroups.asScala mustBe Set("disability-team")
@@ -143,7 +144,7 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
         new Response()
       ).asJava)).toCompletableFuture)
 
-      val activity = notificationService.registrationInvite(universityID).futureValue.right.get
+      val activity: Activity = notificationService.registrationInvite(universityID).futureValue.right.get
 
       activity.getRecipients.getUsers.asScala mustBe Set("u0672089")
       activity.getRecipients.getGroups.asScala mustBe Set()

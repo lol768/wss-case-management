@@ -17,20 +17,23 @@ import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext
 import java.time.Duration
+
+import services.AuditLogContext
+
 import scala.language.higherKinds
 
 @ImplementedBy(classOf[AppointmentDaoImpl])
 trait AppointmentDao {
-  def insert(appointment: StoredAppointment): DBIO[StoredAppointment]
-  def update(appointment: StoredAppointment, version: OffsetDateTime): DBIO[StoredAppointment]
+  def insert(appointment: StoredAppointment)(implicit ac: AuditLogContext): DBIO[StoredAppointment]
+  def update(appointment: StoredAppointment, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredAppointment]
   def findByIDQuery(id: UUID): Query[Appointments, StoredAppointment, Seq]
   def findByIDsQuery(ids: Set[UUID]): Query[Appointments, StoredAppointment, Seq]
   def findByKeyQuery(key: IssueKey): Query[Appointments, StoredAppointment, Seq]
   def findByClientQuery(universityID: UniversityID): Query[Appointments, StoredAppointment, Seq]
   def findByCaseQuery(caseID: UUID): Query[Appointments, StoredAppointment, Seq]
-  def insertClients(clients: Set[StoredAppointmentClient]): DBIO[Seq[StoredAppointmentClient]]
-  def insertClient(client: StoredAppointmentClient): DBIO[StoredAppointmentClient]
-  def deleteClient(client: StoredAppointmentClient): DBIO[Done]
+  def insertClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredAppointmentClient]]
+  def insertClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[StoredAppointmentClient]
+  def deleteClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[Done]
   def findClientsQuery(appointmentIDs: Set[UUID]): Query[AppointmentClients, StoredAppointmentClient, Seq]
 }
 
@@ -39,10 +42,10 @@ class AppointmentDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) extends AppointmentDao with HasDatabaseConfigProvider[JdbcProfile] {
 
-  override def insert(appointment: StoredAppointment): DBIO[StoredAppointment] =
+  override def insert(appointment: StoredAppointment)(implicit ac: AuditLogContext): DBIO[StoredAppointment] =
     appointments.insert(appointment)
 
-  override def update(appointment: StoredAppointment, version: OffsetDateTime): DBIO[StoredAppointment] =
+  override def update(appointment: StoredAppointment, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredAppointment] =
     appointments.update(appointment.copy(version = version))
 
   override def findByIDQuery(id: UUID): Query[Appointments, StoredAppointment, Seq] =
@@ -63,13 +66,13 @@ class AppointmentDaoImpl @Inject()(
   override def findByCaseQuery(caseID: UUID): Query[Appointments, StoredAppointment, Seq] =
     appointments.table.filter(_.caseID === caseID)
 
-  override def insertClients(clients: Set[StoredAppointmentClient]): DBIO[Seq[StoredAppointmentClient]] =
+  override def insertClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredAppointmentClient]] =
     appointmentClients.insertAll(clients.toSeq)
 
-  override def insertClient(client: StoredAppointmentClient): DBIO[StoredAppointmentClient] =
+  override def insertClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[StoredAppointmentClient] =
     appointmentClients.insert(client)
 
-  override def deleteClient(client: StoredAppointmentClient): DBIO[Done] =
+  override def deleteClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[Done] =
     appointmentClients.delete(client)
 
   override def findClientsQuery(appointmentIDs: Set[UUID]): Query[AppointmentClients, StoredAppointmentClient, Seq] =
@@ -115,7 +118,7 @@ object AppointmentDao {
 
     override def atVersion(at: OffsetDateTime): StoredAppointment = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[StoredAppointment]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[StoredAppointment]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredAppointmentVersion(
         id,
         key,
@@ -130,7 +133,8 @@ object AppointmentDao {
         created,
         version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
   }
 
@@ -150,6 +154,7 @@ object AppointmentDao {
 
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[StoredAppointment]
 
   trait CommonAppointmentProperties { self: Table[_] =>
@@ -192,9 +197,10 @@ object AppointmentDao {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredAppointmentVersion] =
-      (id, key, caseID, subject, start, duration, location, team, teamMember, appointmentType, created, version, operation, timestamp).mapTo[StoredAppointmentVersion]
+      (id, key, caseID, subject, start, duration, location, team, teamMember, appointmentType, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
     def pk = primaryKey("pk_appointment_version", (id, timestamp))
     def idx = index("idx_appointment_version", (id, version))
   }
@@ -218,7 +224,7 @@ object AppointmentDao {
   ) extends Versioned[StoredAppointmentClient] {
     override def atVersion(at: OffsetDateTime): StoredAppointmentClient = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[StoredAppointmentClient]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[StoredAppointmentClient]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredAppointmentClientVersion(
         universityID,
         appointmentID,
@@ -227,7 +233,8 @@ object AppointmentDao {
         created,
         version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
   }
 
@@ -241,6 +248,7 @@ object AppointmentDao {
 
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[StoredAppointmentClient]
 
   trait CommonAppointmentClientProperties { self: Table[_] =>
@@ -273,9 +281,10 @@ object AppointmentDao {
     with CommonAppointmentClientProperties {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredAppointmentClientVersion] =
-      (universityID, appointmentID, state, cancellationReason, created, version, operation, timestamp).mapTo[StoredAppointmentClientVersion]
+      (universityID, appointmentID, state, cancellationReason, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentClientVersion]
     def pk = primaryKey("pk_appointment_client_version", (universityID, appointmentID, timestamp))
     def idx = index("idx_appointment_client_version", (universityID, appointmentID, version))
   }

@@ -9,6 +9,7 @@ import domain.dao.UploadedFileDao
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import enumeratum._
 import helpers.JavaTime
+import services.AuditLogContext
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.collection.immutable
@@ -32,7 +33,7 @@ case class Message (
 ) extends Versioned[Message] {
   override def atVersion(at: OffsetDateTime): Message = copy(version = at)
 
-  override def storedVersion[B <: StoredVersion[Message]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+  override def storedVersion[B <: StoredVersion[Message]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
     MessageVersion(
       id,
       text,
@@ -45,7 +46,8 @@ case class Message (
       created,
       version,
       operation,
-      timestamp
+      timestamp,
+      ac.usercode
     ).asInstanceOf[B]
 }
 
@@ -82,8 +84,9 @@ object Message extends Versioning {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
-    def * = (id, text, sender, client, teamMember, team, ownerId, ownerType, created, version, operation, timestamp).mapTo[MessageVersion]
+    def * = (id, text, sender, client, teamMember, team, ownerId, ownerType, created, version, operation, timestamp, auditUser).mapTo[MessageVersion]
     def pk = primaryKey("pk_messageversions", (id, timestamp))
     def idx = index("idx_messageversions", (id, version))
   }
@@ -113,7 +116,8 @@ case class MessageVersion (
   created: OffsetDateTime,
   version: OffsetDateTime = OffsetDateTime.now(),
   operation: DatabaseOperation,
-  timestamp: OffsetDateTime
+  timestamp: OffsetDateTime,
+  auditUser: Option[Usercode]
 ) extends StoredVersion[Message]
 
 /**

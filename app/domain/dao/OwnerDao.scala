@@ -10,13 +10,14 @@ import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import ExtendedPostgresProfile.api._
+import services.AuditLogContext
 
 import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[OwnerDaoImpl])
 trait OwnerDao {
-  def insert(owner: Owner): DBIO[Owner]
-  def delete(owner: Owner): DBIO[Done]
+  def insert(owner: Owner)(implicit ac: AuditLogContext): DBIO[Owner]
+  def delete(owner: Owner)(implicit ac: AuditLogContext): DBIO[Done]
   def findEnquiryOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq]
   def findCaseOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq]
   def getCaseOwnerHistory(id: UUID): DBIO[Seq[OwnerVersion]]
@@ -28,10 +29,10 @@ class OwnerDaoImpl @Inject() (
 )(implicit ec: ExecutionContext)
   extends OwnerDao with HasDatabaseConfigProvider[JdbcProfile] {
 
-  override def insert(owner: Owner): DBIO[Owner] =
+  override def insert(owner: Owner)(implicit ac: AuditLogContext): DBIO[Owner] =
     Owner.owners += owner
 
-  override def delete(owner: Owner): DBIO[Done] =
+  override def delete(owner: Owner)(implicit ac: AuditLogContext): DBIO[Done] =
     Owner.owners.delete(owner)
 
   override def findCaseOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq] =

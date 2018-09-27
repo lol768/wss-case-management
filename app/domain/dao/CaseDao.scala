@@ -13,6 +13,7 @@ import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
@@ -22,7 +23,7 @@ import scala.language.higherKinds
 
 @ImplementedBy(classOf[CaseDaoImpl])
 trait CaseDao {
-  def insert(c: Case): DBIO[Case]
+  def insert(c: Case)(implicit ac: AuditLogContext): DBIO[Case]
   def find(id: UUID): DBIO[Case]
   def find(ids: Set[UUID]): DBIO[Seq[Case]]
   def find(key: IssueKey): DBIO[Case]
@@ -31,24 +32,24 @@ trait CaseDao {
   def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq]
   def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq]
   def searchQuery(query: CaseSearchQuery): Query[Cases, Case, Seq]
-  def update(c: Case, version: OffsetDateTime): DBIO[Case]
-  def insertTags(tags: Set[StoredCaseTag]): DBIO[Seq[StoredCaseTag]]
-  def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag]
-  def deleteTag(tag: StoredCaseTag): DBIO[Done]
+  def update(c: Case, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Case]
+  def insertTags(tags: Set[StoredCaseTag])(implicit ac: AuditLogContext): DBIO[Seq[StoredCaseTag]]
+  def insertTag(tag: StoredCaseTag)(implicit ac: AuditLogContext): DBIO[StoredCaseTag]
+  def deleteTag(tag: StoredCaseTag)(implicit ac: AuditLogContext): DBIO[Done]
   def findTagsQuery(caseIds: Set[UUID]): Query[CaseTags, StoredCaseTag, Seq]
-  def insertClients(clients: Set[CaseClient]): DBIO[Seq[CaseClient]]
-  def insertClient(client: CaseClient): DBIO[CaseClient]
-  def deleteClient(client: CaseClient): DBIO[Done]
+  def insertClients(clients: Set[CaseClient])(implicit ac: AuditLogContext): DBIO[Seq[CaseClient]]
+  def insertClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[CaseClient]
+  def deleteClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[Done]
   def findClientsQuery(caseIds: Set[UUID]): Query[CaseClients, CaseClient, Seq]
-  def insertLink(link: StoredCaseLink): DBIO[StoredCaseLink]
-  def deleteLink(link: StoredCaseLink, version: OffsetDateTime): DBIO[Done]
+  def insertLink(link: StoredCaseLink)(implicit ac: AuditLogContext): DBIO[StoredCaseLink]
+  def deleteLink(link: StoredCaseLink, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findLinksQuery(caseID: UUID): Query[CaseLinks, StoredCaseLink, Seq]
-  def insertNote(note: StoredCaseNote): DBIO[StoredCaseNote]
-  def updateNote(note: StoredCaseNote, version: OffsetDateTime): DBIO[StoredCaseNote]
-  def deleteNote(note: StoredCaseNote, version: OffsetDateTime): DBIO[Done]
+  def insertNote(note: StoredCaseNote)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
+  def updateNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
+  def deleteNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq]
-  def insertDocument(document: StoredCaseDocument): DBIO[StoredCaseDocument]
-  def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime): DBIO[Done]
+  def insertDocument(document: StoredCaseDocument)(implicit ac: AuditLogContext): DBIO[StoredCaseDocument]
+  def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq]
   def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, Case, Seq]
   def getHistory(id: UUID): DBIO[Seq[CaseVersion]]
@@ -62,7 +63,7 @@ class CaseDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) extends CaseDao with HasDatabaseConfigProvider[JdbcProfile] {
 
-  override def insert(c: Case): DBIO[Case] =
+  override def insert(c: Case)(implicit ac: AuditLogContext): DBIO[Case] =
     cases.insert(c)
 
   override def find(id: UUID): DBIO[Case] =
@@ -123,60 +124,60 @@ class CaseDaoImpl @Inject()(
       .map { case (c, _) => c }
   }
 
-  override def update(c: Case, version: OffsetDateTime): DBIO[Case] =
+  override def update(c: Case, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Case] =
     cases.update(c.copy(version = version))
 
-  override def insertTags(tags: Set[StoredCaseTag]): DBIO[Seq[StoredCaseTag]] =
+  override def insertTags(tags: Set[StoredCaseTag])(implicit ac: AuditLogContext): DBIO[Seq[StoredCaseTag]] =
     caseTags.insertAll(tags.toSeq)
 
-  override def insertTag(tag: StoredCaseTag): DBIO[StoredCaseTag] =
+  override def insertTag(tag: StoredCaseTag)(implicit ac: AuditLogContext): DBIO[StoredCaseTag] =
     caseTags.insert(tag)
 
-  override def deleteTag(tag: StoredCaseTag): DBIO[Done] =
+  override def deleteTag(tag: StoredCaseTag)(implicit ac: AuditLogContext): DBIO[Done] =
     caseTags.delete(tag)
 
   override def findTagsQuery(caseIds: Set[UUID]): Query[CaseTags, StoredCaseTag, Seq] =
     caseTags.table
       .filter(_.caseId.inSet(caseIds))
 
-  override def insertClients(clients: Set[CaseClient]): DBIO[Seq[CaseClient]] =
+  override def insertClients(clients: Set[CaseClient])(implicit ac: AuditLogContext): DBIO[Seq[CaseClient]] =
     caseClients.insertAll(clients.toSeq)
 
-  override def insertClient(client: CaseClient): DBIO[CaseClient] =
+  override def insertClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[CaseClient] =
     caseClients.insert(client)
 
-  override def deleteClient(client: CaseClient): DBIO[Done] =
+  override def deleteClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[Done] =
     caseClients.delete(client)
 
   override def findClientsQuery(caseIds: Set[UUID]): Query[CaseClients, CaseClient, Seq] =
     caseClients.table
       .filter(_.caseId.inSet(caseIds))
 
-  override def insertLink(link: StoredCaseLink): DBIO[StoredCaseLink] =
+  override def insertLink(link: StoredCaseLink)(implicit ac: AuditLogContext): DBIO[StoredCaseLink] =
     caseLinks.insert(link)
 
-  override def deleteLink(link: StoredCaseLink, version: OffsetDateTime): DBIO[Done] =
+  override def deleteLink(link: StoredCaseLink, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done] =
     caseLinks.delete(link.copy(version = version))
 
   override def findLinksQuery(caseID: UUID): Query[CaseLinks, StoredCaseLink, Seq] =
     caseLinks.table.filter { l => l.outgoingCaseID === caseID || l.incomingCaseID === caseID }
 
-  override def insertNote(note: StoredCaseNote): DBIO[StoredCaseNote] =
+  override def insertNote(note: StoredCaseNote)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
     caseNotes.insert(note)
 
-  override def updateNote(note: StoredCaseNote, version: OffsetDateTime): DBIO[StoredCaseNote] =
+  override def updateNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
     caseNotes.update(note.copy(version = version))
 
-  override def deleteNote(note: StoredCaseNote, version: OffsetDateTime): DBIO[Done] =
+  override def deleteNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done] =
     caseNotes.delete(note.copy(version = version))
 
   override def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq] =
     caseNotes.table.filter(_.caseId === caseID)
 
-  override def insertDocument(document: StoredCaseDocument): DBIO[StoredCaseDocument] =
+  override def insertDocument(document: StoredCaseDocument)(implicit ac: AuditLogContext): DBIO[StoredCaseDocument] =
     caseDocuments.insert(document)
 
-  override def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime): DBIO[Done] =
+  override def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done] =
     caseDocuments.delete(document.copy(version = version))
 
   override def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq] =
@@ -263,7 +264,7 @@ object CaseDao {
     cause: CaseCause
   ) extends Versioned[Case] {
     override def atVersion(at: OffsetDateTime): Case = copy(version = at)
-    override def storedVersion[B <: StoredVersion[Case]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[Case]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       CaseVersion(
         id.get,
         key.get,
@@ -281,7 +282,8 @@ object CaseDao {
         caseType,
         cause,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
   }
 
@@ -330,6 +332,7 @@ object CaseDao {
 
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[Case]
 
   trait CommonProperties { self: Table[_] =>
@@ -370,9 +373,10 @@ object CaseDao {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[CaseVersion] =
-      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, operation, timestamp).mapTo[CaseVersion]
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, operation, timestamp, auditUser).mapTo[CaseVersion]
   }
 
   implicit class CaseExtensions[C[_]](val q: Query[Cases, Case, C]) extends AnyVal {
@@ -414,13 +418,14 @@ object CaseDao {
     version: OffsetDateTime = OffsetDateTime.now()
   ) extends Versioned[StoredCaseTag] {
     override def atVersion(at: OffsetDateTime): StoredCaseTag = copy(version = at)
-    override def storedVersion[B <: StoredVersion[StoredCaseTag]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[StoredCaseTag]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredCaseTagVersion(
         caseId,
         caseTag,
         version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
   }
 
@@ -429,7 +434,8 @@ object CaseDao {
     caseTag: CaseTag,
     version: OffsetDateTime = OffsetDateTime.now(),
     operation: DatabaseOperation,
-    timestamp: OffsetDateTime
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[StoredCaseTag]
 
   trait CommonTagProperties { self: Table[_] =>
@@ -456,9 +462,10 @@ object CaseDao {
     with CommonTagProperties {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseTagVersion] =
-      (caseId, caseTag, version, operation, timestamp).mapTo[StoredCaseTagVersion]
+      (caseId, caseTag, version, operation, timestamp, auditUser).mapTo[StoredCaseTagVersion]
     def pk = primaryKey("pk_case_tag_version", (caseId, caseTag, timestamp))
     def idx = index("idx_case_tag_version", (caseId, caseTag, version))
   }
@@ -469,13 +476,14 @@ object CaseDao {
     version: OffsetDateTime = OffsetDateTime.now()
   ) extends Versioned[CaseClient] {
     override def atVersion(at: OffsetDateTime): CaseClient = copy(version = at)
-    override def storedVersion[B <: StoredVersion[CaseClient]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[CaseClient]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       CaseClientVersion(
         caseId,
         client,
         version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
   }
 
@@ -484,7 +492,8 @@ object CaseDao {
     client: UniversityID,
     version: OffsetDateTime = OffsetDateTime.now(),
     operation: DatabaseOperation,
-    timestamp: OffsetDateTime
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[CaseClient]
 
   trait CommonClientProperties { self: Table[_] =>
@@ -512,9 +521,10 @@ object CaseDao {
     with CommonClientProperties {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[CaseClientVersion] =
-      (caseId, client, version, operation, timestamp).mapTo[CaseClientVersion]
+      (caseId, client, version, operation, timestamp, auditUser).mapTo[CaseClientVersion]
     def pk = primaryKey("pk_case_client_version", (caseId, client, timestamp))
     def idx = index("idx_case_client_version", (caseId, client, version))
   }
@@ -527,14 +537,15 @@ object CaseDao {
   ) extends Versioned[StoredCaseLink] {
     override def atVersion(at: OffsetDateTime): StoredCaseLink = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[StoredCaseLink]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[StoredCaseLink]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredCaseLinkVersion(
         linkType,
         outgoingCaseID,
         incomingCaseID,
         version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
   }
 
@@ -544,7 +555,8 @@ object CaseDao {
     incomingCaseID: UUID,
     version: OffsetDateTime = OffsetDateTime.now(),
     operation: DatabaseOperation,
-    timestamp: OffsetDateTime
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[StoredCaseLink]
 
   trait CommonLinkProperties { self: Table[_] =>
@@ -574,9 +586,10 @@ object CaseDao {
     with CommonLinkProperties {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseLinkVersion] =
-      (linkType, outgoingCaseID, incomingCaseID, version, operation, timestamp).mapTo[StoredCaseLinkVersion]
+      (linkType, outgoingCaseID, incomingCaseID, version, operation, timestamp, auditUser).mapTo[StoredCaseLinkVersion]
     def pk = primaryKey("pk_case_link_version", (linkType, outgoingCaseID, incomingCaseID, timestamp))
     def idx = index("idx_case_link_version", (linkType, outgoingCaseID, incomingCaseID, version))
   }
@@ -601,7 +614,7 @@ object CaseDao {
 
     override def atVersion(at: OffsetDateTime): StoredCaseNote = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[StoredCaseNote]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[StoredCaseNote]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredCaseNoteVersion(
         id,
         caseId,
@@ -611,7 +624,8 @@ object CaseDao {
         created,
         version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
   }
 
@@ -624,7 +638,8 @@ object CaseDao {
     created: OffsetDateTime,
     version: OffsetDateTime,
     operation: DatabaseOperation,
-    timestamp: OffsetDateTime
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[StoredCaseNote]
 
   trait CommonNoteProperties { self: Table[_] =>
@@ -655,9 +670,10 @@ object CaseDao {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseNoteVersion] =
-      (id, caseId, noteType, text, teamMember, created, version, operation, timestamp).mapTo[StoredCaseNoteVersion]
+      (id, caseId, noteType, text, teamMember, created, version, operation, timestamp, auditUser).mapTo[StoredCaseNoteVersion]
     def pk = primaryKey("pk_case_note_version", (id, timestamp))
     def idx = index("idx_case_note_version", (id, version))
   }
@@ -682,7 +698,7 @@ object CaseDao {
 
     override def atVersion(at: OffsetDateTime): StoredCaseDocument = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[StoredCaseDocument]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[StoredCaseDocument]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredCaseDocumentVersion(
         id,
         caseId,
@@ -692,7 +708,8 @@ object CaseDao {
         created,
         version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
   }
 
@@ -705,7 +722,8 @@ object CaseDao {
     created: OffsetDateTime,
     version: OffsetDateTime,
     operation: DatabaseOperation,
-    timestamp: OffsetDateTime
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[StoredCaseDocument]
 
   trait CommonDocumentProperties { self: Table[_] =>
@@ -737,9 +755,10 @@ object CaseDao {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+    def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseDocumentVersion] =
-      (id, caseId, documentType, fileId, teamMember, created, version, operation, timestamp).mapTo[StoredCaseDocumentVersion]
+      (id, caseId, documentType, fileId, teamMember, created, version, operation, timestamp, auditUser).mapTo[StoredCaseDocumentVersion]
     def pk = primaryKey("pk_case_document_version", (id, timestamp))
     def idx = index("idx_case_document_version", (id, version))
   }

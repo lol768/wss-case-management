@@ -115,7 +115,7 @@ class EnquiryServiceImpl @Inject() (
     ))
   }
 
-  private def addMessageDBIO(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], uploader: Usercode)(implicit t: TimingContext): DBIO[(Message, Seq[UploadedFile])] =
+  private def addMessageDBIO(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], uploader: Usercode)(implicit ac: AuditLogContext): DBIO[(Message, Seq[UploadedFile])] =
     for {
       message <- messageDao.insert(message.toMessage(
         client = enquiry.universityID,
@@ -139,7 +139,7 @@ class EnquiryServiceImpl @Inject() (
       enquiry => notificationService.enquiryReassign(enquiry).map(_.right.map(_ => enquiry))
     ))
 
-  private def addNoteDBIO(enquiryID: UUID, noteType: EnquiryNoteType, note: EnquiryNoteSave): DBIO[StoredEnquiryNote] =
+  private def addNoteDBIO(enquiryID: UUID, noteType: EnquiryNoteType, note: EnquiryNoteSave)(implicit ac: AuditLogContext): DBIO[StoredEnquiryNote] =
     enquiryDao.insertNote(
       StoredEnquiryNote(
         id = UUID.randomUUID(),

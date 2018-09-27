@@ -12,19 +12,20 @@ import domain.dao.ClientSummaryDao.StoredClientSummary.{ClientSummaries, Reasona
 import helpers.JavaTime
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.{Index, PrimaryKey, ProvenShape}
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[ClientSummaryDaoImpl])
 trait ClientSummaryDao {
-  def insert(summary: StoredClientSummary): DBIO[StoredClientSummary]
-  def update(summary: StoredClientSummary, version: OffsetDateTime): DBIO[StoredClientSummary]
-  def insertReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment]): DBIO[Seq[StoredReasonableAdjustment]]
-  def insertReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment): DBIO[StoredReasonableAdjustment]
-  def deleteReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment): DBIO[Done]
+  def insert(summary: StoredClientSummary)(implicit ac: AuditLogContext): DBIO[StoredClientSummary]
+  def update(summary: StoredClientSummary, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredClientSummary]
+  def insertReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Seq[StoredReasonableAdjustment]]
+  def insertReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment)(implicit ac: AuditLogContext): DBIO[StoredReasonableAdjustment]
+  def deleteReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment)(implicit ac: AuditLogContext): DBIO[Done]
   def get(universityID: UniversityID): DBIO[Option[StoredClientSummary]]
   def getByAlternativeEmailAddress(email: String): DBIO[Option[StoredClientSummary]]
   def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq]
@@ -43,7 +44,7 @@ object ClientSummaryDao {
   ) extends Versioned[StoredClientSummary] {
     override def atVersion(at: OffsetDateTime): StoredClientSummary = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[StoredClientSummary]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+    override def storedVersion[B <: StoredVersion[StoredClientSummary]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredClientSummaryVersion(
         universityID,
         highMentalHealthRisk,
@@ -53,7 +54,8 @@ object ClientSummaryDao {
         riskStatus,
         version,
         operation,
-        timestamp
+        timestamp,
+        ac.usercode
       ).asInstanceOf[B]
 
     def asClientSummary(reasonableAdjustments: Set[ReasonableAdjustment]) = ClientSummary(
@@ -77,7 +79,8 @@ object ClientSummaryDao {
     riskStatus: Option[ClientRiskStatus],
     version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
-    timestamp: OffsetDateTime
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
   ) extends StoredVersion[StoredClientSummary]
 
   object StoredClientSummary extends Versioning {
@@ -104,8 +107,9 @@ object ClientSummaryDao {
       def universityID: Rep[UniversityID] = column[UniversityID]("university_id")
       def operation: Rep[DatabaseOperation] = column[DatabaseOperation]("version_operation")
       def timestamp: Rep[OffsetDateTime] = column[OffsetDateTime]("version_timestamp_utc")
+      def auditUser = column[Option[Usercode]]("version_user")
 
-      def * : ProvenShape[StoredClientSummaryVersion] = (universityID, highMentalHealthRisk, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, version, operation, timestamp).mapTo[StoredClientSummaryVersion]
+      def * : ProvenShape[StoredClientSummaryVersion] = (universityID, highMentalHealthRisk, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, version, operation, timestamp, auditUser).mapTo[StoredClientSummaryVersion]
       def pk: PrimaryKey = primaryKey("pk_client_summary_version", (universityID, timestamp))
       def idx: Index = index("idx_client_summary_version", (universityID, version))
     }
@@ -119,13 +123,14 @@ object ClientSummaryDao {
       version: OffsetDateTime = OffsetDateTime.now()
     ) extends Versioned[StoredReasonableAdjustment] {
       override def atVersion(at: OffsetDateTime): StoredReasonableAdjustment = copy(version = at)
-      override def storedVersion[B <: StoredVersion[StoredReasonableAdjustment]](operation: DatabaseOperation, timestamp: OffsetDateTime): B =
+      override def storedVersion[B <: StoredVersion[StoredReasonableAdjustment]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
         StoredReasonableAdjustmentVersion(
           universityID,
           reasonableAdjustment,
           version,
           operation,
-          timestamp
+          timestamp,
+          ac.usercode
         ).asInstanceOf[B]
     }
 
@@ -134,7 +139,8 @@ object ClientSummaryDao {
       reasonableAdjustment: ReasonableAdjustment,
       version: OffsetDateTime = OffsetDateTime.now(),
       operation: DatabaseOperation,
-      timestamp: OffsetDateTime
+      timestamp: OffsetDateTime,
+      auditUser: Option[Usercode]
     ) extends StoredVersion[StoredReasonableAdjustment]
 
     trait CommonStoredReasonableAdjustmentProperties { self: Table[_] =>
@@ -161,9 +167,10 @@ object ClientSummaryDao {
       with CommonStoredReasonableAdjustmentProperties {
       def operation = column[DatabaseOperation]("version_operation")
       def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+      def auditUser = column[Option[Usercode]]("version_user")
 
       override def * : ProvenShape[StoredReasonableAdjustmentVersion] =
-        (universityID, reasonableAdjustment, version, operation, timestamp).mapTo[StoredReasonableAdjustmentVersion]
+        (universityID, reasonableAdjustment, version, operation, timestamp, auditUser).mapTo[StoredReasonableAdjustmentVersion]
       def pk = primaryKey("pk_reasonable_adjustment_version", (universityID, reasonableAdjustment, timestamp))
       def idx = index("idx_reasonable_adjustment_version", (universityID, reasonableAdjustment, version))
     }
@@ -181,19 +188,19 @@ class ClientSummaryDaoImpl @Inject()(
   import StoredClientSummary._
   import dbConfig.profile.api._
 
-  override def insert(summary: StoredClientSummary): DBIO[StoredClientSummary] =
+  override def insert(summary: StoredClientSummary)(implicit ac: AuditLogContext): DBIO[StoredClientSummary] =
     clientSummaries.insert(summary)
 
-  override def update(summary: StoredClientSummary, version: OffsetDateTime): DBIO[StoredClientSummary] =
+  override def update(summary: StoredClientSummary, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredClientSummary] =
     clientSummaries.update(summary.copy(version = version))
 
-  override def insertReasonableAdjustments(adjustments: Set[StoredReasonableAdjustment]): DBIO[Seq[StoredReasonableAdjustment]] =
+  override def insertReasonableAdjustments(adjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Seq[StoredReasonableAdjustment]] =
     reasonableAdjustments.insertAll(adjustments.toSeq)
 
-  override def insertReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment): DBIO[StoredReasonableAdjustment] =
+  override def insertReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment)(implicit ac: AuditLogContext): DBIO[StoredReasonableAdjustment] =
     reasonableAdjustments.insert(reasonableAdjustment)
 
-  override def deleteReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment): DBIO[Done] =
+  override def deleteReasonableAdjustment(reasonableAdjustment: StoredReasonableAdjustment)(implicit ac: AuditLogContext): DBIO[Done] =
     reasonableAdjustments.delete(reasonableAdjustment)
 
   override def get(universityID: UniversityID): DBIO[Option[StoredClientSummary]] =

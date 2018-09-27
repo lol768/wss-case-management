@@ -6,7 +6,7 @@ import java.util.{Date, UUID}
 import akka.Done
 import javax.inject.Inject
 import org.quartz._
-import services.EmailService
+import services.{AuditLogContext, EmailService}
 import warwick.core.timing.TimingContext
 import system.Logging
 
@@ -23,8 +23,9 @@ class SendOutgoingEmailJob @Inject()(
 )(implicit executionContext: ExecutionContext) extends Job with Logging {
 
   override def execute(context: JobExecutionContext): Unit = {
-    // TODO could provide a real context per job run, to track sluggish jobs
-    implicit val timing: TimingContext = TimingContext.none
+    implicit val auditLogContext: AuditLogContext = AuditLogContext.empty()(
+      TimingContext.none // TODO could provide a real context per job run, to track sluggish jobs
+    )
 
     def rescheduleFor(startTime: Instant): Unit = {
       val trigger =

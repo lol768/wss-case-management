@@ -133,7 +133,7 @@ class CaseServiceImpl @Inject() (
       case _: NoSuchElementException => ServiceResults.error(s"Could not find a Case with key ${caseKey.string}")
     }
 
-  private def findFullyJoined(query: Query[Cases, Case, Seq])(implicit t: TimingContext): Future[ServiceResult[Case.FullyJoined]] =
+  private def findFullyJoined(query: Query[Cases, Case, Seq])(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]] =
     daoRunner.run(for {
       (clientCase, messages) <-
         query.withMessages
@@ -273,7 +273,7 @@ class CaseServiceImpl @Inject() (
   override def getLinks(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[(Seq[CaseLink], Seq[CaseLink])]] =
     daoRunner.run(getLinksDBIO(caseID)).map(Right.apply)
 
-  private def addNoteDBIO(caseID: UUID, noteType: CaseNoteType, note: CaseNoteSave): DBIO[StoredCaseNote] =
+  private def addNoteDBIO(caseID: UUID, noteType: CaseNoteType, note: CaseNoteSave)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
     dao.insertNote(
       StoredCaseNote(
         id = UUID.randomUUID(),
@@ -445,7 +445,7 @@ class CaseServiceImpl @Inject() (
 
 
 
-  private def addMessageDBIO(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], uploader: Usercode)(implicit t: TimingContext): DBIO[(Message, Seq[UploadedFile])] =
+  private def addMessageDBIO(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], uploader: Usercode)(implicit ac: AuditLogContext): DBIO[(Message, Seq[UploadedFile])] =
     for {
       message <- messageDao.insert(message.toMessage(
         client = client,

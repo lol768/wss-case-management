@@ -9,7 +9,7 @@ import org.mockito.Mockito.{RETURNS_SMART_NULLS, _}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
-import services.NoTimeTracking
+import services.NoAuditLogging
 import services.tabula.ProfileService
 import uk.ac.warwick.util.core.DateTimeUtils
 import warwick.sso.{UniversityID, User, UserLookupService, Usercode}
@@ -18,7 +18,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Try
 
-class CaseHistoryTest extends PlaySpec with MockitoSugar with ScalaFutures with NoTimeTracking {
+class CaseHistoryTest extends PlaySpec with MockitoSugar with ScalaFutures with NoAuditLogging {
 
   private val userLookupService = mock[UserLookupService](RETURNS_SMART_NULLS)
   when(userLookupService.getUsers(Seq.empty[Usercode])).thenReturn(Try(Map.empty[Usercode, User]))
@@ -34,12 +34,12 @@ class CaseHistoryTest extends PlaySpec with MockitoSugar with ScalaFutures with 
 
       DateTimeUtils.useMockDateTime(nowInstant, () => {
         val history = Seq(
-          StoredCaseTagVersion(caseID, CaseTag.Accommodation, now, DatabaseOperation.Insert, now),
-          StoredCaseTagVersion(caseID, CaseTag.Alcohol, now.minusMinutes(1), DatabaseOperation.Insert, now.minusMinutes(1)),
-          StoredCaseTagVersion(caseID, CaseTag.Alcohol, now.minusMinutes(5), DatabaseOperation.Delete, now.minusMinutes(2)),
-          StoredCaseTagVersion(caseID, CaseTag.Antisocial, now.minusMinutes(3), DatabaseOperation.Insert, now.minusMinutes(3)),
-          StoredCaseTagVersion(caseID, CaseTag.Bullying, now.minusMinutes(4), DatabaseOperation.Insert, now.minusMinutes(4)),
-          StoredCaseTagVersion(caseID, CaseTag.Alcohol, now.minusMinutes(5), DatabaseOperation.Insert, now.minusMinutes(5))
+          StoredCaseTagVersion(caseID, CaseTag.Accommodation, now, DatabaseOperation.Insert, now, Some(Usercode("cusfal"))),
+          StoredCaseTagVersion(caseID, CaseTag.Alcohol, now.minusMinutes(1), DatabaseOperation.Insert, now.minusMinutes(1), Some(Usercode("cusfal"))),
+          StoredCaseTagVersion(caseID, CaseTag.Alcohol, now.minusMinutes(5), DatabaseOperation.Delete, now.minusMinutes(2), Some(Usercode("cusfal"))),
+          StoredCaseTagVersion(caseID, CaseTag.Antisocial, now.minusMinutes(3), DatabaseOperation.Insert, now.minusMinutes(3), Some(Usercode("cusfal"))),
+          StoredCaseTagVersion(caseID, CaseTag.Bullying, now.minusMinutes(4), DatabaseOperation.Insert, now.minusMinutes(4), Some(Usercode("cusfal"))),
+          StoredCaseTagVersion(caseID, CaseTag.Alcohol, now.minusMinutes(5), DatabaseOperation.Insert, now.minusMinutes(5), Some(Usercode("cusfal")))
         )
         val result = CaseHistory.apply(Seq(), history, Seq(), Seq(), userLookupService, profileService).futureValue.right.get
         result.tags.head._1 mustBe Set(CaseTag.Accommodation, CaseTag.Alcohol, CaseTag.Antisocial, CaseTag.Bullying)

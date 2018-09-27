@@ -12,15 +12,16 @@ import slick.jdbc.JdbcProfile
 import ExtendedPostgresProfile.api._
 import domain.Enquiry.{EnquirySearchQuery, StoredEnquiryNote}
 import helpers.JavaTime
+import services.AuditLogContext
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[EnquiryDaoImpl])
 trait EnquiryDao {
-  def insert(enquiry: Enquiry): DBIO[Enquiry]
-  def update(enquiry: Enquiry, version: OffsetDateTime): DBIO[Enquiry]
-  def insertNote(note: StoredEnquiryNote): DBIO[StoredEnquiryNote]
+  def insert(enquiry: Enquiry)(implicit ac: AuditLogContext): DBIO[Enquiry]
+  def update(enquiry: Enquiry, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Enquiry]
+  def insertNote(note: StoredEnquiryNote)(implicit ac: AuditLogContext): DBIO[StoredEnquiryNote]
   def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findByIDsQuery(ids: Set[UUID]): Query[Enquiry.Enquiries, Enquiry, Seq]
   def findByKeyQuery(key: IssueKey): Query[Enquiry.Enquiries, Enquiry, Seq]
@@ -39,13 +40,13 @@ class EnquiryDaoImpl @Inject() (
 )(implicit ec: ExecutionContext)
   extends EnquiryDao with HasDatabaseConfigProvider[JdbcProfile] {
 
-  override def insert(enquiry: Enquiry): DBIO[Enquiry] =
+  override def insert(enquiry: Enquiry)(implicit ac: AuditLogContext): DBIO[Enquiry] =
     Enquiry.enquiries += enquiry
 
-  override def update(enquiry: Enquiry, version: OffsetDateTime): DBIO[Enquiry] =
+  override def update(enquiry: Enquiry, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Enquiry] =
     Enquiry.enquiries.update(enquiry.copy(version = version))
 
-  override def insertNote(note: StoredEnquiryNote): DBIO[StoredEnquiryNote] =
+  override def insertNote(note: StoredEnquiryNote)(implicit ac: AuditLogContext): DBIO[StoredEnquiryNote] =
     Enquiry.enquiryNotes += note
 
   override def findByIDQuery(id: UUID): Query[Enquiry.Enquiries, Enquiry, Seq] =

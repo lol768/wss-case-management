@@ -23,12 +23,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[UploadedFileServiceImpl])
 trait UploadedFileService {
-  def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode)(implicit t: TimingContext): DBIO[UploadedFile]
-  def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode, ownerId: UUID, ownerType: UploadedFileOwner)(implicit t: TimingContext): DBIO[UploadedFile]
+  def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode)(implicit ac: AuditLogContext): DBIO[UploadedFile]
+  def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode, ownerId: UUID, ownerType: UploadedFileOwner)(implicit ac: AuditLogContext): DBIO[UploadedFile]
   def store(in: ByteSource, metadata: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]]
   def store(in: ByteSource, metadata: UploadedFileSave, ownerId: UUID, ownerType: UploadedFileOwner)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]]
 
-  def deleteDBIO(id: UUID): DBIO[Done]
+  def deleteDBIO(id: UUID)(implicit ac: AuditLogContext): DBIO[Done]
   def delete(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 }
 
@@ -43,7 +43,7 @@ class UploadedFileServiceImpl @Inject()(
 
   import timing._
 
-  private def storeDBIO(id: UUID, in: ByteSource, metadata: UploadedFileSave, uploader: Usercode, ownerId: Option[UUID], ownerType: Option[UploadedFileOwner])(implicit t: TimingContext): DBIO[UploadedFile] = {
+  private def storeDBIO(id: UUID, in: ByteSource, metadata: UploadedFileSave, uploader: Usercode, ownerId: Option[UUID], ownerType: Option[UploadedFileOwner])(implicit ac: AuditLogContext): DBIO[UploadedFile] = {
     for {
       // Treat the ObjectStorageService put as DBIO so we force a rollback if it fails (even though it won't delete the object)
       _ <- DBIO.from(time(TimingCategories.ObjectStorageWrite) {
@@ -69,10 +69,10 @@ class UploadedFileServiceImpl @Inject()(
     } yield file.asUploadedFile
   }
 
-  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode)(implicit t: TimingContext): DBIO[UploadedFile] =
+  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode)(implicit ac: AuditLogContext): DBIO[UploadedFile] =
     storeDBIO(UUID.randomUUID(), in, metadata, uploader, None, None)
 
-  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode, ownerId: UUID, ownerType: UploadedFileOwner)(implicit t: TimingContext): DBIO[UploadedFile] =
+  override def storeDBIO(in: ByteSource, metadata: UploadedFileSave, uploader: Usercode, ownerId: UUID, ownerType: UploadedFileOwner)(implicit ac: AuditLogContext): DBIO[UploadedFile] =
     storeDBIO(UUID.randomUUID(), in, metadata, uploader, Some(ownerId), Some(ownerType))
 
   override def store(in: ByteSource, metadata: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]] =
@@ -85,7 +85,7 @@ class UploadedFileServiceImpl @Inject()(
       daoRunner.run(storeDBIO(in, metadata, ac.usercode.get, ownerId, ownerType)).map(Right.apply)
     }
 
-  override def deleteDBIO(id: UUID): DBIO[Done] =
+  override def deleteDBIO(id: UUID)(implicit ac: AuditLogContext): DBIO[Done] =
     for {
       existing <- dao.find(id)
       done <- dao.delete(existing)
