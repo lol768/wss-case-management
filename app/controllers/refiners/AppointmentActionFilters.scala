@@ -9,7 +9,7 @@ import system.ImplicitRequestContext
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class CanViewAppointmentActionRefiner @Inject()(
+class AppointmentActionFilters @Inject()(
   appointmentService: AppointmentService,
   securityService: SecurityService,
   permissionService: PermissionService
@@ -21,7 +21,14 @@ class CanViewAppointmentActionRefiner @Inject()(
     permissionService.canViewAppointment(request.context.user.get.usercode)
   }
 
+  private val CanClientManageAppointment = PermissionsFilter[AppointmentSpecificRequest] { implicit request =>
+    permissionService.canClientManageAppointment(request.context.user.get, request.appointment.id)
+  }
+
   def CanViewAppointmentAction(appointmentKey: IssueKey): ActionBuilder[AppointmentSpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithAppointment(appointmentKey) andThen CanViewAppointment
+
+  def CanClientManageAppointmentAction(appointmentKey: IssueKey): ActionBuilder[AppointmentSpecificRequest, AnyContent] =
+    securityService.SigninRequiredAction andThen WithAppointment(appointmentKey) andThen CanClientManageAppointment
 
 }

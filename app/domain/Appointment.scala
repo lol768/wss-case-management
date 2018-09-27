@@ -22,6 +22,7 @@ case class Appointment(
   team: Team,
   teamMember: Usercode,
   appointmentType: AppointmentType,
+  state: AppointmentState = AppointmentState.Provisional,
   created: OffsetDateTime = OffsetDateTime.now(),
   lastUpdated: OffsetDateTime = OffsetDateTime.now(),
 ) {
@@ -60,13 +61,7 @@ case class AppointmentRender(
   appointment: Appointment,
   clients: Set[AppointmentClient],
   clientCase: Option[Case]
-) {
-  lazy val state: AppointmentState =
-    if (clients.exists(_.state == AppointmentState.Attended)) AppointmentState.Attended
-    else if (clients.forall(_.state == AppointmentState.Cancelled)) AppointmentState.Cancelled
-    else if (clients.exists(_.state == AppointmentState.Confirmed) && clients.forall(_.state != AppointmentState.Provisional)) AppointmentState.Confirmed
-    else AppointmentState.Provisional
-}
+)
 
 case class AppointmentClient(
   universityID: UniversityID,

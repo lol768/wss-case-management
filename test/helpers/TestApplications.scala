@@ -59,7 +59,7 @@ object TestApplications extends MockitoSugar {
       .disable[PlayLogbackAccessModule]
       .overrides(
         bind[SSOClientHandler].to[warwick.sso.MockSSOClientHandler],
-        bind[UserLookupService].to(mock[UserLookupService]),
+        bind[UserLookupService].to[warwick.sso.MockUserLookupService],
         bind[GroupService].to[warwick.sso.MockGroupService],
 
         // Allows putting test versions of migrations under test/resources/evolutions/default
