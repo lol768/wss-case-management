@@ -1,12 +1,19 @@
 @import controllers.admin.AppointmentController.AppointmentFormData
+@import domain.dao.CaseDao.Case
 @import domain.{Appointment, AppointmentType}
 @import views.html.b3.B3FieldConstructor
 
 @(
-  form: Form[AppointmentFormData]
+  form: Form[AppointmentFormData],
+  relatedCase: Option[Case],
 )(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
 
-@b3.validatedHidden(form, "case")
+@relatedCase.map { c =>
+  @b3.inputWrapped("hidden", form("case"), '_label -> "Case") { input =>
+    @input
+    <p class="form-control-static">@c.key.get.string @c.subject</p>
+  }
+}
 
 @b3.text(form("appointment.subject"),
   '_label -> "Subject"

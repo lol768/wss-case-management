@@ -1,14 +1,16 @@
 @import controllers.admin.AppointmentController.AppointmentFormData
 @import domain.Team
+@import domain.dao.CaseDao.Case
 
 @(
   team: Team,
-  form: Form[AppointmentFormData]
+  form: Form[AppointmentFormData],
+  relatedCase: Option[Case]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Create a ${team.name} appointment") {
   @b3.vertical.formCSRF(controllers.admin.routes.AppointmentController.create(team.id)) { implicit ifc =>
-    @appointmentFields(form)
+    @appointmentFields(form, relatedCase)
 
     @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id))
   }
