@@ -308,9 +308,9 @@ object CaseDao {
     )
   }
 
-  case class CaseMessages(data: Seq[MessageData]) {
-    lazy val byClient: Map[UniversityID, Seq[MessageData]] = data.groupBy(_.client)
-    lazy val teamMembers: Set[Usercode] = data.flatMap(_.teamMember).toSet
+  case class CaseMessages(data: Seq[MessageRender]) {
+    lazy val byClient: Map[UniversityID, Seq[MessageRender]] = data.groupBy(_.message.client)
+    lazy val teamMembers: Set[Usercode] = data.flatMap(_.message.teamMember).toSet
   }
 
   case class CaseVersion(
@@ -379,7 +379,7 @@ object CaseDao {
       (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, operation, timestamp, auditUser).mapTo[CaseVersion]
   }
 
-  implicit class CaseExtensions[C[_]](q: Query[Cases, Case, C]) {
+  implicit class CaseExtensions[C[_]](val q: Query[Cases, Case, C]) extends AnyVal {
     def withClients = q
       .join(caseClients.table)
       .on(_.id === _.caseId)
@@ -387,10 +387,11 @@ object CaseDao {
       .joinLeft(caseNotes.table)
       .on(_.id === _.caseId)
     def withMessages = q
-      .joinLeft(Message.messages.table)
-      .on { (c, m) =>
+      .joinLeft(Message.messages.table.withUploadedFiles)
+      .on { case (c, (m, _)) =>
         c.id === m.ownerId && m.ownerType === (MessageOwner.Case: MessageOwner)
       }
+
     def withLastUpdated = q
       .joinLeft(Message.messages.table)
       .on((c, m) =>

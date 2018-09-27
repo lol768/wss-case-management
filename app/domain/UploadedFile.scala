@@ -3,8 +3,12 @@ package domain
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import com.google.common.io.{ByteSource, Files}
+import controllers.refiners.EnquirySpecificRequest
 import enumeratum.{EnumEntry, PlayEnum}
-import warwick.sso.Usercode
+import play.api.libs.Files.TemporaryFile
+import play.api.mvc.MultipartFormData
+import warwick.sso.{AuthenticatedRequest, Usercode}
 
 import scala.collection.immutable
 

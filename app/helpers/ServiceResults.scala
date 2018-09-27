@@ -41,6 +41,9 @@ object ServiceResults {
   def exceptionToServiceResult[A](ex: Throwable, msg: Option[String] = None): ServiceResult[A] =
     Left(List(ServiceError(msg.getOrElse(ex.getMessage), ex)))
 
+  def error[A](msg: String): ServiceResult[A] =
+    Left(List(ServiceError(msg)))
+
   def logErrors[A](
     result: ServiceResult[A],
     logger: Logger,

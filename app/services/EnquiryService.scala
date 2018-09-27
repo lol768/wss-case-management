@@ -9,7 +9,7 @@ import domain.CustomJdbcTypes._
 import domain.Enquiry.{EnquirySearchQuery, StoredEnquiryNote}
 import domain._
 import domain.dao.{DaoRunner, EnquiryDao, MessageDao}
-import helpers.JavaTime
+import helpers.{JavaTime, ServiceResults}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
@@ -117,13 +117,9 @@ class EnquiryServiceImpl @Inject() (
 
   private def addMessageDBIO(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], uploader: Usercode)(implicit ac: AuditLogContext): DBIO[(Message, Seq[UploadedFile])] =
     for {
-      message <- messageDao.insert(Message(
-        id = UUID.randomUUID(),
-        text = message.text,
-        sender = message.sender,
+      message <- messageDao.insert(message.toMessage(
         client = enquiry.universityID,
-        teamMember = message.teamMember,
-        team = message.teamMember.map(_ => enquiry.team), // Only store Team if there is an explicit team member
+        team = enquiry.team, // Only store Team if there is an explicit team member
         ownerId = enquiry.id.get,
         ownerType = MessageOwner.Enquiry
       ))
@@ -183,14 +179,16 @@ class EnquiryServiceImpl @Inject() (
       withMessages <- enquiries.withMessages.map {
         case (e, mf) => (e, mf.map { case (m, f) => (m.messageData, f) })
       }.result
-      withNotes <- enquiries.withNotes.result
+      withNotes <- enquiries.withNotes.result // TODO this could just have enquiry ID, we have full Enquiry objects with messages already
     } yield (withMessages, withNotes)).map { case (withMessages, withNotes) =>
       Right(groupTuples(withMessages, withNotes))
     }
   }
 
   override def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Enquiry]] =
-    daoRunner.run(enquiryDao.findByIDQuery(id).result.head).map(Right.apply)
+    daoRunner.run(enquiryDao.findByIDQuery(id).result.head).map(Right.apply).recover {
+      case _: NoSuchElementException => ServiceResults.error(s"Could not find an Enquiry with ID $id")
+    }
 
   override def get(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]] =
     daoRunner.run(enquiryDao.findByIDsQuery(ids.toSet).result).map { enquiries =>
@@ -203,7 +201,9 @@ class EnquiryServiceImpl @Inject() (
     }
 
   override def get(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Enquiry]] =
-    daoRunner.run(enquiryDao.findByKeyQuery(enquiryKey).result.head).map(Right.apply)
+    daoRunner.run(enquiryDao.findByKeyQuery(enquiryKey).result.head).map(Right.apply).recover {
+      case _: NoSuchElementException => ServiceResults.error(s"Could not find an Enquiry with key ${enquiryKey.string}")
+    }
 
   private def getWithMessagesAndNotes(query: Query[Enquiry.Enquiries, Enquiry, Seq]) =
     for {
@@ -324,14 +324,7 @@ class EnquiryServiceImpl @Inject() (
 
 object EnquiryService {
   def groupTuples(messageTuples: Seq[(Enquiry, Option[(MessageData, Option[StoredUploadedFile])])], noteTuples: Seq[(Enquiry, Option[StoredEnquiryNote])]): Seq[EnquiryRender] = {
-    val enquiriesAndMessages =
-      OneToMany.leftJoin(messageTuples)(MessageData.dateOrderingWithFile)
-        .map { case (enquiry, mf) =>
-          enquiry ->
-            OneToMany.leftJoin(mf.distinct)(StoredUploadedFile.dateOrdering)
-              .sorted(MessageData.dateOrderingWithFiles)
-              .map { case (m, f) => MessageRender(m, f.map(_.asUploadedFile)) }
-        }
+    val enquiriesAndMessages = MessageData.groupOwnerAndMessage(messageTuples)
     val enquiriesAndNotes =
       OneToMany.leftJoin(noteTuples.map { case (e, n) => (e, n.map(_.asEnquiryNote)) }.distinct)(EnquiryNote.dateOrdering).toMap
 

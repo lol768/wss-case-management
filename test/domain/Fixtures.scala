@@ -4,6 +4,7 @@ import java.time.Duration
 import java.util.UUID
 
 import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
+import domain.dao.{AppointmentDao, CaseDao, UploadedFileDao}
 import domain.dao.CaseDao.Case
 import helpers.JavaTime
 import warwick.sso._
@@ -103,5 +104,38 @@ object Fixtures {
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
     )
+  }
+
+  object schemas {
+    import domain.ExtendedPostgresProfile.api._
+    def truncateAndReset =
+      CaseDao.caseTags.table.delete andThen
+      CaseDao.caseTags.versionsTable.delete andThen
+      CaseDao.caseClients.table.delete andThen
+      CaseDao.caseClients.versionsTable.delete andThen
+      CaseDao.caseLinks.table.delete andThen
+      CaseDao.caseLinks.versionsTable.delete andThen
+      CaseDao.caseNotes.table.delete andThen
+      CaseDao.caseNotes.versionsTable.delete andThen
+      CaseDao.caseDocuments.table.delete andThen
+      CaseDao.caseDocuments.versionsTable.delete andThen
+      UploadedFileDao.uploadedFiles.table.delete andThen
+      UploadedFileDao.uploadedFiles.versionsTable.delete andThen
+      AuditEvent.auditEvents.delete andThen
+      AppointmentDao.appointmentClients.table.delete andThen
+      AppointmentDao.appointmentClients.versionsTable.delete andThen
+      AppointmentDao.appointments.table.delete andThen
+      AppointmentDao.appointments.versionsTable.delete andThen
+      CaseDao.cases.table.delete andThen
+      CaseDao.cases.versionsTable.delete andThen
+      Enquiry.enquiries.table.delete andThen
+      Enquiry.enquiries.versionsTable.delete andThen
+      Message.messages.table.delete andThen
+      Message.messages.versionsTable.delete
+      Owner.owners.table.delete andThen
+      Owner.owners.versionsTable.delete
+      sql"ALTER SEQUENCE SEQ_CASE_ID RESTART WITH 1000".asUpdate andThen
+      sql"ALTER SEQUENCE SEQ_APPOINTMENT_KEY RESTART WITH 1000".asUpdate
+      sql"ALTER SEQUENCE SEQ_ENQUIRY_KEY RESTART WITH 1000".asUpdate
   }
 }

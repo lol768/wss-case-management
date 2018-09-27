@@ -17,6 +17,7 @@ import scala.concurrent.ExecutionContext
 trait MessageDao {
   def insert(message: Message)(implicit ac: AuditLogContext): DBIO[Message]
 
+  // TODO never used in code and doesn't filter by owner
   def findByClientQuery(client: UniversityID): Query[Message.Messages, Message, Seq]
 
   def latestForEnquiryQuery(enquiry: Enquiries): Query[Message.Messages, Message, Seq]

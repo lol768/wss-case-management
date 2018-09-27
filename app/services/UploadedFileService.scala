@@ -13,6 +13,7 @@ import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import domain.ExtendedPostgresProfile.api._
+import play.api.mvc.{BodyParser, DefaultPlayBodyParsers}
 import system.TimingCategories
 import warwick.core.timing.{TimingContext, TimingService}
 import warwick.objectstore.ObjectStorageService
@@ -37,7 +38,7 @@ class UploadedFileServiceImpl @Inject()(
   objectStorageService: ObjectStorageService,
   daoRunner: DaoRunner,
   dao: UploadedFileDao,
-  timing: TimingService,
+  timing: TimingService
 )(implicit ec: ExecutionContext) extends UploadedFileService {
 
   import timing._

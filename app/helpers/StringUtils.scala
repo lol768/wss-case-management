@@ -7,8 +7,8 @@ import language.implicitConversions
   * Scala-style String utilities. Adds the methods as implicit methods
   * on String.
   */
-trait StringUtils {
-  class SuperString(string: String) {
+object StringUtils {
+  implicit class SuperString(val string: String) extends AnyVal {
     def hasText: Boolean = Utils hasText string
     def isEmptyOrWhitespace: Boolean = !hasText
     def hasLength: Boolean = Utils hasLength string
@@ -24,11 +24,8 @@ trait StringUtils {
     def safeStartsWith(substring: String): Boolean = Option(string).exists(_.startsWith(substring))
   }
 
-  implicit def StringToSuperString(string: String): SuperString = new SuperString(string)
-
   implicit class Regex(sc: StringContext) {
     def r = new util.matching.Regex(sc.parts.mkString, sc.parts.tail.map(_ => "x"): _*)
   }
 }
 
-object StringUtils extends StringUtils

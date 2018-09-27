@@ -26,17 +26,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
     }
 
     override def teardown(): Unit = {
-      // FIXME this will get tedious to do separately in every DB test.
-      // Need one thing to destroy them all
-      execWithCommit(
-        AppointmentDao.appointmentClients.table.delete andThen
-        AppointmentDao.appointmentClients.versionsTable.delete andThen
-        AppointmentDao.appointments.table.delete andThen
-        AppointmentDao.appointments.versionsTable.delete andThen
-        CaseDao.cases.table.delete andThen
-        CaseDao.cases.versionsTable.delete andThen
-        sql"ALTER SEQUENCE SEQ_APPOINTMENT_KEY RESTART WITH 1000".asUpdate
-      )
+      execWithCommit(Fixtures.schemas.truncateAndReset)
     }
   }
 

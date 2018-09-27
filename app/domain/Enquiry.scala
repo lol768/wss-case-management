@@ -199,6 +199,8 @@ object Enquiry extends Versioning {
       .on { case (e, n) => e.id === n.enquiryID }
   }
 
+
+
   case class EnquirySearchQuery(
     query: Option[String] = None,
     createdAfter: Option[LocalDate] = None,

@@ -26,26 +26,7 @@ class CaseServiceTest extends AbstractDaoTest {
     }
 
     override def teardown(): Unit = {
-      // FIXME this will get tedious to do separately in every DB test.
-      // Need one thing to destroy them all
-      execWithCommit(
-        CaseDao.caseTags.table.delete andThen
-        CaseDao.caseTags.versionsTable.delete andThen
-        CaseDao.caseClients.table.delete andThen
-        CaseDao.caseClients.versionsTable.delete andThen
-        CaseDao.caseLinks.table.delete andThen
-        CaseDao.caseLinks.versionsTable.delete andThen
-        CaseDao.caseNotes.table.delete andThen
-        CaseDao.caseNotes.versionsTable.delete andThen
-        CaseDao.caseDocuments.table.delete andThen
-        CaseDao.caseDocuments.versionsTable.delete andThen
-        UploadedFileDao.uploadedFiles.table.delete andThen
-        UploadedFileDao.uploadedFiles.versionsTable.delete andThen
-        CaseDao.cases.table.delete andThen
-        CaseDao.cases.versionsTable.delete andThen
-        AuditEvent.auditEvents.delete andThen
-        sql"ALTER SEQUENCE SEQ_CASE_ID RESTART WITH 1000".asUpdate
-      )
+      execWithCommit(Fixtures.schemas.truncateAndReset)
     }
   }
 
