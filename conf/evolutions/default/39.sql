@@ -1,4 +1,5 @@
 # --- !Ups
+
 ALTER TABLE enquiry_version ADD COLUMN version_user VARCHAR(100) NULL;
 ALTER TABLE enquiry_note_version ADD COLUMN version_user VARCHAR(100) NULL;
 ALTER TABLE message_version ADD COLUMN version_user VARCHAR(100) NULL;
