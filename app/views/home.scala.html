@@ -111,7 +111,7 @@
           @views.html.admin.casesTab(info.openCases, info.closedCases, info.clients, controllers.admin.routes.CaseController.createSelectTeam(), routes.IndexController.closedCases, "member", context.user.get.usercode.string, " assigned to me")
         </div>
         <div role="tabpanel" class="tab-pane" id="clients">
-          @views.html.admin.clientsTab(info.atRiskClients, info.teams.contains(Teams.MentalHealth))
+          @views.html.admin.clientsTab(routes.IndexController.atRiskClients)
         </div>
         <div role="tabpanel" class="tab-pane" id="appointments">
           @views.html.admin.appointmentsTab()
