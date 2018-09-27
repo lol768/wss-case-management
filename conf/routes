@@ -28,6 +28,7 @@ POST        /service/enquirysearch/:enquiryKey      @controllers.EnquirySearchCo
 GET         /                                       @controllers.IndexController.home
 GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries
 GET         /closed-cases                           @controllers.IndexController.closedCases
+GET         /at-risk-clients                        @controllers.IndexController.atRiskClients
 
 ## Clients ##
 
@@ -54,6 +55,7 @@ POST        /appointment/:appointmentKey/reject     @controllers.appointments.Ap
 GET         /team/:teamId                           @controllers.admin.AdminController.teamHome(teamId: String)
 GET         /team/:teamId/closed-enquiries          @controllers.admin.AdminController.closedEnquiries(teamId: String)
 GET         /team/:teamId/closed-cases              @controllers.admin.AdminController.closedCases(teamId: String)
+GET         /team/:teamId/at-risk-clients           @controllers.admin.AdminController.atRiskClients(teamId: String)
 
 GET         /team/client/:universityID                          @controllers.admin.ClientController.client(universityID: warwick.sso.UniversityID)
 POST        /team/client/:universityID                          @controllers.admin.ClientController.updateSummary(universityID: warwick.sso.UniversityID)

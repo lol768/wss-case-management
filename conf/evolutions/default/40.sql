@@ -1,11 +1,8 @@
 # --- !Ups
-alter table appointment add column state VARCHAR(20) NOT NULL DEFAULT 'Provisional';
-alter table appointment_version add column state VARCHAR(20) NOT NULL DEFAULT 'Provisional';
-alter table appointment alter column state drop default;
-alter table appointment_version alter column state drop default;
 
-create index idx_appointment_state on appointment (state);
+ALTER TABLE reasonable_adjustment_version RENAME COLUMN version_timetsamp_utc TO version_timestamp_utc;
 
 # --- !Downs
-alter table appointment drop column state;
-alter table appointment_version drop column state;
+
+ALTER TABLE reasonable_adjustment_version RENAME COLUMN version_timestamp_utc TO version_timetsamp_utc;
+
