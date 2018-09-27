@@ -13,7 +13,7 @@
 )
 
 @b3.free('_label -> "Clients", '_class -> form.error("clients").map(_ => "has-error")) {
-  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for clients", multiple = true, universityId = true)
+  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for users", multiple = true, universityId = true)
   @b3.errors(form("clients"))
 }
 
@@ -35,7 +35,7 @@
 )
 
 @b3.free('_label -> "Team member", '_class -> form.error("appointment.teamMember").map(_ => "has-error")) {
-  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("appointment.teamMember") && v.nonEmpty }.values.toSeq, name = "appointment.teamMember", placeholder = "Search for a user", multiple = false)
+  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("appointment.teamMember") && v.nonEmpty }.values.toSeq, name = "appointment.teamMember", placeholder = "Search for a team member", multiple = false)
 }
 
 @b3.select(form("appointment.appointmentType"),
