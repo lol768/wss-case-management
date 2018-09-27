@@ -433,7 +433,7 @@ class CaseServiceImpl @Inject() (
 
 
   override def addMessage(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(Message, Seq[UploadedFile])]] = {
-    auditService.audit('CaseAddMessage, `case`.id.get.toString, 'Case, Json.obj()) {
+    auditService.audit('CaseAddMessage, `case`.id.get.toString, 'Case, Json.obj("client" -> client.string)) {
       daoRunner.run(
         addMessageDBIO(`case`, client, message, files, ac.usercode.get)
       ).map(Right.apply)
