@@ -33,7 +33,13 @@ object IndexController {
     closedEnquiries: Int,
     openCases: Seq[(Case, OffsetDateTime)],
     closedCases: Int,
-    clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
+    rejectedAppointments: Seq[AppointmentRender],
+    provisionalAppointments: Seq[AppointmentRender],
+    appointmentsNeedingOutcome: Seq[AppointmentRender],
+    confirmedAppointments: Int,
+    attendedAppointments: Int,
+    cancelledAppointments: Int,
+    clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
   )
 }
 
@@ -90,10 +96,16 @@ class IndexController @Inject()(
           enquiries.findEnquiriesAwaitingClient(usercode),
           enquiries.countClosedEnquiries(usercode),
           cases.listOpenCases(usercode),
-          cases.countClosedCases(usercode)
-        ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases) =>
+          cases.countClosedCases(usercode),
+          appointments.findRejectedAppointments(usercode),
+          appointments.findProvisionalAppointments(usercode),
+          appointments.findAppointmentsNeedingOutcome(usercode),
+          appointments.countConfirmedAppointments(usercode),
+          appointments.countAttendedAppointments(usercode),
+          appointments.countCancelledAppointments(usercode),
+        ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, rejectedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments) =>
           cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successFlatMapTo { caseClients =>
-            val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map{ case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients
+            val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map { case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients ++ (rejectedAppointments ++ provisionalAppointments ++ appointmentsNeedingOutcome).map { a => a.appointment.id -> a.clients.map(_.universityID) }
 
             profiles.getProfiles(clients.values.flatten.toSet).successMapTo { clientProfiles =>
               val resolvedClients = clients.mapValues(_.map(c => clientProfiles.get(c).map(Right.apply).getOrElse(Left(c))))
@@ -105,7 +117,13 @@ class IndexController @Inject()(
                 closedEnquiries,
                 openCases,
                 closedCases,
-                resolvedClients
+                rejectedAppointments,
+                provisionalAppointments,
+                appointmentsNeedingOutcome,
+                confirmedAppointments,
+                attendedAppointments,
+                cancelledAppointments,
+                resolvedClients,
               ))
             }
           }
@@ -124,7 +142,7 @@ class IndexController @Inject()(
   }
 
   def closedEnquiries: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    enquiries.findClosedEnquiries(request.context.user.get.usercode).successFlatMap { enquiries =>
+    enquiries.findClosedEnquiries(currentUser().usercode).successFlatMap { enquiries =>
       val clients = enquiries.map { case (e, _) => e.id.get -> Set(e.universityID) }.toMap
 
       profiles.getProfiles(clients.values.flatten.toSet).successMap { profiles =>
@@ -135,7 +153,7 @@ class IndexController @Inject()(
   }
 
   def closedCases: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    cases.listClosedCases(request.context.user.get.usercode).successFlatMap { closedCases =>
+    cases.listClosedCases(currentUser().usercode).successFlatMap { closedCases =>
       cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successFlatMap { clients =>
         profiles.getProfiles(clients.values.flatten.toSet).successMap { profiles =>
           val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
@@ -146,13 +164,47 @@ class IndexController @Inject()(
   }
 
   def atRiskClients: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    val usercode = request.context.user.get.usercode
-
-    Future.successful(permissions.teams(usercode)).successFlatMap(teams =>
+    Future.successful(permissions.teams(currentUser().usercode)).successFlatMap(teams =>
       clientSummaries.findAtRisk(teams.contains(Teams.MentalHealth)).successMap(clients =>
         Ok(views.html.admin.atRiskClients(clients, teams.contains(Teams.MentalHealth)))
       )
     )
+  }
+
+  def confirmedAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    appointments.findConfirmedAppointments(currentUser().usercode).successFlatMap { appointments =>
+      val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
+
+      profiles.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
+        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
+
+        Ok(views.html.admin.confirmedAppointments(appointments, resolvedClients, None))
+      })
+    }
+  }
+
+  def attendedAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    appointments.findAttendedAppointments(currentUser().usercode).successFlatMap { appointments =>
+      val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
+
+      profiles.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
+        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
+
+        Ok(views.html.admin.attendedAppointments(appointments, resolvedClients, None))
+      })
+    }
+  }
+
+  def cancelledAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    appointments.findCancelledAppointments(currentUser().usercode).successFlatMap { appointments =>
+      val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
+
+      profiles.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
+        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
+
+        Ok(views.html.admin.cancelledAppointments(appointments, resolvedClients, None))
+      })
+    }
   }
 
   def redirectToPath(path: String, status: Int = MOVED_PERMANENTLY) = Action {

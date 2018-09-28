@@ -57,7 +57,7 @@
         attendedAppointments,
         cancelledAppointments,
         clients,
-        userLookup,
+        Some(userLookup),
         controllers.admin.routes.AppointmentController.createForm(team.id),
         controllers.admin.routes.AdminController.confirmedAppointments(team.id),
         controllers.admin.routes.AdminController.attendedAppointments(team.id),

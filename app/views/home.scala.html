@@ -217,7 +217,20 @@
           @views.html.admin.clientsTab(routes.IndexController.atRiskClients)
         </div>
         <div role="tabpanel" class="tab-pane" id="appointments">
-          @* @views.html.admin.appointmentsTab() *@
+          @views.html.admin.appointmentsTab(
+            info.rejectedAppointments,
+            info.provisionalAppointments,
+            info.appointmentsNeedingOutcome,
+            info.confirmedAppointments,
+            info.attendedAppointments,
+            info.cancelledAppointments,
+            info.clients,
+            None,
+            controllers.admin.routes.AppointmentController.createSelectTeam(),
+            routes.IndexController.confirmedAppointments,
+            routes.IndexController.attendedAppointments,
+            routes.IndexController.cancelledAppointments,
+          )
         </div>
         <div role="tabpanel" class="tab-pane" id="mymessages">
           @renderClientMessages(clientInformation.enquiries, clientInformation.registration)
