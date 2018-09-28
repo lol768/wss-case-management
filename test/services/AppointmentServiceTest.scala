@@ -11,7 +11,7 @@ import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.Future
 
-class AppointmentServiceTest extends AbstractDaoTest {
+ extends AbstractDaoTest {
 
   private val service = get[AppointmentService]
 
@@ -19,8 +19,8 @@ class AppointmentServiceTest extends AbstractDaoTest {
     override def setup(): Appointment = {
       val stored = Fixtures.appointments.newStoredAppointment()
       execWithCommit(
-        AppointmentDao.appointments.insert(stored) andThen
-        AppointmentDao.appointmentClients.insert(Fixtures.appointments.newStoredClient(stored.id))
+        (AppointmentDao.appointments.table += stored) andThen
+        (AppointmentDao.appointmentClients.table += Fixtures.appointments.newStoredClient(stored.id))
       )
       stored.asAppointment
     }
