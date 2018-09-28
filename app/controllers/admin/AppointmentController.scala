@@ -67,11 +67,11 @@ class AppointmentController @Inject()(
   permissions: PermissionService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
-  canViewAppointmentActionRefiner: CanViewAppointmentActionRefiner,
+  appointmentActionFilters: AppointmentActionFilters,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import anyTeamActionRefiner._
-  import canViewAppointmentActionRefiner._
+  import appointmentActionFilters._
   import canViewTeamActionRefiner._
 
   private def renderAppointment(appointmentKey: IssueKey)(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =

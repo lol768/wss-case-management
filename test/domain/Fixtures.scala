@@ -92,6 +92,7 @@ object Fixtures {
       Teams.MentalHealth,
       Usercode("mentalhealth-counsellor"),
       AppointmentType.FaceToFace,
+      AppointmentState.Provisional,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
     )

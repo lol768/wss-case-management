@@ -14,14 +14,16 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import services._
 import services.tabula.ProfileService
-import warwick.sso.{AuthenticatedRequest, UniversityID}
+import warwick.sso.{AuthenticatedRequest, UniversityID, User, UserLookupService, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object IndexController {
   case class ClientInformation(
     enquiries: Seq[EnquiryRender],
-    registration: Option[Registration]
+    registration: Option[Registration],
+    appointments: Seq[AppointmentRender],
+    userLookup: Map[Usercode, User]
   )
 
   case class TeamMemberInformation(
@@ -46,6 +48,8 @@ class IndexController @Inject()(
   cases: CaseService,
   profiles: ProfileService,
   clientSummaries: ClientSummaryService,
+  appointments: AppointmentService,
+  userLookupService: UserLookupService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
   import anyTeamActionRefiner._
@@ -56,11 +60,15 @@ class IndexController @Inject()(
 
     ServiceResults.zip(
       enquiries.findEnquiriesForClient(client),
-      registrations.get(client)
+      registrations.get(client),
+      appointments.findForClient(client)
     ).flatMap(_.fold(
       errors => Future.successful(Left(errors)),
-      { case (e, registration) =>
-        val result = Future.successful(Right(ClientInformation(e, registration)))
+      { case (e, registration, a) =>
+        val usercodes = a.map(_.appointment.teamMember).toSet
+        val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
+
+        val result = Future.successful(Right(ClientInformation(e, registration, a, userLookup)))
 
         // Record an EnquiryView event for the first enquiry as that's open by default in the accordion
         e.headOption.map { e =>

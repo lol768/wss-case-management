@@ -40,3 +40,6 @@ flash.case.documentAdded=The case document has been uploaded
 flash.case.documentDeleted=The case document has been deleted
 flash.case.reassigned=The case has been reassigned to {0}
 flash.appointment.created=The appointment has been created ({0})
+flash.appointment.accepted=You''ve accepted the appointment
+flash.appointment.confirmed=You''ve confirmed the appointment
+flash.appointment.rejected=You''ve rejected the appointment

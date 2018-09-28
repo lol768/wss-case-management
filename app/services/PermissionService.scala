@@ -35,6 +35,7 @@ trait PermissionService {
   def canAddClientMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
   def canViewAppointment(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def canClientManageAppointment(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
   def webgroupFor(team: Team): GroupName
 }
@@ -45,12 +46,14 @@ class PermissionServiceImpl @Inject() (
   roleService: RoleService,
   enquiryServiceProvider: Provider[EnquiryService],
   caseServiceProvider: Provider[CaseService],
+  appointmentServiceProvider: Provider[AppointmentService],
   config: Configuration,
   timing: TimingService
 )(implicit ec: ExecutionContext) extends PermissionService {
 
   private lazy val enquiryService = enquiryServiceProvider.get()
   private lazy val caseService = caseServiceProvider.get()
+  private lazy val appointmentService = appointmentServiceProvider.get()
 
   private val webgroupPrefix = config.get[String]("app.webgroup.team.prefix")
 
@@ -170,6 +173,19 @@ class PermissionServiceImpl @Inject() (
       isAdmin(user),
       inAnyTeam(user)
     )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+
+  private def isAppointmentClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    user.universityId.map { uniId =>
+      appointmentService.getClients(id).map {
+        _.map(_.exists(_.universityID == uniId))
+      }
+    }.getOrElse {
+      // No Uni ID; client of nothing
+      Future.successful(Right(false))
+    }
+
+  override def canClientManageAppointment(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    isAppointmentClient(user, id)
 
   override def webgroupFor(team: Team): GroupName =
     GroupName(s"$webgroupPrefix${team.id}")

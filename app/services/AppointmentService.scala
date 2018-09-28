@@ -22,6 +22,7 @@ import scala.language.higherKinds
 @ImplementedBy(classOf[AppointmentServiceImpl])
 trait AppointmentService {
   def create(appointment: AppointmentSave, clients: Set[UniversityID], team: Team, caseID: Option[UUID])(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Appointment]]
   def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
   def find(appointmentKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Appointment]]
@@ -30,13 +31,20 @@ trait AppointmentService {
   def findForCase(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
   def findForCaseDBIO(caseID: UUID)(implicit t: TimingContext): DBIO[Seq[Appointment]]
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
+
   def search(query: AppointmentSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
+
   def listOpenAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
   def listOpenAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
   def listClosedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
   def countClosedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def listClosedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
   def countClosedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
+
+  def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[AppointmentClient]]]
+
+  def clientAccept(appointmentID: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+  def clientReject(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 }
 
 @Singleton
@@ -47,7 +55,7 @@ class AppointmentServiceImpl @Inject()(
   dao: AppointmentDao
 )(implicit ec: ExecutionContext) extends AppointmentService {
 
-  private def toStoredAppointment(id: UUID, key: IssueKey, save: AppointmentSave, team: Team, caseID: Option[UUID]): StoredAppointment =
+  private def createStoredAppointment(id: UUID, key: IssueKey, save: AppointmentSave, team: Team, caseID: Option[UUID]): StoredAppointment =
     StoredAppointment(
       id,
       key,
@@ -59,6 +67,7 @@ class AppointmentServiceImpl @Inject()(
       team,
       save.teamMember,
       save.appointmentType,
+      AppointmentState.Provisional,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime
     )
@@ -68,7 +77,7 @@ class AppointmentServiceImpl @Inject()(
     auditService.audit('AppointmentSave, id.toString, 'Appointment, Json.obj()) {
       daoRunner.run(for {
         nextId <- sql"SELECT nextval('SEQ_APPOINTMENT_KEY')".as[Int].head
-        inserted <- dao.insert(toStoredAppointment(id, IssueKey(IssueKeyType.Appointment, nextId), appointment, team, caseID))
+        inserted <- dao.insert(createStoredAppointment(id, IssueKey(IssueKeyType.Appointment, nextId), appointment, team, caseID))
         _ <- dao.insertClients(clients.map { universityID =>
           StoredAppointmentClient(
             universityID,
@@ -155,6 +164,59 @@ class AppointmentServiceImpl @Inject()(
 
   override def countClosedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     ???
+
+  private def getClientsDBIO(id: UUID): DBIO[Seq[StoredAppointmentClient]] =
+    dao.findClientsQuery(Set(id))
+      .filter(_.appointmentID === id)
+      .result
+
+  override def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[AppointmentClient]]] =
+    daoRunner.run(
+      dao.findClientsQuery(Set(id))
+        .filter(_.appointmentID === id)
+        .map(_.appointmentClient)
+        .result
+    ).map { c => Right(c.toSet) }
+
+  override def clientAccept(appointmentID: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
+    auditService.audit('AppointmentAccept, appointmentID.toString, 'Appointment, Json.obj("universityID" -> universityID.string)) {
+      daoRunner.run(for {
+        appointment <- dao.findByIDQuery(appointmentID).result.head
+        clients <- getClientsDBIO(appointmentID)
+        _ <- dao.updateClient(
+          clients.find(_.universityID == universityID).get.copy(
+            state = AppointmentState.Confirmed,
+            cancellationReason = None
+          )
+        )
+        // If any clients has accepted the appointment, transition state to confirmed
+        updatedAppointment <-
+          if (appointment.state == AppointmentState.Provisional)
+            dao.update(appointment.copy(state = AppointmentState.Confirmed), appointment.version)
+          else
+            DBIO.successful(appointment)
+      } yield updatedAppointment).map { a => Right(a.asAppointment) }
+    }
+
+  override def clientReject(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
+    auditService.audit('AppointmentReject, appointmentID.toString, 'Appointment, Json.obj("universityID" -> universityID.string, "reason" -> reason.entryName)) {
+      daoRunner.run(for {
+        appointment <- dao.findByIDQuery(appointmentID).result.head
+        clients <- getClientsDBIO(appointmentID)
+        _ <- dao.updateClient(
+          clients.find(_.universityID == universityID).get.copy(
+            state = AppointmentState.Cancelled,
+            cancellationReason = Some(reason)
+          )
+        )
+        // A client rejection should transition the state to Provisional if no clients have confirmed
+        updatedAppointment <-
+          if (appointment.state == AppointmentState.Confirmed && clients.forall { c => c.universityID == universityID || c.state != AppointmentState.Confirmed })
+            dao.update(appointment.copy(state = AppointmentState.Provisional), appointment.version)
+          else
+            DBIO.successful(appointment)
+      } yield updatedAppointment).map { a => Right(a.asAppointment) }
+    }
 
 }
 
