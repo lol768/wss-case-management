@@ -99,6 +99,7 @@ val testDeps = Seq(
   "org.seleniumhq.selenium" % "selenium-java" % "3.14.0",
   "org.seleniumhq.selenium" % "selenium-chrome-driver" % "3.14.0",
   "com.h2database" % "h2" % "1.4.196",
+  "com.opentable.components" % "otj-pg-embedded" % "0.12.1",
   "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.22",
   "jaxen" % "jaxen" % "1.1.6"
 ).map(_ % Test)
