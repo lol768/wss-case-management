@@ -127,7 +127,8 @@ class AppointmentController @Inject()(
               "case" -> clientCase.id.get.toString
             ) ++ clients.toSeq.zipWithIndex.map { case (universityID, index) =>
               s"clients[$index]" -> universityID.string
-            }.toMap).discardingErrors
+            }.toMap).discardingErrors,
+            Some(clientCase)
           ))
         }
       }
@@ -137,21 +138,30 @@ class AppointmentController @Inject()(
           teamRequest.team,
           baseForm.bind(baseBind ++ Map(
             "clients[0]" -> universityID.string
-          )).discardingErrors
+          )).discardingErrors,
+          None
         ))
       )
 
       case _ => Future.successful(
-        Ok(views.html.admin.appointments.create(teamRequest.team, baseForm.bind(baseBind).discardingErrors))
+        Ok(views.html.admin.appointments.create(teamRequest.team, baseForm.bind(baseBind).discardingErrors, None))
       )
     }
   }
 
   def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     form(teamRequest.team, profiles, cases).bindFromRequest().fold(
-      formWithErrors => Future.successful(
-        Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors))
-      ),
+      formWithErrors => formWithErrors.data.get("case") match {
+        case Some(caseID) =>
+          cases.find(UUID.fromString(caseID)).successMap { clientCase =>
+            Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, Some(clientCase)))
+          }
+
+        case None =>
+          Future.successful(
+            Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, None))
+          )
+      },
       data => {
         val clients = data.clients.filter(_.string.nonEmpty)
 
