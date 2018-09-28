@@ -11,7 +11,7 @@ import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.Future
 
- extends AbstractDaoTest {
+class AppointmentServiceTest extends AbstractDaoTest {
 
   private val service = get[AppointmentService]
 
