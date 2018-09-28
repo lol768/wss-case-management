@@ -8,13 +8,12 @@ import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
-import domain.Message.Messages
 import domain._
 import domain.dao.CaseDao.{Case, _}
-import domain.dao.UploadedFileDao.{StoredUploadedFile, UploadedFiles}
+import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{CaseDao, DaoRunner, MessageDao, UploadedFileDao}
-import helpers.{JavaTime, ServiceResults}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
+import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import services.CaseService._
@@ -34,7 +33,8 @@ trait CaseService {
   def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def findFull(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]]
   def findFull(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]]
-  def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, Seq[MessageRender], Seq[CaseNote])]]]
+  def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]]
+  def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]]
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
 
@@ -75,6 +75,7 @@ trait CaseService {
   def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
   def addMessage(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(Message, Seq[UploadedFile])]]
+  def hasMessagesForClient(id: UUID, client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
   def reassign(c: Case, team: Team, caseType: Option[CaseType], note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
 
@@ -169,13 +170,26 @@ class CaseServiceImpl @Inject() (
       findFullyJoined(dao.findByKeyQuery(caseKey))
     }
 
-  override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, Seq[MessageRender], Seq[CaseNote])]]] = {
-    val clientCases = dao.findByClientQuery(universityID)
+  override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]] = {
+    withClientMessagesAndNotes(universityID, dao.findByClientQuery(universityID)).map(Right.apply)
+  }
+
+  override def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]] = {
+    auditService.audit('CaseView, id.toString, 'Case, Json.obj()) {
+      withClientMessagesAndNotes(universityID, dao.findByIDQuery(id)).map(r => Right(r.head))
+    }
+  }
+
+  private def withClientMessagesAndNotes(universityID: UniversityID, query: Query[Cases, Case, Seq])(implicit t: TimingContext):  Future[Seq[CaseRender]] = {
     daoRunner.run(for {
-      withMessages <- clientCases.withMessages.map { case (c, mf) => (c, mf.map { case (m, f) => (m.messageData, f) }) }.result
-      withNotes <- clientCases.withNotes.result
+      withMessages <- query.withMessages
+        .map { case (c, mf) => (c,
+          mf.filter { case (m, _) => m.client === universityID }.map { case (m, f) => (m.messageData, f) }
+        ) }
+        .result
+      withNotes <- query.withNotes.result
     } yield (withMessages, withNotes)).map { case (withMessages, withNotes) =>
-      Right(groupTuples(withMessages, withNotes))
+      groupTuples(withMessages, withNotes)
     }
   }
 
@@ -452,6 +466,8 @@ class CaseServiceImpl @Inject() (
     ))
   }
 
+  override def hasMessagesForClient(id: UUID, client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    withClientMessagesAndNotes(client, dao.findByIDQuery(id)).map(r => Right(r.head.messages.nonEmpty))
 
 
   private def addMessageDBIO(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], uploader: Usercode)(implicit ac: AuditLogContext): DBIO[(Message, Seq[UploadedFile])] =
@@ -501,25 +517,24 @@ class CaseServiceImpl @Inject() (
 }
 
 object CaseService {
-  def groupTuples(messagesTuples: Seq[(Case, Option[(MessageData, Option[StoredUploadedFile])])], notesTuples: Seq[(Case, Option[StoredCaseNote])]): Seq[(Case, Seq[MessageRender], Seq[CaseNote])] = {
+  def groupTuples(messagesTuples: Seq[(Case, Option[(MessageData, Option[StoredUploadedFile])])], notesTuples: Seq[(Case, Option[StoredCaseNote])]): Seq[CaseRender] = {
     val casesAndMessages =
       MessageData.groupOwnerAndMessage(messagesTuples)
     val casesAndNotes =
       OneToMany.leftJoin(notesTuples.map { case (c, n) => (c, n.map(_.asCaseNote)) })(CaseNote.dateOrdering).toMap
 
-    sortByRecent(casesAndMessages.map { case (c, m) => (c, m.distinct, casesAndNotes.getOrElse(c, Nil)) })
+    sortByRecent(casesAndMessages.map { case (c, m) => CaseRender(c, m.distinct, casesAndNotes.getOrElse(c, Nil)) })
   }
 
   /**
     * Sort by the most recently updated, either by newest message, newest case note or when the case was last
     * updated (perhaps from its state changing)
     */
-  def sortByRecent(data: Seq[(Case, Seq[MessageRender], Seq[CaseNote])]): Seq[(Case, Seq[MessageRender], Seq[CaseNote])] =
+  def sortByRecent(data: Seq[CaseRender]): Seq[CaseRender] =
     data.sortBy(lastModified)(JavaTime.dateTimeOrdering.reverse)
 
-  def lastModified(entry: (Case, Seq[MessageRender], Seq[CaseNote])): OffsetDateTime = {
+  def lastModified(entry: CaseRender): OffsetDateTime = {
     import JavaTime.dateTimeOrdering
-    val (c, messages, notes) = entry
-    (c.version #:: messages.toStream.map(_.message.created) #::: notes.toStream.map(_.created)).max
+    (entry.clientCase.version #:: entry.messages.toStream.map(_.message.created) #::: entry.notes.toStream.map(_.created)).max
   }
 }

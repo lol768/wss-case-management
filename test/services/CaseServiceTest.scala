@@ -10,6 +10,7 @@ import domain.dao.{AbstractDaoTest, CaseDao, UploadedFileDao}
 import domain._
 import helpers.DataFixture
 import domain.ExtendedPostgresProfile.api._
+import warwick.core.timing.TimingContext
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.{UniversityID, Usercode}
 
@@ -78,7 +79,7 @@ class CaseServiceTest extends AbstractDaoTest {
       fullyJoined.incomingCaseLinks.size mustBe 1
       fullyJoined.incomingCaseLinks.exists { l => l.linkType == CaseLinkType.Related && l.outgoing == c1 && l.incoming == clientCase } mustBe true
       fullyJoined.notes.size mustBe 3
-      fullyJoined.notes(0).text mustBe "I hate herons"
+      fullyJoined.notes.head.text mustBe "I hate herons"
       fullyJoined.notes(1).text mustBe "clientCase is related to c2"
       fullyJoined.notes(2).text mustBe "c1 is related to clientCase"
       fullyJoined.documents.size mustBe 1
@@ -86,12 +87,24 @@ class CaseServiceTest extends AbstractDaoTest {
     }
 
     "find by client" in withData(new CaseFixture()) { _ =>
-      val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty).serviceValue
-      val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness)).serviceValue
+      val definedAuditLogContext: AuditLogContext = AuditLogContext(Some(Usercode("cusfal")), timingData = TimingContext.none.timingData)
 
-      service.findForClient(UniversityID("0672089")).serviceValue.map { case (c, _, _) => c } mustBe Seq(created2, created)
-      service.findForClient(UniversityID("0672088")).serviceValue.map { case (c, _, _) => c } mustBe Seq(created2)
+      val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty)(definedAuditLogContext).serviceValue
+      val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness))(definedAuditLogContext).serviceValue
+
+      service.findForClient(UniversityID("0672089")).serviceValue.map(_.clientCase) mustBe Seq(created2, created)
+      service.findForClient(UniversityID("0672088")).serviceValue.map(_.clientCase) mustBe Seq(created2)
       service.findForClient(UniversityID("1234567")).serviceValue mustBe 'empty
+
+      // Only return messages for specified client (but still return the case)
+      service.addMessage(created2, UniversityID("0672088"), MessageSave("text", MessageSender.Team, Some(Usercode("cusfal"))), Seq())(definedAuditLogContext)
+      val resultFor0672088 = service.findForClient(UniversityID("0672088")).serviceValue
+      resultFor0672088.size mustBe 1
+      resultFor0672088.head.clientCase mustBe created2
+      resultFor0672088.head.messages.size mustBe 1
+      val resultFor0672089 = service.findForClient(UniversityID("0672089")).serviceValue
+      resultFor0672089.size mustBe 2
+      resultFor0672089.find(_.clientCase == created2).get.messages.size mustBe 0
     }
 
     "get and set tags" in withData(new CaseFixture()) { c =>

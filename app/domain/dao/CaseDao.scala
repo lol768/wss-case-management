@@ -13,7 +13,7 @@ import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import services.AuditLogContext
+import services.{AuditLogContext, CaseService}
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
@@ -262,7 +262,7 @@ object CaseDao {
     originalEnquiry: Option[UUID],
     caseType: Option[CaseType],
     cause: CaseCause
-  ) extends Versioned[Case] {
+  ) extends Versioned[Case] with Issue {
     override def atVersion(at: OffsetDateTime): Case = copy(version = at)
     override def storedVersion[B <: StoredVersion[Case]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       CaseVersion(
@@ -285,6 +285,18 @@ object CaseDao {
         timestamp,
         ac.usercode
       ).asInstanceOf[B]
+  }
+
+  case class CaseRender(
+    clientCase: Case,
+    messages: Seq[MessageRender],
+    notes: Seq[CaseNote]
+  ) {
+    def toIssue = IssueRender(
+      clientCase,
+      messages,
+      CaseService.lastModified(this)
+    )
   }
 
   object Case {

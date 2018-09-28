@@ -32,6 +32,7 @@ trait PermissionService {
   def canViewCase(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canAddTeamMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def canClientViewCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canAddClientMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
   def canViewAppointment(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
@@ -142,8 +143,18 @@ class PermissionServiceImpl @Inject() (
   override def canAddTeamMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     canEditCase(user.usercode, id)
 
+  override def canClientViewCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    Future.sequence(Seq(
+      isCaseClient(user, id),
+      caseHasMessages(user, id)
+    )).map(results => ServiceResults.sequence(results).map(_.forall(is => is)))
+
+
   override def canAddClientMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    isCaseClient(user, id)
+    Future.sequence(Seq(
+      isCaseClient(user, id),
+      caseHasMessages(user, id)
+    )).map(results => ServiceResults.sequence(results).map(_.forall(is => is)))
 
   private def isCaseTeam(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     caseService.find(id).map(_.flatMap(c => inTeam(user, c.team)))
@@ -158,11 +169,19 @@ class PermissionServiceImpl @Inject() (
       }
     )
 
-  def isCaseClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+  private def isCaseClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     user.universityId.map { uniId =>
       caseService.getClients(id).map {
         _.map(_.contains(uniId))
       }
+    }.getOrElse {
+      // No Uni ID; client of nothing
+      Future.successful(Right(false))
+    }
+
+  private def caseHasMessages(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    user.universityId.map { uniId =>
+      caseService.hasMessagesForClient(id, uniId)
     }.getOrElse {
       // No Uni ID; client of nothing
       Future.successful(Right(false))

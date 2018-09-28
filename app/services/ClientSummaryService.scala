@@ -116,8 +116,8 @@ class ClientSummaryServiceImpl @Inject()(
                   AtRiskClient(
                     summary,
                     profileMap.get(summary.universityID),
-                    cases.map { case (c, messages, notes) => CaseService.lastModified((c, messages, notes)) }.sorted(JavaTime.dateTimeOrdering).lastOption,
-                    enquiries.flatMap(_.messages.lastOption.map(_.message.created)).lastOption
+                    cases.map(CaseService.lastModified).sorted(JavaTime.dateTimeOrdering).lastOption,
+                    enquiries.map(EnquiryService.lastModified).sorted(JavaTime.dateTimeOrdering).lastOption
                   )
                 case _ =>
                   // Never actually used but good for typing

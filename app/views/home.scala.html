@@ -7,13 +7,16 @@
 @import play.api.data.Forms._
 @import warwick.sso.{User, Usercode}
 
+@import domain.IssueRender
+@import domain.dao.CaseDao.Case
+@import domain.Enquiry
 @(
   clientInformation: ClientInformation,
   teamMemberInformation: Option[TeamMemberInformation],
   supportedMimeTypes: Seq[MediaType],
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
-@renderClientMessages(enquiries: Seq[EnquiryRender], registration: Option[Registration]) = {
+@renderClientMessages(issues: Seq[IssueRender], registration: Option[Registration]) = {
   <div class="pull-right">
     <a href="@controllers.registration.routes.RegisterController.form()" class="btn btn-default">
       @if(registration.isDefined) {
@@ -26,47 +29,56 @@
 
   <p>If you have a question or would like to arrange to speak to somebody about an issue:</p>
   <a class="btn btn-primary" href="@controllers.enquiries.routes.EnquiryController.form()">
-    @if(enquiries.isEmpty) {
+    @if(issues.isEmpty) {
       Make an enquiry
     } else {
       Make another enquiry
     }
   </a>
 
-  @if(enquiries.nonEmpty) {
+  @if(issues.nonEmpty) {
     <h2>Your messages</h2>
 
     <div class="panel-group enquiries" id="enquiries-accordion" role="tablist" aria-multiselectable="true">
-      @enquiries.map { e =>
-        <div class="panel panel-default thread thread--client state-@e.enquiry.state.entryName">
+      @issues.map { issueRender =>
+        <div class="panel panel-default thread thread--client state-@issueRender.issue.state.entryName">
 
-          <div class="panel-heading" role="tab" id="heading-@e.enquiry.key.get.string">
+          <div class="panel-heading" role="tab" id="heading-@issueRender.issue.id.get.toString">
             <h4 class="panel-title">
-                <a class="@if(enquiries.head.enquiry != e.enquiry){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@e.enquiry.key.get.string" aria-expanded="true" aria-controls="collapse-@e.enquiry.key.get.string">
+                <a class="@if(issues.head.issue != issueRender.issue){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@issueRender.issue.id.get.toString" aria-expanded="true" aria-controls="collapse-@issueRender.issue.id.get.toString">
                 <div class="pull-right">
-                  @if(e.enquiry.version.isAfter(e.messages.last.message.created)) {
-                    @JavaTime.Relative(e.enquiry.version)
-                  } else {
-                    @JavaTime.Relative(e.messages.last.message.created)
-                  }
+                  @JavaTime.Relative(issueRender.lastUpdatedDate)
                   <i class="fas fa-fw fa-angle-down"></i>
                   <i class="fas fa-fw fa-angle-up"></i>
                 </div>
-                @tags.icons.enquiryState(e.enquiry.state)
-                @e.enquiry.subject
+                @tags.icons.enquiryState(issueRender.issue.state)
+                @issueRender.issue match {
+                  case e: Enquiry => {
+                    @e.subject
+                  }
+                  case c: Case => {
+                    Enquiry
+                  }
+                  case _ => {}
+                }
               </a>
             </h4>
           </div>
 
-          <div id="collapse-@e.enquiry.key.get.string" class="panel-collapse collapse @if(enquiries.head.enquiry == e.enquiry){in}" role="tabpanel" aria-labelledby="heading-@e.enquiry.key.get.string" data-ping="@controllers.enquiries.routes.EnquiryMessagesController.auditView(e.enquiry.key.get)">
+          <div id="collapse-@issueRender.issue.id.get.toString" class="panel-collapse collapse @if(issues.head.issue == issueRender.issue){in}" role="tabpanel" aria-labelledby="heading-@issueRender.issue.id.get.toString" data-ping="@controllers.routes.ClientMessagesController.auditView(issueRender.issue.id.get)">
             <div class="panel-body">
-              @e.messages.map { render =>
-                @views.html.tags.messages.message(render.message, render.files, clientName = "You", s"${render.message.team.getOrElse(e.enquiry.team).name} team", f => controllers.enquiries.routes.EnquiryMessagesController.download(e.enquiry.key.get, f.id))
+              @issueRender.messages.map { render =>
+                @views.html.tags.messages.message(
+                  message = render.message,
+                  files = render.files,
+                  clientName = "You",
+                  teamName = s"${render.message.team.getOrElse(issueRender.issue.team).name} team",
+                  attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id.get, f.id))
               }
             </div>
               <div class="panel-footer">
                 @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
-                  @tags.messages.messageForm(controllers.enquiries.routes.EnquiryMessagesController.addMessage(e.enquiry.key.get), form, supportedMimeTypes, rows = 1)
+                  @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), form, supportedMimeTypes, rows = 1)
                 }
               </div>
           </div>
@@ -173,7 +185,7 @@
 
     <div class="tab-content">
       <div role="tabpanel" class="tab-pane active" id="mymessages">
-        @renderClientMessages(clientInformation.enquiries, clientInformation.registration)
+        @renderClientMessages(clientInformation.issues, clientInformation.registration)
       </div>
       <div role="tabpanel" class="tab-pane" id="myappointments">
         @renderClientAppointments(clientInformation.appointments, clientInformation.userLookup)
@@ -220,7 +232,7 @@
           @views.html.admin.appointmentsTab()
         </div>
         <div role="tabpanel" class="tab-pane" id="mymessages">
-          @renderClientMessages(clientInformation.enquiries, clientInformation.registration)
+          @renderClientMessages(clientInformation.issues, clientInformation.registration)
         </div>
         <div role="tabpanel" class="tab-pane" id="myappointments">
           @renderClientAppointments(clientInformation.appointments, clientInformation.userLookup)

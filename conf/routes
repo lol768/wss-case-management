@@ -35,15 +35,15 @@ GET         /at-risk-clients                        @controllers.IndexController
 GET         /register                               @controllers.registration.RegisterController.form
 POST        /register                               @controllers.registration.RegisterController.submit
 
+GET         /messages/:id                           @controllers.ClientMessagesController.messages(id: java.util.UUID)
+POST        /messages/:id                           @controllers.ClientMessagesController.addMessage(id: java.util.UUID)
+POST        /messages/:id/view                      @controllers.ClientMessagesController.auditView(id: java.util.UUID)
+GET         /messages/:id/:fileId                   @controllers.ClientMessagesController.download(id: java.util.UUID, fileId: java.util.UUID)
+
 ## Enquiries ##
 
 GET         /enquiry                                @controllers.enquiries.EnquiryController.form()
 POST        /enquiry                                @controllers.enquiries.EnquiryController.submit()
-
-GET         /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.messages(enquiryKey: domain.IssueKey)
-POST        /enquiry/:enquiryKey                    @controllers.enquiries.EnquiryMessagesController.addMessage(enquiryKey: domain.IssueKey)
-POST        /enquiry/:enquiryKey/view               @controllers.enquiries.EnquiryMessagesController.auditView(enquiryKey: domain.IssueKey)
-GET         /enquiry/:enquiryKey/:fileId            @controllers.enquiries.EnquiryMessagesController.download(enquiryKey: domain.IssueKey, fileId: java.util.UUID)
 
 ## Appointments ##
 

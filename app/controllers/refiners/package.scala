@@ -1,5 +1,7 @@
 package controllers
 
+import java.util.UUID
+
 import domain.{IssueKey, Teams}
 import helpers.ServiceResults.ServiceResult
 import play.api.mvc._
@@ -40,6 +42,27 @@ package object refiners {
             Right(new CaseSpecificRequest[A](c, request))
           case _ =>
             Left(Results.NotFound(views.html.errors.notFound()))
+        }
+      }
+
+      override protected def executionContext: ExecutionContext = ec
+    }
+
+  def WithIssue(id: UUID)(implicit enquiryService: EnquiryService, caseService: CaseService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, IssueSpecificRequest] =
+    new ActionRefiner[AuthenticatedRequest, IssueSpecificRequest] {
+      override protected def refine[A](request: AuthenticatedRequest[A]): Future[Either[Result, IssueSpecificRequest[A]]] = {
+        implicit val requestContext: RequestContext = requestContextBuilder(request)
+
+        enquiryService.get(id).flatMap {
+          case Right(enquiry) =>
+            Future.successful(Right(new IssueSpecificRequest[A](enquiry, request)))
+          case _ =>
+            caseService.find(id).map {
+              case Right(clientCase) =>
+                Right(new IssueSpecificRequest[A](clientCase, request))
+              case _ =>
+                Left(Results.NotFound(views.html.errors.notFound()))
+            }
         }
       }
 

@@ -7,7 +7,7 @@ import controllers.IndexController.{ClientInformation, TeamMemberInformation}
 import controllers.refiners.AnyTeamActionRefiner
 import domain._
 import domain.dao.CaseDao.Case
-import helpers.ServiceResults
+import helpers.{JavaTime, ServiceResults}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
@@ -20,7 +20,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object IndexController {
   case class ClientInformation(
-    enquiries: Seq[EnquiryRender],
+    issues: Seq[IssueRender],
     registration: Option[Registration],
     appointments: Seq[AppointmentRender],
     userLookup: Map[Usercode, User]
@@ -60,20 +60,25 @@ class IndexController @Inject()(
 
     ServiceResults.zip(
       enquiries.findEnquiriesForClient(client),
+      cases.findForClient(client).map(_.map(_.filter(_.messages.nonEmpty))),
       registrations.get(client),
       appointments.findForClient(client)
     ).flatMap(_.fold(
       errors => Future.successful(Left(errors)),
-      { case (e, registration, a) =>
+      { case (clientEnquiries, clientCases, registration, a) =>
+        val issues = (clientEnquiries.map(_.toIssue) ++ clientCases.map(_.toIssue)).sortBy(_.lastUpdatedDate)(JavaTime.dateTimeOrdering).reverse
+
         val usercodes = a.map(_.appointment.teamMember).toSet
         val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
 
-        val result = Future.successful(Right(ClientInformation(e, registration, a, userLookup)))
+        val result = Future.successful(Right(ClientInformation(issues, registration, a, userLookup)))
 
-        // Record an EnquiryView event for the first enquiry as that's open by default in the accordion
-        e.headOption.map { e =>
-          audit.audit('EnquiryView, e.enquiry.id.get.toString, 'Enquiry, Json.obj())(result)
-        }.getOrElse(result)
+        // Record an EnquiryView or CaseView event for the first issue as that's open by default in the accordion
+        issues.headOption.map(issue => issue.issue match {
+          case e: Enquiry => audit.audit('EnquiryView, e.id.get.toString, 'Enquiry, Json.obj())(result)
+          case c: Case => audit.audit('CaseView, c.id.get.toString, 'Case, Json.obj())(result)
+          case _ => result
+        }).getOrElse(result)
       }
     ))
   }
