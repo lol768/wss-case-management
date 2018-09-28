@@ -337,6 +337,67 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
   }
 }
 
+.case-details {
+
+  details {
+    i.closed { display: inline-block; }
+    i.open { display: none; }
+
+    &[open] {
+      i.closed { display: none; }
+      i.open { display: inline-block; }
+    }
+
+    summary {
+      &:first-of-type {
+        list-style-type: none;
+      }
+
+      &::-webkit-details-marker {
+        display:none;
+      }
+    }
+  }
+
+  .case-details--section {
+    .control-label, .content {
+      position: relative;
+      min-height: 1px;
+      padding-right: @grid-gutter-width / 2;
+      float: left;
+
+      &.control-label {
+
+        i {
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        @media (min-width: @screen-sm-min) {
+          width: percentage(2/12);
+        }
+        @media (min-width: @screen-md-min) {
+          // need to keep the labels in line with the labels in the left column of .case-details--actions
+          // the left column is col-5 with a nested row containing col-5 for the label
+          // this means the label is 5/12 * 5/12 of a page wide = 25/144
+          width: percentage(25/144);
+        }
+        padding-left: @grid-gutter-width;
+      }
+
+      &.content {
+        @media (min-width: @screen-sm) {
+          width: percentage(10/12);
+        }
+        @media (min-width: @screen-md) {
+          width: percentage(119/144);
+        }
+        padding-left: @grid-gutter-width / 2;
+      }
+    }
+  }
+}
+
 .form-wellbeing {
   margin: 0 @grid-gutter-width;
 

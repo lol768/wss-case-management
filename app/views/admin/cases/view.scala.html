@@ -1,7 +1,9 @@
 @import controllers.admin.CaseController.CaseNoteFormData
 @import controllers.admin.{CaseController, CaseDocumentController}
 @import domain._
+@import domain.CaseNoteType._
 @import domain.dao.CaseDao.Case
+@import domain.UserType.Student
 @import helpers.JavaTime
 @import org.apache.tika.mime.MediaType
 @import play.api.libs.json.Json
@@ -11,6 +13,7 @@
   clients: Seq[Either[UniversityID, SitsProfile]],
   owners: Seq[User],
   caseNotes: Seq[(CaseNote, Option[User])],
+  sectionNotes: Map[CaseNoteType, Seq[(CaseNote, Option[User])]],
   originalEnquiry: Option[Enquiry],
   userLookup: Map[Usercode, User],
   noteForm: Form[CaseNoteFormData],
@@ -21,76 +24,142 @@
 
 @caseLinks(links: Seq[CaseLink], description: CaseLinkType => String, target: CaseLink => Case) = {
   @if(links.nonEmpty) {
-    <ul>
-      @links.groupBy(_.linkType).map { case (linkType, l) =>
+    <ul class="list-unstyled">
+      @links.groupBy(_.linkType).map { case (linkType, l) => @l.map { link =>
         <li>
-          @description(linkType)
-          <ul>
-            @l.map { link =>
-              <li><a href="@controllers.admin.routes.CaseController.view(target(link).key.get)">@target(link).key.get.string</a> @target(link).subject</li>
+          This case @description(linkType) <a href="@controllers.admin.routes.CaseController.view(target(link).key.get)">@target(link).key.get.string</a> @target(link).subject<br />
+          Link added @helpers.JavaTime.Relative(link.updatedDate) @*TODO - once CASE-195 is done add "by X in team Y"*@
+          @defining(CaseController.deleteForm(link.updatedDate).fill(link.updatedDate)) { form =>
+            @b3.inline.formCSRF(controllers.admin.routes.CaseController.deleteLink(c.clientCase.key.get, link.id), 'class -> "inline-form") { implicit ifc =>
+              @b3.validatedHidden(form, "version")
+              <button type="submit" class="btn btn-sm btn-link"><i class="fas fa-times-circle"></i></button>
             }
-          </ul>
+          }
         </li>
-      }
+      }}
     </ul>
   }
 }
 
-@main(s"${c.clientCase.key.get.string} ${c.clientCase.subject}") {
-  <div class="row field-history" data-field-history="@Json.stringify(Json.toJson(history)(CaseHistory.writer))">
-    <div class="col-md-4 col-md-push-8">
-      @clients.map {
-        case Left(universityID) => {
-          <div>
-            <p>
-              <strong>University ID: </strong> <a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a>
-            </p>
-          </div>
+@caseDetail(label: String)(content: Html) = {
+  <div class="row form-horizontal">
+    <div class="col-sm-5 control-label">
+      @label
+    </div>
+    <div class="col-sm-7">
+      <div class="form-control-static">
+        @content
+      </div>
+    </div>
+  </div>
+}
+
+@collapsibleSection(label: String)(content: Html) = {
+  <details class="case-details--section row form-horizontal">
+    <summary class="control-label">@label <i class="closed fas fa-plus-circle"></i> <i class="open fas fa-minus-circle"></i></summary>
+    <div class="content form-control-static">
+      @content
+    </div>
+  </details>
+}
+
+@section(label: String)(content: Html) = {
+  <div class="case-details--section row form-horizontal">
+    <div class="control-label">@label</div>
+    <div class="content form-control-static">
+      @content
+    </div>
+  </div>
+}
+
+@caseNote(note: CaseNote, user: Option[User]) = {
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title">
+        <span class="date pull-right">
+          @helpers.JavaTime.Relative(note.created)
+          @if(note.lastUpdated != note.created) {
+            (last updated @helpers.JavaTime.Relative(note.lastUpdated))
+          }
+        </span>
+        @{note.noteType.description}
+      </h3>
+    </div>
+    <div class="panel-body">
+    @views.utils.nl2br(note.text)
+    </div>
+    <div class="panel-footer">
+      <div class="pull-right">
+        <a class="btn btn-default btn-xs" href="@controllers.admin.routes.CaseController.editNoteForm(c.clientCase.key.get, note.id)">Edit</a>
+        @defining(CaseController.deleteForm(note.lastUpdated).fill(note.lastUpdated)) { form =>
+          @b3.inline.formCSRF(controllers.admin.routes.CaseController.deleteNote(c.clientCase.key.get, note.id), 'class -> "inline-form") { implicit ifc =>
+            @b3.validatedHidden(form, "version")
+            <button type="submit" class="btn btn-default btn-xs">Delete</button>
+          }
         }
-        case Right(profile) => {
-          <div class="row">
-            @profile.photo.map { photo =>
-              <div class="col-xs-4 col-sm-2 col-md-4">
-                <p class="photo">
-                  <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">
-                    <img src="@photo" class="img-thumbnail img-circle">
-                  </a>
-                </p>
-              </div>
-            }
-            <div class="col-xs-8 col-sm-10 col-md-8">
-              <p>
-                <strong>University ID: </strong> <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.universityID.string</a><br />
-                <strong>Full name: </strong> @profile.fullName<br />
-                <strong>Department: </strong> @profile.department.name<br />
-                <strong>Warwick email address: </strong> @profile.warwickEmail
-              </p>
+      </div>
+      <div class="author">@user.flatMap(_.name.full).getOrElse(s"[unknown user ${note.teamMember.string}]")</div>
+    </div>
+  </div>
+}
+
+@viewSectionNotes(noteType: CaseNoteType, link: String) = {
+  @defining(sectionNotes.getOrElse(noteType, Nil)) { notes: Seq[(CaseNote, Option[User])] =>
+    @if(notes.nonEmpty) {
+      <a role="button" href="#@noteType.entryName-notes-modal" data-toggle="modal" data-target="#@noteType.entryName-notes-modal">
+        View @tags.p(notes.size, link)()
+      </a>
+
+      <div class="modal fade" id="@noteType.entryName-notes-modal" tabindex="-1" role="dialog" aria-labelledby="@noteType.entryName-notes-modal-label">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+              <h4 class="modal-title" id="@noteType.entryName-notes-modal-label">@{link.capitalize}s</h4>
+            </div>
+            <div class="modal-body">
+              @notes.map { case (note, user) => @caseNote(note, user) }
             </div>
           </div>
+        </div>
+      </div>
+    }
+  }
+}
+
+@main(s"${c.clientCase.key.get.string} ${c.clientCase.subject}") {
+  <div class="case-details">
+    <div class="case-details--header">
+      @clients.map {
+        case Left(universityID) => {
+          <h5><a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a></h5>
+        }
+        case Right(profile) => {
+          <h5>
+            <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.fullName</a>,
+            @profile.universityID.string,
+            @views.tags.profiles.typeAndDepartment(profile)
+          </h5>
         }
       }
-      <div class="pull-right" data-field-history-field="clients"></div>
     </div>
-    <div class="col-md-8 col-md-pull-4">
-      <div class="hidden" data-field-history-field="subject" data-field-history-target=".id7-page-title h1"></div>
-      <dl class="dl-horizontal">
-        <dt>Team</dt>
-        <dd data-field-history-field="team">@c.clientCase.team.name @* TODO CASE-80 Reassign button *@</dd>
+    <div class="case-details--actions row">
+      <div class="col-sm-6 col-md-5 field-history" data-field-history="@Json.stringify(Json.toJson(history)(CaseHistory.writer))">
 
-        <dt>Date raised</dt>
-        <dd>@helpers.JavaTime.Relative(c.clientCase.created)</dd>
+        @caseDetail("Date raised"){ <div>@helpers.JavaTime.Relative(c.clientCase.created)</div> }
 
-        <dt>State</dt>
-        <dd data-field-history-field="state">@c.clientCase.state @* TODO Transition buttons *@</dd>
+        @caseDetail("Team"){
+          <div data-field-history-field="team">@c.clientCase.team.name</div>
+          @viewSectionNotes(Referral, "team assignment note")
+        }
+
+        @caseDetail("State"){ <div data-field-history-field="state">@c.clientCase.state</div> }
 
         @if(c.clientCase.incidentDate.nonEmpty) {
           @* If currently related to an incident... *@
-          <dt>Incident</dt>
-          <dd>
+          @caseDetail("Incident"){
             <span data-field-history-field="incidentDate">@helpers.JavaTime.Relative(c.clientCase.incidentDate.get)</span>
-
             <span data-field-history-field="onCampus">@if(c.clientCase.onCampus.contains(true)) { On-campus } else { Off-campus }</span>
-
             @if(c.clientCase.notifiedPolice.contains(true)) {
               <span data-field-history-field="notifiedPolice">
                 <span class="label label-info">Police notified</span>
@@ -106,9 +175,9 @@
                 <span class="label label-info">Ambulance called</span>
               </span>
             } else if (history.notifiedAmbulance.exists(_._1.contains(true))) {
-              <span data-field-history-field="notifiedAmbulance">
-                <span class="label label-info"><s>Ambulance called</s></span>
-              </span>
+            <span data-field-history-field="notifiedAmbulance">
+              <span class="label label-info"><s>Ambulance called</s></span>
+            </span>
             }
 
             @if(c.clientCase.notifiedFire.contains(true)) {
@@ -116,214 +185,191 @@
                 <span class="label label-info">Fire service called</span>
               </span>
             } else if (history.notifiedFire.exists(_._1.contains(true))) {
-              <span data-field-history-field="notifiedFire">
-                <span class="label label-info"><s>Fire service called</s></span>
-              </span>
+            <span data-field-history-field="notifiedFire">
+              <span class="label label-info"><s>Fire service called</s></span>
+            </span>
             }
-
-          </dd>
+          }
         } else if(history.incidentDate.exists(_._1.nonEmpty)) {
           @* If not currently related to an incident but was previously... *@
-          <span data-field-history-field="incidentDate">Not currently related to an incident</span>
+          @caseDetail("Incident"){
+            <span data-field-history-field="incidentDate">Not currently related to an incident</span>
+          }
         }
 
-        @originalEnquiry.map { enquiry =>
-          <dt>Original enquiry</dt>
-          <dd>
+        @originalEnquiry.map { enquiry => @caseDetail("Original enquiry"){
             <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)">@enquiry.key.get.string @enquiry.subject</a>
             -
             @helpers.JavaTime.Relative(enquiry.created)
-          </dd>
-        }
+        }}
 
-        <dt>Cause</dt>
-        <dd data-field-history-field="cause">@c.clientCase.cause.description</dd>
+        @caseDetail("Cause"){ <div data-field-history-field="cause">@c.clientCase.cause.description</div> }
 
-        @c.clientCase.caseType.map { caseType =>
-          <dt>Case type</dt>
-          <dd data-field-history-field="caseType">@caseType.description</dd>
-        }
+        @c.clientCase.caseType.map { caseType => @caseDetail("Case type"){
+            <div data-field-history-field="caseType">@caseType.description</div>
+        }}
 
         @if(c.tags.nonEmpty || history.tags.size > 1) {
-          <dt>Tags</dt>
-          <dd data-field-history-field="tags">
-            @if(c.tags.nonEmpty) {
-              @c.tags.toSeq.map(_.description).sorted.mkString(", ")
-            } else {
-              None
-            }
-          </dd>
+          @caseDetail("Tags"){
+            <div data-field-history-field="tags">
+              @if(c.tags.nonEmpty) {
+                @c.tags.toSeq.map(_.description).sorted.mkString(", ")
+              } else {
+                None
+              }
+            </div>
+          }
         }
 
-        <dt>Owners</dt>
-        <dd>
-          @if(owners.nonEmpty) {
-            <ul class="list-unstyled">
-              @owners.map { owner =>
-                @if(owners.last == owner) {
-                  <li data-field-history-field="owners">@owner.name.full.getOrElse(owner.usercode.string)</li>
-                } else {
-                  <li>@owner.name.full.getOrElse(owner.usercode.string)</li>
-                }
+        @tags.manageOwners(
+          owners,
+          controllers.admin.routes.OwnersController.caseSubmit(c.clientCase.key.get),
+          controllers.admin.routes.OwnersController.caseSubmitSelf(c.clientCase.key.get),
+          labelCols = 5,
+          containerCols = 7
+        )
+
+      </div>
+      <div class="col-sm-6 col-md-4 col-md-offset-2">
+        <div class="row form-horizontal">
+          <div class="col-sm-4 control-label">
+            Actions
+          </div>
+          <div class="col-sm-8">
+            <p>
+              @if(c.clientCase.state != IssueState.Closed) {
+                <a href="@controllers.admin.routes.CaseController.closeForm(c.clientCase.key.get)" class="btn btn-primary btn-block">Close case</a>
+              } else {
+                <a href="@controllers.admin.routes.CaseController.closeForm(c.clientCase.key.get)" class="btn btn-primary btn-block">Reopen case</a>
               }
-            </ul>
-          } else {
-            None
-          }
-          <a href="@controllers.admin.routes.OwnersController.caseForm(c.clientCase.key.get)" class="btn btn-default">Edit owners</a>
-        </dd>
-      </dl>
-
-      <p>
-        <a class="btn btn-default" href="@controllers.admin.routes.CaseController.editForm(c.clientCase.key.get)">Edit case</a>
-      </p>
+            </p>
+            <p>
+              <a href="@controllers.admin.routes.CaseController.editForm(c.clientCase.key.get)" class="btn btn-default btn-block">Edit case</a>
+            </p>
+            <p>
+              <a href="@controllers.admin.routes.CaseDocumentController.addDocumentForm(c.clientCase.key.get)" class="btn btn-default btn-block">Add a document</a>
+            </p>
+            <p>
+              <a href="@controllers.admin.routes.CaseController.linkForm(c.clientCase.key.get)" class="btn btn-default btn-block">Link to another case</a>
+            </p>
+            <p>
+              <a href="@controllers.admin.routes.CaseController.reassign(c.clientCase.key.get)" class="btn btn-default btn-block">Assign to a different team</a>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <h2>Case links</h2>
+    @if(c.outgoingCaseLinks.nonEmpty ||  c.incomingCaseLinks.nonEmpty){
+      @collapsibleSection("Case links") {
+        @caseLinks(c.outgoingCaseLinks, _.outwardDescription, _.incoming)
+        @caseLinks(c.incomingCaseLinks, _.inwardDescription, _.outgoing)
+        @viewSectionNotes(AssociatedCase, "case links note")
+      }
+    }
 
-  @caseLinks(c.outgoingCaseLinks, _.outwardDescription, _.incoming)
-  @caseLinks(c.incomingCaseLinks, _.inwardDescription, _.outgoing)
-
-  <p><a href="@controllers.admin.routes.CaseController.linkForm(c.clientCase.key.get)" class="btn btn-default">Create link</a></p>
-
-  <h2>Case documents</h2>
-
-  @if(c.documents.nonEmpty) {
-    <table class="table table-default">
-      <thead>
-        <tr>
-          <th class="col-sm-4">Document type</th>
-          <th class="col-sm-4">File</th>
-          <th class="col-sm-3">Created</th>
-          <th class="col-sm-1"></th>
-        </tr>
-      </thead>
-      <tbody>
-        @c.documents.map { doc =>
-          <tr>
-            <td>@doc.documentType.description</td>
-            <td>
-              <a href="@controllers.admin.routes.CaseDocumentController.download(c.clientCase.key.get, doc.id)">@doc.file.fileName</a>
-            </td>
-            <td>@helpers.JavaTime.Relative(doc.created)</td>
-            <td>
+    @if(c.documents.nonEmpty) {
+      @collapsibleSection("Documents") {
+        <table class="table table-default">
+          <thead>
+            <tr>
+              <th class="col-sm-4">Document type</th>
+              <th class="col-sm-4">File</th>
+              <th class="col-sm-3">Created</th>
+              <th class="col-sm-1"></th>
+            </tr>
+          </thead>
+          <tbody>
+          @c.documents.map { doc =>
+            <tr>
+              <td>@doc.documentType.description</td>
+              <td>
+                <a href="@controllers.admin.routes.CaseDocumentController.download(c.clientCase.key.get, doc.id)">@doc.file.fileName</a>
+              </td>
+              <td>@helpers.JavaTime.Relative(doc.created)</td>
+              <td>
               @defining(CaseDocumentController.deleteForm(doc.lastUpdated).fill(doc.lastUpdated)) { form =>
                 @b3.inline.formCSRF(controllers.admin.routes.CaseDocumentController.delete(c.clientCase.key.get, doc.id), 'class -> "inline-form") { implicit ifc =>
                   @b3.validatedHidden(form, "version")
                   <button type="submit" class="btn btn-default btn-xs">Delete</button>
                 }
               }
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  }
-
-  <p><a href="@controllers.admin.routes.CaseDocumentController.addDocumentForm(c.clientCase.key.get)" class="btn btn-default">Add document</a></p>
-
-  <h2>Case notes</h2>
-
-  @caseNotes.map { case (note, user) =>
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        <h3 class="panel-title">
-          <span class="date pull-right">
-            @helpers.JavaTime.Relative(note.created)
-            @if(note.lastUpdated != note.created) {
-              (last updated @helpers.JavaTime.Relative(note.lastUpdated))
-            }
-          </span>
-          @{note.noteType.description}
-        </h3>
-      </div>
-      <div class="panel-body">
-        @views.utils.nl2br(note.text)
-      </div>
-      <div class="panel-footer">
-        <div class="pull-right">
-          <a class="btn btn-default btn-xs" href="@controllers.admin.routes.CaseController.editNoteForm(c.clientCase.key.get, note.id)">Edit</a>
-          @defining(CaseController.deleteNoteForm(note.lastUpdated).fill(note.lastUpdated)) { form =>
-            @b3.inline.formCSRF(controllers.admin.routes.CaseController.deleteNote(c.clientCase.key.get, note.id), 'class -> "inline-form") { implicit ifc =>
-              @b3.validatedHidden(form, "version")
-              <button type="submit" class="btn btn-default btn-xs">Delete</button>
-            }
+              </td>
+            </tr>
           }
-        </div>
-        <div class="author">@user.flatMap(_.name.full).getOrElse(s"[unknown user ${note.teamMember.string}]")</div>
-      </div>
-    </div>
-  }
+          </tbody>
+        </table>
+        @viewSectionNotes(DocumentNote, "document note")
+      }
+    }
 
-  @b3.vertical.formCSRF(controllers.admin.routes.CaseController.addNote(c.clientCase.key.get)) { implicit ifc =>
-    <div class="panel panel-default panel-form">
-      <div class="panel-heading">
-        <h3 class="panel-title">Add a case note</h3>
-      </div>
-      <div class="panel-body">
-        @b3.validatedHidden(noteForm, "version")
-        @b3.textarea(noteForm("text"), 'rows -> 5)
-      </div>
-      <div class="panel-footer spaced-buttons">
-        @if(c.clientCase.state != IssueState.Closed) {
-          <button type="submit" class="btn btn-primary">Save</button>
-          <button type="submit" formaction="@controllers.admin.routes.CaseController.close(c.clientCase.key.get)" class="btn btn-primary"> Close case</button>
-        } else {
-          <button type="submit" formaction="@controllers.admin.routes.CaseController.reopen(c.clientCase.key.get)" class="btn btn-primary"> Reopen case</button>
+    @collapsibleSection("Case notes") {
+
+      @if(c.clientCase.state != IssueState.Closed) {
+        @b3.vertical.formCSRF(controllers.admin.routes.CaseController.addNote(c.clientCase.key.get)) { implicit ifc =>
+          <div class="panel panel-default panel-form">
+            <div class="panel-heading">
+              <h3 class="panel-title">Add a case note</h3>
+            </div>
+            <div class="panel-body">
+              @b3.validatedHidden(noteForm, "version")
+              @b3.textarea(noteForm("text"), 'rows -> 5)
+            </div>
+            <div class="panel-footer">
+              <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+          </div>
         }
-      </div>
-    </div>
-  }
+      }
 
-  <h2>Appointments</h2>
+      @caseNotes.map { case (note, user) => @caseNote(note, user)}
+    }
 
-  @* TODO *@
+    @collapsibleSection("Appointments") {
+      <p><a href="@controllers.admin.routes.AppointmentController.createForm(c.clientCase.team.id, forCase = Some(c.clientCase.key.get))" class="btn btn-default">Create an appointment</a></p
+    }
 
-  <p><a href="@controllers.admin.routes.AppointmentController.createForm(c.clientCase.team.id, forCase = Some(c.clientCase.key.get))" class="btn btn-default">Create an appointment</a></p>
-
-  <h2>Messages</h2>
-
-  <div class="panel-group" id="messages-accordion" role="tablist" aria-multiselectable="true">
-    @clients.map { maybeClient =>
+    @section("Messages") {
+      <div class="panel-group" id="messages-accordion" role="tablist" aria-multiselectable="true">
+      @clients.map { maybeClient =>
         @defining(SitsProfile.universityId(maybeClient)) { universityId: UniversityID =>
-            @defining(c.messages.byClient.getOrElse(universityId, Nil)) { messages: Seq[MessageRender] =>
-              <div class="thread panel panel-default">
-                <div class="panel-heading" role="tab" id="thread-heading-@universityId.string">
-                  <h4 class="panel-title">
-                    @if(clients.size > 1){
-                      <a class="collapsed" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-thread-@universityId.string" aria-expanded="true" aria-controls="collapse-thread-@universityId">
-                        <div class="pull-right">
-                          @messages.lastOption.map { m =>
-                            @JavaTime.Relative(m.message.created)
-                          }
-                          <i class="fas fa-fw fa-angle-down"></i>
-                          <i class="fas fa-fw fa-angle-up"></i>
-                        </div>
-                        @tags.clientFullName(maybeClient)
-                        @if(messages.isEmpty) {
-                          (No messages)
-                        } else {
-                          (@tags.p(messages.length, "message")())
-                        }
-                      </a>
-                    } else {
-                      <div class="pull-right">
-                        @messages.lastOption.map { m =>
-                          @JavaTime.Relative(m.message.created)
-                        }
-                      </div>
-                      @if(messages.isEmpty) {
-                        No messages
-                      } else {
-                        @tags.p(messages.length, "message")()
+          @defining(c.messages.byClient.getOrElse(universityId, Nil)) { messages: Seq[MessageRender] =>
+            <div class="thread panel panel-default">
+              <div class="panel-heading" role="tab" id="thread-heading-@universityId.string">
+                <h4 class="panel-title">
+                @if(clients.size > 1){
+                  <a class="collapsed" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-thread-@universityId.string" aria-expanded="true" aria-controls="collapse-thread-@universityId">
+                    <div class="pull-right">
+                      @messages.lastOption.map { m =>
+                        @JavaTime.Relative(m.message.created)
                       }
+                      <i class="fas fa-fw fa-angle-down"></i>
+                      <i class="fas fa-fw fa-angle-up"></i>
+                    </div>
+                    @tags.clientFullName(maybeClient)
+                    @if(messages.isEmpty) {
+                      (No messages)
+                    } else {
+                      (@tags.p(messages.length, "message")())
                     }
+                  </a>
+                } else {
+                  <div class="pull-right">
+                  @messages.lastOption.map { m =>
+                    @JavaTime.Relative(m.message.created)
+                  }
+                  </div>
+                  @if(messages.isEmpty) {
+                    No messages
+                  } else {
+                    @tags.p(messages.length, "message")()
+                  }
+                }
 
-                  </h4>
-                </div>
-                <div id="collapse-thread-@universityId.string" class="panel-collapse @if(clients.size > 1){ collapse }" role="tabpanel" aria-labelledby="thread-heading-@universityId.string">
-                  <div class="panel-body">
+                </h4>
+              </div>
+              <div id="collapse-thread-@universityId.string" class="panel-collapse @if(clients.size > 1){ collapse }" role="tabpanel" aria-labelledby="thread-heading-@universityId.string">
+                <div class="panel-body">
                   @messages.map { render =>
                     @views.html.tags.messages.message(
                       render.message,
@@ -341,7 +387,7 @@
                       None
                     )
 
-                    @* @if(render.message.sender == MessageSender.Client) {
+                    @*if(render.message.sender == MessageSender.Client) {
                       <div class="message message-client">
                         <div class="date pull-right">@helpers.JavaTime.Relative(render.message.created)</div>
                         <div class="message--author">Client</div>
@@ -353,18 +399,21 @@
                         <div class="message--author">@render.message.teamMember.flatMap(userLookup.get).map(_.name.full).getOrElse("Team member")</div>
                         @views.utils.nl2br(render.message.text)
                       </div>
-                    } *@
+                    }*@
                   }
-                  </div>
-                  <div class="panel-footer">
-                    @if(c.clientCase.state != IssueState.Closed) {
-                      @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.clientCase.key.get, universityId), messageForm, supportedMimeTypes)
-                    }
-                  </div>
+                </div>
+                <div class="panel-footer">
+                @if(c.clientCase.state != IssueState.Closed) {
+                  @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.clientCase.key.get, universityId), messageForm, supportedMimeTypes)
+                }
                 </div>
               </div>
-            }
+            </div>
+          }
         }
+      }
+      </div>
     }
+
   </div>
 }

@@ -1,0 +1,59 @@
+@import warwick.sso.User
+@(
+  owners: Seq[User],
+  submit: Call,
+  submitSelf: Call,
+  labelCols: Int = 4,
+  containerCols: Int = 8
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+<div class="row form-horizontal">
+  <div class="col-sm-@labelCols control-label">
+    Owners
+  </div>
+  <div class="col-sm-@containerCols">
+    @b3.horizontal.formCSRF(submit, "col-sm-0", "col-sm-12", 'class -> "form-control-static") { implicit ifc =>
+      @if(owners.nonEmpty) {
+        @owners.map { owner =>
+          <div class="clearfix" @if(owners.last == owner){ data-field-history-field="owners" }>
+            <button type="button" class="pull-right btn btn-sm btn-link" data-toggle="remove-submit" data-target="div">
+              <i class="fas fa-times-circle"></i>
+            </button>
+            <input type="hidden" name="owners[]" value="@owner.usercode.string">
+            @owner.name.full
+          </div>
+        }
+      } else {
+        <div>None</div>
+      }
+      <div>
+        <a role="button" href="#add-owner-modal" data-toggle="modal" data-target="#add-owner-modal">
+          Add an owner
+        </a>
+      </div>
+
+      <div class="modal fade" id="add-owner-modal" tabindex="-1" role="dialog" aria-labelledby="add-owner-modal-label">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+              <h4 class="modal-title" id="add-owner-modal-label">Add an owner</h4>
+            </div>
+            <div class="modal-body">
+              @b3.free() {
+                @tags.flexipicker(values = Nil, name = "owners[]", placeholder = "Search for a user", multiple = false)
+              }
+            </div>
+            <div class="modal-footer spaced-buttons">
+              @if(!owners.contains(context.user.get)) {
+                <button type="submit" class="btn btn-primary" formaction="@submitSelf">Add me</button>
+              }
+              <button type="submit" class="btn btn-primary">Add owner</button>
+              <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>

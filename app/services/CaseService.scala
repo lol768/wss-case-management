@@ -47,6 +47,7 @@ trait CaseService {
 
   def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]]
   def getLinks(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[(Seq[CaseLink], Seq[CaseLink])]]
+  def deleteLink(caseID: UUID, linkID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
   def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]]
@@ -253,7 +254,7 @@ class CaseServiceImpl @Inject() (
   override def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]] =
     auditService.audit('CaseLinkSave, outgoingID.toString, 'Case, Json.obj("to" -> incomingID.toString, "note" -> caseNote.text)) {
       daoRunner.run(for {
-        link <- dao.insertLink(StoredCaseLink(linkType, outgoingID, incomingID))
+        link <- dao.insertLink(StoredCaseLink(UUID.randomUUID(), linkType, outgoingID, incomingID))
         _ <- addNoteDBIO(outgoingID, CaseNoteType.AssociatedCase, caseNote)
         _ <- addNoteDBIO(incomingID, CaseNoteType.AssociatedCase, caseNote)
       } yield link).map(Right.apply)
@@ -266,12 +267,20 @@ class CaseServiceImpl @Inject() (
       .result
       .map { results =>
         results.map { case ((link, outgoing), incoming) =>
-          CaseLink(link.linkType, outgoing, incoming, link.version)
+          CaseLink(link.id, link.linkType, outgoing, incoming, link.version)
         }.partition(_.outgoing.id.get == caseID)
       }
 
   override def getLinks(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[(Seq[CaseLink], Seq[CaseLink])]] =
     daoRunner.run(getLinksDBIO(caseID)).map(Right.apply)
+
+  override def deleteLink(caseID: UUID, linkID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
+    auditService.audit('CaseLinkDelete, caseID.toString, 'Case, Json.obj("linkID" -> linkID.toString)) {
+      daoRunner.run(for {
+        existing <- dao.findLinksQuery(caseID).filter(_.id === linkID).result.head
+        done <- dao.deleteLink(existing, version)
+      } yield done).map(Right.apply)
+    }
 
   private def addNoteDBIO(caseID: UUID, noteType: CaseNoteType, note: CaseNoteSave)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
     dao.insertNote(

@@ -8,7 +8,7 @@ function getValue(value) {
   if (_.isArray(value)) {
     return _.map(value, v => v.description || v.name || v).join(', ');
   }
-  return value.description || value.name || value;
+  return _.get(value, 'description', undefined) || _.get(value, 'name', undefined) || value || 'None';
 }
 
 function handleData($container, data) {

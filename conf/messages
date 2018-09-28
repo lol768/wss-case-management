@@ -29,6 +29,7 @@ flash.registration.updated=Registration updated
 flash.case.created=The case has been opened ({0})
 flash.case.updated=The case has been updated
 flash.case.linked=The case link has been created
+flash.case.linkDeleted=The case link has been deleted
 flash.case.noteAdded=The case note has been saved
 flash.case.noteUpdated=The case note has been updated
 flash.case.noteDeleted=The case note has been deleted
