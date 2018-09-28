@@ -1,0 +1,12 @@
+@import java.util.UUID
+
+@import domain.{AppointmentRender, SitsProfile}
+@import warwick.sso.{UniversityID, User, Usercode}
+
+@(
+  appointments: Seq[AppointmentRender],
+  clientLookup: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
+  userLookup: Map[Usercode, User]
+)(implicit context: RequestContext)
+
+@views.html.admin.appointmentTable(Some("Upcoming appointments"), appointments, clientLookup, userLookup, Some("There are no upcoming appointments"))

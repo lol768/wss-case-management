@@ -32,7 +32,7 @@
 @views.html.admin.caseTable(Some("Open cases"), openCases, clients)
 
 @if(closedCases == 0) {
-  No closed cases to show
+  <p>No closed cases to show</p>
 } else {
   <details data-toggle="load" data-href="@closedCasesRoute" data-target=".content">
     <summary>Show @tags.p(closedCases, "closed case")()</summary>

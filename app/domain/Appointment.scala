@@ -22,9 +22,10 @@ case class Appointment(
   team: Team,
   teamMember: Usercode,
   appointmentType: AppointmentType,
-  state: AppointmentState = AppointmentState.Provisional,
-  created: OffsetDateTime = OffsetDateTime.now(),
-  lastUpdated: OffsetDateTime = OffsetDateTime.now(),
+  state: AppointmentState,
+  cancellationReason: Option[AppointmentCancellationReason],
+  created: OffsetDateTime,
+  lastUpdated: OffsetDateTime,
 ) {
   val end: OffsetDateTime = start.plus(duration)
 }

@@ -1,0 +1,77 @@
+@import java.util.UUID
+
+@import domain.dao.CaseDao.Case
+@import domain.{Appointment, AppointmentClient, AppointmentRender, SitsProfile}
+@import warwick.sso.{UniversityID, User, Usercode}
+
+@import domain.AppointmentState
+@(
+  title: Option[String],
+  appointments: Seq[AppointmentRender],
+  clientLookup: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
+  userLookup: Map[Usercode, User],
+  emptyMessage: Option[String] = None
+)(implicit context: RequestContext)
+
+@appointmentRow(appointment: Appointment, clients: Set[AppointmentClient], clientCase: Option[Case]) = {
+  <tr>
+    <td>
+      @clientLookup.get(appointment.id).map { profiles =>
+        <ul class="list-unstyled">
+          @profiles.toSeq.map {
+            case Left(universityID) => {
+              <li>
+                <a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a>
+                @clients.find(_.universityID == universityID).map { client =>
+                  @tags.appointments.clientAppointmentState(appointment, client)
+                }
+              </li>
+            }
+            case Right(p) => {
+              <li>
+                <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>
+                @clients.find(_.universityID == p.universityID).map { client =>
+                  @tags.appointments.clientAppointmentState(appointment, client)
+                }
+              </li>
+            }
+          }
+        </ul>
+      }
+    </td>
+    <td>
+      @tags.icons.appointmentState(appointment.state)
+      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string @appointment.subject</a>
+    </td>
+    <td>
+      @helpers.JavaTime.Relative(appointment.start) &ndash; @appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+    </td>
+    <td>@userLookup.get(appointment.teamMember).flatMap(_.name.full)</td>
+    <td>
+      @appointment.location.map(_.name)
+      (@appointment.appointmentType.description)
+    </td>
+  </tr>
+}
+
+@if(appointments.nonEmpty) {
+  <table class="table table-default">
+    @title.map { t => <caption>@t</caption> }
+    <thead>
+      <tr>
+        <th class="col-sm-2">Clients</th>
+        <th class="col-sm-4">Subject</th>
+        <th class="col-sm-2">When</th>
+        <th class="col-sm-2">Staff member</th>
+        <th class="col-sm-2">Location</th>
+      </tr>
+    </thead>
+    <tbody>
+      @appointments.map { a =>
+        @appointmentRow(a.appointment, a.clients, a.clientCase)
+      }
+    </tbody>
+  </table>
+} else {
+  @emptyMessage.map { m => <p>@m</p> }
+}

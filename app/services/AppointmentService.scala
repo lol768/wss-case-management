@@ -3,6 +3,7 @@ package services
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
+import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.AppointmentDao.{AppointmentSearchQuery, Appointments, StoredAppointment, StoredAppointmentClient}
@@ -34,12 +35,24 @@ trait AppointmentService {
 
   def search(query: AppointmentSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
 
-  def listOpenAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
-  def listOpenAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
-  def listClosedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
-  def countClosedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
-  def listClosedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
-  def countClosedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def findRejectedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def findRejectedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def findProvisionalAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def findProvisionalAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def findAppointmentsNeedingOutcome(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def findAppointmentsNeedingOutcome(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def findConfirmedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def countConfirmedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def findConfirmedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def countConfirmedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def findAttendedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def countAttendedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def findAttendedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def countAttendedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def findCancelledAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def countCancelledAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def findCancelledAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def countCancelledAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
   def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[AppointmentClient]]]
 
@@ -68,6 +81,7 @@ class AppointmentServiceImpl @Inject()(
       save.teamMember,
       save.appointmentType,
       AppointmentState.Provisional,
+      None,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime
     )
@@ -147,23 +161,65 @@ class AppointmentServiceImpl @Inject()(
   override def search(query: AppointmentSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]] =
     ???
 
-  override def listOpenAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]] =
-    ???
+  override def findRejectedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findRejectedQuery.filter(_.team === team))
 
-  override def listOpenAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]] =
-    ???
+  override def findRejectedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findRejectedQuery.filter(_.teamMember === teamMember))
 
-  override def listClosedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]] =
-    ???
+  override def findProvisionalAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findProvisionalQuery.filter(_.team === team))
 
-  override def countClosedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
-    ???
+  override def findProvisionalAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findProvisionalQuery.filter(_.teamMember === teamMember))
 
-  override def listClosedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]] =
-    ???
+  override def findAppointmentsNeedingOutcome(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findNeedingOutcomeQuery.filter(_.team === team))
 
-  override def countClosedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
-    ???
+  override def findAppointmentsNeedingOutcome(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findNeedingOutcomeQuery.filter(_.teamMember === teamMember))
+
+  override def findConfirmedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findConfirmedQuery.filter(_.team === team))
+
+  override def countConfirmedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(dao.findConfirmedQuery.filter(_.team === team).length.result)
+      .map(Right.apply)
+
+  override def findConfirmedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findConfirmedQuery.filter(_.teamMember === teamMember))
+
+  override def countConfirmedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(dao.findConfirmedQuery.filter(_.teamMember === teamMember).length.result)
+      .map(Right.apply)
+
+  override def findAttendedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findAttendedQuery.filter(_.team === team))
+
+  override def countAttendedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(dao.findAttendedQuery.filter(_.team === team).length.result)
+      .map(Right.apply)
+
+  override def findAttendedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findAttendedQuery.filter(_.teamMember === teamMember))
+
+  override def countAttendedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(dao.findAttendedQuery.filter(_.teamMember === teamMember).length.result)
+      .map(Right.apply)
+
+  override def findCancelledAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findCancelledQuery.filter(_.team === team))
+
+  override def countCancelledAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(dao.findCancelledQuery.filter(_.team === team).length.result)
+      .map(Right.apply)
+
+  override def findCancelledAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findCancelledQuery.filter(_.teamMember === teamMember))
+
+  override def countCancelledAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(dao.findCancelledQuery.filter(_.teamMember === teamMember).length.result)
+      .map(Right.apply)
 
   private def getClientsDBIO(id: UUID): DBIO[Seq[StoredAppointmentClient]] =
     dao.findClientsQuery(Set(id))

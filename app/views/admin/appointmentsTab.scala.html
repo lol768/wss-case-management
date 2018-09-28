@@ -1,1 +1,54 @@
-@()(implicit context: RequestContext)
+@import java.util.UUID
+
+@import domain.{AppointmentRender, SitsProfile}
+@import warwick.sso.{UniversityID, User, Usercode}
+
+@(
+  rejectedAppointments: Seq[AppointmentRender],
+  provisionalAppointments: Seq[AppointmentRender],
+  appointmentsNeedingOutcome: Seq[AppointmentRender],
+  confirmedAppointments: Int,
+  attendedAppointments: Int,
+  cancelledAppointments: Int,
+  clientLookup: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
+  userLookup: Map[Usercode, User],
+  createRoute: Call,
+  confirmedAppointmentsRoute: Call,
+  attendedAppointmentsRoute: Call,
+  cancelledAppointmentsRoute: Call,
+)(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
+
+@* TODO Search box *@
+
+<p><a href="@createRoute" class="btn btn-default">Create a new appointment</a></p>
+
+@views.html.admin.appointmentTable(Some("Appointments needing attention"), rejectedAppointments, clientLookup, userLookup)
+@views.html.admin.appointmentTable(Some("Appointment requests awaiting a response"), provisionalAppointments, clientLookup, userLookup)
+@views.html.admin.appointmentTable(Some("Appointments needing outcome"), appointmentsNeedingOutcome, clientLookup, userLookup)
+
+@if(confirmedAppointments > 0) {
+  <details data-toggle="load" data-href="@confirmedAppointmentsRoute" data-target=".content">
+    <summary>Show @tags.p(confirmedAppointments, "upcoming appointments")()</summary>
+    <div class="content">
+      <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
+    </div>
+  </details>
+}
+
+@if(attendedAppointments > 0) {
+  <details data-toggle="load" data-href="@attendedAppointmentsRoute" data-target=".content">
+    <summary>Show @tags.p(attendedAppointments, "attended appointments")()</summary>
+    <div class="content">
+      <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
+    </div>
+  </details>
+}
+
+@if(cancelledAppointments > 0) {
+  <details data-toggle="load" data-href="@cancelledAppointmentsRoute" data-target=".content">
+    <summary>Show @tags.p(cancelledAppointments, "cancelled appointments")()</summary>
+    <div class="content">
+      <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
+    </div>
+  </details>
+}

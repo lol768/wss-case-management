@@ -97,4 +97,34 @@ object ServiceResults {
       case (Right((r1, r2, r3, r4, r5)), Right(r6)) => Right((r1, r2, r3, r4, r5, r6))
       case (s, s6) => Left(List(s, s6).collect { case Left(x) => x }.flatten)
     }
+
+  def zip[T1, T2, T3, T4, T5, T6, T7](_1: Future[ServiceResult[T1]], _2: Future[ServiceResult[T2]], _3: Future[ServiceResult[T3]], _4: Future[ServiceResult[T4]], _5: Future[ServiceResult[T5]], _6: Future[ServiceResult[T6]], _7: Future[ServiceResult[T7]])(implicit executionContext: ExecutionContext): Future[ServiceResult[(T1, T2, T3, T4, T5, T6, T7)]] =
+    zip(_1, _2, _3, _4, _5, _6).zip(_7).map {
+      case (Right((r1, r2, r3, r4, r5, r6)), Right(r7)) => Right((r1, r2, r3, r4, r5, r6, r7))
+      case (s, s7) => Left(List(s, s7).collect { case Left(x) => x }.flatten)
+    }
+
+  def zip[T1, T2, T3, T4, T5, T6, T7, T8](_1: Future[ServiceResult[T1]], _2: Future[ServiceResult[T2]], _3: Future[ServiceResult[T3]], _4: Future[ServiceResult[T4]], _5: Future[ServiceResult[T5]], _6: Future[ServiceResult[T6]], _7: Future[ServiceResult[T7]], _8: Future[ServiceResult[T8]])(implicit executionContext: ExecutionContext): Future[ServiceResult[(T1, T2, T3, T4, T5, T6, T7, T8)]] =
+    zip(_1, _2, _3, _4, _5, _6, _7).zip(_8).map {
+      case (Right((r1, r2, r3, r4, r5, r6, r7)), Right(r8)) => Right((r1, r2, r3, r4, r5, r6, r7, r8))
+      case (s, s8) => Left(List(s, s8).collect { case Left(x) => x }.flatten)
+    }
+
+  def zip[T1, T2, T3, T4, T5, T6, T7, T8, T9](_1: Future[ServiceResult[T1]], _2: Future[ServiceResult[T2]], _3: Future[ServiceResult[T3]], _4: Future[ServiceResult[T4]], _5: Future[ServiceResult[T5]], _6: Future[ServiceResult[T6]], _7: Future[ServiceResult[T7]], _8: Future[ServiceResult[T8]], _9: Future[ServiceResult[T9]])(implicit executionContext: ExecutionContext): Future[ServiceResult[(T1, T2, T3, T4, T5, T6, T7, T8, T9)]] =
+    zip(_1, _2, _3, _4, _5, _6, _7, _8).zip(_9).map {
+      case (Right((r1, r2, r3, r4, r5, r6, r7, r8)), Right(r9)) => Right((r1, r2, r3, r4, r5, r6, r7, r8, r9))
+      case (s, s9) => Left(List(s, s9).collect { case Left(x) => x }.flatten)
+    }
+
+  def zip[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10](_1: Future[ServiceResult[T1]], _2: Future[ServiceResult[T2]], _3: Future[ServiceResult[T3]], _4: Future[ServiceResult[T4]], _5: Future[ServiceResult[T5]], _6: Future[ServiceResult[T6]], _7: Future[ServiceResult[T7]], _8: Future[ServiceResult[T8]], _9: Future[ServiceResult[T9]], _10: Future[ServiceResult[T10]])(implicit executionContext: ExecutionContext): Future[ServiceResult[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)]] =
+    zip(_1, _2, _3, _4, _5, _6, _7, _8, _9).zip(_10).map {
+      case (Right((r1, r2, r3, r4, r5, r6, r7, r8, r9)), Right(r10)) => Right((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10))
+      case (s, s10) => Left(List(s, s10).collect { case Left(x) => x }.flatten)
+    }
+
+  def zip[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11](_1: Future[ServiceResult[T1]], _2: Future[ServiceResult[T2]], _3: Future[ServiceResult[T3]], _4: Future[ServiceResult[T4]], _5: Future[ServiceResult[T5]], _6: Future[ServiceResult[T6]], _7: Future[ServiceResult[T7]], _8: Future[ServiceResult[T8]], _9: Future[ServiceResult[T9]], _10: Future[ServiceResult[T10]], _11: Future[ServiceResult[T11]])(implicit executionContext: ExecutionContext): Future[ServiceResult[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11)]] =
+    zip(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10).zip(_11).map {
+      case (Right((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10)), Right(r11)) => Right((r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11))
+      case (s, s11) => Left(List(s, s11).collect { case Left(x) => x }.flatten)
+    }
 }

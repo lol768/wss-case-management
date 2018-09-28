@@ -18,6 +18,7 @@ import warwick.sso.{UniversityID, Usercode}
 import scala.concurrent.ExecutionContext
 import java.time.Duration
 
+import helpers.JavaTime
 import services.AuditLogContext
 
 import scala.language.higherKinds
@@ -26,11 +27,19 @@ import scala.language.higherKinds
 trait AppointmentDao {
   def insert(appointment: StoredAppointment)(implicit ac: AuditLogContext): DBIO[StoredAppointment]
   def update(appointment: StoredAppointment, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredAppointment]
+
   def findByIDQuery(id: UUID): Query[Appointments, StoredAppointment, Seq]
   def findByIDsQuery(ids: Set[UUID]): Query[Appointments, StoredAppointment, Seq]
   def findByKeyQuery(key: IssueKey): Query[Appointments, StoredAppointment, Seq]
   def findByClientQuery(universityID: UniversityID): Query[Appointments, StoredAppointment, Seq]
   def findByCaseQuery(caseID: UUID): Query[Appointments, StoredAppointment, Seq]
+  def findRejectedQuery: Query[Appointments, StoredAppointment, Seq]
+  def findProvisionalQuery: Query[Appointments, StoredAppointment, Seq]
+  def findNeedingOutcomeQuery: Query[Appointments, StoredAppointment, Seq]
+  def findConfirmedQuery: Query[Appointments, StoredAppointment, Seq]
+  def findAttendedQuery: Query[Appointments, StoredAppointment, Seq]
+  def findCancelledQuery: Query[Appointments, StoredAppointment, Seq]
+
   def insertClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredAppointmentClient]]
   def insertClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[StoredAppointmentClient]
   def updateClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[StoredAppointmentClient]
@@ -67,6 +76,49 @@ class AppointmentDaoImpl @Inject()(
 
   override def findByCaseQuery(caseID: UUID): Query[Appointments, StoredAppointment, Seq] =
     appointments.table.filter(_.caseID === caseID)
+
+  override def findRejectedQuery: Query[Appointments, StoredAppointment, Seq] =
+    appointments.table
+      .withClients
+      .filter { case (a, client) =>
+        a.isProvisional && client.isRejected
+      }
+      .map { case (a, _) => a }
+      .distinct
+
+  override def findProvisionalQuery: Query[Appointments, StoredAppointment, Seq] =
+    appointments.table
+      .filter { a =>
+        a.isProvisional &&
+        a.isInFuture &&
+        !a.id.in(
+          appointmentClients.table
+            .filter { client =>
+              client.appointmentID === a.id && client.isResponded
+            }
+            .map(_.appointmentID)
+        )
+      }
+
+  override def findNeedingOutcomeQuery: Query[Appointments, StoredAppointment, Seq] =
+    appointments.table
+      .filter { a =>
+        a.isConfirmed && a.isInPast
+      }
+
+  override def findConfirmedQuery: Query[Appointments, StoredAppointment, Seq] =
+    appointments.table
+      .filter { a =>
+        a.isConfirmed && a.isInFuture
+      }
+
+  override def findAttendedQuery: Query[Appointments, StoredAppointment, Seq] =
+    appointments.table
+      .filter(_.isAttended)
+
+  override def findCancelledQuery: Query[Appointments, StoredAppointment, Seq] =
+    appointments.table
+      .filter(_.isCancelled)
 
   override def insertClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredAppointmentClient]] =
     appointmentClients.insertAll(clients.toSeq)
@@ -108,6 +160,7 @@ object AppointmentDao {
     teamMember: Usercode,
     appointmentType: AppointmentType,
     state: AppointmentState,
+    cancellationReason: Option[AppointmentCancellationReason],
     created: OffsetDateTime,
     version: OffsetDateTime,
   ) extends Versioned[StoredAppointment] {
@@ -122,6 +175,7 @@ object AppointmentDao {
       teamMember,
       appointmentType,
       state,
+      cancellationReason,
       created,
       version
     )
@@ -141,6 +195,7 @@ object AppointmentDao {
         teamMember,
         appointmentType,
         state,
+        cancellationReason,
         created,
         version,
         operation,
@@ -161,6 +216,7 @@ object AppointmentDao {
     teamMember: Usercode,
     appointmentType: AppointmentType,
     state: AppointmentState,
+    cancellationReason: Option[AppointmentCancellationReason],
     created: OffsetDateTime,
     version: OffsetDateTime,
 
@@ -182,6 +238,7 @@ object AppointmentDao {
     def teamMember = column[Usercode]("team_member")
     def appointmentType = column[AppointmentType]("appointment_type")
     def state = column[AppointmentState]("state")
+    def cancellationReason = column[Option[AppointmentCancellationReason]]("cancellation_reason")
     def created = column[OffsetDateTime]("created_utc")
     def version = column[OffsetDateTime]("version_utc")
   }
@@ -193,9 +250,16 @@ object AppointmentDao {
     def id = column[UUID]("id", O.PrimaryKey)
 
     override def * : ProvenShape[StoredAppointment] =
-      (id, key, caseID, subject, start, duration, location, team, teamMember, appointmentType, state, created, version).mapTo[StoredAppointment]
+      (id, key, caseID, subject, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[StoredAppointment]
     def appointment =
-      (id, key, subject, start, duration, location, team, teamMember, appointmentType, state, created, version).mapTo[Appointment]
+      (id, key, subject, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[Appointment]
+
+    def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
+    def isConfirmed: Rep[Boolean] = state === (AppointmentState.Confirmed: AppointmentState)
+    def isAttended: Rep[Boolean] = state === (AppointmentState.Attended: AppointmentState)
+    def isCancelled: Rep[Boolean] = state === (AppointmentState.Cancelled: AppointmentState)
+    def isInFuture: Rep[Boolean] = start >= JavaTime.offsetDateTime
+    def isInPast: Rep[Boolean] = !isInFuture
 
     def keyIndex = index("idx_appointment_key", key, unique = true)
     def teamIndex = index("idx_appointment_team", (start, team))
@@ -214,7 +278,7 @@ object AppointmentDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredAppointmentVersion] =
-      (id, key, caseID, subject, start, duration, location, team, teamMember, appointmentType, state, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
+      (id, key, caseID, subject, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
     def pk = primaryKey("pk_appointment_version", (id, timestamp))
     def idx = index("idx_appointment_version", (id, version))
   }
@@ -290,6 +354,12 @@ object AppointmentDao {
       (universityID, appointmentID, state, cancellationReason, created, version).mapTo[StoredAppointmentClient]
     def appointmentClient =
       (universityID, state, cancellationReason).mapTo[AppointmentClient]
+
+    def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
+    def isConfirmed: Rep[Boolean] = state === (AppointmentState.Confirmed: AppointmentState)
+    def isAttended: Rep[Boolean] = state === (AppointmentState.Attended: AppointmentState)
+    def isRejected: Rep[Boolean] = state === (AppointmentState.Cancelled: AppointmentState)
+    def isResponded: Rep[Boolean] = isConfirmed || isRejected
 
     def pk = primaryKey("pk_appointment_client", (universityID, appointmentID))
     def fk = foreignKey("fk_appointment_client", appointmentID, appointments.table)(_.id)

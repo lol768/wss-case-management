@@ -56,6 +56,9 @@ GET         /team/:teamId                           @controllers.admin.AdminCont
 GET         /team/:teamId/closed-enquiries          @controllers.admin.AdminController.closedEnquiries(teamId: String)
 GET         /team/:teamId/closed-cases              @controllers.admin.AdminController.closedCases(teamId: String)
 GET         /team/:teamId/at-risk-clients           @controllers.admin.AdminController.atRiskClients(teamId: String)
+GET         /team/:teamId/confirmed-appointments    @controllers.admin.AdminController.confirmedAppointments(teamId: String)
+GET         /team/:teamId/attended-appointments     @controllers.admin.AdminController.attendedAppointments(teamId: String)
+GET         /team/:teamId/cancelled-appointments    @controllers.admin.AdminController.cancelledAppointments(teamId: String)
 
 GET         /team/client/:universityID                          @controllers.admin.ClientController.client(universityID: warwick.sso.UniversityID)
 POST        /team/client/:universityID                          @controllers.admin.ClientController.updateSummary(universityID: warwick.sso.UniversityID)

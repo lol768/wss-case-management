@@ -3,18 +3,23 @@
 
 @import controllers.RequestContext
 @import domain.dao.CaseDao.Case
-@import domain.{Enquiry, MessageData, SitsProfile, Team}
-@import warwick.sso.UniversityID
+@import domain.{AppointmentRender, Enquiry, MessageData, SitsProfile, Team}
+@import warwick.sso.{UniversityID, User, Usercode}
 
-@import domain.AtRiskClient
-@import domain.Teams
 @(team: Team,
   enquiriesRequiringAction: Seq[(Enquiry, MessageData)],
   enquiriesAwaitingClient: Seq[(Enquiry, MessageData)],
   closedEnquiries: Int,
   openCases: Seq[(Case, OffsetDateTime)],
   closedCases: Int,
-  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
+  rejectedAppointments: Seq[AppointmentRender],
+  provisionalAppointments: Seq[AppointmentRender],
+  appointmentsNeedingOutcome: Seq[AppointmentRender],
+  confirmedAppointments: Int,
+  attendedAppointments: Int,
+  cancelledAppointments: Int,
+  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
+  userLookup: Map[Usercode, User]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main(s"${team.name} team") {
@@ -44,7 +49,20 @@
       @views.html.admin.clientsTab(controllers.admin.routes.AdminController.atRiskClients(team.id))
     </div>
     <div role="tabpanel" class="tab-pane" id="appointments">
-      @views.html.admin.appointmentsTab()
+      @views.html.admin.appointmentsTab(
+        rejectedAppointments,
+        provisionalAppointments,
+        appointmentsNeedingOutcome,
+        confirmedAppointments,
+        attendedAppointments,
+        cancelledAppointments,
+        clients,
+        userLookup,
+        controllers.admin.routes.AppointmentController.createForm(team.id),
+        controllers.admin.routes.AdminController.confirmedAppointments(team.id),
+        controllers.admin.routes.AdminController.attendedAppointments(team.id),
+        controllers.admin.routes.AdminController.cancelledAppointments(team.id)
+      )
     </div>
   </div>
 }
