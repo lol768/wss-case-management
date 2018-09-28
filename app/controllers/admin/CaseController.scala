@@ -17,7 +17,7 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Result}
 import services.tabula.ProfileService
-import services.{CaseService, EnquiryService, PermissionService}
+import services.{AppointmentService, CaseService, EnquiryService, PermissionService}
 import warwick.core.timing.TimingContext
 import warwick.sso._
 
@@ -132,6 +132,7 @@ class CaseController @Inject()(
   profiles: ProfileService,
   cases: CaseService,
   enquiries: EnquiryService,
+  appointments: AppointmentService,
   userLookupService: UserLookupService,
   permissions: PermissionService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
@@ -157,10 +158,11 @@ class CaseController @Inject()(
       cases.findFull(caseKey),
       cases.getOwners(Set(request.`case`.id.get)).map(_.right.map(_.getOrElse(request.`case`.id.get, Set.empty))),
       fetchOriginalEnquiry,
+      appointments.findForCase(request.`case`.id.get),
       cases.getHistory(request.`case`.id.get)
-    ).successFlatMap { case (c, owners, originalEnquiry, history) =>
-      val usercodes = c.notes.map(_.teamMember) ++ owners ++ c.messages.teamMembers
-      val userLookup = userLookupService.getUsers(usercodes).toOption.getOrElse(Map())
+    ).successFlatMap { case (c, owners, originalEnquiry, a, history) =>
+      val usercodes = c.notes.map(_.teamMember).toSet ++ owners ++ c.messages.teamMembers ++ a.map(_.appointment.teamMember)
+      val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
       val ownerUsers = userLookup.filterKeys(owners.contains).values.toSeq.sortBy { u => (u.name.last, u.name.first) }
 
       val caseNotes = c.notes.map { note => (note, userLookup.get(note.teamMember)) }
@@ -179,6 +181,7 @@ class CaseController @Inject()(
           generalNotes,
           sectionNotesByType,
           originalEnquiry,
+          a,
           userLookup,
           caseNoteForm,
           messageForm,

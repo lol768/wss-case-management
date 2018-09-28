@@ -1,0 +1,17 @@
+@import domain.{Appointment, AppointmentClient, AppointmentState}
+
+@(
+  appointment: Appointment,
+  client: AppointmentClient
+)
+
+@if(client.state != appointment.state) {
+  <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
+    @tags.icons.appointmentState(client.state, client = true)
+    @if(client.state == AppointmentState.Cancelled) {
+      Rejected
+    } else {
+      @client.state
+    }
+  </span>
+}

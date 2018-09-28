@@ -93,6 +93,7 @@ object Fixtures {
       Usercode("mentalhealth-counsellor"),
       AppointmentType.FaceToFace,
       AppointmentState.Provisional,
+      None,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
     )

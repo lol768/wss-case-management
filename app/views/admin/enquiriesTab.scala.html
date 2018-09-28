@@ -29,7 +29,7 @@
 @views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient, clients)
 
 @if(closedEnquiries == 0) {
-  No closed enquiries to show
+  <p>No closed enquiries to show</p>
 } else {
   <details data-toggle="load" data-href="@closedEnquiriesRoute" data-target=".content">
     <summary>Show @tags.p(closedEnquiries, "closed enquiry")(plural = "closed enquiries")</summary>
