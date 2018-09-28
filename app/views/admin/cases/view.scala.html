@@ -1,9 +1,8 @@
 @import controllers.admin.CaseController.CaseNoteFormData
 @import controllers.admin.{CaseController, CaseDocumentController}
-@import domain._
 @import domain.CaseNoteType._
+@import domain._
 @import domain.dao.CaseDao.Case
-@import domain.UserType.Student
 @import helpers.JavaTime
 @import org.apache.tika.mime.MediaType
 @import play.api.libs.json.Json
@@ -15,6 +14,7 @@
   caseNotes: Seq[(CaseNote, Option[User])],
   sectionNotes: Map[CaseNoteType, Seq[(CaseNote, Option[User])]],
   originalEnquiry: Option[Enquiry],
+  appointments: Seq[AppointmentRender],
   userLookup: Map[Usercode, User],
   noteForm: Form[CaseNoteFormData],
   messageForm: Form[String],
@@ -326,6 +326,30 @@
     }
 
     @collapsibleSection("Appointments") {
+      <table class="table table-default">
+        <thead>
+          <tr>
+            <th class="col-sm-6">Subject</th>
+            <th class="col-sm-3">When</th>
+            <th class="col-sm-3">Staff member</th>
+          </tr>
+        </thead>
+        <tbody>
+          @appointments.map { a =>
+            <tr>
+              <td>
+                @tags.icons.appointmentState(a.appointment.state)
+                <a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)">@a.appointment.key.string @a.appointment.subject</a>
+              </td>
+              <td>
+                @helpers.JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+              </td>
+              <td>@userLookup.get(a.appointment.teamMember).flatMap(_.name.full)</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
       <p><a href="@controllers.admin.routes.AppointmentController.createForm(c.clientCase.team.id, forCase = Some(c.clientCase.key.get))" class="btn btn-default">Create an appointment</a></p
     }
 
