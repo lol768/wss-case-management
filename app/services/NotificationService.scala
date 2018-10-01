@@ -29,6 +29,7 @@ trait NotificationService {
   def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseReassign(clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseMessage(`case`: Case, client: UniversityID, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def appointmentConfirmation(appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
 }
 
 @Singleton
@@ -299,6 +300,33 @@ class NotificationServiceImpl @Inject()(
       }
     }
 
+  override def appointmentConfirmation(appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUser(appointment.teamMember) { teamMember =>
+      val url = s"https://$domain${controllers.admin.routes.AppointmentController.view(appointment.key).url}"
+
+      emailService.queue(
+        Email(
+          subject = s"Case Management: Appointment ${appointment.state.entryName}",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.appointmentResponse(url, appointment.state.entryName.toLowerCase).toString.trim)
+        ),
+        Seq(teamMember)
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            Set(teamMember.usercode.string).asJava,
+            Set[String]().asJava,
+            s"Appointment ${appointment.state.entryName}",
+            url,
+            null,
+            "appointment-confirmation-message"
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
+  }
+
   private def sendAndHandleResponse(activity: Activity)(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     FutureConverters.toScala(myWarwickService.sendAsNotification(activity)).map { resultList =>
       val results = resultList.asScala
@@ -340,6 +368,10 @@ class NotificationServiceImpl @Inject()(
           Future.successful(Left(List(ServiceError(s"Cannot find user with university ID ${universityID.string}"))))
         )
     ))
+  }
+
+  private def withUser(usercode: Usercode)(f: User => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
+    withUsers(Set(usercode)){ users => f(users.head) }
   }
 
   private def withUsers(usercodes: Set[Usercode])(f: Set[User] => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {

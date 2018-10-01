@@ -1,0 +1,5 @@
+@(url: String, verb: String)
+
+@email() {
+  A client has @verb their appointment: @url
+}
