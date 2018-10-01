@@ -8,7 +8,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Result}
-import services.{AppointmentService, NotificationService}
+import services.AppointmentService
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -16,7 +16,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class AppointmentController @Inject()(
   appointments: AppointmentService,
   appointmentActionFilters: AppointmentActionFilters,
-  notificationService: NotificationService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import appointmentActionFilters._
@@ -32,13 +31,11 @@ class AppointmentController @Inject()(
       if (client.state == AppointmentState.Confirmed || client.state == AppointmentState.Attended) {
         // Trying to accept an appointment that's already accepted or happened long ago; just treat as a no-op
         Future.successful(redirectBack())
-      } else appointments.clientAccept(request.appointment.id, universityID).successFlatMap { appointment =>
-        notificationService.appointmentConfirmation(appointment).successMap { _ =>
-          if (appointment.state == AppointmentState.Confirmed)
-            redirectBack().flashing("success" -> Messages("flash.appointment.confirmed"))
-          else
-            redirectBack().flashing("success" -> Messages("flash.appointment.accepted"))
-        }
+      } else appointments.clientAccept(request.appointment.id, universityID).successMap { appointment =>
+        if (appointment.state == AppointmentState.Confirmed)
+          redirectBack().flashing("success" -> Messages("flash.appointment.confirmed"))
+        else
+          redirectBack().flashing("success" -> Messages("flash.appointment.accepted"))
       }
     }
   }
@@ -53,10 +50,8 @@ class AppointmentController @Inject()(
         if (client.state == AppointmentState.Cancelled && client.cancellationReason.contains(cancellationReason)) {
           // Trying to reject an appointment with a no-op
           Future.successful(redirectBack())
-        } else appointments.clientReject(request.appointment.id, universityID, cancellationReason).successFlatMap { appointment =>
-          notificationService.appointmentConfirmation(appointment).successMap { _ =>
-            redirectBack().flashing("success" -> Messages("flash.appointment.rejected"))
-          }
+        } else appointments.clientReject(request.appointment.id, universityID, cancellationReason).successMap { appointment =>
+          redirectBack().flashing("success" -> Messages("flash.appointment.rejected"))
         }
       }
     )

@@ -29,7 +29,7 @@ trait NotificationService {
   def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseReassign(clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseMessage(`case`: Case, client: UniversityID, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
-  def appointmentConfirmation(appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
 }
 
 @Singleton
@@ -300,15 +300,15 @@ class NotificationServiceImpl @Inject()(
       }
     }
 
-  override def appointmentConfirmation(appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+  override def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUser(appointment.teamMember) { teamMember =>
       val url = s"https://$domain${controllers.admin.routes.AppointmentController.view(appointment.key).url}"
 
       emailService.queue(
         Email(
-          subject = s"Case Management: Appointment ${appointment.state.entryName}",
+          subject = s"Case Management: Appointment ${clientState.entryName}",
           from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.appointmentResponse(url, appointment.state.entryName.toLowerCase).toString.trim)
+          bodyText = Some(views.txt.emails.appointmentResponse(url, clientState.entryName.toLowerCase).toString.trim)
         ),
         Seq(teamMember)
       ).flatMap {
@@ -317,7 +317,7 @@ class NotificationServiceImpl @Inject()(
           val activity = new Activity(
             Set(teamMember.usercode.string).asJava,
             Set[String]().asJava,
-            s"Appointment ${appointment.state.entryName}",
+            s"Appointment ${clientState.entryName}",
             url,
             null,
             "appointment-confirmation-message"
