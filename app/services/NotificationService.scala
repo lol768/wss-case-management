@@ -1,5 +1,7 @@
 package services
 
+import java.util.UUID
+
 import com.google.inject.ImplementedBy
 import domain._
 import domain.dao.CaseDao.Case
@@ -8,7 +10,6 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.mailer.Email
-import play.api.mvc.Call
 import services.tabula.ProfileService
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
@@ -127,7 +128,7 @@ class NotificationServiceImpl @Inject()(
     if (sender == MessageSender.Client) {
       enquiryMessageToTeam(enquiry)
     } else {
-      messageToClient(enquiry.universityID, enquiry.team, controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get))
+      messageToClient(enquiry.universityID, enquiry.team, enquiry.id.get)
     }
 
   private def enquiryMessageToTeam(enquiry: Enquiry)(implicit ac: AuditLogContext) = {
@@ -157,9 +158,9 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  private def messageToClient(client: UniversityID, team: Team, link: Call)(implicit ac: AuditLogContext) = {
+  private def messageToClient(client: UniversityID, team: Team, id: UUID)(implicit ac: AuditLogContext) = {
     withUser(client) { user =>
-      val url = s"https://$domain${link.url}"
+      val url = s"https://$domain${controllers.routes.ClientMessagesController.messages(id).url}"
 
       emailService.queue(
         Email(
@@ -177,7 +178,7 @@ class NotificationServiceImpl @Inject()(
             s"The ${team.name} team has sent a message",
             url,
             null,
-            "enquiry-message-from-team" // TODO change alert type
+            "message-from-team"
           )
           sendAndHandleResponse(activity)
       }
@@ -188,7 +189,7 @@ class NotificationServiceImpl @Inject()(
     if (sender == MessageSender.Client)
       caseMessageToTeam(c)
     else {
-      messageToClient(client, c.team, controllers.routes.IndexController.home()) // TODO no dedicated case message thread viewer atm; should there be?
+      messageToClient(client, c.team, c.id.get)
     }
 
   private def caseMessageToTeam(c: Case)(implicit ac: AuditLogContext) = {
@@ -197,7 +198,7 @@ class NotificationServiceImpl @Inject()(
 
       emailService.queue(
         Email(
-          subject = "Case Management: Enquiry message from client received",
+          subject = "Case Management: Case message from client received",
           from = "no-reply@warwick.ac.uk",
           bodyText = Some(views.txt.emails.casemessagefromclient(url).toString.trim)
         ),

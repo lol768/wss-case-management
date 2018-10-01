@@ -3,7 +3,7 @@ package controllers.admin
 import controllers.BaseController
 import controllers.refiners.AnyTeamActionRefiner
 import domain._
-import domain.dao.CaseDao.Case
+import domain.dao.CaseDao.CaseRender
 import helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -41,7 +41,7 @@ class ClientController @Inject()(
     "reasonable-adjustments" -> set(ReasonableAdjustment.formField)
   )(ClientSummarySave.apply)(ClientSummarySave.unapply))
 
-  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], Seq[EnquiryRender], Seq[(Case, Seq[MessageRender], Seq[CaseNote])])]] = {
+  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], Seq[EnquiryRender], Seq[CaseRender])]] = {
     val profile = profileService.getProfile(universityID).map(_.value)
     val registration = registrationService.get(universityID)
     val clientSummary = clientSummaryService.get(universityID)

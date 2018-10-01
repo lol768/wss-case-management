@@ -11,7 +11,7 @@ import helpers.JavaTime
 import helpers.StringUtils._
 import play.api.data.Form
 import play.api.data.Forms._
-import services.AuditLogContext
+import services.{AuditLogContext, EnquiryService}
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
 
@@ -27,7 +27,7 @@ case class Enquiry(
   state: IssueState = Open,
   version: OffsetDateTime = OffsetDateTime.now(),
   created: OffsetDateTime = OffsetDateTime.now(),
-) extends Versioned[Enquiry] {
+) extends Versioned[Enquiry] with Issue {
 
   override def atVersion(at: OffsetDateTime): Enquiry = copy(version = at)
   override def storedVersion[B <: StoredVersion[Enquiry]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
@@ -224,7 +224,13 @@ case class EnquiryRender(
   enquiry: Enquiry,
   messages: Seq[MessageRender],
   notes: Seq[EnquiryNote]
-)
+) {
+  def toIssue = IssueRender(
+    enquiry,
+    messages,
+    EnquiryService.lastModified(this)
+  )
+}
 
 case class EnquiryVersion(
   id: UUID,

@@ -4,13 +4,14 @@
 @import services.CaseService
 @import warwick.sso.UniversityID
 
+@import domain.dao.CaseDao.CaseRender
 @(
   universityID: UniversityID,
   profile: Option[SitsProfile],
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
   enquiries: Seq[EnquiryRender],
-  cases: Seq[(Case, Seq[MessageRender], Seq[CaseNote])],
+  cases: Seq[CaseRender],
   form: Form[ClientSummarySave],
   inMentalHealthTeam: Boolean,
   success: Option[String] = None
@@ -138,14 +139,14 @@
     } else {
       <p>
         @tags.p(
-          number = cases.count { case (c, _, _) => c.state != IssueState.Closed },
+          number = cases.count(_.clientCase.state != IssueState.Closed),
           singular = "open case"
         )(
           plural = "open cases",
           zero = "No"
         ),
         @tags.p(
-          number = cases.count { case (c, _, _) => c.state == IssueState.Closed },
+          number = cases.count(_.clientCase.state == IssueState.Closed),
           singular = "closed case"
         )(
           plural = "closed cases",
@@ -155,7 +156,7 @@
       </p>
 
       <div class="hidden" id="case-tables">
-        @if(cases.exists { case (c, _, _) => c.state != IssueState.Closed }) {
+        @if(cases.exists(_.clientCase.state != IssueState.Closed )) {
           <table class="table table-condensed">
             <caption>Open cases</caption>
             <thead>
@@ -167,20 +168,20 @@
               </tr>
             </thead>
             <tbody>
-              @defining(cases.filter { case (c, _, _) => c.state != IssueState.Closed }) { open: Seq[(Case, Seq[MessageRender], Seq[CaseNote])] =>
-                @open.map { case (c, messages, notes) =>
+              @defining(cases.filter(_.clientCase.state != IssueState.Closed )) { open: Seq[CaseRender] =>
+                @open.map { caseRender: CaseRender =>
                   <tr>
-                    <td><a href="@controllers.admin.routes.CaseController.view(c.key.get)" target="_blank">@c.key.get.string</a></td>
-                    <td><a href="@controllers.admin.routes.CaseController.view(c.key.get)" target="_blank">@c.subject</a></td>
-                    <td>@c.team.name</td>
-                    <td>@JavaTime.Relative(CaseService.lastModified((c, messages, notes)).toLocalDate).capitalize</td>
+                    <td><a href="@controllers.admin.routes.CaseController.view(caseRender.clientCase.key.get)" target="_blank">@caseRender.clientCase.key.get.string</a></td>
+                    <td><a href="@controllers.admin.routes.CaseController.view(caseRender.clientCase.key.get)" target="_blank">@caseRender.clientCase.subject</a></td>
+                    <td>@caseRender.clientCase.team.name</td>
+                    <td>@JavaTime.Relative(CaseService.lastModified(caseRender).toLocalDate).capitalize</td>
                   </tr>
                 }
               }
             </tbody>
           </table>
         }
-        @if(cases.exists { case (c, _, _) => c.state == IssueState.Closed }) {
+        @if(cases.exists(_.clientCase.state == IssueState.Closed )) {
           <table class="table table-condensed">
             <caption>Closed cases</caption>
             <thead>
@@ -192,13 +193,13 @@
               </tr>
             </thead>
             <tbody>
-            @defining(cases.filter { case (c, _, _) => c.state == IssueState.Closed }) { closed: Seq[(Case, Seq[MessageRender], Seq[CaseNote])] =>
-              @closed.map { case (c, _, _) =>
+            @defining(cases.filter(_.clientCase.state == IssueState.Closed )) { closed: Seq[CaseRender] =>
+              @closed.map { caseRender: CaseRender =>
                 <tr>
-                  <td><a href="@controllers.admin.routes.CaseController.view(c.key.get)" target="_blank">@c.key.get.string</a></td>
-                  <td><a href="@controllers.admin.routes.CaseController.view(c.key.get)" target="_blank">@c.subject</a></td>
-                  <td>@c.team.name</td>
-                  <td>@JavaTime.Relative(c.version.toLocalDate).capitalize</td>
+                  <td><a href="@controllers.admin.routes.CaseController.view(caseRender.clientCase.key.get)" target="_blank">@caseRender.clientCase.key.get.string</a></td>
+                  <td><a href="@controllers.admin.routes.CaseController.view(caseRender.clientCase.key.get)" target="_blank">@caseRender.clientCase.subject</a></td>
+                  <td>@caseRender.clientCase.team.name</td>
+                  <td>@JavaTime.Relative(caseRender.clientCase.version.toLocalDate).capitalize</td>
                 </tr>
               }
             }
