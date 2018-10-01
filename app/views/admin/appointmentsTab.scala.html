@@ -11,11 +11,12 @@
   attendedAppointments: Int,
   cancelledAppointments: Int,
   clientLookup: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
-  userLookup: Map[Usercode, User],
+  userLookup: Option[Map[Usercode, User]],
   createRoute: Call,
   confirmedAppointmentsRoute: Call,
   attendedAppointmentsRoute: Call,
   cancelledAppointmentsRoute: Call,
+  showStaffMember: Boolean = true,
 )(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
 @* TODO Search box *@

@@ -112,7 +112,7 @@ class AdminController @Inject()(
         val usercodes = appointments.map(_.appointment.teamMember).toSet
         val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
 
-        Ok(views.html.admin.confirmedAppointments(appointments, resolvedClients, userLookup))
+        Ok(views.html.admin.confirmedAppointments(appointments, resolvedClients, Some(userLookup)))
       })
     }
   }
@@ -126,7 +126,7 @@ class AdminController @Inject()(
         val usercodes = appointments.map(_.appointment.teamMember).toSet
         val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
 
-        Ok(views.html.admin.attendedAppointments(appointments, resolvedClients, userLookup))
+        Ok(views.html.admin.attendedAppointments(appointments, resolvedClients, Some(userLookup)))
       })
     }
   }
@@ -140,7 +140,7 @@ class AdminController @Inject()(
         val usercodes = appointments.map(_.appointment.teamMember).toSet
         val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
 
-        Ok(views.html.admin.cancelledAppointments(appointments, resolvedClients, userLookup))
+        Ok(views.html.admin.cancelledAppointments(appointments, resolvedClients, Some(userLookup)))
       })
     }
   }

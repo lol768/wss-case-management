@@ -9,8 +9,8 @@
   title: Option[String],
   appointments: Seq[AppointmentRender],
   clientLookup: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
-  userLookup: Map[Usercode, User],
-  emptyMessage: Option[String] = None
+  userLookup: Option[Map[Usercode, User]],
+  emptyMessage: Option[String] = None,
 )(implicit context: RequestContext)
 
 @appointmentRow(appointment: Appointment, clients: Set[AppointmentClient], clientCase: Option[Case]) = {
@@ -46,7 +46,9 @@
     <td>
       @helpers.JavaTime.Relative(appointment.start) &ndash; @appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
     </td>
-    <td>@userLookup.get(appointment.teamMember).flatMap(_.name.full)</td>
+    @userLookup.map { userLookup =>
+      <td>@userLookup.get(appointment.teamMember).flatMap(_.name.full)</td>
+    }
     <td>
       @appointment.location.map(_.name)
       (@appointment.appointmentType.description)
@@ -62,8 +64,10 @@
         <th class="col-sm-2">Clients</th>
         <th class="col-sm-4">Subject</th>
         <th class="col-sm-2">When</th>
-        <th class="col-sm-2">Staff member</th>
-        <th class="col-sm-2">Location</th>
+        @if(userLookup.nonEmpty) {
+          <th class="col-sm-2">Staff member</th>
+        }
+        <th class="col-sm-@if(userLookup.nonEmpty) {2} else {4}">Location</th>
       </tr>
     </thead>
     <tbody>

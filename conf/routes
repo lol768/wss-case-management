@@ -29,6 +29,9 @@ GET         /                                       @controllers.IndexController
 GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries
 GET         /closed-cases                           @controllers.IndexController.closedCases
 GET         /at-risk-clients                        @controllers.IndexController.atRiskClients
+GET         /confirmed-appointments                 @controllers.IndexController.confirmedAppointments
+GET         /attended-appointments                  @controllers.IndexController.attendedAppointments
+GET         /cancelled-appointments                 @controllers.IndexController.cancelledAppointments
 
 ## Clients ##
 
