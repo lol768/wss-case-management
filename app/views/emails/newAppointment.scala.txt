@@ -1,0 +1,7 @@
+@(url: String)
+
+@email() {
+  You have been invited to attend an appointment by Wellbeing Support Services.
+
+  Follow this link to see details and confirm the appointment: @url
+}
