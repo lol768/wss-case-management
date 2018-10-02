@@ -16,6 +16,7 @@ error.caseType.invalid=Please select a valid case type
 error.localDateTime=Please enter a valid date/time (dd-MM-yyyy HH:mm:ss)
 error.linkTarget.same=You can't link a case to itself
 error.privacyStatementConsent.required=Please confirm you have read the privacy statement
+error.appointment.start.inPast=Please select a date/time for the appointment in the future
 
 flash.client.summary.updated=Client summary updated
 flash.client.registration.invited=Invitation to register sent to client
@@ -40,6 +41,7 @@ flash.case.documentAdded=The case document has been uploaded
 flash.case.documentDeleted=The case document has been deleted
 flash.case.reassigned=The case has been reassigned to {0}
 flash.appointment.created=The appointment has been created ({0})
+flash.appointment.updated=The appointment has been updated
 flash.appointment.accepted=You''ve accepted the appointment
 flash.appointment.confirmed=You''ve confirmed the appointment
 flash.appointment.rejected=You''ve rejected the appointment

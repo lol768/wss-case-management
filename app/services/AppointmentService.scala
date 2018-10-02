@@ -111,8 +111,33 @@ class AppointmentServiceImpl @Inject()(
 
   override def update(id: UUID, changes: AppointmentSave, clients: Set[UniversityID], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
     auditService.audit('AppointmentUpdate, id.toString, 'Appointment, Json.obj()) {
+      def newState(existing: StoredAppointment, clientResult: UpdateDifferencesResult[StoredAppointmentClient]): AppointmentState =
+        if (existing.state == AppointmentState.Provisional || existing.state == AppointmentState.Cancelled || existing.state == AppointmentState.Attended)
+          existing.state
+        else if (clientResult.all.exists(_.state == AppointmentState.Confirmed))
+          // At least one client has still confirmed
+          AppointmentState.Confirmed
+        else
+          // All confirmed clients have been removed; back to provisional
+          AppointmentState.Provisional
+
       daoRunner.run(for {
         existing <- dao.findByIDQuery(id).result.head
+        clientsResult <- updateDifferencesDBIO[StoredAppointmentClient, UniversityID](
+          clients,
+          dao.findClientsQuery(Set(id)),
+          _.universityID,
+          universityID => StoredAppointmentClient(
+            universityID,
+            id,
+            AppointmentState.Provisional,
+            None,
+            JavaTime.offsetDateTime,
+            JavaTime.offsetDateTime
+          ),
+          dao.insertClient,
+          dao.deleteClient
+        )
         updated <- dao.update(
           // We re-construct the whole StoredAppointment here so that missing a value will throw a compile error
           StoredAppointment(
@@ -126,19 +151,17 @@ class AppointmentServiceImpl @Inject()(
             existing.team,
             changes.teamMember,
             changes.appointmentType,
-            AppointmentState.Provisional,
-            None,
-            JavaTime.offsetDateTime,
+            newState(existing, clientsResult),
+            if (newState(existing, clientsResult) == AppointmentState.Provisional)
+              None
+            else
+              existing.cancellationReason,
+            existing.created,
             JavaTime.offsetDateTime
           ),
           version
         )
-
-
-
-
-
-      } yield existing).map { a => Right(a.asAppointment) }
+      } yield updated).map { a => Right(a.asAppointment) }
     }
   }
 
