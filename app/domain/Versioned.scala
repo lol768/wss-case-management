@@ -116,6 +116,24 @@ class VersionedTableQuery[A <: Versioned[A], B <: StoredVersion[A], C <: Table[A
     } yield deleted
   }
   def -=(value: A)(implicit ec: ExecutionContext, ac: AuditLogContext): DBIO[Done] = delete(value)
+
+  def deleteAll(values: Seq[A])(implicit ec: ExecutionContext, ac: AuditLogContext): DBIO[Seq[Done]] = {
+    val versionTimestamp = JavaTime.offsetDateTime
+    val storedVersions = values.map(_.storedVersion[B](DatabaseOperation.Delete, versionTimestamp))
+
+    // Slick doesn't support bulk delete, so just do them one at a time
+    val deleteAction = DBIO.sequence(values.map(value =>
+      table.filter { a => a.matchesPrimaryKey(value) && a.version === value.version }.delete.flatMap {
+        case 1 => DBIO.successful(Done)
+        case _ => optimisticLockingException(value)
+      }
+    ))
+
+    for {
+      delete <- deleteAction
+      _ <- versionsTable ++= storedVersions
+    } yield delete
+  }
 }
 
 trait Versioning {

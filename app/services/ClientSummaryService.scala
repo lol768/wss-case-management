@@ -80,8 +80,8 @@ class ClientSummaryServiceImpl @Inject()(
           dao.getReasonableAdjustmentsQuery(universityID),
           _.reasonableAdjustment,
           r => toStored(universityID, r),
-          dao.insertReasonableAdjustment,
-          dao.deleteReasonableAdjustment
+          dao.insertReasonableAdjustments,
+          dao.deleteReasonableAdjustments
         )
         updatedAdjustments <- dao.getReasonableAdjustmentsQuery(universityID).result
       } yield {

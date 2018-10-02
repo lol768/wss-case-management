@@ -35,10 +35,12 @@ trait CaseDao {
   def update(c: Case, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Case]
   def insertTags(tags: Set[StoredCaseTag])(implicit ac: AuditLogContext): DBIO[Seq[StoredCaseTag]]
   def insertTag(tag: StoredCaseTag)(implicit ac: AuditLogContext): DBIO[StoredCaseTag]
+  def deleteTags(tags: Set[StoredCaseTag])(implicit ac: AuditLogContext): DBIO[Seq[Done]]
   def deleteTag(tag: StoredCaseTag)(implicit ac: AuditLogContext): DBIO[Done]
   def findTagsQuery(caseIds: Set[UUID]): Query[CaseTags, StoredCaseTag, Seq]
   def insertClients(clients: Set[CaseClient])(implicit ac: AuditLogContext): DBIO[Seq[CaseClient]]
   def insertClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[CaseClient]
+  def deleteClients(client: Set[CaseClient])(implicit ac: AuditLogContext): DBIO[Seq[Done]]
   def deleteClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[Done]
   def findClientsQuery(caseIds: Set[UUID]): Query[CaseClients, CaseClient, Seq]
   def insertLink(link: StoredCaseLink)(implicit ac: AuditLogContext): DBIO[StoredCaseLink]
@@ -133,6 +135,9 @@ class CaseDaoImpl @Inject()(
   override def insertTag(tag: StoredCaseTag)(implicit ac: AuditLogContext): DBIO[StoredCaseTag] =
     caseTags.insert(tag)
 
+  override def deleteTags(tags: Set[StoredCaseTag])(implicit ac: AuditLogContext): DBIO[Seq[Done]] =
+    caseTags.deleteAll(tags.toSeq)
+
   override def deleteTag(tag: StoredCaseTag)(implicit ac: AuditLogContext): DBIO[Done] =
     caseTags.delete(tag)
 
@@ -145,6 +150,9 @@ class CaseDaoImpl @Inject()(
 
   override def insertClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[CaseClient] =
     caseClients.insert(client)
+
+  override def deleteClients(clients: Set[CaseClient])(implicit ac: AuditLogContext): DBIO[Seq[Done]] =
+    caseClients.deleteAll(clients.toSeq)
 
   override def deleteClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[Done] =
     caseClients.delete(client)
