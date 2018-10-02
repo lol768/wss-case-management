@@ -1,5 +1,6 @@
 package services
 
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
@@ -23,6 +24,7 @@ import scala.language.higherKinds
 @ImplementedBy(classOf[AppointmentServiceImpl])
 trait AppointmentService {
   def create(appointment: AppointmentSave, clients: Set[UniversityID], team: Team, caseID: Option[UUID])(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+  def update(id: UUID, appointment: AppointmentSave, clients: Set[UniversityID], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Appointment]]
   def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
@@ -103,6 +105,39 @@ class AppointmentServiceImpl @Inject()(
           )
         })
       } yield inserted).map { a => Right(a.asAppointment) }
+    }
+  }
+
+  override def update(id: UUID, changes: AppointmentSave, clients: Set[UniversityID], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
+    auditService.audit('AppointmentUpdate, id.toString, 'Appointment, Json.obj()) {
+      daoRunner.run(for {
+        existing <- dao.findByIDQuery(id).result.head
+        updated <- dao.update(
+          // We re-construct the whole StoredAppointment here so that missing a value will throw a compile error
+          StoredAppointment(
+            existing.id,
+            existing.key,
+            existing.caseID,
+            changes.subject,
+            changes.start,
+            changes.duration,
+            changes.location,
+            existing.team,
+            changes.teamMember,
+            changes.appointmentType,
+            AppointmentState.Provisional,
+            None,
+            JavaTime.offsetDateTime,
+            JavaTime.offsetDateTime
+          ),
+          version
+        )
+
+
+
+
+
+      } yield existing).map { a => Right(a.asAppointment) }
     }
   }
 
