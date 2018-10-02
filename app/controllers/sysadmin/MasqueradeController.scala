@@ -24,6 +24,7 @@ class MasqueradeController @Inject()(
 
   private[this] val testTabulaUsers = configuration.get[Seq[String]]("wellbeing.tabula.testUsers")
   private[this] val testTeamMemberUsers = configuration.get[Map[String, Seq[String]]]("wellbeing.testTeamMembers")
+  private[this] val testAdminUsers = configuration.get[Seq[String]]("wellbeing.testAdmins")
   
   def masquerade: Action[AnyContent] = RequiredActualUserRoleAction(Masquerader).async { implicit request =>
     profiles.getProfiles(testTabulaUsers.map(UniversityID.apply).toSet).successMap { profiles =>
@@ -51,7 +52,9 @@ class MasqueradeController @Inject()(
         .toSeq
         .sortBy { case (team, _) => team.name }
 
-      Ok(views.html.sysadmin.masquerade(testUsers, testTeamMembers))
+      val testAdmins = userLookupService.getUsers(testAdminUsers.map(Usercode.apply)).toOption.map(_.values.toSeq).getOrElse(Seq())
+
+      Ok(views.html.sysadmin.masquerade(testUsers, testTeamMembers, testAdmins))
     }
   }
 }
