@@ -28,7 +28,7 @@
       @links.groupBy(_.linkType).map { case (linkType, l) => @l.map { link =>
         <li>
           This case @description(linkType) <a href="@controllers.admin.routes.CaseController.view(target(link).key.get)">@target(link).key.get.string</a> @target(link).subject<br />
-          Link added @helpers.JavaTime.Relative(link.updatedDate) @*TODO - once CASE-195 is done add "by X in team Y"*@
+          Link added @helpers.JavaTime.Relative(link.updatedDate).toLowerCase @*TODO - once CASE-195 is done add "by X in team Y"*@
           @defining(CaseController.deleteForm(link.updatedDate).fill(link.updatedDate)) { form =>
             @b3.inline.formCSRF(controllers.admin.routes.CaseController.deleteLink(c.clientCase.key.get, link.id), 'class -> "inline-form") { implicit ifc =>
               @b3.validatedHidden(form, "version")
@@ -43,10 +43,10 @@
 
 @caseDetail(label: String)(content: Html) = {
   <div class="row form-horizontal">
-    <div class="col-sm-5 control-label">
+    <div class="col-sm-3 control-label">
       @label
     </div>
-    <div class="col-sm-7">
+    <div class="col-sm-9">
       <div class="form-control-static">
         @content
       </div>
@@ -144,7 +144,7 @@
       }
     </div>
     <div class="case-details--actions row">
-      <div class="col-sm-6 col-md-5 field-history" data-field-history="@Json.stringify(Json.toJson(history)(CaseHistory.writer))">
+      <div class="col-sm-6 col-md-7 field-history" data-field-history="@Json.stringify(Json.toJson(history)(CaseHistory.writer))">
 
         @caseDetail("Date raised"){ <div>@helpers.JavaTime.Relative(c.clientCase.created)</div> }
 
@@ -225,12 +225,13 @@
           owners,
           controllers.admin.routes.OwnersController.caseSubmit(c.clientCase.key.get),
           controllers.admin.routes.OwnersController.caseSubmitSelf(c.clientCase.key.get),
-          labelCols = 5,
-          containerCols = 7
+          labelCols = 2,
+          labelOffset = 1,
+          containerCols = 9
         )
 
       </div>
-      <div class="col-sm-6 col-md-4 col-md-offset-2">
+      <div class="col-sm-6 col-md-4 ">
         <div class="row form-horizontal">
           <div class="col-sm-4 control-label">
             Actions
@@ -250,6 +251,9 @@
               <a href="@controllers.admin.routes.CaseDocumentController.addDocumentForm(c.clientCase.key.get)" class="btn btn-default btn-block">Add a document</a>
             </p>
             <p>
+              <a href="@controllers.admin.routes.AppointmentController.createForm(c.clientCase.team.id, forCase = Some(c.clientCase.key.get))" class="btn btn-default btn-block">Create an appointment</a>
+            </p>
+            <p>
               <a href="@controllers.admin.routes.CaseController.linkForm(c.clientCase.key.get)" class="btn btn-default btn-block">Link to another case</a>
             </p>
             <p>
@@ -260,16 +264,18 @@
       </div>
     </div>
 
-    @if(c.outgoingCaseLinks.nonEmpty ||  c.incomingCaseLinks.nonEmpty){
-      @collapsibleSection("Case links") {
+    @collapsibleSection("Case links") {
+      @if(c.outgoingCaseLinks.nonEmpty ||  c.incomingCaseLinks.nonEmpty){
         @caseLinks(c.outgoingCaseLinks, _.outwardDescription, _.incoming)
         @caseLinks(c.incomingCaseLinks, _.inwardDescription, _.outgoing)
         @viewSectionNotes(AssociatedCase, "case links note")
+      } else {
+        <p>This case is not linked to any other cases</p>
       }
     }
 
-    @if(c.documents.nonEmpty) {
-      @collapsibleSection("Documents") {
+    @collapsibleSection("Documents") {
+      @if(c.documents.nonEmpty) {
         <table class="table table-default">
           <thead>
             <tr>
@@ -300,6 +306,8 @@
           </tbody>
         </table>
         @viewSectionNotes(DocumentNote, "document note")
+      } else {
+        <p>This case has no documents</p>
       }
     }
 
@@ -326,31 +334,34 @@
     }
 
     @collapsibleSection("Appointments") {
-      <table class="table table-default">
-        <thead>
-          <tr>
-            <th class="col-sm-6">Subject</th>
-            <th class="col-sm-3">When</th>
-            <th class="col-sm-3">Staff member</th>
-          </tr>
-        </thead>
-        <tbody>
+      @if(appointments.nonEmpty) {
+        <table class="table table-default">
+          <thead>
+            <tr>
+              <th class="col-sm-6">Subject</th>
+              <th class="col-sm-3">When</th>
+              <th class="col-sm-3">Staff member</th>
+            </tr>
+          </thead>
+          <tbody>
           @appointments.map { a =>
             <tr>
               <td>
                 @tags.icons.appointmentState(a.appointment.state)
-                <a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)">@a.appointment.key.string @a.appointment.subject</a>
+              <a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)">@a.appointment.key.string @a.appointment.subject</a>
               </td>
               <td>
-                @helpers.JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+                @helpers.JavaTime.Relative(a.appointment.start) &ndash;
+                @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
               </td>
               <td>@userLookup.get(a.appointment.teamMember).flatMap(_.name.full)</td>
             </tr>
           }
-        </tbody>
-      </table>
-
-      <p><a href="@controllers.admin.routes.AppointmentController.createForm(c.clientCase.team.id, forCase = Some(c.clientCase.key.get))" class="btn btn-default">Create an appointment</a></p
+          </tbody>
+        </table>
+      } else {
+        <p>This case has no appointments</p>
+      }
     }
 
     @section("Messages") {

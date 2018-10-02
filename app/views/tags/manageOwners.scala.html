@@ -4,11 +4,12 @@
   submit: Call,
   submitSelf: Call,
   labelCols: Int = 4,
+  labelOffset: Int = 0,
   containerCols: Int = 8
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 <div class="row form-horizontal">
-  <div class="col-sm-@labelCols control-label">
+  <div class="col-sm-@labelCols col-sm-offset-@labelOffset control-label">
     Owners
   </div>
   <div class="col-sm-@containerCols">
@@ -16,11 +17,11 @@
       @if(owners.nonEmpty) {
         @owners.map { owner =>
           <div class="clearfix" @if(owners.last == owner){ data-field-history-field="owners" }>
-            <button type="button" class="pull-right btn btn-sm btn-link" data-toggle="remove-submit" data-target="div">
-              <i class="fas fa-times-circle"></i>
-            </button>
             <input type="hidden" name="owners[]" value="@owner.usercode.string">
             @owner.name.full
+            <button type="button" class="btn btn-sm btn-link" data-toggle="remove-submit" data-target="div">
+              <i class="fas fa-times-circle"></i>
+            </button>
           </div>
         }
       } else {

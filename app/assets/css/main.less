@@ -378,9 +378,9 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
         }
         @media (min-width: @screen-md-min) {
           // need to keep the labels in line with the labels in the left column of .case-details--actions
-          // the left column is col-5 with a nested row containing col-5 for the label
-          // this means the label is 5/12 * 5/12 of a page wide = 25/144
-          width: percentage(25/144);
+          // the left column is col-7 with a nested row containing col-3 for the label
+          // this means the label is 7/12 * 3/12 of a page wide = 21/144 = 7/48
+          width: percentage(7/48);
         }
         padding-left: @grid-gutter-width;
       }
@@ -390,7 +390,7 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
           width: percentage(10/12);
         }
         @media (min-width: @screen-md) {
-          width: percentage(119/144);
+          width: percentage(41/48);
         }
         padding-left: @grid-gutter-width / 2;
       }
