@@ -1,5 +1,7 @@
 package services
 
+import java.util.UUID
+
 import com.google.inject.ImplementedBy
 import domain._
 import domain.dao.CaseDao.Case
@@ -8,7 +10,6 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.mailer.Email
-import play.api.mvc.Call
 import services.tabula.ProfileService
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
@@ -29,6 +30,7 @@ trait NotificationService {
   def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseReassign(clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseMessage(`case`: Case, client: UniversityID, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
 }
 
 @Singleton
@@ -127,7 +129,7 @@ class NotificationServiceImpl @Inject()(
     if (sender == MessageSender.Client) {
       enquiryMessageToTeam(enquiry)
     } else {
-      messageToClient(enquiry.universityID, enquiry.team, controllers.enquiries.routes.EnquiryMessagesController.messages(enquiry.key.get))
+      messageToClient(enquiry.universityID, enquiry.team, enquiry.id.get)
     }
 
   private def enquiryMessageToTeam(enquiry: Enquiry)(implicit ac: AuditLogContext) = {
@@ -157,9 +159,9 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  private def messageToClient(client: UniversityID, team: Team, link: Call)(implicit ac: AuditLogContext) = {
+  private def messageToClient(client: UniversityID, team: Team, id: UUID)(implicit ac: AuditLogContext) = {
     withUser(client) { user =>
-      val url = s"https://$domain${link.url}"
+      val url = s"https://$domain${controllers.routes.ClientMessagesController.messages(id).url}"
 
       emailService.queue(
         Email(
@@ -177,7 +179,7 @@ class NotificationServiceImpl @Inject()(
             s"The ${team.name} team has sent a message",
             url,
             null,
-            "enquiry-message-from-team" // TODO change alert type
+            "message-from-team"
           )
           sendAndHandleResponse(activity)
       }
@@ -188,7 +190,7 @@ class NotificationServiceImpl @Inject()(
     if (sender == MessageSender.Client)
       caseMessageToTeam(c)
     else {
-      messageToClient(client, c.team, controllers.routes.IndexController.home()) // TODO no dedicated case message thread viewer atm; should there be?
+      messageToClient(client, c.team, c.id.get)
     }
 
   private def caseMessageToTeam(c: Case)(implicit ac: AuditLogContext) = {
@@ -197,7 +199,7 @@ class NotificationServiceImpl @Inject()(
 
       emailService.queue(
         Email(
-          subject = "Case Management: Enquiry message from client received",
+          subject = "Case Management: Case message from client received",
           from = "no-reply@warwick.ac.uk",
           bodyText = Some(views.txt.emails.casemessagefromclient(url).toString.trim)
         ),
@@ -299,6 +301,33 @@ class NotificationServiceImpl @Inject()(
       }
     }
 
+  override def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUser(appointment.teamMember) { teamMember =>
+      val url = s"https://$domain${controllers.admin.routes.AppointmentController.view(appointment.key).url}"
+
+      emailService.queue(
+        Email(
+          subject = s"Case Management: Appointment ${clientState.entryName}",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.appointmentResponse(url, clientState.entryName.toLowerCase).toString.trim)
+        ),
+        Seq(teamMember)
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            Set(teamMember.usercode.string).asJava,
+            Set[String]().asJava,
+            s"Appointment ${clientState.entryName}",
+            url,
+            null,
+            "appointment-confirmation-message"
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
+  }
+
   private def sendAndHandleResponse(activity: Activity)(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     FutureConverters.toScala(myWarwickService.sendAsNotification(activity)).map { resultList =>
       val results = resultList.asScala
@@ -340,6 +369,10 @@ class NotificationServiceImpl @Inject()(
           Future.successful(Left(List(ServiceError(s"Cannot find user with university ID ${universityID.string}"))))
         )
     ))
+  }
+
+  private def withUser(usercode: Usercode)(f: User => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
+    withUsers(Set(usercode)){ users => f(users.head) }
   }
 
   private def withUsers(usercodes: Set[Usercode])(f: Set[User] => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {

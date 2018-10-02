@@ -10,11 +10,12 @@ import domain._
 import domain.dao.AppointmentDao.{AppointmentSearchQuery, Appointments, StoredAppointment, StoredAppointmentClient}
 import domain.dao.CaseDao.Case
 import domain.dao.{AppointmentDao, DaoRunner}
-import helpers.JavaTime
+import helpers.{JavaTime, ServiceResults}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import services.AppointmentService._
+import system.Logging
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
 
@@ -68,7 +69,7 @@ class AppointmentServiceImpl @Inject()(
   notificationService: NotificationService,
   daoRunner: DaoRunner,
   dao: AppointmentDao
-)(implicit ec: ExecutionContext) extends AppointmentService {
+)(implicit ec: ExecutionContext) extends AppointmentService with Logging {
 
   private def createStoredAppointment(id: UUID, key: IssueKey, save: AppointmentSave, team: Team, caseID: Option[UUID]): StoredAppointment =
     StoredAppointment(
@@ -286,7 +287,11 @@ class AppointmentServiceImpl @Inject()(
             dao.update(appointment.copy(state = AppointmentState.Confirmed), appointment.version)
           else
             DBIO.successful(appointment)
-      } yield updatedAppointment).map { a => Right(a.asAppointment) }
+      } yield updatedAppointment).flatMap { a =>
+        notificationService.appointmentConfirmation(a.asAppointment, AppointmentState.Confirmed).map(sr =>
+          ServiceResults.logErrors(sr, logger, ())
+        ).map(_ => Right(a.asAppointment))
+      }
     }
 
   override def clientReject(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
@@ -306,7 +311,11 @@ class AppointmentServiceImpl @Inject()(
             dao.update(appointment.copy(state = AppointmentState.Provisional), appointment.version)
           else
             DBIO.successful(appointment)
-      } yield updatedAppointment).map { a => Right(a.asAppointment) }
+      } yield updatedAppointment).flatMap { a =>
+        notificationService.appointmentConfirmation(a.asAppointment, AppointmentState.Cancelled).map(sr =>
+          ServiceResults.logErrors(sr, logger, ())
+        ).map(_ => Right(a.asAppointment))
+      }
     }
 
 }
