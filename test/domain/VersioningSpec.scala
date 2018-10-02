@@ -120,7 +120,6 @@ class VersioningSpec extends AbstractDaoTest {
 
   trait EmptyDatabaseFixture {
     def db: Database = dbConfig.db
-
     db.run((
       sqlu"""DROP TABLE IF EXISTS ACCOUNT""" andThen
       sqlu"""DROP TABLE IF EXISTS ACCOUNT_VERSION""" andThen

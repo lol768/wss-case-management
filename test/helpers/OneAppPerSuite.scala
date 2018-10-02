@@ -1,15 +1,32 @@
 package helpers
 
-import org.scalatest.{Suite, TestSuite}
+import com.opentable.db.postgres.embedded.EmbeddedPostgres
+import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
 import warwick.sso.{Usercode, Users}
 
 import scala.reflect.ClassTag
 
-trait OneAppPerSuite extends Suite with org.scalatestplus.play.guice.GuiceOneAppPerSuite {
+trait OneAppPerSuite extends Suite
+  with org.scalatestplus.play.guice.GuiceOneAppPerSuite
+  with BeforeAndAfterAll {
   self: TestSuite =>
 
-  def fakeApplicationBuilder = TestApplications.fullBuilder()
+  val postgres = EmbeddedPostgres.builder()
+    .setCleanDataDirectory(true)
+    .start()
+
+  override protected def afterAll(): Unit = {
+    postgres.close()
+  }
+
+  def fakeApplicationBuilder: GuiceApplicationBuilder =
+    TestApplications.fullBuilder()
+      .configure(
+        // Port varies so pass url in dynamically
+        "slick.dbs.default.db.url" -> postgres.getJdbcUrl("postgres","postgres")
+      )
 
   implicit override def fakeApplication: Application = fakeApplicationBuilder.build()
 

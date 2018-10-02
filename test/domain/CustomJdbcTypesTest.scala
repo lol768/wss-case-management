@@ -4,9 +4,9 @@ import java.sql.Timestamp
 import java.time.{OffsetDateTime, ZonedDateTime}
 import java.util.UUID
 
+import domain.ExtendedPostgresProfile.api._
 import domain.dao.AbstractDaoTest
 import helpers.JavaTime
-import domain.ExtendedPostgresProfile.api._
 
 class CustomJdbcTypesTest extends AbstractDaoTest {
 
