@@ -51,7 +51,7 @@ POST        /enquiry                                @controllers.enquiries.Enqui
 ## Appointments ##
 
 POST        /appointment/:appointmentKey/accept     @controllers.appointments.AppointmentController.accept(appointmentKey: domain.IssueKey)
-POST        /appointment/:appointmentKey/reject     @controllers.appointments.AppointmentController.reject(appointmentKey: domain.IssueKey)
+POST        /appointment/:appointmentKey/decline    @controllers.appointments.AppointmentController.decline(appointmentKey: domain.IssueKey)
 
 ## Teams ##
 

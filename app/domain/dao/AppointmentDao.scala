@@ -33,7 +33,7 @@ trait AppointmentDao {
   def findByKeyQuery(key: IssueKey): Query[Appointments, StoredAppointment, Seq]
   def findByClientQuery(universityID: UniversityID): Query[Appointments, StoredAppointment, Seq]
   def findByCaseQuery(caseID: UUID): Query[Appointments, StoredAppointment, Seq]
-  def findRejectedQuery: Query[Appointments, StoredAppointment, Seq]
+  def findDeclinedQuery: Query[Appointments, StoredAppointment, Seq]
   def findProvisionalQuery: Query[Appointments, StoredAppointment, Seq]
   def findNeedingOutcomeQuery: Query[Appointments, StoredAppointment, Seq]
   def findConfirmedQuery: Query[Appointments, StoredAppointment, Seq]
@@ -77,11 +77,11 @@ class AppointmentDaoImpl @Inject()(
   override def findByCaseQuery(caseID: UUID): Query[Appointments, StoredAppointment, Seq] =
     appointments.table.filter(_.caseID === caseID)
 
-  override def findRejectedQuery: Query[Appointments, StoredAppointment, Seq] =
+  override def findDeclinedQuery: Query[Appointments, StoredAppointment, Seq] =
     appointments.table
       .withClients
       .filter { case (a, client) =>
-        a.isProvisional && client.isRejected
+        a.isProvisional && client.isDeclined
       }
       .map { case (a, _) => a }
       .distinct
@@ -358,8 +358,8 @@ object AppointmentDao {
     def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
     def isConfirmed: Rep[Boolean] = state === (AppointmentState.Confirmed: AppointmentState)
     def isAttended: Rep[Boolean] = state === (AppointmentState.Attended: AppointmentState)
-    def isRejected: Rep[Boolean] = state === (AppointmentState.Cancelled: AppointmentState)
-    def isResponded: Rep[Boolean] = isConfirmed || isRejected
+    def isDeclined: Rep[Boolean] = state === (AppointmentState.Cancelled: AppointmentState)
+    def isResponded: Rep[Boolean] = isConfirmed || isDeclined
 
     def pk = primaryKey("pk_appointment_client", (universityID, appointmentID))
     def fk = foreignKey("fk_appointment_client", appointmentID, appointments.table)(_.id)

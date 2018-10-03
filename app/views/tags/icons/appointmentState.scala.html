@@ -2,7 +2,7 @@
 @(state: AppointmentState, client: Boolean = false)
 @state match {
   case AppointmentState.Confirmed | AppointmentState.Attended => {@tags.icons.appointmentConfirmed()}
-  case AppointmentState.Cancelled if client => {@tags.icons.appointmentRejected()}
+  case AppointmentState.Cancelled if client => {@tags.icons.appointmentDeclined()}
   case AppointmentState.Cancelled => {@tags.icons.appointmentCancelled()}
   case _ => {@tags.icons.appointments()}
 }
