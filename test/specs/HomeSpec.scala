@@ -30,7 +30,7 @@ class HomeSpec extends BaseSpec {
 
     "forbid a user without a University ID" in {
       val home = req("/").forUser(users.noUniId).get()
-      status(home) mustEqual PRECONDITION_FAILED
+      status(home) mustBe FORBIDDEN
       contentAsString(home) must include("University ID is required")
     }
 

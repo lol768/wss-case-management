@@ -84,5 +84,5 @@ class SecurityServiceImpl @Inject()(
   private val unauthorizedResponse =
     Unauthorized(Json.toJson(JsonClientError(status = "unauthorized", errors = Seq("You are not signed in.  You may authenticate through Web Sign-On."))))
 
-  private def noUniversityIdResponse(request: AuthenticatedRequest[_]) = PreconditionFailed(views.html.errors.noUniversityId()(RequestContext.authenticated(sso, request, Nil, csrfPageHelperFactory, configuration)))
+  private def noUniversityIdResponse(request: AuthenticatedRequest[_]) = Forbidden(views.html.errors.noUniversityId()(RequestContext.authenticated(sso, request, Nil, csrfPageHelperFactory, configuration)))
 }
