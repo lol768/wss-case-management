@@ -105,7 +105,11 @@ class AppointmentServiceImpl @Inject()(
             JavaTime.offsetDateTime
           )
         })
-      } yield inserted).map { a => Right(a.asAppointment) }
+      } yield inserted).flatMap { a =>
+        notificationService.newAppointment(clients).map(sr =>
+          ServiceResults.logErrors(sr, logger, ())
+        ).map(_ => Right(a.asAppointment))
+      }
     }
   }
 

@@ -7,6 +7,7 @@
 @(
   testUsers: Seq[(SitsDepartment, Seq[(UserType, Seq[(Option[Route], Seq[SitsProfile])])])],
   testTeamMembers: Seq[(Team, Seq[User])],
+  testAdmins: Seq[User]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main("Masquerade") {
@@ -61,6 +62,26 @@
         <h3><i class="fal fa-vial"></i> Test data</h3>
 
         <p>The following users are available for masquerading in the test system:</p>
+
+        @if(testAdmins.nonEmpty) {
+          <h4>Admins</h4>
+
+          <ul>
+            @testAdmins.map { user =>
+              <li>
+                @b3.inline.formCSRF(warwick.sso.routes.MasqueradeController.masquerade(), 'class -> "inline-form") { implicit ifc =>
+                  <input type="hidden" name="usercode" value="@user.usercode.string">
+                  <button type="submit" class="btn btn-default btn-sm">
+                    <i class="fal fa-fw fa-user-secret"></i>
+                    Mask
+                  </button>
+                }
+
+                @user.name.full
+              </li>
+            }
+          </ul>
+        }
 
         @testTeamMembers.map { case (team, users) =>
           <h4>@team.name team</h4>
