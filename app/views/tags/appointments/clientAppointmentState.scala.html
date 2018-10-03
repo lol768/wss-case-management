@@ -8,10 +8,6 @@
 @if(client.state != appointment.state) {
   <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
     @tags.icons.appointmentState(client.state, client = true)
-    @if(client.state == AppointmentState.Cancelled) {
-      Declined
-    } else {
-      @client.state
-    }
+    @client.state.clientDescription
   </span>
 }
