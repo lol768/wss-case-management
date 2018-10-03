@@ -218,7 +218,15 @@ class PermissionServiceImpl @Inject() (
     appointmentService.find(id).map(_.flatMap(a => inTeam(user, a.team)))
 
   private def isAppointmentTeamMember(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    appointmentService.find(id).map(_.flatMap(a => Right(a.teamMember == user)))
+    inAnyTeamImpl(user).fold(
+      errors => Future.successful(Left(errors)),
+      isInAnyTeam =>
+        if (!isInAnyTeam) {
+          Future.successful(Right(false))
+        } else {
+          appointmentService.find(id).map(_.flatMap(a => Right(a.teamMember == user)))
+        }
+    )
 
   override def webgroupFor(team: Team): GroupName =
     GroupName(s"$webgroupPrefix${team.id}")

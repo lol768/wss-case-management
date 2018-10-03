@@ -16,6 +16,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import services.AppointmentService._
 import system.Logging
+import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
 
@@ -165,7 +166,34 @@ class AppointmentServiceImpl @Inject()(
           ),
           version
         )
-      } yield updated).map { a => Right(a.asAppointment) }
+      } yield (updated, clientsResult)).flatMap { case (a, clientsResult) =>
+        val notifyAddedClients: Future[ServiceResult[Option[Activity]]] =
+          if (clientsResult.added.nonEmpty)
+            notificationService.newAppointment(clientsResult.added.map(_.universityID).toSet).map(sr =>
+              ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
+            )
+          else Future.successful(Right(None))
+
+        val notifyRemovedClients: Future[ServiceResult[Option[Activity]]] =
+          if (clientsResult.removed.nonEmpty)
+            notificationService.cancelledAppointment(clientsResult.removed.map(_.universityID).toSet).map(sr =>
+              ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
+            )
+          else Future.successful(Right(None))
+
+        val notifyExistingClients: Future[ServiceResult[Option[Activity]]] =
+          if (clientsResult.unchanged.nonEmpty)
+            notificationService.changedAppointment(clientsResult.unchanged.map(_.universityID).toSet).map(sr =>
+              ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
+            )
+          else Future.successful(Right(None))
+
+        ServiceResults.zip(
+          notifyAddedClients,
+          notifyRemovedClients,
+          notifyExistingClients
+        ).map(_ => Right(a.asAppointment))
+      }
     }
   }
 
