@@ -264,7 +264,7 @@ class AppointmentServiceImpl @Inject()(
     }
 
   override def clientDecline(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
-    auditService.audit('AppointmentReject, appointmentID.toString, 'Appointment, Json.obj("universityID" -> universityID.string, "reason" -> reason.entryName)) {
+    auditService.audit('AppointmentDecline, appointmentID.toString, 'Appointment, Json.obj("universityID" -> universityID.string, "reason" -> reason.entryName)) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
         clients <- getClientsDBIO(appointmentID)
