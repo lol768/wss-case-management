@@ -40,7 +40,7 @@ class AppointmentController @Inject()(
     }
   }
 
-  def reject(appointmentKey: IssueKey): Action[AnyContent] = CanClientManageAppointmentAction(appointmentKey).async { implicit request =>
+  def decline(appointmentKey: IssueKey): Action[AnyContent] = CanClientManageAppointmentAction(appointmentKey).async { implicit request =>
     val universityID = currentUser().universityId.get
 
     Form(single("cancellationReason" -> AppointmentCancellationReason.formField)).bindFromRequest().fold(
@@ -48,10 +48,10 @@ class AppointmentController @Inject()(
       cancellationReason => appointments.getClients(request.appointment.id).successFlatMap { clients =>
         val client = clients.find(_.universityID == universityID).get
         if (client.state == AppointmentState.Cancelled && client.cancellationReason.contains(cancellationReason)) {
-          // Trying to reject an appointment with a no-op
+          // Trying to decline an appointment with a no-op
           Future.successful(redirectBack())
-        } else appointments.clientReject(request.appointment.id, universityID, cancellationReason).successMap { appointment =>
-          redirectBack().flashing("success" -> Messages("flash.appointment.rejected"))
+        } else appointments.clientDecline(request.appointment.id, universityID, cancellationReason).successMap { appointment =>
+          redirectBack().flashing("success" -> Messages("flash.appointment.declined"))
         }
       }
     )

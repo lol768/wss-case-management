@@ -335,9 +335,9 @@ class NotificationServiceImpl @Inject()(
 
       emailService.queue(
         Email(
-          subject = s"Case Management: Appointment ${clientState.entryName}",
+          subject = s"Case Management: Appointment ${clientState.clientDescription}",
           from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.appointmentResponse(url, clientState.entryName.toLowerCase).toString.trim)
+          bodyText = Some(views.txt.emails.appointmentResponse(url, clientState.clientDescription.toLowerCase).toString.trim)
         ),
         Seq(teamMember)
       ).flatMap {
@@ -346,7 +346,7 @@ class NotificationServiceImpl @Inject()(
           val activity = new Activity(
             Set(teamMember.usercode.string).asJava,
             Set[String]().asJava,
-            s"Appointment ${clientState.entryName}",
+            s"Appointment ${clientState.clientDescription}",
             url,
             null,
             "appointment-confirmation-message"

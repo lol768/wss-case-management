@@ -30,13 +30,13 @@ class AdminController @Inject()(
   import canViewTeamActionRefiner._
 
   def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    findEnquiriesAndCasesAndAppointments { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, rejectedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments, clients) => {
+    findEnquiriesAndCasesAndAppointments { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments, clients) => {
       profileService.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
         val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-        val usercodes = (rejectedAppointments ++ provisionalAppointments ++ appointmentsNeedingOutcome).map(_.appointment.teamMember).toSet
+        val usercodes = (declinedAppointments ++ provisionalAppointments ++ appointmentsNeedingOutcome).map(_.appointment.teamMember).toSet
         val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
 
-        Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, rejectedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments, resolvedClients, userLookup))
+        Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments, resolvedClients, userLookup))
       })
     }}
   }
@@ -61,16 +61,16 @@ class AdminController @Inject()(
       enquiries.countClosedEnquiries(teamRequest.team),
       cases.listOpenCases(teamRequest.team),
       cases.countClosedCases(teamRequest.team),
-      appointments.findRejectedAppointments(teamRequest.team),
+      appointments.findDeclinedAppointments(teamRequest.team),
       appointments.findProvisionalAppointments(teamRequest.team),
       appointments.findAppointmentsNeedingOutcome(teamRequest.team),
       appointments.countConfirmedAppointments(teamRequest.team),
       appointments.countAttendedAppointments(teamRequest.team),
       appointments.countCancelledAppointments(teamRequest.team),
-    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, rejectedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments) =>
+    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments) =>
       cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successFlatMap { caseClients =>
-        val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map{ case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients ++ (rejectedAppointments ++ provisionalAppointments ++ appointmentsNeedingOutcome).map { a => a.appointment.id -> a.clients.map(_.universityID) }
-        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, rejectedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments, clients)
+        val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map{ case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients ++ (declinedAppointments ++ provisionalAppointments ++ appointmentsNeedingOutcome).map { a => a.appointment.id -> a.clients.map(_.universityID) }
+        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments, clients)
       }
     }
   }

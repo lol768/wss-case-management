@@ -28,7 +28,7 @@ class HomeSpec extends BaseSpec {
       html.navigationPages mustBe Seq((s"${Teams.WellbeingSupport.name.replace("&", "&amp;")} team", Uri.parse(s"/team/${Teams.WellbeingSupport.id}")))
     }
 
-    "reject a user without a University ID" in {
+    "forbid a user without a University ID" in {
       val home = req("/").forUser(users.noUniId).get()
       status(home) mustEqual PRECONDITION_FAILED
       contentAsString(home) must include("University ID is required")
