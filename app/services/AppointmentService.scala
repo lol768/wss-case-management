@@ -62,6 +62,8 @@ trait AppointmentService {
 
   def clientAccept(appointmentID: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
   def clientDecline(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+
+  def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 }
 
 @Singleton
@@ -368,6 +370,19 @@ class AppointmentServiceImpl @Inject()(
             DBIO.successful(appointment)
       } yield updatedAppointment).flatMap { a =>
         notificationService.appointmentConfirmation(a.asAppointment, AppointmentState.Cancelled).map(sr =>
+          ServiceResults.logErrors(sr, logger, ())
+        ).map(_ => Right(a.asAppointment))
+      }
+    }
+
+  override def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
+    auditService.audit('AppointmentCancel, appointmentID.toString, 'Appointment, Json.obj()) {
+      daoRunner.run(for {
+        appointment <- dao.findByIDQuery(appointmentID).result.head
+        clients <- getClientsDBIO(appointmentID).map(_.map(_.asAppointmentClient))
+        updatedAppointment <- dao.update(appointment.copy(state = AppointmentState.Cancelled, cancellationReason = Some(reason)), version)
+      } yield (updatedAppointment, clients)).flatMap { case (a, clients) =>
+        notificationService.cancelledAppointment(clients.map(_.universityID).toSet).map(sr =>
           ServiceResults.logErrors(sr, logger, ())
         ).map(_ => Right(a.asAppointment))
       }

@@ -190,7 +190,7 @@ class TeamEnquiryController @Inject()(
       formWithErrors => Future.successful(
         Ok(views.html.admin.enquiry.reassign(
           request.enquiry,
-          formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", request.enquiry.version))
+          formWithErrors.bindVersion(request.enquiry.version)
         ))
       ),
       data =>

@@ -56,6 +56,19 @@ object AppointmentController {
       )(AppointmentFormData.apply)(AppointmentFormData.unapply)
     )
   }
+
+  case class CancelAppointmentData(
+    cancellationReason: AppointmentCancellationReason,
+    version: OffsetDateTime
+  )
+
+  def cancelForm(existingVersion: OffsetDateTime): Form[CancelAppointmentData] =
+    Form(
+      mapping(
+        "cancellationReason" -> AppointmentCancellationReason.formField,
+        "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == existingVersion)
+      )(CancelAppointmentData.apply)(CancelAppointmentData.unapply)
+    )
 }
 
 @Singleton
@@ -74,7 +87,7 @@ class AppointmentController @Inject()(
   import appointmentActionFilters._
   import canViewTeamActionRefiner._
 
-  private def renderAppointment(appointmentKey: IssueKey)(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
+  private def renderAppointment(appointmentKey: IssueKey, cancelForm: Form[CancelAppointmentData])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
     appointments.findForRender(appointmentKey).successFlatMap { render =>
       profiles.getProfiles(render.clients.map(_.universityID)).successMap { clientProfiles =>
         val usercodes = Seq(render.appointment.teamMember)
@@ -92,13 +105,14 @@ class AppointmentController @Inject()(
         Ok(views.html.admin.appointments.view(
           render,
           clients,
-          userLookup
+          userLookup,
+          cancelForm
         ))
       }
     }
 
-  def view(appointmentKey: IssueKey): Action[AnyContent] = CanViewAppointmentAction(appointmentKey).async { implicit appointmentRequest =>
-    renderAppointment(appointmentKey)
+  def view(appointmentKey: IssueKey): Action[AnyContent] = CanViewAppointmentAction(appointmentKey).async { implicit request =>
+    renderAppointment(appointmentKey, cancelForm(request.appointment.lastUpdated).bindVersion(request.appointment.lastUpdated).discardingErrors)
   }
 
   def createSelectTeam(forCase: Option[IssueKey], client: Option[UniversityID]): Action[AnyContent] = AnyTeamMemberRequiredAction { implicit request =>
@@ -205,7 +219,7 @@ class AppointmentController @Inject()(
           Ok(
             views.html.admin.appointments.edit(
               a.appointment,
-              formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", a.appointment.lastUpdated)),
+              formWithErrors.bindVersion(a.appointment.lastUpdated),
               a.clientCase
             )
           )
@@ -220,6 +234,18 @@ class AppointmentController @Inject()(
         }
       )
     }
+  }
+
+  def cancel(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
+    val appointment = request.appointment
+
+    cancelForm(appointment.lastUpdated).bindFromRequest().fold(
+      formWithErrors => renderAppointment(appointmentKey, formWithErrors.bindVersion(appointment.lastUpdated)),
+      data => appointments.cancel(appointment.id, data.cancellationReason, data.version).successMap { updated =>
+        Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
+          .flashing("success" -> Messages("flash.appointment.cancelled"))
+      }
+    )
   }
 
 }
