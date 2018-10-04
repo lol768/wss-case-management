@@ -246,7 +246,11 @@ object CaseHistory {
         }
       }
     }
-    result.reverse
+    result
+      // Group by identical timestamp and take the last one so bulk operations show as a single action
+      .groupBy { case (_, t, _) => t }.mapValues(_.last).values.toSeq
+      .sortBy { case (_, t, _) => t }
+      .reverse
   }
 
   private def toJson[A](items: Seq[(A, OffsetDateTime, Option[Either[Usercode, User]])])(implicit itemWriter: Writes[A]): JsValue =
