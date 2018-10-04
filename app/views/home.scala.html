@@ -172,6 +172,21 @@
   </table>
 }
 
+@myAppointmentsBadge() = {
+  @defining(
+    clientInformation.appointments.count(a =>
+      a.appointment.start.isAfter(JavaTime.offsetDateTime) &&
+          a.appointment.state != AppointmentState.Cancelled &&
+          a.clients.find(c => context.user.flatMap(_.universityId).contains(c.universityID))
+              .forall(_.state != AppointmentState.Cancelled)
+    )
+  ) { count =>
+    @if(count > 0) {
+      <span class="badge">@count</span>
+    }
+  }
+}
+
 @if(teamMemberInformation.isEmpty) {
   @main("My messages", hidePageTitle = true) {
     <ul class="nav nav-tabs" role="tablist">
@@ -179,7 +194,11 @@
         <a href="#mymessages" aria-controls="mymessages" role="tab" data-toggle="tab">@tags.icons.myMessages() My messages</a>
       </li>
       <li role="presentation">
-        <a href="#myappointments" aria-controls="myappointments" role="tab" data-toggle="tab">@tags.icons.myAppointments() My appointments</a>
+        <a href="#myappointments" aria-controls="myappointments" role="tab" data-toggle="tab">
+          @tags.icons.myAppointments()
+          My appointments
+          @myAppointmentsBadge()
+        </a>
       </li>
     </ul>
 
@@ -214,7 +233,11 @@
           <a href="#mymessages" aria-controls="mymessages" role="tab" data-toggle="tab">@tags.icons.myMessages() My messages</a>
         </li>
         <li role="presentation">
-          <a href="#myappointments" aria-controls="myappointments" role="tab" data-toggle="tab">@tags.icons.myAppointments() My appointments</a>
+          <a href="#myappointments" aria-controls="myappointments" role="tab" data-toggle="tab">
+            @tags.icons.myAppointments()
+            My appointments
+            @myAppointmentsBadge()
+          </a>
         </li>
       </ul>
 
