@@ -24,7 +24,7 @@ trait ClientSummaryDao {
   def insert(summary: StoredClientSummary)(implicit ac: AuditLogContext): DBIO[StoredClientSummary]
   def update(summary: StoredClientSummary, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredClientSummary]
   def insertReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Seq[StoredReasonableAdjustment]]
-  def deleteReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Seq[Done]]
+  def deleteReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Done]
   def get(universityID: UniversityID): DBIO[Option[StoredClientSummary]]
   def getByAlternativeEmailAddress(email: String): DBIO[Option[StoredClientSummary]]
   def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq]
@@ -196,7 +196,7 @@ class ClientSummaryDaoImpl @Inject()(
   override def insertReasonableAdjustments(adjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Seq[StoredReasonableAdjustment]] =
     reasonableAdjustments.insertAll(adjustments.toSeq)
 
-  override def deleteReasonableAdjustments(adjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Seq[Done]] =
+  override def deleteReasonableAdjustments(adjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Done] =
     reasonableAdjustments.deleteAll(adjustments.toSeq)
 
   override def get(universityID: UniversityID): DBIO[Option[StoredClientSummary]] =
