@@ -271,14 +271,17 @@ section.indent {
     font-weight: bold;
   }
 
-  html.flexbox & {
-    display: flex;
+  @media (min-width: @screen-md-min) {
+    html.flexbox & {
+      display: flex;
 
-    > li {
-      flex: 1 1 0;
+      > li {
+        flex: 1 1 0;
+        white-space: nowrap;
 
-      > a i {
-        margin-right: 5px;
+        > a i {
+          margin-right: 5px;
+        }
       }
     }
   }
