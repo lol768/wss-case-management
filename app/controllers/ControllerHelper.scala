@@ -1,6 +1,7 @@
 package controllers
 
 import helpers.Json._
+import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import play.api.libs.json.Json
 import play.api.mvc.{Request, RequestHeader, Result, Results}
@@ -21,15 +22,10 @@ trait ControllerHelper extends Results with Logging {
       case _ => BadRequest(views.html.errors.multiple(errors))
     }
 
-  implicit class EnhancedFutureServiceError[A](val future: Future[ServiceResult[A]]) {
+  implicit class FutureServiceResultControllerOps[A](val future: Future[ServiceResult[A]]) {
     def successMap(fn: A => Result)(implicit r: RequestHeader, ec: ExecutionContext): Future[Result] =
       future.map { result =>
         result.fold(showErrors, fn)
-      }
-
-    def successMapTo[B](fn: A => B)(implicit ec: ExecutionContext): Future[ServiceResult[B]] =
-      future.map { result =>
-        result.fold(Left.apply, a => Right(fn(a)))
       }
 
     def successFlatMap(fn: A => Future[Result])(implicit r: RequestHeader, ec: ExecutionContext): Future[Result] =
@@ -39,13 +35,8 @@ trait ControllerHelper extends Results with Logging {
           fn
         )
       }
-
-    def successFlatMapTo[B](fn: A => Future[ServiceResult[B]])(implicit ec: ExecutionContext): Future[ServiceResult[B]] =
-      future.flatMap { result =>
-        result.fold(
-          e => Future.successful(Left(e)),
-          fn
-        )
-      }
   }
+
+  implicit def futureServiceResultOps[A](future: Future[ServiceResult[A]]): FutureServiceResultOps[A] =
+    new FutureServiceResultOps[A](future)
 }

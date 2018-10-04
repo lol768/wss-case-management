@@ -11,6 +11,7 @@ import play.api.Configuration
 import system.Roles
 import warwick.core.timing.{TimingContext, TimingService}
 import warwick.sso.{GroupName, GroupService, RoleService, User, Usercode}
+import ServiceResults.Implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -116,14 +117,13 @@ class PermissionServiceImpl @Inject() (
     enquiryService.get(id).map(_.flatMap { enquiry => inTeam(user, enquiry.team) } )
 
   private def isEnquiryOwner(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    inAnyTeamImpl(user).fold(
-      errors => Future.successful(Left(errors)),
-      isInAnyTeam => if (!isInAnyTeam) {
+    Future.successful(inAnyTeamImpl(user)).successFlatMapTo { isInAnyTeam =>
+      if (!isInAnyTeam) {
         Future.successful(Right(false))
       } else {
         enquiryService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).contains(user)))
       }
-    )
+    }
 
   private def isEnquiryClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     enquiryService.get(id).map(_.map { enquiry => enquiry.universityID == user.universityId.get } )
@@ -161,14 +161,13 @@ class PermissionServiceImpl @Inject() (
     caseService.find(id).map(_.flatMap(c => inTeam(user, c.team)))
 
   private def isCaseOwner(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    inAnyTeamImpl(user).fold(
-      errors => Future.successful(Left(errors)),
-      isInAnyTeam => if (!isInAnyTeam) {
+    Future.successful(inAnyTeamImpl(user)).successFlatMapTo { isInAnyTeam =>
+      if (!isInAnyTeam) {
         Future.successful(Right(false))
       } else {
         caseService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).contains(user)))
       }
-    )
+    }
 
   private def isCaseClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     user.universityId.map { uniId =>
@@ -232,16 +231,10 @@ class PermissionServiceImpl @Inject() (
     GroupName(s"$webgroupPrefix${team.id}")
 
   private def inTeam(user: Usercode, team: Team): ServiceResult[Boolean] =
-    groupService.isUserInGroup(user, webgroupFor(team)).fold(
-      e => ServiceResults.exceptionToServiceResult(e),
-      r => Right(r)
-    )
+    ServiceResults.fromTry(groupService.isUserInGroup(user, webgroupFor(team)))
 
   private def isAdminImpl(user: Usercode): ServiceResult[Boolean] =
-    groupService.isUserInGroup(user, roleService.getRole(Roles.Admin).groupName).fold(
-      e => ServiceResults.exceptionToServiceResult(e),
-      r => Right(r)
-    )
+    ServiceResults.fromTry(groupService.isUserInGroup(user, roleService.getRole(Roles.Admin).groupName))
 
 }
 

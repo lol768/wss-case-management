@@ -4,6 +4,7 @@ import play.api.Logger
 import play.api.libs.json._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 object ServiceResults {
   trait ServiceError extends Serializable {
@@ -18,6 +19,36 @@ object ServiceResults {
     def apply(msg: String): ServiceError = ServiceErrorImpl(msg, None)
   }
 
+  /**
+    * Extra operations on (Future) ServiceResults:
+    *
+    * {{{import helpers.ServiceResults.Implicits._}}}
+    */
+  object Implicits {
+
+    implicit class FutureServiceResultOps[A](val future: Future[ServiceResult[A]]) {
+      /**
+        * Maps a successful service result to another value - other outcomes are unchanged.
+        */
+      def successMapTo[B](fn: A => B)(implicit ec: ExecutionContext): Future[ServiceResult[B]] =
+        future.map { result =>
+          result.fold(Left.apply, a => Right(fn(a)))
+        }
+
+      /**
+        * Flatmaps a successful service result to a future of another value - other outcomes are unchanged.
+        */
+      def successFlatMapTo[B](fn: A => Future[ServiceResult[B]])(implicit ec: ExecutionContext): Future[ServiceResult[B]] =
+        future.flatMap { result =>
+          result.fold(
+            e => Future.successful(Left(e)),
+            fn
+          )
+        }
+    }
+
+  }
+
   implicit def serviceErrorFormat: Format[ServiceError] = new Format[ServiceError] {
     def reads(js: JsValue): JsResult[ServiceError] =
       js.validate[String].map(ServiceError.apply)
@@ -26,6 +57,11 @@ object ServiceResults {
   }
 
   type ServiceResult[A] = Either[List[_ <: ServiceError], A]
+
+  def fromTry[A](t: Try[A]): ServiceResult[A] = t.fold(
+    e => ServiceResults.exceptionToServiceResult(e),
+    r => Right(r)
+  )
 
   /**
     * Converts exception-throwing code into a ServiceResult, catching any exceptions
