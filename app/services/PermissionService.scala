@@ -36,6 +36,7 @@ trait PermissionService {
   def canAddClientMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
   def canViewAppointment(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def canEditAppointment(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canClientManageAppointment(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
   def webgroupFor(team: Team): GroupName
@@ -193,6 +194,13 @@ class PermissionServiceImpl @Inject() (
       inAnyTeam(user)
     )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
 
+  override def canEditAppointment(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    Future.sequence(Seq(
+      isAdmin(user),
+      isAppointmentTeam(user, id),
+      isAppointmentTeamMember(user, id)
+    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+
   private def isAppointmentClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     user.universityId.map { uniId =>
       appointmentService.getClients(id).map {
@@ -205,6 +213,20 @@ class PermissionServiceImpl @Inject() (
 
   override def canClientManageAppointment(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     isAppointmentClient(user, id)
+
+  private def isAppointmentTeam(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    appointmentService.find(id).map(_.flatMap(a => inTeam(user, a.team)))
+
+  private def isAppointmentTeamMember(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    inAnyTeamImpl(user).fold(
+      errors => Future.successful(Left(errors)),
+      isInAnyTeam =>
+        if (!isInAnyTeam) {
+          Future.successful(Right(false))
+        } else {
+          appointmentService.find(id).map(_.flatMap(a => Right(a.teamMember == user)))
+        }
+    )
 
   override def webgroupFor(team: Team): GroupName =
     GroupName(s"$webgroupPrefix${team.id}")

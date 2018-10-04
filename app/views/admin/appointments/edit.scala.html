@@ -1,0 +1,19 @@
+@import controllers.admin.AppointmentController.AppointmentFormData
+@import domain.Appointment
+@import domain.dao.CaseDao.Case
+
+@(
+  appointment: Appointment,
+  form: Form[AppointmentFormData],
+  relatedCase: Option[Case]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"Edit appointment ${appointment.key.string}") {
+  @b3.vertical.formCSRF(controllers.admin.routes.AppointmentController.edit(appointment.key)) { implicit ifc =>
+    @b3.validatedHidden(form, "version")
+
+    @appointmentFields(form, relatedCase)
+
+    @tags.submitOrCancel("Update", controllers.admin.routes.AppointmentController.view(appointment.key))
+  }
+}

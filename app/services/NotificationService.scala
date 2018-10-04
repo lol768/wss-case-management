@@ -31,6 +31,8 @@ trait NotificationService {
   def caseReassign(clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseMessage(`case`: Case, client: UniversityID, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def newAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
 }
 
@@ -323,6 +325,60 @@ class NotificationServiceImpl @Inject()(
             url,
             null,
             "appointment-created-message"
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
+  }
+
+  override def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUsers(clients) { clientUsers =>
+      val url = s"https://$domain${controllers.routes.IndexController.home().withFragment("myappointments").path}"
+
+      emailService.queue(
+        Email(
+          subject = s"Wellbeing Support Services: appointment cancelled",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.cancelledAppointment(url).toString.trim)
+        ),
+        clientUsers.toSeq
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            clientUsers.map(_.usercode.string).asJava,
+            Set[String]().asJava,
+            s"Appointment cancelled",
+            url,
+            null,
+            "appointment-cancelled-message"
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
+  }
+
+  override def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUsers(clients) { clientUsers =>
+      val url = s"https://$domain${controllers.routes.IndexController.home().withFragment("myappointments").path}"
+
+      emailService.queue(
+        Email(
+          subject = s"Wellbeing Support Services: appointment updated",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.changedAppointment(url).toString.trim)
+        ),
+        clientUsers.toSeq
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            clientUsers.map(_.usercode.string).asJava,
+            Set[String]().asJava,
+            s"Appointment updated",
+            url,
+            null,
+            "appointment-updated-message"
           )
           sendAndHandleResponse(activity)
       }
