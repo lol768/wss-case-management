@@ -4,10 +4,10 @@ import java.time.OffsetDateTime
 
 import akka.Done
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
 import helpers.JavaTime
-import slick.dbio.Effect
-import ExtendedPostgresProfile.api._
 import services.AuditLogContext
+import slick.dbio.Effect
 import slick.lifted.Rep
 import slick.sql.FixedSqlStreamingAction
 import warwick.sso.Usercode
@@ -116,6 +116,29 @@ class VersionedTableQuery[A <: Versioned[A], B <: StoredVersion[A], C <: Table[A
     } yield deleted
   }
   def -=(value: A)(implicit ec: ExecutionContext, ac: AuditLogContext): DBIO[Done] = delete(value)
+
+  def deleteAll(values: Seq[A])(implicit ec: ExecutionContext, ac: AuditLogContext): DBIO[Done] = {
+    val versionTimestamp = JavaTime.offsetDateTime
+    val storedVersions = values.map(_.storedVersion[B](DatabaseOperation.Delete, versionTimestamp))
+
+    val deleteAction = DBIO.sequence(values.map(value =>
+      table.filter { a => a.matchesPrimaryKey(value) && a.version === value.version }.delete.flatMap {
+        case 1 => DBIO.successful(Done)
+        case _ => optimisticLockingException(value)
+      }
+    )).map(_.partition {
+      case Done => true
+      case _ => false
+    } match {
+      case (_, Nil) => Done
+      case (errors, _) => errors.head
+    })
+
+    for {
+      delete <- deleteAction
+      _ <- versionsTable ++= storedVersions
+    } yield delete
+  }
 }
 
 trait Versioning {

@@ -212,16 +212,16 @@ class CaseServiceImpl @Inject() (
           dao.findClientsQuery(Set(c.id.get)),
           _.client,
           id => CaseClient(c.id.get, id, now),
-          dao.insertClient,
-          dao.deleteClient
+          dao.insertClients,
+          dao.deleteClients
         )
         _ <- updateDifferencesDBIO[StoredCaseTag, CaseTag](
           tags,
           dao.findTagsQuery(Set(c.id.get)),
           _.caseTag,
           t => StoredCaseTag(c.id.get, t, now),
-          dao.insertTag,
-          dao.deleteTag
+          dao.insertTags,
+          dao.deleteTags
         )
       } yield updated).map(Right.apply)
     }
@@ -260,8 +260,8 @@ class CaseServiceImpl @Inject() (
         dao.findTagsQuery(Set(caseId)),
         _.caseTag,
         t => StoredCaseTag(caseId, t, now),
-        dao.insertTag,
-        dao.deleteTag
+        dao.insertTags,
+        dao.deleteTags
       )).map(_ => Right(tags))
     }
 

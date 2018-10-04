@@ -41,9 +41,8 @@ trait AppointmentDao {
   def findCancelledQuery: Query[Appointments, StoredAppointment, Seq]
 
   def insertClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredAppointmentClient]]
-  def insertClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[StoredAppointmentClient]
   def updateClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[StoredAppointmentClient]
-  def deleteClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[Done]
+  def deleteClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Done]
   def findClientByIDQuery(appointmentID: UUID, universityID: UniversityID): Query[AppointmentClients, StoredAppointmentClient, Seq]
   def findClientsQuery(appointmentIDs: Set[UUID]): Query[AppointmentClients, StoredAppointmentClient, Seq]
 }
@@ -123,14 +122,11 @@ class AppointmentDaoImpl @Inject()(
   override def insertClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredAppointmentClient]] =
     appointmentClients.insertAll(clients.toSeq)
 
-  override def insertClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[StoredAppointmentClient] =
-    appointmentClients.insert(client)
-
   override def updateClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[StoredAppointmentClient] =
     appointmentClients.update(client)
 
-  override def deleteClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[Done] =
-    appointmentClients.delete(client)
+  override def deleteClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Done] =
+    appointmentClients.deleteAll(clients.toSeq)
 
   override def findClientByIDQuery(appointmentID: UUID, universityID: UniversityID): Query[AppointmentClients, StoredAppointmentClient, Seq] =
     appointmentClients.table.filter { c => c.appointmentID === appointmentID && c.universityID === universityID }

@@ -140,8 +140,8 @@ class AppointmentServiceImpl @Inject()(
             JavaTime.offsetDateTime,
             JavaTime.offsetDateTime
           ),
-          dao.insertClient,
-          dao.deleteClient
+          dao.insertClients,
+          dao.deleteClients
         )
         updated <- dao.update(
           // We re-construct the whole StoredAppointment here so that missing a value will throw a compile error
