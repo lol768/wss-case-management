@@ -1,3 +1,5 @@
+@import java.time.OffsetDateTime
+
 @import controllers.admin.CaseController.CaseNoteFormData
 @import controllers.admin.{CaseController, CaseDocumentController}
 @import domain.CaseNoteType._
@@ -22,17 +24,20 @@
   supportedMimeTypes: Seq[MediaType]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@caseLinks(links: Seq[CaseLink], description: CaseLinkType => String, target: CaseLink => Case) = {
+@caseLinks(links: Seq[EntityAndCreator[CaseLink]], description: CaseLinkType => String, target: CaseLink => Case) = {
   @if(links.nonEmpty) {
     <ul class="list-unstyled">
-      @links.groupBy(_.linkType).map { case (linkType, l) => @l.map { link =>
+      @links.groupBy(_.entity.linkType).map { case (linkType, groupedLinks) => @groupedLinks.map { l =>
         <li>
-          This case @description(linkType) <a href="@controllers.admin.routes.CaseController.view(target(link).key.get)">@target(link).key.get.string</a> @target(link).subject<br />
-          Link added @helpers.JavaTime.Relative(link.updatedDate).toLowerCase @*TODO - once CASE-195 is done add "by X in team Y"*@
-          @defining(CaseController.deleteForm(link.updatedDate).fill(link.updatedDate)) { form =>
-            @b3.inline.formCSRF(controllers.admin.routes.CaseController.deleteLink(c.clientCase.key.get, link.id), 'class -> "inline-form") { implicit ifc =>
+          This case @description(linkType) <a href="@controllers.admin.routes.CaseController.view(target(l.entity).key.get)">@target(l.entity).key.get.string</a> @target(l.entity).subject<br />
+          @l.entity.caseNote.text <br />
+          Link added @helpers.JavaTime.Relative(l.entity.updatedDate).toLowerCase by @tags.creatorAndTeam(l.creator)
+          @defining(CaseController.deleteForm(l.entity.updatedDate).fill(l.entity.updatedDate)) { form : Form[OffsetDateTime] =>
+            @b3.inline.formCSRF(controllers.admin.routes.CaseController.deleteLink(c.clientCase.key.get, l.entity.id), 'class -> "inline-form") { implicit ifc =>
               @b3.validatedHidden(form, "version")
-              <button type="submit" class="btn btn-sm btn-link"><i class="fas fa-times-circle"></i></button>
+              <button type="submit" class="btn btn-sm btn-link" data-toggle="confirm-submit" data-message="Are you sure you want to delete this case link?">
+                <i class="fas fa-times-circle"></i>
+              </button>
             }
           }
         </li>
@@ -54,22 +59,22 @@
   </div>
 }
 
-@collapsibleSection(label: String)(content: Html) = {
-  <details class="case-details--section row form-horizontal">
-    <summary class="control-label">@label <i class="closed fas fa-plus-circle"></i> <i class="open fas fa-minus-circle"></i></summary>
-    <div class="content form-control-static">
-      @content
+@section(label: String, isCollapsible: Boolean)(content: Html) = {
+  @if(isCollapsible) {
+    <details class="case-details--section row form-horizontal">
+      <summary class="control-label">@label <i class="closed fas fa-plus-circle"></i> <i class="open fas fa-minus-circle"></i></summary>
+      <div class="content form-control-static">
+        @content
+      </div>
+    </details>
+  } else {
+    <div class="case-details--section row form-horizontal">
+      <div class="control-label">@label</div>
+      <div class="content form-control-static">
+        @content
+      </div>
     </div>
-  </details>
-}
-
-@section(label: String)(content: Html) = {
-  <div class="case-details--section row form-horizontal">
-    <div class="control-label">@label</div>
-    <div class="content form-control-static">
-      @content
-    </div>
-  </div>
+  }
 }
 
 @caseNote(note: CaseNote, user: Option[User]) = {
@@ -225,11 +230,7 @@
           owners,
           controllers.admin.routes.OwnersController.caseSubmit(c.clientCase.key.get),
           controllers.admin.routes.OwnersController.caseSubmitSelf(c.clientCase.key.get),
-          labelCols = 2,
-          labelOffset = 1,
-          containerCols = 9
         )
-
       </div>
       <div class="col-sm-6 col-md-4 ">
         <div class="row form-horizontal">
@@ -264,76 +265,41 @@
       </div>
     </div>
 
-    @collapsibleSection("Case links") {
+    @section("Case links", isCollapsible=true) {
       @if(c.outgoingCaseLinks.nonEmpty ||  c.incomingCaseLinks.nonEmpty){
         @caseLinks(c.outgoingCaseLinks, _.outwardDescription, _.incoming)
         @caseLinks(c.incomingCaseLinks, _.inwardDescription, _.outgoing)
-        @viewSectionNotes(AssociatedCase, "case links note")
       } else {
         <p>This case is not linked to any other cases</p>
       }
     }
 
-    @collapsibleSection("Documents") {
+    @section("Documents", isCollapsible=true) {
       @if(c.documents.nonEmpty) {
-        <table class="table table-default">
-          <thead>
-            <tr>
-              <th class="col-sm-4">Document type</th>
-              <th class="col-sm-4">File</th>
-              <th class="col-sm-3">Created</th>
-              <th class="col-sm-1"></th>
-            </tr>
-          </thead>
-          <tbody>
+        <ul class="list-unstyled">
           @c.documents.map { doc =>
-            <tr>
-              <td>@doc.documentType.description</td>
-              <td>
-                <a href="@controllers.admin.routes.CaseDocumentController.download(c.clientCase.key.get, doc.id)">@doc.file.fileName</a>
-              </td>
-              <td>@helpers.JavaTime.Relative(doc.created)</td>
-              <td>
-              @defining(CaseDocumentController.deleteForm(doc.lastUpdated).fill(doc.lastUpdated)) { form =>
-                @b3.inline.formCSRF(controllers.admin.routes.CaseDocumentController.delete(c.clientCase.key.get, doc.id), 'class -> "inline-form") { implicit ifc =>
+            <li>
+              <a href="@controllers.admin.routes.CaseDocumentController.download(c.clientCase.key.get, doc.entity.id)">@doc.entity.file.fileName</a>,
+              @doc.entity.documentType.description,
+              added @helpers.JavaTime.Relative(doc.entity.created) by @tags.creatorAndTeam(doc.creator)
+              @defining(CaseDocumentController.deleteForm(doc.entity.lastUpdated).fill(doc.entity.lastUpdated)) { form =>
+                @b3.inline.formCSRF(controllers.admin.routes.CaseDocumentController.delete(c.clientCase.key.get, doc.entity.id), 'class -> "inline-form") { implicit ifc =>
                   @b3.validatedHidden(form, "version")
-                  <button type="submit" class="btn btn-default btn-xs">Delete</button>
+                  <button type="submit" class="btn btn-sm btn-link" data-toggle="confirm-submit" data-message="Are you sure you want to delete this document?">
+                    <i class="fas fa-times-circle"></i>
+                  </button>
                 }
-              }
-              </td>
-            </tr>
+              } <br/>
+              @doc.entity.caseNote.text
+            </li>
           }
-          </tbody>
-        </table>
-        @viewSectionNotes(DocumentNote, "document note")
+        </ul>
       } else {
         <p>This case has no documents</p>
       }
     }
 
-    @collapsibleSection("Case notes") {
-
-      @if(c.clientCase.state != IssueState.Closed) {
-        @b3.vertical.formCSRF(controllers.admin.routes.CaseController.addNote(c.clientCase.key.get)) { implicit ifc =>
-          <div class="panel panel-default panel-form">
-            <div class="panel-heading">
-              <h3 class="panel-title">Add a case note</h3>
-            </div>
-            <div class="panel-body">
-              @b3.validatedHidden(noteForm, "version")
-              @b3.textarea(noteForm("text"), 'rows -> 5)
-            </div>
-            <div class="panel-footer">
-              <button type="submit" class="btn btn-primary">Save</button>
-            </div>
-          </div>
-        }
-      }
-
-      @caseNotes.map { case (note, user) => @caseNote(note, user)}
-    }
-
-    @collapsibleSection("Appointments") {
+    @section("Appointments", isCollapsible=true) {
       @if(appointments.nonEmpty) {
         <table class="table table-default">
           <thead>
@@ -364,7 +330,28 @@
       }
     }
 
-    @section("Messages") {
+    @section("Case notes", isCollapsible=true) {
+      @if(c.clientCase.state != IssueState.Closed) {
+        @b3.vertical.formCSRF(controllers.admin.routes.CaseController.addNote(c.clientCase.key.get)) { implicit ifc =>
+          <div class="panel panel-default panel-form">
+            <div class="panel-heading">
+              <h3 class="panel-title">Add a case note</h3>
+            </div>
+            <div class="panel-body">
+              @b3.validatedHidden(noteForm, "version")
+              @b3.textarea(noteForm("text"), 'rows -> 5)
+            </div>
+            <div class="panel-footer">
+              <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+          </div>
+        }
+      }
+
+      @caseNotes.map { case (note, user) => @caseNote(note, user)}
+    }
+
+    @section("Messages", isCollapsible = clients.size == 1) {
       <div class="panel-group" id="messages-accordion" role="tablist" aria-multiselectable="true">
       @clients.map { maybeClient =>
         @defining(SitsProfile.universityId(maybeClient)) { universityId: UniversityID =>
@@ -404,39 +391,27 @@
                 </h4>
               </div>
               <div id="collapse-thread-@universityId.string" class="panel-collapse @if(clients.size > 1){ collapse }" role="tabpanel" aria-labelledby="thread-heading-@universityId.string">
-                <div class="panel-body">
-                  @messages.map { render =>
-                    @views.html.tags.messages.message(
-                      render.message,
-                      render.files,
-                      "Client",
-                      render.message.teamMember
-                          .flatMap { usercode =>
-                        userLookup.get(usercode)
-                            .filter(_.isFound)
-                            .flatMap(_.name.full)
-                            .map { name => s"$name, ${render.message.team.getOrElse(c.clientCase.team).name} team" }
-                      }.getOrElse(s"${render.message.team.getOrElse(c.clientCase.team).name} team"),
-                      f => controllers.admin.routes.CaseMessageController.download(c.clientCase.key.get, f.id),
-                      // TODO last view date for cases
-                      None
-                    )
-
-                    @*if(render.message.sender == MessageSender.Client) {
-                      <div class="message message-client">
-                        <div class="date pull-right">@helpers.JavaTime.Relative(render.message.created)</div>
-                        <div class="message--author">Client</div>
-                        @views.utils.nl2br(render.message.text)
-                      </div>
-                    } else {
-                      <div class="message message-team">
-                        <div class="date pull-right">@helpers.JavaTime.Relative(render.message.created)</div>
-                        <div class="message--author">@render.message.teamMember.flatMap(userLookup.get).map(_.name.full).getOrElse("Team member")</div>
-                        @views.utils.nl2br(render.message.text)
-                      </div>
-                    }*@
-                  }
-                </div>
+                @if(messages.nonEmpty){
+                  <div class="panel-body">
+                    @messages.map { render =>
+                      @views.html.tags.messages.message(
+                        render.message,
+                        render.files,
+                        "Client",
+                        render.message.teamMember
+                            .flatMap { usercode =>
+                          userLookup.get(usercode)
+                              .filter(_.isFound)
+                              .flatMap(_.name.full)
+                              .map { name => s"$name, ${render.message.team.getOrElse(c.clientCase.team).name} team" }
+                        }.getOrElse(s"${render.message.team.getOrElse(c.clientCase.team).name} team"),
+                        f => controllers.admin.routes.CaseMessageController.download(c.clientCase.key.get, f.id),
+                        // TODO last view date for cases
+                        None
+                      )
+                    }
+                  </div>
+                }
                 <div class="panel-footer">
                 @if(c.clientCase.state != IssueState.Closed) {
                   @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.clientCase.key.get, universityId), messageForm, supportedMimeTypes)

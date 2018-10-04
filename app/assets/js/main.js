@@ -132,7 +132,17 @@ $(() => {
     }
   });
 
-  $(':button[data-toggle="remove-submit"][data-target]').on('click', function removeAndSubmit() {
+  // be sure to bind the confirm-submit handler before other handlers on submit buttons
+  $(':button[data-toggle~="confirm-submit"][data-message]').on('click', function confirmBeforeSubmit(event) {
+    const $button = $(this);
+    // eslint-disable-next-line no-alert
+    if (!window.confirm($button.data('message'))) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  });
+
+  $(':button[data-toggle~="remove-submit"][data-target]').on('click', function removeAndSubmit() {
     const $button = $(this);
     const $form = $button.closest('form');
     $button.closest($button.data('target')).find(':input').remove();

@@ -61,12 +61,12 @@
     </div>
 
     <div class="enquiry-details--actions row">
-      <div class="col-sm-6 col-md-4">
+      <div class="col-sm-6 col-md-7">
         <div class="row form-horizontal">
-          <div class="col-sm-4 control-label">
+          <div class="col-sm-3 control-label">
             Team
           </div>
-          <div class="col-sm-8">
+          <div class="col-sm-9">
             <div class="form-control-static">
               <div>@enquiry.team.name</div>
 
@@ -127,10 +127,10 @@
 
         @if(linkedCases.nonEmpty) {
           <div class="row form-horizontal">
-            <div class="col-sm-4 control-label">
+            <div class="col-sm-3 control-label">
               @tags.p(linkedCases.size, "Linked case")(showNumber = false)
             </div>
-            <div class="col-sm-8 form-control-static">
+            <div class="col-sm-9 form-control-static">
               @linkedCases.map { clientCase =>
                 <div class="clearfix">
                   <a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">
@@ -142,7 +142,7 @@
           </div>
         }
       </div>
-      <div class="col-sm-6 col-md-4 col-md-offset-2">
+      <div class="col-sm-6 col-md-4">
         <div class="row form-horizontal">
           <div class="col-sm-4 control-label">
             Actions

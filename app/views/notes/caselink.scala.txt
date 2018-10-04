@@ -1,5 +1,0 @@
-@import domain.dao.CaseDao.Case
-@(thisCase: Case, targetCase: Case, outwardDescription: String, message: String)
-@{thisCase.key.get.string} (@{thisCase.subject}) @{outwardDescription} @{targetCase.key.get.string} (@{targetCase.subject})
-
-@message
