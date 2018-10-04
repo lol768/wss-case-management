@@ -12,7 +12,7 @@
   closedEnquiries: Int,
   openCases: Seq[(Case, OffsetDateTime)],
   closedCases: Int,
-  rejectedAppointments: Seq[AppointmentRender],
+  declinedAppointments: Seq[AppointmentRender],
   provisionalAppointments: Seq[AppointmentRender],
   appointmentsNeedingOutcome: Seq[AppointmentRender],
   confirmedAppointments: Int,
@@ -50,7 +50,7 @@
     </div>
     <div role="tabpanel" class="tab-pane" id="appointments">
       @views.html.admin.appointmentsTab(
-        rejectedAppointments,
+        declinedAppointments,
         provisionalAppointments,
         appointmentsNeedingOutcome,
         confirmedAppointments,

@@ -173,4 +173,53 @@ class AppointmentController @Inject()(
     )
   }
 
+  def editForm(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
+    appointments.findForRender(appointmentKey).successMap { a =>
+      Ok(
+        views.html.admin.appointments.edit(
+          a.appointment,
+          form(a.appointment.team, profiles, cases, Some(a.appointment.lastUpdated))
+            .fill(AppointmentFormData(
+              a.clients.map(_.universityID),
+              a.clientCase.flatMap(_.id),
+              AppointmentSave(
+                a.appointment.subject,
+                a.appointment.start,
+                a.appointment.duration,
+                a.appointment.location,
+                a.appointment.teamMember,
+                a.appointment.appointmentType
+              ),
+              Some(a.appointment.lastUpdated)
+            )),
+          a.clientCase
+        )
+      )
+    }
+  }
+
+  def edit(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
+    appointments.findForRender(appointmentKey).successFlatMap { a =>
+      form(a.appointment.team, profiles, cases, Some(a.appointment.lastUpdated)).bindFromRequest().fold(
+        formWithErrors => Future.successful(
+          Ok(
+            views.html.admin.appointments.edit(
+              a.appointment,
+              formWithErrors.bind(formWithErrors.data ++ JavaTime.OffsetDateTimeFormatter.unbind("version", a.appointment.lastUpdated)),
+              a.clientCase
+            )
+          )
+        ),
+        data => {
+          val clients = data.clients.filter(_.string.nonEmpty)
+
+          appointments.update(a.appointment.id, data.appointment, clients, data.version.get).successMap { updated =>
+            Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
+              .flashing("success" -> Messages("flash.appointment.updated"))
+          }
+        }
+      )
+    }
+  }
+
 }

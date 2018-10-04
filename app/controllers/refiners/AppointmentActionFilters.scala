@@ -21,12 +21,19 @@ class AppointmentActionFilters @Inject()(
     permissionService.canViewAppointment(request.context.user.get.usercode)
   }
 
+  private val CanEditAppointment = PermissionsFilter[AppointmentSpecificRequest] { implicit request =>
+    permissionService.canEditAppointment(request.context.user.get.usercode, request.appointment.id)
+  }
+
   private val CanClientManageAppointment = PermissionsFilter[AppointmentSpecificRequest] { implicit request =>
     permissionService.canClientManageAppointment(request.context.user.get, request.appointment.id)
   }
 
   def CanViewAppointmentAction(appointmentKey: IssueKey): ActionBuilder[AppointmentSpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithAppointment(appointmentKey) andThen CanViewAppointment
+
+  def CanEditAppointmentAction(appointmentKey: IssueKey): ActionBuilder[AppointmentSpecificRequest, AnyContent] =
+    securityService.SigninRequiredAction andThen WithAppointment(appointmentKey) andThen CanEditAppointment
 
   def CanClientManageAppointmentAction(appointmentKey: IssueKey): ActionBuilder[AppointmentSpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithAppointment(appointmentKey) andThen CanClientManageAppointment

@@ -118,7 +118,7 @@
                 <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
                   @tags.icons.appointmentState(client.state, client = true)
                   @if(client.state == AppointmentState.Cancelled) {
-                    Rejected
+                    Declined
                   } else {
                     @client.state
                   }
@@ -134,15 +134,15 @@
                 }
 
                 @if(client.state == AppointmentState.Provisional || client.state == AppointmentState.Confirmed) {
-                  @b3.horizontal.formCSRF(controllers.appointments.routes.AppointmentController.reject(a.appointment.key), "col-sm-3", "col-sm-9", 'class -> "inline-form") { implicit ifc =>
-                    <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#reject-@{a.appointment.id.toString}-modal">@tags.icons.appointmentReject() Reject</button>
+                  @b3.horizontal.formCSRF(controllers.appointments.routes.AppointmentController.decline(a.appointment.key), "col-sm-3", "col-sm-9", 'class -> "inline-form") { implicit ifc =>
+                    <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#decline-@{a.appointment.id.toString}-modal">@tags.icons.appointmentDecline() Decline</button>
 
-                    <div class="modal fade" id="reject-@{a.appointment.id.toString}-modal" tabindex="-1" role="dialog" aria-labelledby="reject-@{a.appointment.id.toString}-modal-label">
+                    <div class="modal fade" id="decline-@{a.appointment.id.toString}-modal" tabindex="-1" role="dialog" aria-labelledby="decline-@{a.appointment.id.toString}-modal-label">
                       <div class="modal-dialog" role="document">
                         <div class="modal-content">
                           <div class="modal-header">
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                            <h4 class="modal-title" id="reject-@{a.appointment.id.toString}-modal-label">Reject appointment</h4>
+                            <h4 class="modal-title" id="decline-@{a.appointment.id.toString}-modal-label">Decline appointment</h4>
                           </div>
                           <div class="modal-body form-vertical">
                             @defining(Form(single("cancellationReason" -> AppointmentCancellationReason.formField))) { form: Form[AppointmentCancellationReason] =>
@@ -155,7 +155,7 @@
                             }
                           </div>
                           <div class="modal-footer spaced-buttons">
-                            <button type="submit" class="btn btn-primary">Reject appointment</button>
+                            <button type="submit" class="btn btn-primary">Decline appointment</button>
                             <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                           </div>
                         </div>
@@ -230,7 +230,7 @@
         </div>
         <div role="tabpanel" class="tab-pane" id="appointments">
           @views.html.admin.appointmentsTab(
-            info.rejectedAppointments,
+            info.declinedAppointments,
             info.provisionalAppointments,
             info.appointmentsNeedingOutcome,
             info.confirmedAppointments,

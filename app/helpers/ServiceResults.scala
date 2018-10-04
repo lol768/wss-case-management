@@ -49,14 +49,14 @@ object ServiceResults {
     logger: Logger,
     fallback: A,
     message: List[_ <: ServiceError] => Option[String] = _ => None
-  ): A  = {
+  ): ServiceResult[A]  = {
     result.fold(
       e => {
         val msg = message(e).getOrElse(e.head.message)
         e.headOption.flatMap(_.cause).fold(logger.error(msg))(t => logger.error(msg, t))
-        fallback
+        Right(fallback)
       },
-      success => success
+      success => Right(success)
     )
   }
 

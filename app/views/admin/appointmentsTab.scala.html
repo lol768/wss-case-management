@@ -4,7 +4,7 @@
 @import warwick.sso.{UniversityID, User, Usercode}
 
 @(
-  rejectedAppointments: Seq[AppointmentRender],
+  declinedAppointments: Seq[AppointmentRender],
   provisionalAppointments: Seq[AppointmentRender],
   appointmentsNeedingOutcome: Seq[AppointmentRender],
   confirmedAppointments: Int,
@@ -23,7 +23,7 @@
 
 <p><a href="@createRoute" class="btn btn-default">Create a new appointment</a></p>
 
-@views.html.admin.appointmentTable(Some("Appointments needing attention"), rejectedAppointments, clientLookup, userLookup)
+@views.html.admin.appointmentTable(Some("Appointments needing attention"), declinedAppointments, clientLookup, userLookup)
 @views.html.admin.appointmentTable(Some("Appointment requests awaiting a response"), provisionalAppointments, clientLookup, userLookup)
 @views.html.admin.appointmentTable(Some("Appointments needing outcome"), appointmentsNeedingOutcome, clientLookup, userLookup)
 

@@ -99,6 +99,6 @@ class ClientController @Inject()(
       logger,
       false,
       _ => Some(s"Could not determine if ${request.context.user.get.usercode.string} was in ${Teams.MentalHealth.id}; returning false")
-    )
+    ).right.get
 
 }

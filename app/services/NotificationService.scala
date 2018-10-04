@@ -30,6 +30,9 @@ trait NotificationService {
   def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseReassign(clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseMessage(`case`: Case, client: UniversityID, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def newAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
 }
 
@@ -301,15 +304,96 @@ class NotificationServiceImpl @Inject()(
       }
     }
 
+  override def newAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUsers(clients) { clientUsers =>
+      val url = s"https://$domain${controllers.routes.IndexController.home().withFragment("myappointments").path}"
+
+      emailService.queue(
+        Email(
+          subject = s"Wellbeing Support Services: new appointment created",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.newAppointment(url).toString.trim)
+        ),
+        clientUsers.toSeq
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            clientUsers.map(_.usercode.string).asJava,
+            Set[String]().asJava,
+            s"New appointment created",
+            url,
+            null,
+            "appointment-created-message"
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
+  }
+
+  override def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUsers(clients) { clientUsers =>
+      val url = s"https://$domain${controllers.routes.IndexController.home().withFragment("myappointments").path}"
+
+      emailService.queue(
+        Email(
+          subject = s"Wellbeing Support Services: appointment cancelled",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.cancelledAppointment(url).toString.trim)
+        ),
+        clientUsers.toSeq
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            clientUsers.map(_.usercode.string).asJava,
+            Set[String]().asJava,
+            s"Appointment cancelled",
+            url,
+            null,
+            "appointment-cancelled-message"
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
+  }
+
+  override def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUsers(clients) { clientUsers =>
+      val url = s"https://$domain${controllers.routes.IndexController.home().withFragment("myappointments").path}"
+
+      emailService.queue(
+        Email(
+          subject = s"Wellbeing Support Services: appointment updated",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.changedAppointment(url).toString.trim)
+        ),
+        clientUsers.toSeq
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            clientUsers.map(_.usercode.string).asJava,
+            Set[String]().asJava,
+            s"Appointment updated",
+            url,
+            null,
+            "appointment-updated-message"
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
+  }
+
   override def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUser(appointment.teamMember) { teamMember =>
       val url = s"https://$domain${controllers.admin.routes.AppointmentController.view(appointment.key).url}"
 
       emailService.queue(
         Email(
-          subject = s"Case Management: Appointment ${clientState.entryName}",
+          subject = s"Case Management: Appointment ${clientState.clientDescription}",
           from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.appointmentResponse(url, clientState.entryName.toLowerCase).toString.trim)
+          bodyText = Some(views.txt.emails.appointmentResponse(url, clientState.clientDescription.toLowerCase).toString.trim)
         ),
         Seq(teamMember)
       ).flatMap {
@@ -318,7 +402,7 @@ class NotificationServiceImpl @Inject()(
           val activity = new Activity(
             Set(teamMember.usercode.string).asJava,
             Set[String]().asJava,
-            s"Appointment ${clientState.entryName}",
+            s"Appointment ${clientState.clientDescription}",
             url,
             null,
             "appointment-confirmation-message"
@@ -357,6 +441,22 @@ class NotificationServiceImpl @Inject()(
         Future.successful(Left(List(ServiceError(s"Cannot find webgroup with name ${webGroup.string}"))))
       )
     )
+  }
+
+
+  // DummyImplicit crime - otherwise this clashes with the usercode version due to type erasure - suspect that more idomatic TypeTag trickery to solve this problem may exist
+  private def withUsers(universityIDs: Set[UniversityID])(f: Set[User] => Future[ServiceResult[Activity]])(implicit t: TimingContext, d: DummyImplicit): Future[ServiceResult[Activity]] = {
+    profileService.getProfiles(universityIDs).flatMap(_.fold(
+      errors => Future.successful(Left(errors)),
+      profiles => {
+        val users = universityIDs.flatMap(uid =>
+          profiles.get(uid).map(_.asUser)
+            .orElse(userLookupService.getUsers(Seq(uid)).toOption.flatMap(_.get(uid)))
+        )
+
+        f(users)
+      }
+    ))
   }
 
   private def withUser(universityID: UniversityID)(f: User => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {

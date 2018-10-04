@@ -1,7 +1,7 @@
 package services
 import domain.dao.CaseDao
 import domain.dao.CaseDao.Case
-import domain.{Appointment, AppointmentState, Enquiry, MessageSender}
+import domain._
 import helpers.ServiceResults.ServiceResult
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.sso.{UniversityID, Usercode}
@@ -21,5 +21,8 @@ class NullNotificationService extends NotificationService {
   override def enquiryReassign(enquiry: Enquiry)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def newCaseOwner(newOwners: Set[Usercode], clientCase: CaseDao.Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def caseReassign(clientCase: CaseDao.Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def newAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
 }
