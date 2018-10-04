@@ -10,6 +10,7 @@ import helpers.JavaTime
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import domain.ExtendedPostgresProfile.api._
+import org.scalatest.BeforeAndAfterEach
 import services.AuditLogContext
 import warwick.sso.{GroupName, Usercode}
 
@@ -112,20 +113,22 @@ object VersioningSpec {
   }
 }
 
-class VersioningSpec extends AbstractDaoTest {
+class VersioningSpec extends AbstractDaoTest with BeforeAndAfterEach {
 
   val accountDao = new SlickAccountDao(dbConfigProvider)
 
   import Account._
 
   trait EmptyDatabaseFixture {
-    def db: Database = dbConfig.db
-
-    db.run((
-      sqlu"""DROP TABLE IF EXISTS ACCOUNT""" andThen
-      sqlu"""DROP TABLE IF EXISTS ACCOUNT_VERSION""" andThen
+    execWithCommit(
       (accounts.table.schema ++ accounts.versionsTable.schema).create
-    ).transactionally).futureValue
+    )
+  }
+
+  override protected def afterEach(): Unit = {
+    execWithCommit(
+      (accounts.table.schema ++ accounts.versionsTable.schema).drop
+    )
   }
 
   "SlickAccountDao" should {
@@ -137,25 +140,25 @@ class VersioningSpec extends AbstractDaoTest {
       insertedAccount.webgroup mustBe account.webgroup
 
       accountDao.list().futureValue.size mustBe 1
-      db.run(accounts.versionsTable.result).futureValue.length mustBe 1
+      exec(accounts.versionsTable.result).length mustBe 1
 
       // If I try and insert it again, it should throw an error but not insert an extra row into versions
       Try(accountDao.insert(account).futureValue).isFailure mustBe true
-      db.run(accounts.versionsTable.result).futureValue.length mustBe 1
+      exec(accounts.versionsTable.result).length mustBe 1
     }
 
     "insert a row into the versions table on update" in new EmptyDatabaseFixture {
       private val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
 
       // Just the I
-      db.run(accounts.versionsTable.result).futureValue.length mustBe 1
+      exec(accounts.versionsTable.result).length mustBe 1
 
       private val updatedAccount = accountDao.update(account.copy(webgroup = GroupName("in-elab"))).futureValue
       updatedAccount.usercode mustBe account.usercode
       updatedAccount.webgroup mustBe GroupName("in-elab")
 
       accountDao.list().futureValue.size mustBe 1
-      db.run(accounts.versionsTable.result).futureValue.length mustBe 2 // I, U
+      exec(accounts.versionsTable.result).length mustBe 2 // I, U
 
       // Go back to the original group name
       private val updatedAccount2 = accountDao.update(updatedAccount.copy(webgroup = GroupName("in-webdev"))).futureValue
@@ -163,32 +166,32 @@ class VersioningSpec extends AbstractDaoTest {
       updatedAccount2.webgroup mustBe GroupName("in-webdev")
 
       accountDao.list().futureValue.size mustBe 1
-      db.run(accounts.versionsTable.result).futureValue.length mustBe 3 // I, U, U
+      exec(accounts.versionsTable.result).length mustBe 3 // I, U, U
     }
 
     "fail optimistic locking if trying to update a row with the wrong version" in new EmptyDatabaseFixture {
       private val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
       accountDao.update(account.copy(webgroup = GroupName("in-elab"))).futureValue
 
-      db.run(accounts.versionsTable.result).futureValue.length mustBe 2 // I, U
+      exec(accounts.versionsTable.result).length mustBe 2 // I, U
 
       // Try and use the original account again for the update, version mismatch, OLE
       Try(accountDao.update(account.copy(webgroup = GroupName("in-all"))).futureValue).isFailure mustBe true
 
-      db.run(accounts.versionsTable.result).futureValue.length mustBe 2 // Still I, U
+      exec(accounts.versionsTable.result).length mustBe 2 // Still I, U
     }
 
     "insert a row into the versions table on delete" in new EmptyDatabaseFixture {
       private val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
 
       // Just the I
-      db.run(accounts.versionsTable.result).futureValue.length mustBe 1
+      exec(accounts.versionsTable.result).length mustBe 1
       accountDao.list().futureValue.size mustBe 1
 
       accountDao.delete(account).futureValue mustBe Done
 
       // I, D
-      db.run(accounts.versionsTable.result).futureValue.length mustBe 2
+      exec(accounts.versionsTable.result).length mustBe 2
       accountDao.list().futureValue.size mustBe 0
     }
 
@@ -196,12 +199,12 @@ class VersioningSpec extends AbstractDaoTest {
       private val account = accountDao.insert(Account(Usercode("cuscav"), GroupName("in-webdev"))).futureValue
       accountDao.update(account.copy(webgroup = GroupName("in-elab"))).futureValue
 
-      db.run(accounts.versionsTable.result).futureValue.length mustBe 2 // I, U
+      exec(accounts.versionsTable.result).length mustBe 2 // I, U
 
       // Try and delete the original account again for the update, version mismatch, OLE
       Try(accountDao.delete(account).futureValue).isFailure mustBe true
 
-      db.run(accounts.versionsTable.result).futureValue.length mustBe 2 // Still I, U
+      exec(accounts.versionsTable.result).length mustBe 2 // Still I, U
     }
   }
 

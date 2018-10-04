@@ -10,7 +10,7 @@ import services.AuditLogContext
 import warwick.core.timing.TimingContext
 import slick.basic.DatabaseConfig
 import slick.dbio.{DBIO, DBIOAction}
-import slick.jdbc.JdbcProfile
+import slick.jdbc.{JdbcBackend, JdbcProfile}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -28,6 +28,7 @@ abstract class AbstractDaoTest extends PlaySpec with MockitoSugar with OneAppPer
   protected lazy val dbConfigProvider: DatabaseConfigProvider = get[DatabaseConfigProvider]
   protected lazy val dbConfig: DatabaseConfig[JdbcProfile] = dbConfigProvider.get[JdbcProfile]
   protected lazy val profile: JdbcProfile = dbConfig.profile
+  protected def db: JdbcBackend#DatabaseDef = dbConfig.db
 
   // Some aliases to allow tests to be a bit tidier
   lazy val DBIO = profile.api.DBIO

@@ -260,8 +260,7 @@ class CaseServiceTest extends AbstractDaoTest {
       service.findRecentlyViewed(Usercode("cuscav"), 5).serviceValue mustBe Seq(c)
     }
 
-    "search" ignore withData(new CaseFixture) { c =>
-      // TODO Find a way to test this. Replace H2 with embedded PgSQL?
+    "search" in withData(new CaseFixture) { c =>
       service.search(CaseSearchQuery(query = Some("assessment")), 5).serviceValue mustBe Seq(c)
     }
   }
