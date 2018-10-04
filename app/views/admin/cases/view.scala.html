@@ -99,7 +99,7 @@
         @defining(CaseController.deleteForm(note.lastUpdated).fill(note.lastUpdated)) { form =>
           @b3.inline.formCSRF(controllers.admin.routes.CaseController.deleteNote(c.clientCase.key.get, note.id), 'class -> "inline-form") { implicit ifc =>
             @b3.validatedHidden(form, "version")
-            <button type="submit" class="btn btn-default btn-xs">Delete</button>
+            <button type="submit" class="btn btn-default btn-xs" data-toggle="confirm-submit" data-message="Are you sure you want to delete this case note?">Delete</button>
           }
         }
       </div>
