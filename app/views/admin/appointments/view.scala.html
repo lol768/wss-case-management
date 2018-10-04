@@ -1,12 +1,11 @@
-@import domain.{Appointment, AppointmentClient, SitsProfile}
-@import domain.dao.CaseDao.Case
+@import controllers.admin.AppointmentController.CancelAppointmentData
+@import domain.{AppointmentCancellationReason, AppointmentClient, AppointmentRender, AppointmentState, SitsProfile}
 @import warwick.sso.{UniversityID, User, Usercode}
-@import domain.AppointmentRender
-
 @(
   a: AppointmentRender,
   clients: Seq[(AppointmentClient, Either[UniversityID, SitsProfile])],
   userLookup: Map[Usercode, User],
+  cancelForm: Form[CancelAppointmentData],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"${a.appointment.key.string} ${a.appointment.subject}") {
@@ -77,7 +76,44 @@
             @tags.icons.appointmentState(a.appointment.state)
             @a.appointment.state
           </span>
+
+          @if(a.appointment.state == AppointmentState.Provisional || a.appointment.state == AppointmentState.Confirmed) {
+            &nbsp;
+            @b3.horizontal.formCSRF(controllers.admin.routes.AppointmentController.cancel(a.appointment.key), "col-sm-3", "col-sm-9", 'class -> "inline-form") { implicit ifc =>
+              <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#cancel-modal">@tags.icons.appointmentCancel() Cancel</button>
+
+              @b3.validatedHidden(cancelForm, "version")
+
+              <div class="modal fade" id="cancel-modal" tabindex="-1" role="dialog" aria-labelledby="cancel-modal-label">
+                <div class="modal-dialog" role="document">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                      <h4 class="modal-title" id="cancel-modal-label">Cancel appointment</h4>
+                    </div>
+                    <div class="modal-body form-vertical">
+                    @b3.select(cancelForm("cancellationReason"),
+                      options = AppointmentCancellationReason.values.map { r => r.entryName -> r.description },
+                      '_label -> "Reason",
+                      '_default -> "",
+                      'required -> true
+                    )
+                    </div>
+                    <div class="modal-footer spaced-buttons">
+                      <button type="submit" class="btn btn-primary">Cancel appointment</button>
+                      <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          }
         </dd>
+
+        @a.appointment.cancellationReason.map { reason =>
+          <dt>Cancellation reason</dt>
+          <dd>@reason.description</dd>
+        }
       </dl>
 
       <p>

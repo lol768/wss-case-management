@@ -112,12 +112,13 @@ DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocum
 POST        /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.addMessage(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
 GET         /team/case/:caseKey/attachments/:fileId @controllers.admin.CaseMessageController.download(caseKey: domain.IssueKey, fileId: java.util.UUID)
 
-GET         /team/appointment/create                @controllers.admin.AppointmentController.createSelectTeam(forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
-GET         /team/appointment/create/:teamId        @controllers.admin.AppointmentController.createForm(teamId: String, forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
-POST        /team/appointment/create/:teamId        @controllers.admin.AppointmentController.create(teamId: String)
-GET         /team/appointment/:appointmentKey       @controllers.admin.AppointmentController.view(appointmentKey: domain.IssueKey)
-GET         /team/appointment/:appointmentKey/edit  @controllers.admin.AppointmentController.editForm(appointmentKey: domain.IssueKey)
-POST        /team/appointment/:appointmentKey       @controllers.admin.AppointmentController.edit(appointmentKey: domain.IssueKey)
+GET         /team/appointment/create                    @controllers.admin.AppointmentController.createSelectTeam(forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
+GET         /team/appointment/create/:teamId            @controllers.admin.AppointmentController.createForm(teamId: String, forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
+POST        /team/appointment/create/:teamId            @controllers.admin.AppointmentController.create(teamId: String)
+GET         /team/appointment/:appointmentKey           @controllers.admin.AppointmentController.view(appointmentKey: domain.IssueKey)
+GET         /team/appointment/:appointmentKey/edit      @controllers.admin.AppointmentController.editForm(appointmentKey: domain.IssueKey)
+POST        /team/appointment/:appointmentKey           @controllers.admin.AppointmentController.edit(appointmentKey: domain.IssueKey)
+POST        /team/appointment/:appointmentKey/cancel    @controllers.admin.AppointmentController.cancel(appointmentKey: domain.IssueKey)
 
 ## Admins ##
 

@@ -1,8 +1,12 @@
 package controllers
 
+import java.time.OffsetDateTime
+
+import helpers.JavaTime
 import helpers.Json._
 import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
+import play.api.data.Form
 import play.api.libs.json.Json
 import play.api.mvc.{Request, RequestHeader, Result, Results}
 import system.Logging
@@ -39,4 +43,9 @@ trait ControllerHelper extends Results with Logging {
 
   implicit def futureServiceResultOps[A](future: Future[ServiceResult[A]]): FutureServiceResultOps[A] =
     new FutureServiceResultOps[A](future)
+
+  implicit class EnhancedForm[A](val form: Form[A]) {
+    def bindVersion(version: OffsetDateTime, key: String = "version"): Form[A] =
+      form.bind(form.data ++ JavaTime.OffsetDateTimeFormatter.unbind(key, version))
+  }
 }
