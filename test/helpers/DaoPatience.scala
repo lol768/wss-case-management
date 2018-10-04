@@ -9,6 +9,6 @@ import org.scalatest.time.{Millis, Span}
 trait DaoPatience {
   self: PatienceConfiguration =>
 
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(2000, Millis)), scaled(Span(15, Millis)))
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(5000, Millis)), scaled(Span(15, Millis)))
 
 }
