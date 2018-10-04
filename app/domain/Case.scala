@@ -66,8 +66,10 @@ case class CaseLink(
   linkType: CaseLinkType,
   outgoing: Case,
   incoming: Case,
+  caseNote: CaseNote,
+  teamMember: Usercode,
   updatedDate: OffsetDateTime
-)
+) extends HasCreator
 
 sealed abstract class CaseLinkType(val outwardDescription: String, val inwardDescription: String) extends EnumEntry
 object CaseLinkType extends PlayEnum[CaseLinkType] {
@@ -118,9 +120,10 @@ case class CaseDocument(
   documentType: CaseDocumentType,
   file: UploadedFile,
   teamMember: Usercode,
+  caseNote: CaseNote,
   created: OffsetDateTime = OffsetDateTime.now(),
   lastUpdated: OffsetDateTime = OffsetDateTime.now()
-)
+) extends HasCreator
 
 /**
   * Just the metadata of the document required to save it

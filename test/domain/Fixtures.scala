@@ -117,10 +117,10 @@ object Fixtures {
       CaseDao.caseClients.versionsTable.delete andThen
       CaseDao.caseLinks.table.delete andThen
       CaseDao.caseLinks.versionsTable.delete andThen
-      CaseDao.caseNotes.table.delete andThen
-      CaseDao.caseNotes.versionsTable.delete andThen
       CaseDao.caseDocuments.table.delete andThen
       CaseDao.caseDocuments.versionsTable.delete andThen
+      CaseDao.caseNotes.table.delete andThen
+      CaseDao.caseNotes.versionsTable.delete andThen
       UploadedFileDao.uploadedFiles.table.delete andThen
       UploadedFileDao.uploadedFiles.versionsTable.delete andThen
       AuditEvent.auditEvents.delete andThen

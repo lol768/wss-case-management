@@ -321,9 +321,9 @@ object CaseDao {
       clients: Set[UniversityID],
       tags: Set[CaseTag],
       notes: Seq[CaseNote],
-      documents: Seq[CaseDocument],
-      outgoingCaseLinks: Seq[CaseLink],
-      incomingCaseLinks: Seq[CaseLink],
+      documents: Seq[EntityAndCreator[CaseDocument]],
+      outgoingCaseLinks: Seq[EntityAndCreator[CaseLink]],
+      incomingCaseLinks: Seq[EntityAndCreator[CaseLink]],
       messages: CaseMessages
     )
   }
@@ -554,6 +554,8 @@ object CaseDao {
     linkType: CaseLinkType,
     outgoingCaseID: UUID,
     incomingCaseID: UUID,
+    caseNote: UUID,
+    teamMember: Usercode,
     version: OffsetDateTime = OffsetDateTime.now()
   ) extends Versioned[StoredCaseLink] {
     override def atVersion(at: OffsetDateTime): StoredCaseLink = copy(version = at)
@@ -564,6 +566,8 @@ object CaseDao {
         linkType,
         outgoingCaseID,
         incomingCaseID,
+        caseNote,
+        teamMember,
         version,
         operation,
         timestamp,
@@ -576,6 +580,8 @@ object CaseDao {
     linkType: CaseLinkType,
     outgoingCaseID: UUID,
     incomingCaseID: UUID,
+    caseNote: UUID,
+    teamMember: Usercode,
     version: OffsetDateTime = OffsetDateTime.now(),
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
@@ -586,6 +592,8 @@ object CaseDao {
     def linkType = column[CaseLinkType]("link_type")
     def outgoingCaseID = column[UUID]("outgoing_case_id")
     def incomingCaseID = column[UUID]("incoming_case_id")
+    def caseNote = column[UUID]("case_note")
+    def teamMember = column[Usercode]("team_member")
     def version = column[OffsetDateTime]("version_utc")
   }
 
@@ -598,7 +606,8 @@ object CaseDao {
     override def matchesPrimaryKey(other: StoredCaseLink): Rep[Boolean] = id === other.id
 
     override def * : ProvenShape[StoredCaseLink] =
-      (id, linkType, outgoingCaseID, incomingCaseID, version).mapTo[StoredCaseLink]
+      (id, linkType, outgoingCaseID, incomingCaseID, caseNote, teamMember, version).mapTo[StoredCaseLink]
+    def pk = primaryKey("pk_case_link", (linkType, outgoingCaseID, incomingCaseID))
     def outgoingFK = foreignKey("fk_case_link_outgoing", outgoingCaseID, cases.table)(_.id)
     def incomingFK = foreignKey("fk_case_link_incoming", incomingCaseID, cases.table)(_.id)
     def outgoingCaseIndex = index("idx_case_link_outgoing", outgoingCaseID)
@@ -614,7 +623,7 @@ object CaseDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseLinkVersion] =
-      (id, linkType, outgoingCaseID, incomingCaseID, version, operation, timestamp, auditUser).mapTo[StoredCaseLinkVersion]
+      (id, linkType, outgoingCaseID, incomingCaseID, caseNote, teamMember, version, operation, timestamp, auditUser).mapTo[StoredCaseLinkVersion]
     def pk = primaryKey("pk_case_link_version", (linkType, outgoingCaseID, incomingCaseID, timestamp))
     def idx = index("idx_case_link_version", (linkType, outgoingCaseID, incomingCaseID, version))
   }
@@ -709,14 +718,16 @@ object CaseDao {
     documentType: CaseDocumentType,
     fileId: UUID,
     teamMember: Usercode,
+    caseNote: UUID,
     created: OffsetDateTime,
     version: OffsetDateTime
   ) extends Versioned[StoredCaseDocument] {
-    def asCaseDocument(file: UploadedFile) = CaseDocument(
+    def asCaseDocument(file: UploadedFile, note: CaseNote) = CaseDocument(
       id,
       documentType,
       file,
       teamMember,
+      note,
       created,
       version
     )
@@ -730,6 +741,7 @@ object CaseDao {
         documentType,
         fileId,
         teamMember,
+        caseNote,
         created,
         version,
         operation,
@@ -744,6 +756,7 @@ object CaseDao {
     documentType: CaseDocumentType,
     fileId: UUID,
     teamMember: Usercode,
+    caseNote: UUID,
     created: OffsetDateTime,
     version: OffsetDateTime,
     operation: DatabaseOperation,
@@ -756,6 +769,7 @@ object CaseDao {
     def documentType = column[CaseDocumentType]("document_type")
     def fileId = column[UUID]("file_id")
     def teamMember = column[Usercode]("team_member")
+    def caseNote = column[UUID]("case_note")
     def created = column[OffsetDateTime]("created_utc")
     def version = column[OffsetDateTime]("version_utc")
   }
@@ -767,7 +781,7 @@ object CaseDao {
     def id = column[UUID]("id", O.PrimaryKey)
 
     override def * : ProvenShape[StoredCaseDocument] =
-      (id, caseId, documentType, fileId, teamMember, created, version).mapTo[StoredCaseDocument]
+      (id, caseId, documentType, fileId, teamMember, caseNote, created, version).mapTo[StoredCaseDocument]
     def caseFK = foreignKey("fk_case_document_case", caseId, cases.table)(_.id)
     def fileFK = foreignKey("fk_case_document_file", fileId, UploadedFileDao.uploadedFiles.table)(_.id)
     def caseIndex = index("idx_case_document_case", caseId)
@@ -783,7 +797,7 @@ object CaseDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseDocumentVersion] =
-      (id, caseId, documentType, fileId, teamMember, created, version, operation, timestamp, auditUser).mapTo[StoredCaseDocumentVersion]
+      (id, caseId, documentType, fileId, teamMember, caseNote, created, version, operation, timestamp, auditUser).mapTo[StoredCaseDocumentVersion]
     def pk = primaryKey("pk_case_document_version", (id, timestamp))
     def idx = index("idx_case_document_version", (id, version))
   }

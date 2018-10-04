@@ -3,24 +3,22 @@
   owners: Seq[User],
   submit: Call,
   submitSelf: Call,
-  labelCols: Int = 4,
-  containerCols: Int = 8
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 <div class="row form-horizontal">
-  <div class="col-sm-@labelCols control-label">
+  <div class="col-sm-3 control-label">
     Owners
   </div>
-  <div class="col-sm-@containerCols">
+  <div class="col-sm-9">
     @b3.horizontal.formCSRF(submit, "col-sm-0", "col-sm-12", 'class -> "form-control-static") { implicit ifc =>
       @if(owners.nonEmpty) {
         @owners.map { owner =>
           <div class="clearfix" @if(owners.last == owner){ data-field-history-field="owners" }>
-            <button type="button" class="pull-right btn btn-sm btn-link" data-toggle="remove-submit" data-target="div">
-              <i class="fas fa-times-circle"></i>
-            </button>
             <input type="hidden" name="owners[]" value="@owner.usercode.string">
             @owner.name.full
+            <button type="button" class="btn btn-sm btn-link" data-toggle="confirm-submit remove-submit" data-target="div" data-message="Are you sure you want to remove this owner?">
+              <i class="fas fa-times-circle"></i>
+            </button>
           </div>
         }
       } else {

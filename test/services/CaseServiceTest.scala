@@ -75,15 +75,15 @@ class CaseServiceTest extends AbstractDaoTest {
       fullyJoined.clients mustBe clients
       fullyJoined.tags mustBe tags
       fullyJoined.outgoingCaseLinks.size mustBe 1
-      fullyJoined.outgoingCaseLinks.exists { l => l.linkType == CaseLinkType.Related && l.outgoing == clientCase && l.incoming == c2 } mustBe true
+      fullyJoined.outgoingCaseLinks.map(_.entity).exists { l => l.linkType == CaseLinkType.Related && l.outgoing == clientCase && l.incoming == c2 } mustBe true
       fullyJoined.incomingCaseLinks.size mustBe 1
-      fullyJoined.incomingCaseLinks.exists { l => l.linkType == CaseLinkType.Related && l.outgoing == c1 && l.incoming == clientCase } mustBe true
+      fullyJoined.incomingCaseLinks.map(_.entity).exists { l => l.linkType == CaseLinkType.Related && l.outgoing == c1 && l.incoming == clientCase } mustBe true
       fullyJoined.notes.size mustBe 3
       fullyJoined.notes.head.text mustBe "I hate herons"
       fullyJoined.notes(1).text mustBe "clientCase is related to c2"
       fullyJoined.notes(2).text mustBe "c1 is related to clientCase"
       fullyJoined.documents.size mustBe 1
-      fullyJoined.documents.head.documentType mustBe CaseDocumentType.SpecificLearningDifficultyDocument
+      fullyJoined.documents.map(_.entity).head.documentType mustBe CaseDocumentType.SpecificLearningDifficultyDocument
     }
 
     "find by client" in withData(new CaseFixture()) { _ =>

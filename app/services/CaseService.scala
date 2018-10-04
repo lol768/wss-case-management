@@ -93,6 +93,7 @@ class CaseServiceImpl @Inject() (
   appointmentService: AppointmentService,
   userLookupService: UserLookupService,
   profileService: ProfileService,
+  permissionsService: PermissionService,
   daoRunner: DaoRunner,
   dao: CaseDao,
   messageDao: MessageDao,
@@ -132,7 +133,7 @@ class CaseServiceImpl @Inject() (
 
   override def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]] =
     daoRunner.run(dao.find(caseKey)).map(Right(_)).recover {
-      case _: NoSuchElementException => ServiceResults.error(s"Could not find a Case with key ${caseKey.string}")
+      case _: NoSuchElementException => ServiceResults.error[Case](s"Could not find a Case with key ${caseKey.string}")
     }
 
   private def findFullyJoined(query: Query[Cases, Case, Seq])(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]] =
@@ -149,16 +150,27 @@ class CaseServiceImpl @Inject() (
       notes <- getNotesDBIO(clientCase.id.get)
       docs <- getDocumentsDBIO(clientCase.id.get)
       (outgoingCaseLinks, incomingCaseLinks) <- getLinksDBIO(clientCase.id.get)
-    } yield Case.FullyJoined(
-      clientCase,
-      clients.map(_.client).toSet,
-      tags.map(_.caseTag).toSet,
-      notes.map(_.asCaseNote),
-      docs.map { case (d, f) => d.asCaseDocument(f.asUploadedFile) },
-      outgoingCaseLinks,
-      incomingCaseLinks,
-      CaseMessages(messages)
-    )).map(Right(_))
+    } yield {
+      val caseDocuments =  docs.map { case ((d, f), n) => d.asCaseDocument(f.asUploadedFile, n.asCaseNote) }
+
+      ServiceResults.sequence(outgoingCaseLinks.map(c => EntityAndCreator(c, permissionsService, userLookupService)))
+        .flatMap(o => ServiceResults.sequence(incomingCaseLinks.map(c => EntityAndCreator(c, permissionsService, userLookupService)))
+          .flatMap (i => ServiceResults.sequence(caseDocuments.map(c => EntityAndCreator(c, permissionsService, userLookupService)))
+            .map(d => (o, i, d))
+          )
+        ).map { case (outgoing, incoming, documents) =>
+          Case.FullyJoined(
+            clientCase,
+            clients.map(_.client).toSet,
+            tags.map(_.caseTag).toSet,
+            notes.map(_.asCaseNote),
+            documents,
+            outgoing,
+            incoming,
+            CaseMessages(messages)
+          )
+        }
+    })
 
   override def findFull(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]] =
     auditService.audit('CaseView, id.toString, 'Case, Json.obj()) {
@@ -268,9 +280,10 @@ class CaseServiceImpl @Inject() (
   override def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]] =
     auditService.audit('CaseLinkSave, outgoingID.toString, 'Case, Json.obj("to" -> incomingID.toString, "note" -> caseNote.text)) {
       daoRunner.run(for {
-        link <- dao.insertLink(StoredCaseLink(UUID.randomUUID(), linkType, outgoingID, incomingID))
-        _ <- addNoteDBIO(outgoingID, CaseNoteType.AssociatedCase, caseNote)
+        outNote <- addNoteDBIO(outgoingID, CaseNoteType.AssociatedCase, caseNote)
+        // add a note to the linked case - will bump last modified on that case. May want to show it in the UI at some point but won't be exposed for now
         _ <- addNoteDBIO(incomingID, CaseNoteType.AssociatedCase, caseNote)
+        link <- dao.insertLink(StoredCaseLink(UUID.randomUUID(), linkType, outgoingID, incomingID, outNote.id, caseNote.teamMember))
       } yield link).map(Right.apply)
     }
 
@@ -278,10 +291,11 @@ class CaseServiceImpl @Inject() (
     dao.findLinksQuery(caseID)
       .join(CaseDao.cases.table).on(_.outgoingCaseID === _.id)
       .join(CaseDao.cases.table).on(_._1.incomingCaseID === _.id)
+      .join(CaseDao.caseNotes.table).on(_._1._1.caseNote === _.id)
       .result
       .map { results =>
-        results.map { case ((link, outgoing), incoming) =>
-          CaseLink(link.id, link.linkType, outgoing, incoming, link.version)
+        results.map { case (((link, outgoing), incoming), note) =>
+          CaseLink(link.id, link.linkType, outgoing, incoming, note.asCaseNote, link.teamMember, link.version)
         }.partition(_.outgoing.id.get == caseID)
       }
 
@@ -421,28 +435,31 @@ class CaseServiceImpl @Inject() (
       val documentID = UUID.randomUUID()
       daoRunner.run(for {
         f <- uploadedFileService.storeDBIO(in, file, ac.usercode.get)
+        n <- addNoteDBIO(caseID, CaseNoteType.DocumentNote, caseNote)
         doc <- dao.insertDocument(StoredCaseDocument(
           documentID,
           caseID,
           document.documentType,
           f.id,
           document.teamMember,
+          n.id,
           JavaTime.offsetDateTime,
           JavaTime.offsetDateTime
         ))
-        _ <- addNoteDBIO(caseID, CaseNoteType.DocumentNote, caseNote)
-      } yield doc.asCaseDocument(f)).map(Right.apply)
+
+      } yield doc.asCaseDocument(f, n.asCaseNote)).map(Right.apply)
     }
 
-  private def getDocumentsDBIO(caseID: UUID): DBIO[Seq[(StoredCaseDocument, StoredUploadedFile)]] =
+  private def getDocumentsDBIO(caseID: UUID): DBIO[Seq[((StoredCaseDocument, StoredUploadedFile), StoredCaseNote)]] =
     dao.findDocumentsQuery(caseID)
       .join(UploadedFileDao.uploadedFiles.table).on(_.fileId === _.id)
-      .sortBy { case (d, _) => d.created.desc }
+      .join(CaseDao.caseNotes.table).on(_._1.caseNote === _.id)
+      .sortBy { case ((d, f), n) => d.created.desc }
       .result
 
   override def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]] = {
     daoRunner.run(getDocumentsDBIO(caseID))
-      .map { docs => Right(docs.map { case (d, f) => d.asCaseDocument(f.asUploadedFile) }) }
+      .map { docs => Right(docs.map { case ((d, f), n) => d.asCaseDocument(f.asUploadedFile, n.asCaseNote) }) }
   }
 
   override def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
