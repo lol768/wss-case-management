@@ -4,5 +4,6 @@
   case AppointmentState.Confirmed | AppointmentState.Attended => {@tags.icons.appointmentConfirmed()}
   case AppointmentState.Cancelled if client => {@tags.icons.appointmentDeclined()}
   case AppointmentState.Cancelled => {@tags.icons.appointmentCancelled()}
+  case AppointmentState.Provisional => {@tags.icons.appointmentPending()}
   case _ => {@tags.icons.appointments()}
 }
