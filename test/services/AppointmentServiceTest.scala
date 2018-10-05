@@ -2,6 +2,7 @@ package services
 
 import java.time.Duration
 
+import akka.Done
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.{AbstractDaoTest, AppointmentDao, CaseDao}
@@ -68,7 +69,8 @@ class AppointmentServiceTest extends AbstractDaoTest {
         Set(
           AppointmentClient(UniversityID("0672089"), AppointmentState.Provisional, None)
         ),
-        None
+        None,
+        Seq()
       )
 
       // Create a case to link to
@@ -76,13 +78,18 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
       val multipleClientsWithCase = service.create(AppointmentSave("Skype call", JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, Some(c.id.get)).serviceValue
 
+      // Add some notes
+      val note1 = service.addNote(multipleClientsWithCase.id, AppointmentNoteSave("Note 1 test", Usercode("cusfal"))).serviceValue
+      val note2 = service.addNote(multipleClientsWithCase.id, AppointmentNoteSave("Note 2 test", Usercode("cusfal"))).serviceValue
+
       service.findForRender(multipleClientsWithCase.key).serviceValue mustBe AppointmentRender(
         multipleClientsWithCase,
         Set(
           AppointmentClient(UniversityID("0672088"), AppointmentState.Provisional, None),
           AppointmentClient(UniversityID("0672089"), AppointmentState.Provisional, None)
         ),
-        Some(c)
+        Some(c),
+        Seq(note1, note2)
       )
     }
 
@@ -156,6 +163,33 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
       val multiClientUpdate3 = service.clientDecline(multiClient.id, client1, AppointmentCancellationReason.UnableToAttend).serviceValue
       multiClientUpdate3.state mustBe AppointmentState.Provisional // All clients have declined
+    }
+
+    "get and set appointment notes" in withData(new AppointmentFixture) { a =>
+      service.getNotes(a.id).serviceValue mustBe 'empty
+
+      val n1 = service.addNote(a.id, AppointmentNoteSave(
+        text = "I just called to say I love you",
+        teamMember = Usercode("cuscav")
+      )).serviceValue
+
+      val n2 = service.addNote(a.id, AppointmentNoteSave(
+        text = "Jim came in to tell me that Peter needed a chat",
+        teamMember = Usercode("cusebr")
+      )).serviceValue
+
+      service.getNotes(a.id).serviceValue mustBe Seq(n2, n1) // Newest first
+
+      val n1Updated = service.updateNote(a.id, n1.id, AppointmentNoteSave(
+        text = "Jim's not really bothered",
+        teamMember = Usercode("cusebr")
+      ), n1.lastUpdated).serviceValue
+
+      service.getNotes(a.id).serviceValue mustBe Seq(n2, n1Updated)
+
+      service.deleteNote(a.id, n2.id, n2.lastUpdated).serviceValue mustBe Done
+
+      service.getNotes(a.id).serviceValue mustBe Seq(n1Updated)
     }
   }
 }

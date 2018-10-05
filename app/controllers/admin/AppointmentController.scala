@@ -7,6 +7,7 @@ import controllers.BaseController
 import controllers.admin.AppointmentController._
 import controllers.refiners._
 import domain._
+import helpers.ServiceResults.ServiceError
 import helpers.{FormHelpers, JavaTime}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -69,6 +70,24 @@ object AppointmentController {
         "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == existingVersion)
       )(CancelAppointmentData.apply)(CancelAppointmentData.unapply)
     )
+
+  case class AppointmentNoteFormData(
+    text: String,
+    version: OffsetDateTime
+  )
+
+  def appointmentNoteForm(version: OffsetDateTime): Form[AppointmentNoteFormData] = Form(mapping(
+    "text" -> nonEmptyText,
+    "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
+  )(AppointmentNoteFormData.apply)(AppointmentNoteFormData.unapply))
+
+  def appointmentNoteFormPrefilled(version: OffsetDateTime): Form[AppointmentNoteFormData] =
+    appointmentNoteForm(version).fill(AppointmentNoteFormData("", version))
+
+  def deleteForm(version: OffsetDateTime): Form[OffsetDateTime] = Form(single(
+    "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
+  ))
+
 }
 
 @Singleton
@@ -87,10 +106,10 @@ class AppointmentController @Inject()(
   import appointmentActionFilters._
   import canViewTeamActionRefiner._
 
-  private def renderAppointment(appointmentKey: IssueKey, cancelForm: Form[CancelAppointmentData])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
+  private def renderAppointment(appointmentKey: IssueKey, appointmentNoteForm: Form[AppointmentNoteFormData], cancelForm: Form[CancelAppointmentData])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
     appointments.findForRender(appointmentKey).successFlatMap { render =>
       profiles.getProfiles(render.clients.map(_.universityID)).successMap { clientProfiles =>
-        val usercodes = Seq(render.appointment.teamMember)
+        val usercodes = render.notes.map(_.teamMember) ++ Seq(render.appointment.teamMember)
         val userLookup = userLookupService.getUsers(usercodes).toOption.getOrElse(Map())
 
         val clients =
@@ -106,13 +125,18 @@ class AppointmentController @Inject()(
           render,
           clients,
           userLookup,
+          appointmentNoteForm,
           cancelForm
         ))
       }
     }
 
   def view(appointmentKey: IssueKey): Action[AnyContent] = CanViewAppointmentAction(appointmentKey).async { implicit request =>
-    renderAppointment(appointmentKey, cancelForm(request.appointment.lastUpdated).bindVersion(request.appointment.lastUpdated).discardingErrors)
+    renderAppointment(
+      appointmentKey,
+      appointmentNoteFormPrefilled(request.appointment.lastUpdated),
+      cancelForm(request.appointment.lastUpdated).bindVersion(request.appointment.lastUpdated).discardingErrors
+    )
   }
 
   def createSelectTeam(forCase: Option[IssueKey], client: Option[UniversityID]): Action[AnyContent] = AnyTeamMemberRequiredAction { implicit request =>
@@ -240,12 +264,91 @@ class AppointmentController @Inject()(
     val appointment = request.appointment
 
     cancelForm(appointment.lastUpdated).bindFromRequest().fold(
-      formWithErrors => renderAppointment(appointmentKey, formWithErrors.bindVersion(appointment.lastUpdated)),
+      formWithErrors => renderAppointment(
+        appointmentKey,
+        appointmentNoteFormPrefilled(appointment.lastUpdated),
+        formWithErrors.bindVersion(appointment.lastUpdated)
+      ),
       data => appointments.cancel(appointment.id, data.cancellationReason, data.version).successMap { updated =>
         Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
           .flashing("success" -> Messages("flash.appointment.cancelled"))
       }
     )
   }
+
+  def addNote(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
+    val appointment = request.appointment
+
+    appointmentNoteForm(appointment.lastUpdated).bindFromRequest().fold(
+      formWithErrors => renderAppointment(
+        appointmentKey,
+        formWithErrors.bindVersion(appointment.lastUpdated),
+        cancelForm(appointment.lastUpdated).bindVersion(appointment.lastUpdated).discardingErrors
+      ),
+      data =>
+        // We don't do anything with data.version here, it's validated but we don't lock the appointment when adding a note
+        appointments.addNote(appointment.id, AppointmentNoteSave(data.text, currentUser.usercode)).successMap { _ =>
+          Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
+            .flashing("success" -> Messages("flash.appointment.noteAdded"))
+        }
+    )
+  }
+
+  def editNoteForm(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
+    withAppointmentNote(id) { note =>
+      Future.successful(
+        Ok(
+          views.html.admin.appointments.editNote(
+            appointmentKey,
+            note,
+            appointmentNoteForm(note.lastUpdated).fill(AppointmentNoteFormData(note.text, note.lastUpdated))
+          )
+        )
+      )
+    }
+  }
+
+  def editNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
+    withAppointmentNote(id) { note =>
+      appointmentNoteForm(note.lastUpdated).bindFromRequest().fold(
+        formWithErrors => Future.successful(
+          Ok(
+            views.html.admin.appointments.editNote(
+              appointmentKey,
+              note,
+              formWithErrors.bindVersion(note.lastUpdated)
+            )
+          )
+        ),
+        data =>
+          appointments.updateNote(request.appointment.id, note.id, AppointmentNoteSave(data.text, currentUser.usercode), data.version).successMap { _ =>
+            Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
+              .flashing("success" -> Messages("flash.appointment.noteUpdated"))
+          }
+      )
+    }
+  }
+
+  def deleteNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
+    withAppointmentNote(id) { note =>
+      deleteForm(note.lastUpdated).bindFromRequest().fold(
+        formWithErrors => Future.successful(
+          // Nowhere to show a validation error so just fall back to an error page
+          showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
+        ),
+        version =>
+          appointments.deleteNote(request.appointment.id, note.id, version).successMap { _ =>
+            Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
+              .flashing("success" -> Messages("flash.appointment.noteDeleted"))
+          }
+      )
+    }
+  }
+
+  private def withAppointmentNote(id: UUID)(f: AppointmentNote => Future[Result])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
+    appointments.getNotes(request.appointment.id).successFlatMap { notes =>
+      notes.find(_.id == id).map(f)
+        .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
+    }
 
 }

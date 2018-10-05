@@ -46,37 +46,6 @@
   }
 }
 
-@caseDetail(label: String)(content: Html) = {
-  <div class="row form-horizontal">
-    <div class="col-sm-3 control-label">
-      @label
-    </div>
-    <div class="col-sm-9">
-      <div class="form-control-static">
-        @content
-      </div>
-    </div>
-  </div>
-}
-
-@section(label: String, isCollapsible: Boolean)(content: Html) = {
-  @if(isCollapsible) {
-    <details class="case-details--section row form-horizontal">
-      <summary class="control-label">@label <i class="closed fas fa-plus-circle"></i> <i class="open fas fa-minus-circle"></i></summary>
-      <div class="content form-control-static">
-        @content
-      </div>
-    </details>
-  } else {
-    <div class="case-details--section row form-horizontal">
-      <div class="control-label">@label</div>
-      <div class="content form-control-static">
-        @content
-      </div>
-    </div>
-  }
-}
-
 @caseNote(note: CaseNote, user: Option[User]) = {
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -151,18 +120,18 @@
     <div class="case-details--actions row">
       <div class="col-sm-6 col-md-7 field-history" data-field-history="@Json.stringify(Json.toJson(history)(CaseHistory.writer))">
 
-        @caseDetail("Date raised"){ <div>@helpers.JavaTime.Relative(c.clientCase.created)</div> }
+        @tags.sectioned.detail("Date raised"){ <div>@helpers.JavaTime.Relative(c.clientCase.created)</div> }
 
-        @caseDetail("Team"){
+        @tags.sectioned.detail("Team"){
           <div data-field-history-field="team">@c.clientCase.team.name</div>
           @viewSectionNotes(Referral, "team assignment note")
         }
 
-        @caseDetail("State"){ <div data-field-history-field="state">@c.clientCase.state</div> }
+        @tags.sectioned.detail("State"){ <div data-field-history-field="state">@c.clientCase.state</div> }
 
         @if(c.clientCase.incidentDate.nonEmpty) {
           @* If currently related to an incident... *@
-          @caseDetail("Incident"){
+          @tags.sectioned.detail("Incident"){
             <span data-field-history-field="incidentDate">@helpers.JavaTime.Relative(c.clientCase.incidentDate.get)</span>
             <span data-field-history-field="onCampus">@if(c.clientCase.onCampus.contains(true)) { On-campus } else { Off-campus }</span>
             @if(c.clientCase.notifiedPolice.contains(true)) {
@@ -197,25 +166,25 @@
           }
         } else if(history.incidentDate.exists(_._1.nonEmpty)) {
           @* If not currently related to an incident but was previously... *@
-          @caseDetail("Incident"){
+          @tags.sectioned.detail("Incident"){
             <span data-field-history-field="incidentDate">Not currently related to an incident</span>
           }
         }
 
-        @originalEnquiry.map { enquiry => @caseDetail("Original enquiry"){
+        @originalEnquiry.map { enquiry => @tags.sectioned.detail("Original enquiry"){
             <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)">@enquiry.key.get.string @enquiry.subject</a>
             -
             @helpers.JavaTime.Relative(enquiry.created)
         }}
 
-        @caseDetail("Cause"){ <div data-field-history-field="cause">@c.clientCase.cause.description</div> }
+        @tags.sectioned.detail("Cause"){ <div data-field-history-field="cause">@c.clientCase.cause.description</div> }
 
-        @c.clientCase.caseType.map { caseType => @caseDetail("Case type"){
+        @c.clientCase.caseType.map { caseType => @tags.sectioned.detail("Case type"){
             <div data-field-history-field="caseType">@caseType.description</div>
         }}
 
         @if(c.tags.nonEmpty || history.tags.size > 1) {
-          @caseDetail("Tags"){
+          @tags.sectioned.detail("Tags"){
             <div data-field-history-field="tags">
               @if(c.tags.nonEmpty) {
                 @c.tags.toSeq.map(_.description).sorted.mkString(", ")
@@ -265,7 +234,7 @@
       </div>
     </div>
 
-    @section("Case links", isCollapsible=true) {
+    @tags.sectioned.section("case", "Case links", isCollapsible=true) {
       @if(c.outgoingCaseLinks.nonEmpty ||  c.incomingCaseLinks.nonEmpty){
         @caseLinks(c.outgoingCaseLinks, _.outwardDescription, _.incoming)
         @caseLinks(c.incomingCaseLinks, _.inwardDescription, _.outgoing)
@@ -274,7 +243,7 @@
       }
     }
 
-    @section("Documents", isCollapsible=true) {
+    @tags.sectioned.section("case", "Documents", isCollapsible=true) {
       @if(c.documents.nonEmpty) {
         <ul class="list-unstyled">
           @c.documents.map { doc =>
@@ -299,7 +268,7 @@
       }
     }
 
-    @section("Appointments", isCollapsible=true) {
+    @tags.sectioned.section("case", "Appointments", isCollapsible=true) {
       @if(appointments.nonEmpty) {
         <table class="table table-default">
           <thead>
@@ -330,7 +299,7 @@
       }
     }
 
-    @section("Case notes", isCollapsible=true) {
+    @tags.sectioned.section("case", "Case notes", isCollapsible=true) {
       @if(c.clientCase.state != IssueState.Closed) {
         @b3.vertical.formCSRF(controllers.admin.routes.CaseController.addNote(c.clientCase.key.get)) { implicit ifc =>
           <div class="panel panel-default panel-form">
@@ -351,7 +320,7 @@
       @caseNotes.map { case (note, user) => @caseNote(note, user)}
     }
 
-    @section("Messages", isCollapsible = clients.size == 1) {
+    @tags.sectioned.section("case", "Messages", isCollapsible = clients.size == 1) {
       <div class="panel-group" id="messages-accordion" role="tablist" aria-multiselectable="true">
       @clients.map { maybeClient =>
         @defining(SitsProfile.universityId(maybeClient)) { universityId: UniversityID =>

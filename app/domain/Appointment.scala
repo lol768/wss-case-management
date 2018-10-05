@@ -5,6 +5,7 @@ import java.util.UUID
 
 import domain.dao.CaseDao.Case
 import enumeratum.{EnumEntry, PlayEnum}
+import helpers.JavaTime
 import play.api.data.format.Formatter
 import play.api.data.{FormError, Forms, Mapping}
 import warwick.sso.{UniversityID, Usercode}
@@ -61,7 +62,8 @@ case class AppointmentSave(
 case class AppointmentRender(
   appointment: Appointment,
   clients: Set[AppointmentClient],
-  clientCase: Option[Case]
+  clientCase: Option[Case],
+  notes: Seq[AppointmentNote]
 )
 
 case class AppointmentClient(
@@ -158,3 +160,25 @@ object AppointmentCancellationReason extends PlayEnum[AppointmentCancellationRea
 
   override def values: immutable.IndexedSeq[AppointmentCancellationReason] = findValues
 }
+
+case class AppointmentNote(
+  id: UUID,
+  text: String,
+  teamMember: Usercode,
+  created: OffsetDateTime = OffsetDateTime.now(),
+  lastUpdated: OffsetDateTime = OffsetDateTime.now()
+)
+
+object AppointmentNote {
+  // oldest first
+  val dateOrdering: Ordering[AppointmentNote] = Ordering.by[AppointmentNote, OffsetDateTime](_.created)(JavaTime.dateTimeOrdering)
+}
+
+/**
+  * Just the data of a note required to save it. Other properties
+  * are derived from other objects passed in to the service method.
+  */
+case class AppointmentNoteSave(
+  text: String,
+  teamMember: Usercode
+)

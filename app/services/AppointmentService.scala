@@ -3,15 +3,16 @@ package services
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.AppointmentDao.{AppointmentSearchQuery, Appointments, StoredAppointment, StoredAppointmentClient}
+import domain.dao.AppointmentDao.{AppointmentSearchQuery, Appointments, StoredAppointment, StoredAppointmentClient, StoredAppointmentNote}
 import domain.dao.CaseDao.Case
 import domain.dao.{AppointmentDao, DaoRunner}
-import helpers.{JavaTime, ServiceResults}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
+import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import services.AppointmentService._
@@ -64,6 +65,11 @@ trait AppointmentService {
   def clientDecline(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+
+  def addNote(appointmentID: UUID, note: AppointmentNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]]
+  def getNotes(appointmentID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentNote]]]
+  def updateNote(appointmentID: UUID, noteID: UUID, note: AppointmentNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]]
+  def deleteNote(appointmentID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 }
 
 @Singleton
@@ -220,21 +226,17 @@ class AppointmentServiceImpl @Inject()(
   override def findForRender(appointmentKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentRender]] =
     auditService.audit('AppointmentView, (a: AppointmentRender) => a.appointment.id.toString, 'Appointment, Json.obj()) {
       val query = dao.findByKeyQuery(appointmentKey)
-      daoRunner.run(for {
-        withCase <- query.withCase.map { case (a, c) => (a.appointment, c) }.result.head
-        clients <- query.withClients.map { case (_, c) => c.appointmentClient }.result
-      } yield AppointmentRender(withCase._1, clients.toSet, withCase._2)).map(Right.apply)
+      listForRender(query).map(_.map(_.head))
     }
 
-  private def listForRenderDBIO(query: Query[Appointments, StoredAppointment, Seq]): DBIO[(Seq[(Appointment, AppointmentClient)], Seq[(Appointment, Option[Case])])] =
-    for {
-      withClients <- query.withClients.map { case (a, c) => (a.appointment, c.appointmentClient) }.result
-      withCase <- query.withCase.map { case (a, c) => (a.appointment, c) }.result
-    } yield (withClients, withCase)
-
   private def listForRender(query: Query[Appointments, StoredAppointment, Seq])(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
-    daoRunner.run(listForRenderDBIO(query))
-      .map { case (withClients, withCase) => Right(groupTuples(withClients, withCase)) }
+    daoRunner.run(
+      for {
+        withClients <- query.withClients.map { case (a, c) => (a.appointment, c.appointmentClient) }.result
+        withCase <- query.withCase.map { case (a, c) => (a.appointment, c) }.result
+        withNotes <- query.withNotes.map { case (a, n) => (a.appointment, n) }.result
+      } yield Right(groupTuples(withClients, withCase, withNotes))
+    )
 
   override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(dao.findByClientQuery(universityID))
@@ -388,20 +390,57 @@ class AppointmentServiceImpl @Inject()(
       }
     }
 
+  override def addNote(appointmentID: UUID, note: AppointmentNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]] =
+    auditService.audit('AppointmentAddNote, appointmentID.toString, 'Appointment, Json.obj()) {
+      daoRunner.run(dao.insertNote(
+        AppointmentDao.StoredAppointmentNote(
+          id = UUID.randomUUID(),
+          appointmentId = appointmentID,
+          text = note.text,
+          teamMember = note.teamMember,
+          created = JavaTime.offsetDateTime,
+          version = JavaTime.offsetDateTime
+        )
+      )).map { n => Right(n.asAppointmentNote) }
+    }
+
+  override def getNotes(appointmentID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentNote]]] =
+    daoRunner.run(
+      dao.findNotesQuery(appointmentID).sortBy(_.created.desc).result
+    ).map { notes => Right(notes.map(_.asAppointmentNote)) }
+
+  override def updateNote(appointmentID: UUID, noteID: UUID, note: AppointmentNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]] =
+    auditService.audit('AppointmentNoteUpdate, appointmentID.toString, 'Appointment, Json.obj("noteID" -> noteID.toString)) {
+      daoRunner.run(for {
+        existing <- dao.findNotesQuery(appointmentID).filter(_.id === noteID).result.head
+        updated <- dao.updateNote(existing.copy(text = note.text, teamMember = note.teamMember), version)
+      } yield updated).map { n => Right(n.asAppointmentNote) }
+    }
+
+  override def deleteNote(appointmentID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
+    auditService.audit('AppointmentNoteDelete, appointmentID.toString, 'Appointment, Json.obj("noteID" -> noteID.toString)) {
+      daoRunner.run(for {
+        existing <- dao.findNotesQuery(appointmentID).filter(_.id === noteID).result.head
+        done <- dao.deleteNote(existing, version)
+      } yield done).map(Right.apply)
+    }
+
 }
 
 object AppointmentService {
-  def groupTuples(withClients: Seq[(Appointment, AppointmentClient)], withCase: Seq[(Appointment, Option[Case])]): Seq[AppointmentRender] = {
+  def groupTuples(withClients: Seq[(Appointment, AppointmentClient)], withCase: Seq[(Appointment, Option[Case])], withNotes: Seq[(Appointment, Option[StoredAppointmentNote])]): Seq[AppointmentRender] = {
+    val appointmentsAndClients = OneToMany.join(withClients)(Ordering.by[AppointmentClient, String](_.universityID.string))
+
     val appointmentsAndCase = withCase.toMap
 
-    OneToMany.join(withClients)(Ordering.by[AppointmentClient, String](_.universityID.string))
-      .map { case (app, clients) =>
-        AppointmentRender(
-          app,
-          clients.toSet,
-          appointmentsAndCase.getOrElse(app, None)
-        )
-      }
+    val appointmentsAndNotes = OneToMany.leftJoin(withNotes.map { case (a, n) => (a, n.map(_.asAppointmentNote)) })(AppointmentNote.dateOrdering).toMap
+
+    appointmentsAndClients.map { case (appointment, clients) => AppointmentRender(
+      appointment = appointment,
+      clients = clients.toSet,
+      appointmentsAndCase.getOrElse(appointment, None),
+      appointmentsAndNotes.getOrElse(appointment, Seq())
+    ) }
       .sortBy(_.appointment.start)(JavaTime.dateTimeOrdering)
   }
 }

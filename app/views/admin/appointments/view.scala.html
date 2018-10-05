@@ -1,77 +1,75 @@
 @import controllers.admin.AppointmentController.CancelAppointmentData
 @import domain.{AppointmentCancellationReason, AppointmentClient, AppointmentRender, AppointmentState, SitsProfile}
 @import warwick.sso.{UniversityID, User, Usercode}
+@import controllers.admin.AppointmentController.AppointmentNoteFormData
+@import controllers.admin.AppointmentController
+@import java.time.OffsetDateTime
 @(
   a: AppointmentRender,
   clients: Seq[(AppointmentClient, Either[UniversityID, SitsProfile])],
   userLookup: Map[Usercode, User],
+  appointmentNoteForm: Form[AppointmentNoteFormData],
   cancelForm: Form[CancelAppointmentData],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@main(s"${a.appointment.key.string} ${a.appointment.subject}") {
-  <div class="row">
-    <div class="col-md-4 col-md-push-8">
+@main(
+  title = s"${a.appointment.key.string} ${a.appointment.subject}",
+  icon = tags.icons.appointmentState(a.appointment.state)
+) {
+  <div class="appointment-details">
+    <div class="appointment-details--header">
       @clients.map { case (client, p) =>
         @p match {
           case Left(universityID) => {
-            <div>
-              <p>
-                <strong>University ID: </strong> <a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a>
-                @tags.appointments.clientAppointmentState(a.appointment, client)
-              </p>
-            </div>
+            <h5>
+              <a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a>
+              @tags.appointments.clientAppointmentState(a.appointment, client)
+            </h5>
           }
           case Right(profile) => {
-            <div class="row">
-              @profile.photo.map { photo =>
-                <div class="col-sm-4">
-                  <p class="photo">
-                    <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">
-                      <img src="@photo" class="img-thumbnail img-circle">
-                    </a>
-                  </p>
-                </div>
-              }
-              <div class="col-sm-8">
-                <p>
-                  <strong>University ID: </strong> <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.universityID.string</a><br />
-                  <strong>Full name: </strong> @profile.fullName<br />
-                  <strong>Department: </strong> @profile.department.name<br />
-                  <strong>Warwick email address: </strong> @profile.warwickEmail<br />
-                  @tags.appointments.clientAppointmentState(a.appointment, client)
-                </p>
-              </div>
-            </div>
+            <h5>
+              <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.fullName</a>
+              ,
+              @profile.universityID.string,
+              @views.tags.profiles.typeAndDepartment(profile)
+              @tags.appointments.clientAppointmentState(a.appointment, client)
+            </h5>
           }
         }
       }
     </div>
-    <div class="col-md-8 col-md-pull-4"> @* TODO history *@
-      <dl class="dl-horizontal">
-        <dt>Date/time</dt>
-        <dd>@helpers.JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))</dd>
+    <div class="appointment-details--actions row">
+      <div class="col-sm-6 col-md-7"> @* TODO history *@
+
+        @tags.sectioned.detail("Date/time") {
+          @helpers.JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        }
 
         @a.appointment.location.map { loc =>
-          <dt>Location</dt>
-          <dd>@loc.name</dd> @* TODO campus map link *@
+          @tags.sectioned.detail("Location") {
+            @loc.name @* TODO campus map link *@
+          }
         }
 
-        <dt>Team member</dt>
-        <dd>@userLookup.get(a.appointment.teamMember).flatMap(_.name.full).getOrElse(s"Unknown (${a.appointment.teamMember.string})")</dd>
+        @tags.sectioned.detail("Team member") {
+          @userLookup.get(a.appointment.teamMember).flatMap(_.name.full).getOrElse(s"Unknown (${a.appointment.teamMember.string})")
+        }
 
-        <dt>Team</dt>
-        <dd>@a.appointment.team.name team</dd>
+        @tags.sectioned.detail("Team") {
+          @a.appointment.team.name team
+        }
 
-        <dt>Appointment type</dt>
-        <dd>@a.appointment.appointmentType.description</dd>
+        @tags.sectioned.detail("Appointment type") {
+          @a.appointment.appointmentType.description
+        }
 
         @a.clientCase.map { clientCase =>
-          <dt>Case</dt>
-          <dd><a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">@clientCase.key.get.string @clientCase.subject</a></dd>
+          @tags.sectioned.detail("Case") {
+            <a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">@clientCase.key.get.string @clientCase.subject</a>
+          }
         }
 
-        <dt>State</dt>
-        <dd>
+        @tags.sectioned.detail("State") {
           <span class="label label-@a.appointment.state.labelType" @a.appointment.cancellationReason.map { r => title="@r.description" }>
             @tags.icons.appointmentState(a.appointment.state)
             @a.appointment.state
@@ -82,7 +80,7 @@
             @b3.horizontal.formCSRF(controllers.admin.routes.AppointmentController.cancel(a.appointment.key), "col-sm-3", "col-sm-9", 'class -> "inline-form") { implicit ifc =>
               <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#cancel-modal">@tags.icons.appointmentCancel() Cancel</button>
 
-              @b3.validatedHidden(cancelForm, "version")
+            @b3.validatedHidden(cancelForm, "version")
 
               <div class="modal fade" id="cancel-modal" tabindex="-1" role="dialog" aria-labelledby="cancel-modal-label">
                 <div class="modal-dialog" role="document">
@@ -108,17 +106,76 @@
               </div>
             }
           }
-        </dd>
+        }
 
         @a.appointment.cancellationReason.map { reason =>
-          <dt>Cancellation reason</dt>
-          <dd>@reason.description</dd>
+          @tags.sectioned.detail("Cancellation reason") {
+            @reason.description
+          }
         }
-      </dl>
-
-      <p>
-        <a class="btn btn-default" href="@controllers.admin.routes.AppointmentController.editForm(a.appointment.key)">Edit appointment</a>
-      </p>
+      </div>
+      <div class="col-sm-6 col-md-4">
+        <div class="row form-horizontal">
+          <div class="col-sm-4 control-label">
+            Actions
+          </div>
+          <div class="col-sm-8">
+            <p>
+              <a class="btn btn-default btn-block" href="@controllers.admin.routes.AppointmentController.editForm(a.appointment.key)">Edit appointment</a>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
+
+    @tags.sectioned.section("appointment", "Appointment notes", isCollapsible=true) {
+      @b3.vertical.formCSRF(controllers.admin.routes.AppointmentController.addNote(a.appointment.key)) { implicit ifc =>
+        <div class="panel panel-default panel-form">
+          <div class="panel-heading">
+            <h3 class="panel-title">Add an appointment note</h3>
+          </div>
+          <div class="panel-body">
+            @b3.validatedHidden(appointmentNoteForm, "version")
+            @b3.textarea(appointmentNoteForm("text"), 'rows -> 5)
+          </div>
+          <div class="panel-footer">
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </div>
+      }
+
+      @a.notes.map { note =>
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title clearfix">
+              <span class="date pull-right">
+                @helpers.JavaTime.Relative(note.created)
+                @if(note.lastUpdated != note.created) {
+                  (last updated @helpers.JavaTime.Relative(note.lastUpdated))
+                }
+              </span>
+            </h3>
+          </div>
+          <div class="panel-body">
+            @views.utils.nl2br(note.text)
+          </div>
+          <div class="panel-footer">
+            <div class="pull-right">
+              <a class="btn btn-default btn-xs" href="@controllers.admin.routes.AppointmentController.editNoteForm(a.appointment.key, note.id)">Edit</a>
+              @defining(AppointmentController.deleteForm(note.lastUpdated).fill(note.lastUpdated)) { form: Form[OffsetDateTime] =>
+                @b3.inline.formCSRF(controllers.admin.routes.AppointmentController.deleteNote(a.appointment.key, note.id), 'class -> "inline-form") { implicit ifc =>
+                  @b3.validatedHidden(form, "version")
+                  <button type="submit" class="btn btn-default btn-xs" data-toggle="confirm-submit" data-message="Are you sure you want to delete this appointment note?">Delete</button>
+                }
+              }
+            </div>
+            <div class="author">
+              @userLookup.get(note.teamMember).flatMap(_.name.full).getOrElse(s"[unknown user ${note.teamMember.string}]")
+            </div>
+          </div>
+        </div>
+      }
+    }
+
   </div>
 }
