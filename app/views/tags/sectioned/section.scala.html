@@ -1,0 +1,17 @@
+@(classPrefix: String, label: String, isCollapsible: Boolean)(content: Html)
+
+@if(isCollapsible) {
+  <details class="@classPrefix-details--section row form-horizontal">
+    <summary class="control-label">@label <i class="closed fas fa-plus-circle"></i> <i class="open fas fa-minus-circle"></i></summary>
+    <div class="content form-control-static">
+    @content
+    </div>
+  </details>
+} else {
+  <div class="@classPrefix-details--section row form-horizontal">
+    <div class="control-label">@label</div>
+    <div class="content form-control-static">
+    @content
+    </div>
+  </div>
+}
