@@ -8,7 +8,7 @@ import enumeratum.{EnumEntry, PlayEnum}
 import helpers.JavaTime
 import play.api.data.format.Formatter
 import play.api.data.{FormError, Forms, Mapping}
-import warwick.sso.{UniversityID, Usercode}
+import warwick.sso.{UniversityID, User, Usercode}
 
 import scala.collection.immutable
 import scala.util.Try
@@ -16,7 +16,6 @@ import scala.util.Try
 case class Appointment(
   id: UUID,
   key: IssueKey,
-  subject: String,
   start: OffsetDateTime,
   duration: Duration,
   location: Option[Location],
@@ -29,12 +28,32 @@ case class Appointment(
   lastUpdated: OffsetDateTime,
 ) {
   val end: OffsetDateTime = start.plus(duration)
+
+  def subject(
+    userLookupOption: Option[Map[Usercode, User]],
+    clientLookupOption: Option[Set[Either[UniversityID, SitsProfile]]]
+  ): String = "%s with %s%s%s".format(
+    appointmentType.description,
+    userLookupOption.map(userLookup =>
+      "%s".format(userLookup.get(teamMember).flatMap(_.name.full).getOrElse(teamMember.string))
+    ).getOrElse(""),
+    if (userLookupOption.nonEmpty && clientLookupOption.nonEmpty) " and " else "",
+    clientLookupOption.map(clientLookup =>
+      if (clientLookup.size == 1) {
+        clientLookup.head.fold(
+          universityID => universityID.string,
+          sitsProfile => sitsProfile.fullName
+        )
+      } else {
+        s"${clientLookup.size} clients"
+      }
+    ).getOrElse("")
+  )
 }
 
 object Appointment {
   def tupled = (apply _).tupled
 
-  val SubjectMaxLength = 200
   val DurationOptions = Seq(
     ("10 minutes", Duration.ofMinutes(10)),
     ("15 minutes", Duration.ofMinutes(15)),
@@ -51,7 +70,6 @@ object Appointment {
   * Just enough information to save or update an appointment
   */
 case class AppointmentSave(
-  subject: String,
   start: OffsetDateTime,
   duration: Duration,
   location: Option[Location],

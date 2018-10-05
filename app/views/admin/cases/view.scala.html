@@ -280,17 +280,26 @@
           </thead>
           <tbody>
           @appointments.map { a =>
-            <tr>
-              <td>
-                @tags.icons.appointmentState(a.appointment.state)
-              <a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)">@a.appointment.key.string @a.appointment.subject</a>
-              </td>
-              <td>
-                @helpers.JavaTime.Relative(a.appointment.start) &ndash;
-                @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
-              </td>
-              <td>@userLookup.get(a.appointment.teamMember).flatMap(_.name.full)</td>
-            </tr>
+              @defining(
+                a.clients.map(client => clients.find(_.fold(
+                  universityID => client.universityID == universityID,
+                  sitsProfile => client.universityID == sitsProfile.universityID
+                )).get)
+              ) { appointmentClients: Set[Either[UniversityID, SitsProfile]] =>
+                <tr>
+                  <td>
+                    @tags.icons.appointmentState(a.appointment.state)
+                    <a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)">
+                      @a.appointment.key.string @a.appointment.subject(Some(userLookup), Some(appointmentClients))
+                    </a>
+                  </td>
+                  <td>
+                    @helpers.JavaTime.Relative(a.appointment.start) &ndash;
+                    @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+                  </td>
+                  <td>@userLookup.get(a.appointment.teamMember).flatMap(_.name.full)</td>
+                </tr>
+              }
           }
           </tbody>
         </table>

@@ -41,7 +41,7 @@
     </td>
     <td>
       @tags.icons.appointmentState(appointment.state)
-      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string @appointment.subject</a>
+      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string @appointment.subject(userLookup, clientLookup.get(appointment.id))</a>
     </td>
     <td>
       @helpers.JavaTime.Relative(appointment.start) &ndash; @appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))

@@ -10,6 +10,8 @@
 @import domain.IssueRender
 @import domain.dao.CaseDao.Case
 @import domain.Enquiry
+@import warwick.sso.UniversityID
+@import domain.SitsProfile
 @(
   clientInformation: ClientInformation,
   teamMemberInformation: Option[TeamMemberInformation],
@@ -104,7 +106,7 @@
         <tr>
           <td>
             @tags.icons.appointmentState(a.appointment.state)
-            @a.appointment.subject
+            @a.appointment.subject(Some(userLookup), None)
           </td>
           <td>@JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))</td>
           <td>@userLookup.get(a.appointment.teamMember).flatMap(_.name.full), @a.appointment.team.name team</td>

@@ -33,7 +33,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
   "AppointmentServiceTest" should {
     "create" in withData(new AppointmentFixture) { _ =>
-      val created = service.create(AppointmentSave("Meeting", JavaTime.offsetDateTime, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, None).serviceValue
+      val created = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, None).serviceValue
       created.id must not be null
       created.key.string mustBe "APP-1000"
       created.duration mustBe Duration.ofMinutes(15)
@@ -41,7 +41,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
       // Create a case to link to
       val c = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase()))
 
-      val created2 = service.create(AppointmentSave("Skype call", JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, Some(c.id.get)).serviceValue
+      val created2 = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, Some(c.id.get)).serviceValue
       created2.id must not be created.id
       created2.key.string mustBe "APP-1001"
     }
@@ -53,8 +53,8 @@ class AppointmentServiceTest extends AbstractDaoTest {
     }
 
     "find by client" in withData(new AppointmentFixture) { _ =>
-      val created = service.create(AppointmentSave("App 1", JavaTime.offsetDateTime, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, None).serviceValue
-      val created2 = service.create(AppointmentSave("App 2", JavaTime.offsetDateTime.minusHours(1), Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, None).serviceValue
+      val created = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, None).serviceValue
+      val created2 = service.create(AppointmentSave(JavaTime.offsetDateTime.minusHours(1), Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, None).serviceValue
 
       service.findForClient(UniversityID("0672089")).serviceValue.map(_.appointment) mustBe Seq(created2, created)
       service.findForClient(UniversityID("0672088")).serviceValue.map(_.appointment) mustBe Seq(created2)
@@ -62,7 +62,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
     }
 
     "find for render" in withData(new AppointmentFixture) { _ =>
-      val singleClientNoCase = service.create(AppointmentSave("Meeting", JavaTime.offsetDateTime, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, None).serviceValue
+      val singleClientNoCase = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, None).serviceValue
 
       service.findForRender(singleClientNoCase.key).serviceValue mustBe AppointmentRender(
         singleClientNoCase,
@@ -76,7 +76,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
       // Create a case to link to
       val c = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase()))
 
-      val multipleClientsWithCase = service.create(AppointmentSave("Skype call", JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, Some(c.id.get)).serviceValue
+      val multipleClientsWithCase = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, Some(c.id.get)).serviceValue
 
       // Add some notes
       val note1 = service.addNote(multipleClientsWithCase.id, AppointmentNoteSave("Note 1 test", Usercode("cusfal"))).serviceValue
@@ -118,7 +118,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
       val client1 = UniversityID("0672089")
       val client2 = UniversityID("0672088")
-      val multiClient = service.create(AppointmentSave("Skype call", JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(client1, client2), Teams.WellbeingSupport, None).serviceValue
+      val multiClient = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(client1, client2), Teams.WellbeingSupport, None).serviceValue
 
       multiClient.state mustBe AppointmentState.Provisional
 
@@ -151,7 +151,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
       val client1 = UniversityID("0672089")
       val client2 = UniversityID("0672088")
-      val multiClient = service.create(AppointmentSave("Skype call", JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(client1, client2), Teams.WellbeingSupport, None).serviceValue
+      val multiClient = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(client1, client2), Teams.WellbeingSupport, None).serviceValue
 
       multiClient.state mustBe AppointmentState.Provisional
 

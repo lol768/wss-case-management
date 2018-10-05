@@ -168,7 +168,6 @@ object AppointmentDao {
     id: UUID,
     key: IssueKey,
     caseID: Option[UUID],
-    subject: String,
     start: OffsetDateTime,
     duration: Duration,
     location: Option[Location],
@@ -183,7 +182,6 @@ object AppointmentDao {
     def asAppointment = Appointment(
       id,
       key,
-      subject,
       start,
       duration,
       location,
@@ -203,7 +201,6 @@ object AppointmentDao {
         id,
         key,
         caseID,
-        subject,
         start,
         duration,
         location,
@@ -224,7 +221,6 @@ object AppointmentDao {
     id: UUID,
     key: IssueKey,
     caseID: Option[UUID],
-    subject: String,
     start: OffsetDateTime,
     duration: Duration,
     location: Option[Location],
@@ -245,8 +241,6 @@ object AppointmentDao {
     def key = column[IssueKey]("appointment_key")
     def searchableKey = toTsVector(key.asColumnOf[String], Some("english"))
     def caseID = column[Option[UUID]]("case_id")
-    def subject = column[String]("subject")
-    def searchableSubject = toTsVector(subject, Some("english"))
     def start = column[OffsetDateTime]("start_utc")
     def duration = column[Duration]("duration_secs")
     def location = column[Option[Location]]("location")
@@ -266,9 +260,9 @@ object AppointmentDao {
     def id = column[UUID]("id", O.PrimaryKey)
 
     override def * : ProvenShape[StoredAppointment] =
-      (id, key, caseID, subject, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[StoredAppointment]
+      (id, key, caseID, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[StoredAppointment]
     def appointment =
-      (id, key, subject, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[Appointment]
+      (id, key, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[Appointment]
 
     def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
     def isConfirmed: Rep[Boolean] = state === (AppointmentState.Confirmed: AppointmentState)
@@ -294,7 +288,7 @@ object AppointmentDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredAppointmentVersion] =
-      (id, key, caseID, subject, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
+      (id, key, caseID, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
     def pk = primaryKey("pk_appointment_version", (id, timestamp))
     def idx = index("idx_appointment_version", (id, version))
   }
