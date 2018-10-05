@@ -13,7 +13,7 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
-  title = s"${a.appointment.key.string} ${a.appointment.subject}",
+  title = s"${a.appointment.key.string} ${a.appointment.subject(Some(userLookup), Some(clients.map(_._2).toSet))}",
   icon = tags.icons.appointmentState(a.appointment.state)
 ) {
   <div class="appointment-details">

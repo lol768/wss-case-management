@@ -46,7 +46,6 @@ object AppointmentController {
         "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
         "case" -> optional(uuid.verifying("error.required", id => isValidCase(id))),
         "appointment" -> mapping(
-          "subject" -> nonEmptyText(maxLength = Appointment.SubjectMaxLength),
           "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", _.isAfter(JavaTime.offsetDateTime)),
           "duration" -> number(min = 60, max = 120 * 60).transform[Duration](n => Duration.ofSeconds(n.toLong), _.getSeconds.toInt),
           "location" -> optional(Location.formField),
@@ -221,7 +220,6 @@ class AppointmentController @Inject()(
               a.clients.map(_.universityID),
               a.clientCase.flatMap(_.id),
               AppointmentSave(
-                a.appointment.subject,
                 a.appointment.start,
                 a.appointment.duration,
                 a.appointment.location,

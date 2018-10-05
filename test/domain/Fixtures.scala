@@ -84,7 +84,6 @@ object Fixtures {
       UUID.randomUUID(),
       IssueKey(IssueKeyType.Appointment, issueKey),
       None,
-      "Mental health consultation",
       JavaTime.offsetDateTime
         .withHour(14).withMinute(0).withSecond(0).withNano(0),
       Duration.ofMinutes(45),
