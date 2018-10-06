@@ -1,7 +1,7 @@
 package services.tabula
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, OffsetDateTime}
+import java.time.{LocalDate, LocalDateTime, OffsetDateTime}
 
 import domain._
 import helpers.JavaTime
@@ -247,6 +247,23 @@ object TabulaResponseParsers {
       )
   }
 
+  implicit val LocalDateTimeReads: Reads[LocalDateTime] = new Reads[LocalDateTime] {
+    final val DateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+
+    override def reads(json: JsValue): JsResult[LocalDateTime] = json match {
+      case JsString(s) => parseDateTime(s) match {
+        case Some(d) => JsSuccess(d)
+        case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError("error.expected.localdatetime.format", DateFormat))))
+      }
+      case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError("error.expected.datetime"))))
+    }
+
+    private def parseDateTime(input: String): Option[LocalDateTime] =
+      scala.util.control.Exception.nonFatalCatch[LocalDateTime].opt(
+        LocalDateTime.parse(input, DateTimeFormatter.ofPattern(DateFormat))
+      )
+  }
+
   case class MemberSearchResult(
     universityID: UniversityID,
     usercode: Usercode,
@@ -291,6 +308,13 @@ object TabulaResponseParsers {
     )(MemberSearchResult.apply _)
 
   val memberSearchResultsReads: Reads[Seq[MemberSearchResult]] = (__ \ "results").read[Seq[MemberSearchResult]](Reads.seq(memberSearchResultReads))
+
+  case class TimetableEvent(
+    start: LocalDateTime,
+    end: LocalDateTime
+  )
+  val timetableEventReads: Reads[TimetableEvent] = Json.reads[TimetableEvent]
+  val timetableEventsReads: Reads[Seq[TimetableEvent]] = (__ \ "events").read[Seq[TimetableEvent]](Reads.seq(timetableEventReads))
 
   private case class ErrorMessage(message: String)
   private val errorMessageReads = Json.reads[ErrorMessage]

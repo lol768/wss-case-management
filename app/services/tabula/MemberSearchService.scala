@@ -8,15 +8,16 @@ import play.api.Configuration
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
 import services.PhotoService
-import system.Logging
+import system.{Logging, TimingCategories}
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
+import warwick.core.timing.{TimingContext, TimingService}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MemberSearchServiceImpl])
 trait MemberSearchService {
-  def search(query: String): Future[ServiceResult[Seq[TabulaResponseParsers.MemberSearchResult]]]
+  def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Seq[TabulaResponseParsers.MemberSearchResult]]]
 }
 
 @Singleton
@@ -24,13 +25,17 @@ class MemberSearchServiceImpl @Inject()(
   ws: WSClient,
   trustedApplicationsManager: TrustedApplicationsManager,
   photoService: PhotoService,
-  configuration: Configuration
+  configuration: Configuration,
+  timing: TimingService
 )(implicit ec: ExecutionContext) extends MemberSearchService with Logging {
+  import timing._
+
+  private val TimingCategory = TimingCategories.Tabula
 
   private val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
   private val tabulaQueryUrl = configuration.get[String]("wellbeing.tabula.query")
 
-  override def search(query: String): Future[ServiceResult[Seq[TabulaResponseParsers.MemberSearchResult]]] = {
+  override def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Seq[TabulaResponseParsers.MemberSearchResult]]] = time(TimingCategory) {
     val request = ws.url(tabulaQueryUrl).withQueryStringParameters(("query", query))
 
     val trustedHeaders = TrustedApplicationUtils.getRequestHeaders(
