@@ -114,7 +114,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
       val updated = service.clientAccept(a.id, universityID).serviceValue
       updated.id mustBe a.id
       updated.lastUpdated mustNot be (a.lastUpdated)
-      updated.state mustBe AppointmentState.Confirmed
+      updated.state mustBe AppointmentState.Accepted
 
       val client1 = UniversityID("0672089")
       val client2 = UniversityID("0672088")
@@ -123,10 +123,10 @@ class AppointmentServiceTest extends AbstractDaoTest {
       multiClient.state mustBe AppointmentState.Provisional
 
       val multiClientUpdate1 = service.clientAccept(multiClient.id, client1).serviceValue
-      multiClientUpdate1.state mustBe AppointmentState.Confirmed // Any client has accepted
+      multiClientUpdate1.state mustBe AppointmentState.Accepted // Any client has accepted
 
       val multiClientUpdate2 = service.clientAccept(multiClient.id, client2).serviceValue
-      multiClientUpdate2.state mustBe AppointmentState.Confirmed // All clients have accepted
+      multiClientUpdate2.state mustBe AppointmentState.Accepted // All clients have accepted
     }
 
     "not set appointment state to cancelled if a client declines" in withData(new AppointmentFixture) { a =>
@@ -147,9 +147,9 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
       a.state mustBe AppointmentState.Provisional
 
-      // Accepting the appointment should confirm it
+      // Accepting the appointment should accept it
       val updated = service.clientAccept(a.id, universityID).serviceValue
-      updated.state mustBe AppointmentState.Confirmed
+      updated.state mustBe AppointmentState.Accepted
 
       // Declining a confirmed appointment should set it back to provisional
       val updated2 = service.clientDecline(a.id, universityID, AppointmentCancellationReason.Clash).serviceValue
@@ -162,10 +162,10 @@ class AppointmentServiceTest extends AbstractDaoTest {
       multiClient.state mustBe AppointmentState.Provisional
 
       val multiClientUpdate1 = service.clientAccept(multiClient.id, client1).serviceValue
-      multiClientUpdate1.state mustBe AppointmentState.Confirmed // Any client has accepted
+      multiClientUpdate1.state mustBe AppointmentState.Accepted // Any client has accepted
 
       val multiClientUpdate2 = service.clientDecline(multiClient.id, client2, AppointmentCancellationReason.Clash).serviceValue
-      multiClientUpdate2.state mustBe AppointmentState.Confirmed // Any clients has accepted, even though one has declined
+      multiClientUpdate2.state mustBe AppointmentState.Accepted // Any clients has accepted, even though one has declined
 
       val multiClientUpdate3 = service.clientDecline(multiClient.id, client1, AppointmentCancellationReason.UnableToAttend).serviceValue
       multiClientUpdate3.state mustBe AppointmentState.Provisional // All clients have declined

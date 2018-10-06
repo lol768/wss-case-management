@@ -41,15 +41,6 @@ class CaseSearchController @Inject()(
   import anyTeamActionRefiner._
   import viewCaseActionRefiner._
 
-  def canDoQuery(query: CaseSearchQuery)(implicit request: AuthenticatedRequest[_]): Future[ServiceResult[Boolean]] = {
-    if (query.team.isEmpty && query.member.isEmpty) {
-      permissions.isAdmin(currentUser.usercode)
-    } else if (query.team.nonEmpty) {
-      permissions.canViewTeamFuture(currentUser.usercode, query.team.get)
-    } else {
-      Future.successful(Right(currentUser.usercode == query.member.get))
-    }
-  }
   def search: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     form.bindFromRequest().fold(
       formWithErrors => Future.successful(
@@ -59,20 +50,14 @@ class CaseSearchController @Inject()(
         )))
       ),
       query => {
-        canDoQuery(query).successFlatMap { canDo =>
-          if (!canDo) {
-            Future.successful(Forbidden(Json.toJson(JsonClientError(status = "forbidden", errors = Seq(s"User ${currentUser.usercode.string} does not have permission to run this query")))))
-          } else {
-            val (category: String, results: Future[ServiceResult[Seq[Case]]]) =
-              if (query.isEmpty) "Recently viewed cases" -> cases.findRecentlyViewed(request.user.get.usercode, 10)
-              else "Search results" -> cases.search(query, 10)
+        val (category: String, results: Future[ServiceResult[Seq[Case]]]) =
+          if (query.isEmpty) "Recently viewed cases" -> cases.findRecentlyViewed(request.user.get.usercode, 10)
+          else "Search results" -> cases.search(query, 10)
 
-            results.successMap { c =>
-              Ok(Json.toJson(API.Success(data = Json.obj(
-                "results" -> c.map(toJson(_, Some(category)))
-              ))))
-            }
-          }
+        results.successMap { c =>
+          Ok(Json.toJson(API.Success(data = Json.obj(
+            "results" -> c.map(toJson(_, Some(category)))
+          ))))
         }
       }
     )

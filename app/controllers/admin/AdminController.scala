@@ -30,13 +30,13 @@ class AdminController @Inject()(
   import canViewTeamActionRefiner._
 
   def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    findEnquiriesAndCasesAndAppointments { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments, clients) => {
+    findEnquiriesAndCasesAndAppointments { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments, clients) => {
       profileService.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
         val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
         val usercodes = (declinedAppointments ++ provisionalAppointments ++ appointmentsNeedingOutcome).map(_.appointment.teamMember).toSet
         val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
 
-        Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments, resolvedClients, userLookup))
+        Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments, resolvedClients, userLookup))
       })
     }}
   }
@@ -49,8 +49,8 @@ class AdminController @Inject()(
       Int,
       Seq[AppointmentRender], // Needing re-schedule
       Seq[AppointmentRender], // Awaiting reply from client (in future)
-      Seq[AppointmentRender], // In the past, Confirmed or Provisional
-      Int, // Confirmed, in future
+      Seq[AppointmentRender], // In the past, Accepted or Provisional
+      Int, // Accepted, in future
       Int, // Attended
       Int, // Cancelled
       Map[UUID, Set[UniversityID]]
@@ -64,13 +64,13 @@ class AdminController @Inject()(
       appointments.findDeclinedAppointments(teamRequest.team),
       appointments.findProvisionalAppointments(teamRequest.team),
       appointments.findAppointmentsNeedingOutcome(teamRequest.team),
-      appointments.countConfirmedAppointments(teamRequest.team),
+      appointments.countAcceptedAppointments(teamRequest.team),
       appointments.countAttendedAppointments(teamRequest.team),
       appointments.countCancelledAppointments(teamRequest.team),
-    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments) =>
+    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments) =>
       cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successFlatMap { caseClients =>
         val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map{ case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients ++ (declinedAppointments ++ provisionalAppointments ++ appointmentsNeedingOutcome).map { a => a.appointment.id -> a.clients.map(_.universityID) }
-        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments, clients)
+        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments, clients)
       }
     }
   }
@@ -103,8 +103,8 @@ class AdminController @Inject()(
     )
   }
 
-  def confirmedAppointments(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    appointments.findConfirmedAppointments(teamRequest.team).successFlatMap { appointments =>
+  def acceptedAppointments(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    appointments.findAcceptedAppointments(teamRequest.team).successFlatMap { appointments =>
       val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
 
       profileService.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
@@ -112,7 +112,7 @@ class AdminController @Inject()(
         val usercodes = appointments.map(_.appointment.teamMember).toSet
         val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
 
-        Ok(views.html.admin.confirmedAppointments(appointments, resolvedClients, Some(userLookup)))
+        Ok(views.html.admin.acceptedAppointments(appointments, resolvedClients, Some(userLookup)))
       })
     }
   }

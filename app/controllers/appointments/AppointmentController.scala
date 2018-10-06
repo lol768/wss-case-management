@@ -31,11 +31,8 @@ class AppointmentController @Inject()(
       if (client.state != AppointmentState.Provisional) {
         // Can only accept appointments that are provisional for you
         Future.successful(redirectBack())
-      } else appointments.clientAccept(request.appointment.id, universityID).successMap { appointment =>
-        if (appointment.state == AppointmentState.Confirmed)
-          redirectBack().flashing("success" -> Messages("flash.appointment.confirmed"))
-        else
-          redirectBack().flashing("success" -> Messages("flash.appointment.accepted"))
+      } else appointments.clientAccept(request.appointment.id, universityID).successMap { _ =>
+        redirectBack().flashing("success" -> Messages("flash.appointment.accepted"))
       }
     }
   }

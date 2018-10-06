@@ -156,14 +156,14 @@ object AppointmentType extends PlayEnum[AppointmentType] {
 
 sealed abstract class AppointmentState(val labelType: String) extends EnumEntry {
   // When attached to AppointmentClient, the displayable description
-  def clientDescription: String = entryName
+  val clientDescription: String = entryName
 }
 object AppointmentState extends PlayEnum[AppointmentState] {
   case object Provisional extends AppointmentState("default")
-  case object Confirmed extends AppointmentState("info")
+  case object Accepted extends AppointmentState("info")
   case object Attended extends AppointmentState("success")
   case object Cancelled extends AppointmentState("danger") {
-    override def clientDescription = "Declined"
+    override val clientDescription = "Declined"
   }
 
   override def values: immutable.IndexedSeq[AppointmentState] = findValues
