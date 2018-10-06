@@ -129,7 +129,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
       multiClientUpdate2.state mustBe AppointmentState.Confirmed // All clients have accepted
     }
 
-    "update appointment state when a client declines an appointment" in withData(new AppointmentFixture) { a =>
+    "not set appointment state to cancelled if a client declines" in withData(new AppointmentFixture) { a =>
       val universityID = UniversityID("1234567") // Must match Fixtures.appointments.newStoredClient
 
       a.state mustBe AppointmentState.Provisional
@@ -140,14 +140,20 @@ class AppointmentServiceTest extends AbstractDaoTest {
       // This is a no-op because a client declining doesn't cancel the appointment - only a team member can do that
       updated.lastUpdated mustBe a.lastUpdated
       updated.state mustBe AppointmentState.Provisional
+    }
+
+    "update appointment state when a client declines an appointment" in withData(new AppointmentFixture) { a =>
+      val universityID = UniversityID("1234567") // Must match Fixtures.appointments.newStoredClient
+
+      a.state mustBe AppointmentState.Provisional
 
       // Accepting the appointment should confirm it
-      val updated2 = service.clientAccept(a.id, universityID).serviceValue
-      updated2.state mustBe AppointmentState.Confirmed
+      val updated = service.clientAccept(a.id, universityID).serviceValue
+      updated.state mustBe AppointmentState.Confirmed
 
       // Declining a confirmed appointment should set it back to provisional
-      val updated3 = service.clientDecline(a.id, universityID, AppointmentCancellationReason.Clash).serviceValue
-      updated3.state mustBe AppointmentState.Provisional
+      val updated2 = service.clientDecline(a.id, universityID, AppointmentCancellationReason.Clash).serviceValue
+      updated2.state mustBe AppointmentState.Provisional
 
       val client1 = UniversityID("0672089")
       val client2 = UniversityID("0672088")
