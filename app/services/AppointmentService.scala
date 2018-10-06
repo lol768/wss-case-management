@@ -314,10 +314,9 @@ class AppointmentServiceImpl @Inject()(
     daoRunner.run(dao.findCancelledQuery.filter(_.teamMember === teamMember).length.result)
       .map(Right.apply)
 
-  private def getClientsDBIO(id: UUID): DBIO[Seq[StoredAppointmentClient]] =
+  private def getClientsQuery(id: UUID) =
     dao.findClientsQuery(Set(id))
       .filter(_.appointmentID === id)
-      .result
 
   override def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[AppointmentClient]]] =
     daoRunner.run(
@@ -331,9 +330,12 @@ class AppointmentServiceImpl @Inject()(
     auditService.audit('AppointmentAccept, appointmentID.toString, 'Appointment, Json.obj("universityID" -> universityID.string)) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
-        clients <- getClientsDBIO(appointmentID)
+        client <-
+          getClientsQuery(appointmentID)
+            .filter { c => c.universityID === universityID && c.isProvisional }
+            .result.head
         _ <- dao.updateClient(
-          clients.find(_.universityID == universityID).get.copy(
+          client.copy(
             state = AppointmentState.Confirmed,
             cancellationReason = None
           )
@@ -355,7 +357,7 @@ class AppointmentServiceImpl @Inject()(
     auditService.audit('AppointmentDecline, appointmentID.toString, 'Appointment, Json.obj("universityID" -> universityID.string, "reason" -> reason.entryName)) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
-        clients <- getClientsDBIO(appointmentID)
+        clients <- getClientsQuery(appointmentID).result
         _ <- dao.updateClient(
           clients.find(_.universityID == universityID).get.copy(
             state = AppointmentState.Cancelled,
@@ -379,7 +381,7 @@ class AppointmentServiceImpl @Inject()(
     auditService.audit('AppointmentCancel, appointmentID.toString, 'Appointment, Json.obj()) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
-        clients <- getClientsDBIO(appointmentID).map(_.map(_.asAppointmentClient))
+        clients <- getClientsQuery(appointmentID).map(_.appointmentClient).result
         updatedAppointment <- dao.update(appointment.copy(state = AppointmentState.Cancelled, cancellationReason = Some(reason)), version)
       } yield (updatedAppointment, clients)).flatMap { case (a, clients) =>
         notificationService.cancelledAppointment(clients.map(_.universityID).toSet).map(sr =>

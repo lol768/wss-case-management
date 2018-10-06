@@ -28,8 +28,8 @@ class AppointmentController @Inject()(
 
     appointments.getClients(request.appointment.id).successFlatMap { clients =>
       val client = clients.find(_.universityID == universityID).get
-      if (client.state == AppointmentState.Confirmed || client.state == AppointmentState.Attended) {
-        // Trying to accept an appointment that's already accepted or happened long ago; just treat as a no-op
+      if (client.state != AppointmentState.Provisional) {
+        // Can only accept appointments that are provisional for you
         Future.successful(redirectBack())
       } else appointments.clientAccept(request.appointment.id, universityID).successMap { appointment =>
         if (appointment.state == AppointmentState.Confirmed)
