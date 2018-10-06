@@ -1,0 +1,13 @@
+@import helpers.JavaTime
+@import java.time.OffsetDateTime
+
+@(
+  start: OffsetDateTime,
+  url: String
+)
+
+@email() {
+  Reminder: You have an appointment at @JavaTime.Relative(start).
+
+  Follow this link to see details: @url
+}

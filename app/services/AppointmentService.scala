@@ -1,7 +1,7 @@
 package services
 
 import java.time.OffsetDateTime
-import java.util.UUID
+import java.util.{Date, UUID}
 
 import akka.Done
 import com.google.inject.ImplementedBy
@@ -14,8 +14,10 @@ import domain.dao.{AppointmentDao, DaoRunner}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
+import org.quartz._
 import play.api.libs.json.Json
 import services.AppointmentService._
+import services.job.SendAppointmentClientReminderJob
 import system.Logging
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.core.timing.TimingContext
@@ -70,6 +72,8 @@ trait AppointmentService {
   def getNotes(appointmentID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentNote]]]
   def updateNote(appointmentID: UUID, noteID: UUID, note: AppointmentNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]]
   def deleteNote(appointmentID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
+
+  def sendClientReminder(appointmentID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 }
 
 @Singleton
@@ -77,7 +81,8 @@ class AppointmentServiceImpl @Inject()(
   auditService: AuditService,
   notificationService: NotificationService,
   daoRunner: DaoRunner,
-  dao: AppointmentDao
+  dao: AppointmentDao,
+  scheduler: Scheduler,
 )(implicit ec: ExecutionContext) extends AppointmentService with Logging {
 
   private def createStoredAppointment(id: UUID, key: IssueKey, save: AppointmentSave, team: Team, caseID: Option[UUID]): StoredAppointment =
@@ -116,7 +121,11 @@ class AppointmentServiceImpl @Inject()(
       } yield inserted).flatMap { a =>
         notificationService.newAppointment(clients).map(sr =>
           ServiceResults.logErrors(sr, logger, ())
-        ).map(_ => Right(a.asAppointment))
+        ).map(_ => {
+          val appointment = a.asAppointment
+          scheduleClientReminder(appointment)
+          Right(appointment)
+        })
       }
     }
   }
@@ -198,7 +207,11 @@ class AppointmentServiceImpl @Inject()(
           notifyAddedClients,
           notifyRemovedClients,
           notifyExistingClients
-        ).map(_ => Right(a.asAppointment))
+        ).map(_ => {
+          val appointment = a.asAppointment
+          scheduleClientReminder(appointment)
+          Right(appointment)
+        })
       }
     }
   }
@@ -421,6 +434,46 @@ class AppointmentServiceImpl @Inject()(
         existing <- dao.findNotesQuery(appointmentID).filter(_.id === noteID).result.head
         done <- dao.deleteNote(existing, version)
       } yield done).map(Right.apply)
+    }
+
+  private def scheduleClientReminder(appointment: Appointment) = {
+    val jobKey = new JobKey(appointment.id.toString, "SendAppointmentClientReminder")
+    val triggerKey = new TriggerKey(appointment.id.toString, "SendAppointmentClientReminder")
+
+    val triggerTime = appointment.start.minusDays(1).toInstant
+
+    if (scheduler.checkExists(triggerKey)) {
+      scheduler.rescheduleJob(
+        triggerKey,
+        TriggerBuilder.newTrigger()
+          .withIdentity(triggerKey)
+          .startAt(Date.from(triggerTime))
+          .build()
+      )
+    } else {
+      scheduler.scheduleJob(
+        JobBuilder.newJob(classOf[SendAppointmentClientReminderJob])
+          .withIdentity(jobKey)
+          .usingJobData("id", appointment.id.toString)
+          .build(),
+        TriggerBuilder.newTrigger()
+          .withIdentity(triggerKey)
+          .startAt(Date.from(triggerTime))
+          .build()
+      )
+    }
+  }
+
+  override def sendClientReminder(appointmentID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
+    auditService.audit('AppointmentSendClientReminder, appointmentID.toString, 'Appointment, Json.obj()) {
+      daoRunner.run(for {
+        appointment <- dao.findByIDQuery(appointmentID).map(_.appointment).result.head
+        clients <- getClientsDBIO(appointmentID).map(_.map(_.asAppointmentClient))
+      } yield (appointment, clients)).flatMap { case (appointment, clients) =>
+        notificationService.appointmentReminder(appointment, clients.filterNot(_.state == AppointmentState.Cancelled).map(_.universityID).toSet).map(sr =>
+          ServiceResults.logErrors(sr, logger, ())
+        ).map(_ => Right(Done))
+      }
     }
 
 }
