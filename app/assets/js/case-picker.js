@@ -8,8 +8,6 @@ import RichResultField from './rich-result-field';
 export default function CasePicker(element) {
   let currentQuery = null;
   const $element = $(element);
-  const searchScope = $element.data('searchScope');
-  const searchScopeValue = $element.data('searchScopeValue');
 
   // Might have manually wired this element up with CasePicker,
   // but add the class for CSS style purposes.
@@ -29,7 +27,7 @@ export default function CasePicker(element) {
   function doSearch(query, callback) {
     currentQuery = query;
 
-    postJsonWithCredentials('/service/casesearch', { query, [searchScope]: searchScopeValue })
+    postJsonWithCredentials('/service/casesearch', { query })
       .then(response => response.json())
       .catch((e) => {
         log.error(e);
