@@ -13,7 +13,7 @@ package object profiles {
         case Some(level) => s"${level}th year"
         case _ => ""
       }
-      s"$year ${client.group} student, ${client.department.name}"
+      (Seq(year) ++ client.group ++ Seq("student,", client.department.name)).mkString(" ")
     case _ =>
       s"${client.userType}, ${client.department.name}"
   }

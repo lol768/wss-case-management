@@ -105,36 +105,8 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
     }
 
     "send an email and a My Warwick notification when a client is invited to register" in new Fixture {
-      val universityID = UniversityID("0672089")
-      val profile = SitsProfile(
-        universityID = universityID,
-        usercode = Usercode("u0672089"),
-        fullName = "Mathew Mannion",
-        dateOfBirth = LocalDate.of(1984, 8, 19),
-        phoneNumber = None,
-        warwickEmail = Some("m.mannion@warwick.ac.uk"),
-        alternateEmail = None,
-        address = None,
-        residence = None,
-        department = SitsDepartment("IN", "IT Services"),
-        course = None,
-        route = None,
-        courseStatus = None,
-        enrolmentStatus = None,
-        attendance = None,
-        group = None,
-        yearOfStudy = None,
-        startDate = None,
-        endDate = None,
-        nationality = None,
-        dualNationality = None,
-        tier4VisaRequired = None,
-        disability = None,
-        photo = None,
-        personalTutors = Nil,
-        researchSupervisors = Nil,
-        userType = UserType.Staff
-      )
+      val profile = Fixtures.profiles.mat
+      val universityID = profile.universityID
 
       when(profileService.getProfile(universityID))
         .thenReturn(Future.successful(CacheElement(Right(Some(profile)), -1L, -1L, -1L)) : Future[CacheElement[ServiceResult[Option[SitsProfile]]]])

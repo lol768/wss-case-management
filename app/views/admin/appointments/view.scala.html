@@ -28,8 +28,7 @@
           }
           case Right(profile) => {
             <h5>
-              <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.fullName</a>
-              ,
+              <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.fullName</a>,
               @profile.universityID.string,
               @views.tags.profiles.typeAndDepartment(profile)
               @tags.appointments.clientAppointmentState(a.appointment, client)
