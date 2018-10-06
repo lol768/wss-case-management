@@ -313,11 +313,7 @@ object TabulaResponseParsers {
     start: LocalDateTime,
     end: LocalDateTime
   )
-  val timetableEventReads: Reads[TimetableEvent] = (
-    (__ \ "start").read[LocalDateTime] and
-    (__ \ "end").read[LocalDateTime]
-  )(TimetableEvent.apply _)
-
+  val timetableEventReads: Reads[TimetableEvent] = Json.reads[TimetableEvent]
   val timetableEventsReads: Reads[Seq[TimetableEvent]] = (__ \ "events").read[Seq[TimetableEvent]](Reads.seq(timetableEventReads))
 
   private case class ErrorMessage(message: String)
