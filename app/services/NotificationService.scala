@@ -5,7 +5,7 @@ import java.util.UUID
 import com.google.inject.ImplementedBy
 import domain._
 import domain.dao.CaseDao.Case
-import helpers.ServiceResults
+import helpers.{JavaTime, ServiceResults}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
@@ -34,6 +34,7 @@ trait NotificationService {
   def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def appointmentReminder(appointment: Appointment, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
 }
 
 @Singleton
@@ -411,6 +412,32 @@ class NotificationServiceImpl @Inject()(
       }
     }
   }
+
+  override def appointmentReminder(appointment: Appointment, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
+    withUsers(clients) { clientUsers =>
+      val url = s"https://$domain${controllers.routes.IndexController.home().withFragment("myappointments").path}"
+
+      emailService.queue(
+        Email(
+          subject = s"Wellbeing Support Services: appointment reminder",
+          from = "no-reply@warwick.ac.uk",
+          bodyText = Some(views.txt.emails.appointmentReminder(appointment.start, url).toString.trim)
+        ),
+        clientUsers.toSeq
+      ).flatMap {
+        case Left(errors) => Future.successful(Left(errors))
+        case _ =>
+          val activity = new Activity(
+            clientUsers.map(_.usercode.string).asJava,
+            Set[String]().asJava,
+            s"Reminder: You have an appointment at ${JavaTime.Relative(appointment.start)}",
+            url,
+            null,
+            "appointment-reminder-message"
+          )
+          sendAndHandleResponse(activity)
+      }
+    }
 
   private def sendAndHandleResponse(activity: Activity)(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     FutureConverters.toScala(myWarwickService.sendAsNotification(activity)).map { resultList =>
