@@ -5,13 +5,15 @@ import controllers.refiners.AnyTeamActionRefiner
 import domain.SitsProfile
 import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
+import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json.{Json, Writes}
 import play.api.mvc.{Action, AnyContent}
-import services.tabula.{MemberSearchService, ProfileService}
+import services.PermissionService
 import services.tabula.TabulaResponseParsers.MemberSearchResult
+import services.tabula.{MemberSearchService, ProfileService}
 import warwick.sso._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -22,7 +24,8 @@ object FlexiPickerController {
     exact: Boolean,
     includeUsers: Boolean,
     includeGroups: Boolean,
-    universityId: Boolean
+    universityId: Boolean,
+    team: Option[String]
   )
 
   val form: Form[FlexiPickerQuery] = Form(mapping(
@@ -30,7 +33,8 @@ object FlexiPickerController {
     "exact" -> default(boolean, false),
     "includeUsers" -> default(boolean, true),
     "includeGroups" -> default(boolean, false),
-    "universityId" -> default(boolean, false)
+    "universityId" -> default(boolean, false),
+    "team" -> optional(text)
   )(FlexiPickerQuery.apply)(FlexiPickerQuery.unapply))
 
   sealed abstract class FlexiPickerResult(val `type`: String) {
@@ -115,7 +119,8 @@ class FlexiPickerController @Inject()(
   userLookupService: UserLookupService,
   memberSearchService: MemberSearchService,
   groupService: GroupService,
-  profileService: ProfileService
+  profileService: ProfileService,
+  permissions: PermissionService,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import anyTeamActionRefiner._
@@ -136,15 +141,17 @@ class FlexiPickerController @Inject()(
 
             if (flexiPickerQuery.includeUsers)
               Future(userLookupService.getUser(warwick.sso.Usercode(query)).toOption.toSeq)
-                .map { g => Right(g.flatMap(FlexiPickerResult.apply(_, flexiPickerQuery.universityId))) }
+                .map(_.filter { u => matchesTeamFilter(flexiPickerQuery, u.usercode) })
+                .map { u => Right(u.flatMap(FlexiPickerResult.apply(_, flexiPickerQuery.universityId))) }
             else Future.successful(Right(Nil)),
 
             if (flexiPickerQuery.includeUsers && query.matches("^[0-9]{7,}$"))
               profileService.getProfile(UniversityID(query)).map(_.value)
                 .flatMap {
-                  case Right(Some(profile)) => Future.successful(Right(Seq(FlexiPickerResult.apply(profile, flexiPickerQuery.universityId))))
+                  case Right(Some(profile)) if matchesTeamFilter(flexiPickerQuery, profile.usercode) => Future.successful(Right(Seq(FlexiPickerResult.apply(profile, flexiPickerQuery.universityId))))
                   case _ =>
                     Future(userLookupService.getUsers(Seq(UniversityID(query)), includeDisabled = true).toOption.flatMap(_.headOption.map(_._2)).toSeq)
+                      .map(_.filter { u => matchesTeamFilter(flexiPickerQuery, u.usercode) })
                       .map { g => Right(g.flatMap(FlexiPickerResult.apply(_, flexiPickerQuery.universityId))) }
                 }
             else Future.successful(Right(Nil)),
@@ -155,10 +162,12 @@ class FlexiPickerController @Inject()(
             else Future.successful(Right(Nil)),
 
             if (!flexiPickerQuery.exact && flexiPickerQuery.includeUsers)
-              memberSearchService.search(query).map(_.right.map(_.map(FlexiPickerResult.apply(_, flexiPickerQuery.universityId))))
+              memberSearchService.search(query)
+                .map(_.right.map(_.filter { r => matchesTeamFilter(flexiPickerQuery, r.usercode) }))
+                .map(_.right.map(_.map(FlexiPickerResult.apply(_, flexiPickerQuery.universityId))))
                 .flatMap {
                   case Right(results) if results.nonEmpty => Future.successful(Right(results))
-                  case _ => queryUsers(query).map(_.right.map(_.flatMap(FlexiPickerResult.apply(_, flexiPickerQuery.universityId))))
+                  case _ => queryUsers(flexiPickerQuery).map(_.right.map(_.flatMap(FlexiPickerResult.apply(_, flexiPickerQuery.universityId))))
                 }
             else Future.successful(Right(Nil))
           )
@@ -188,6 +197,17 @@ class FlexiPickerController @Inject()(
     )
   }
 
+  private def matchesTeamFilter(flexiPickerQuery: FlexiPickerQuery, usercode: Usercode): Boolean =
+    if (!flexiPickerQuery.team.exists(_.hasText)) true
+    else flexiPickerQuery.team.map(_.trim).exists { teamId =>
+      permissions.teams(usercode).fold(
+        _ => false,
+        teams =>
+          if (teams.nonEmpty && (teamId == "*" || teamId == "any")) true
+          else teams.exists(_.id == teamId)
+      )
+    }
+
   final val EnoughResults = 10
 
   final val FirstName = "givenName"
@@ -195,13 +215,13 @@ class FlexiPickerController @Inject()(
   final val UniversityId = "warwickUniId"
   final val Usercode = "cn"
 
-  private def queryUsers(query: String): Future[ServiceResult[Seq[User]]] = Future {
+  private def queryUsers(flexiPickerQuery: FlexiPickerQuery): Future[ServiceResult[Seq[User]]] = Future {
     def usersMatching(filter: (String, String)*) = userLookupService.searchUsers(filter.flatMap {
       case (name, value) if value.trim.nonEmpty => Some(name -> (value + "*"))
       case _ => None
-    }.toMap[String, String]).toOption.getOrElse(Nil)
+    }.toMap[String, String]).toOption.map(_.filter { u => matchesTeamFilter(flexiPickerQuery, u.usercode) }).getOrElse(Nil)
 
-    val words = query.split("\\s+")
+    val words = flexiPickerQuery.query.trim.split("\\s+")
 
     var results = Seq.empty[User]
 

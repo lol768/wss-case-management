@@ -9,6 +9,7 @@
   autoMultiple: Boolean = true,
   deleteExisting: Boolean = true,
   universityId: Boolean = false,
+  team: String = "",
 )
 
 @if(multiple) {
@@ -21,7 +22,7 @@
       data-include-users="@includeUsers" data-include-email="@includeEmail"
       data-include-groups="@includeGroups" data-prefix-groups="webgroup:"
       data-can-delete="@deleteExisting" value="@value" autocomplete="off"
-      data-universityid="@universityId"
+      data-universityid="@universityId" data-team="@team"
     />
   </div>
 }
@@ -32,7 +33,7 @@
       data-include-users="@includeUsers" data-include-email="@includeEmail"
       data-include-groups="@includeGroups" data-prefix-groups="webgroup:"
       data-can-delete="@deleteExisting" autocomplete="off"
-      data-universityid="@universityId"
+      data-universityid="@universityId" data-team="@team"
     />
   </div>
 }
