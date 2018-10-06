@@ -75,7 +75,7 @@
             @a.appointment.state
           </span>
 
-          @if(a.appointment.state == AppointmentState.Provisional || a.appointment.state == AppointmentState.Confirmed) {
+          @if(a.appointment.state == AppointmentState.Provisional || a.appointment.state == AppointmentState.Accepted) {
             &nbsp;
             @b3.horizontal.formCSRF(controllers.admin.routes.AppointmentController.cancel(a.appointment.key), "col-sm-3", "col-sm-9", 'class -> "inline-form") { implicit ifc =>
               <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#cancel-modal">@tags.icons.appointmentCancel() Cancel</button>

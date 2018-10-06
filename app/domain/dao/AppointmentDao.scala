@@ -36,7 +36,7 @@ trait AppointmentDao {
   def findDeclinedQuery: Query[Appointments, StoredAppointment, Seq]
   def findProvisionalQuery: Query[Appointments, StoredAppointment, Seq]
   def findNeedingOutcomeQuery: Query[Appointments, StoredAppointment, Seq]
-  def findConfirmedQuery: Query[Appointments, StoredAppointment, Seq]
+  def findAcceptedQuery: Query[Appointments, StoredAppointment, Seq]
   def findAttendedQuery: Query[Appointments, StoredAppointment, Seq]
   def findCancelledQuery: Query[Appointments, StoredAppointment, Seq]
 
@@ -107,13 +107,13 @@ class AppointmentDaoImpl @Inject()(
   override def findNeedingOutcomeQuery: Query[Appointments, StoredAppointment, Seq] =
     appointments.table
       .filter { a =>
-        a.isConfirmed && a.isInPast
+        a.isAccepted && a.isInPast
       }
 
-  override def findConfirmedQuery: Query[Appointments, StoredAppointment, Seq] =
+  override def findAcceptedQuery: Query[Appointments, StoredAppointment, Seq] =
     appointments.table
       .filter { a =>
-        a.isConfirmed && a.isInFuture
+        a.isAccepted && a.isInFuture
       }
 
   override def findAttendedQuery: Query[Appointments, StoredAppointment, Seq] =
@@ -265,7 +265,7 @@ object AppointmentDao {
       (id, key, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[Appointment]
 
     def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
-    def isConfirmed: Rep[Boolean] = state === (AppointmentState.Confirmed: AppointmentState)
+    def isAccepted: Rep[Boolean] = state === (AppointmentState.Accepted: AppointmentState)
     def isAttended: Rep[Boolean] = state === (AppointmentState.Attended: AppointmentState)
     def isCancelled: Rep[Boolean] = state === (AppointmentState.Cancelled: AppointmentState)
     def isInFuture: Rep[Boolean] = start >= JavaTime.offsetDateTime
@@ -369,10 +369,10 @@ object AppointmentDao {
       (universityID, state, cancellationReason).mapTo[AppointmentClient]
 
     def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
-    def isConfirmed: Rep[Boolean] = state === (AppointmentState.Confirmed: AppointmentState)
+    def isAccepted: Rep[Boolean] = state === (AppointmentState.Accepted: AppointmentState)
     def isAttended: Rep[Boolean] = state === (AppointmentState.Attended: AppointmentState)
     def isDeclined: Rep[Boolean] = state === (AppointmentState.Cancelled: AppointmentState)
-    def isResponded: Rep[Boolean] = isConfirmed || isDeclined
+    def isResponded: Rep[Boolean] = isAccepted || isDeclined
 
     def pk = primaryKey("pk_appointment_client", (universityID, appointmentID))
     def fk = foreignKey("fk_appointment_client", appointmentID, appointments.table)(_.id)

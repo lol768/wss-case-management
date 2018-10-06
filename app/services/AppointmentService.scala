@@ -46,10 +46,10 @@ trait AppointmentService {
   def findProvisionalAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
   def findAppointmentsNeedingOutcome(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
   def findAppointmentsNeedingOutcome(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
-  def findConfirmedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
-  def countConfirmedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
-  def findConfirmedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
-  def countConfirmedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def findAcceptedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def countAcceptedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def findAcceptedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def countAcceptedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def findAttendedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
   def countAttendedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def findAttendedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
@@ -126,11 +126,11 @@ class AppointmentServiceImpl @Inject()(
       def newState(existing: StoredAppointment, clientResult: UpdateDifferencesResult[StoredAppointmentClient]): AppointmentState =
         if (existing.state == AppointmentState.Provisional || existing.state == AppointmentState.Cancelled || existing.state == AppointmentState.Attended)
           existing.state
-        else if (clientResult.all.exists(_.state == AppointmentState.Confirmed))
-          // At least one client has still confirmed
-          AppointmentState.Confirmed
+        else if (clientResult.all.exists(_.state == AppointmentState.Accepted))
+          // At least one client has still accepted
+          AppointmentState.Accepted
         else
-          // All confirmed clients have been removed; back to provisional
+          // All accepted clients have been removed; back to provisional
           AppointmentState.Provisional
 
       daoRunner.run(for {
@@ -272,18 +272,18 @@ class AppointmentServiceImpl @Inject()(
   override def findAppointmentsNeedingOutcome(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(dao.findNeedingOutcomeQuery.filter(_.teamMember === teamMember))
 
-  override def findConfirmedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
-    listForRender(dao.findConfirmedQuery.filter(_.team === team))
+  override def findAcceptedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findAcceptedQuery.filter(_.team === team))
 
-  override def countConfirmedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
-    daoRunner.run(dao.findConfirmedQuery.filter(_.team === team).length.result)
+  override def countAcceptedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(dao.findAcceptedQuery.filter(_.team === team).length.result)
       .map(Right.apply)
 
-  override def findConfirmedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
-    listForRender(dao.findConfirmedQuery.filter(_.teamMember === teamMember))
+  override def findAcceptedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findAcceptedQuery.filter(_.teamMember === teamMember))
 
-  override def countConfirmedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
-    daoRunner.run(dao.findConfirmedQuery.filter(_.teamMember === teamMember).length.result)
+  override def countAcceptedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(dao.findAcceptedQuery.filter(_.teamMember === teamMember).length.result)
       .map(Right.apply)
 
   override def findAttendedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
@@ -334,18 +334,18 @@ class AppointmentServiceImpl @Inject()(
         clients <- getClientsDBIO(appointmentID)
         _ <- dao.updateClient(
           clients.find(_.universityID == universityID).get.copy(
-            state = AppointmentState.Confirmed,
+            state = AppointmentState.Accepted,
             cancellationReason = None
           )
         )
-        // If any clients has accepted the appointment, transition state to confirmed
+        // If any clients has accepted the appointment, transition state to accepted
         updatedAppointment <-
           if (appointment.state == AppointmentState.Provisional)
-            dao.update(appointment.copy(state = AppointmentState.Confirmed), appointment.version)
+            dao.update(appointment.copy(state = AppointmentState.Accepted), appointment.version)
           else
             DBIO.successful(appointment)
       } yield updatedAppointment).flatMap { a =>
-        notificationService.appointmentConfirmation(a.asAppointment, AppointmentState.Confirmed).map(sr =>
+        notificationService.appointmentConfirmation(a.asAppointment, AppointmentState.Accepted).map(sr =>
           ServiceResults.logErrors(sr, logger, ())
         ).map(_ => Right(a.asAppointment))
       }
@@ -362,9 +362,9 @@ class AppointmentServiceImpl @Inject()(
             cancellationReason = Some(reason)
           )
         )
-        // A client declension should transition the state to Provisional if no clients have confirmed
+        // A client declension should transition the state to Provisional if no clients have accepted
         updatedAppointment <-
-          if (appointment.state == AppointmentState.Confirmed && clients.forall { c => c.universityID == universityID || c.state != AppointmentState.Confirmed })
+          if (appointment.state == AppointmentState.Accepted && clients.forall { c => c.universityID == universityID || c.state != AppointmentState.Accepted })
             dao.update(appointment.copy(state = AppointmentState.Provisional), appointment.version)
           else
             DBIO.successful(appointment)

@@ -44,7 +44,6 @@ flash.appointment.created=The appointment has been created ({0})
 flash.appointment.updated=The appointment has been updated
 flash.appointment.cancelled=The appointment has been cancelled
 flash.appointment.accepted=You''ve accepted the appointment
-flash.appointment.confirmed=You''ve confirmed the appointment
 flash.appointment.declined=You''ve declined the appointment
 flash.appointment.noteAdded=The appointment note has been saved
 flash.appointment.noteUpdated=The appointment note has been updated

@@ -7,13 +7,13 @@
   declinedAppointments: Seq[AppointmentRender],
   provisionalAppointments: Seq[AppointmentRender],
   appointmentsNeedingOutcome: Seq[AppointmentRender],
-  confirmedAppointments: Int,
+  acceptedAppointments: Int,
   attendedAppointments: Int,
   cancelledAppointments: Int,
   clientLookup: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
   userLookup: Option[Map[Usercode, User]],
   createRoute: Call,
-  confirmedAppointmentsRoute: Call,
+  acceptedAppointmentsRoute: Call,
   attendedAppointmentsRoute: Call,
   cancelledAppointmentsRoute: Call,
   showStaffMember: Boolean = true,
@@ -27,9 +27,9 @@
 @views.html.admin.appointmentTable(Some("Appointment requests awaiting a response"), provisionalAppointments, clientLookup, userLookup)
 @views.html.admin.appointmentTable(Some("Appointments needing outcome"), appointmentsNeedingOutcome, clientLookup, userLookup)
 
-@if(confirmedAppointments > 0) {
-  <details data-toggle="load" data-href="@confirmedAppointmentsRoute" data-target=".content">
-    <summary>Show @tags.p(confirmedAppointments, "upcoming appointments")()</summary>
+@if(acceptedAppointments > 0) {
+  <details data-toggle="load" data-href="@acceptedAppointmentsRoute" data-target=".content">
+    <summary>Show @tags.p(acceptedAppointments, "upcoming appointments")()</summary>
     <div class="content">
       <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
     </div>

@@ -128,14 +128,14 @@
                 &nbsp;
               }
 
-              @if(a.appointment.state == AppointmentState.Provisional || a.appointment.state == AppointmentState.Confirmed) {
+              @if(a.appointment.state == AppointmentState.Provisional || a.appointment.state == AppointmentState.Accepted) {
                 @if(client.state == AppointmentState.Provisional || client.state == AppointmentState.Cancelled) {
                   @b3.inline.formCSRF(controllers.appointments.routes.AppointmentController.accept(a.appointment.key), 'class -> "inline-form") { implicit ifc =>
                     <button type="submit" class="btn btn-default btn-xs">@tags.icons.appointmentAccept() Accept</button>
                   }
                 }
 
-                @if(client.state == AppointmentState.Provisional || client.state == AppointmentState.Confirmed) {
+                @if(client.state == AppointmentState.Provisional || client.state == AppointmentState.Accepted) {
                   @b3.horizontal.formCSRF(controllers.appointments.routes.AppointmentController.decline(a.appointment.key), "col-sm-3", "col-sm-9", 'class -> "inline-form") { implicit ifc =>
                     <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#decline-@{a.appointment.id.toString}-modal">@tags.icons.appointmentDecline() Decline</button>
 
@@ -258,13 +258,13 @@
             info.declinedAppointments,
             info.provisionalAppointments,
             info.appointmentsNeedingOutcome,
-            info.confirmedAppointments,
+            info.acceptedAppointments,
             info.attendedAppointments,
             info.cancelledAppointments,
             info.clients,
             None,
             controllers.admin.routes.AppointmentController.createSelectTeam(),
-            routes.IndexController.confirmedAppointments,
+            routes.IndexController.acceptedAppointments,
             routes.IndexController.attendedAppointments,
             routes.IndexController.cancelledAppointments,
           )
