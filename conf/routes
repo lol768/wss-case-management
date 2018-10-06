@@ -29,7 +29,7 @@ GET         /                                       @controllers.IndexController
 GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries
 GET         /closed-cases                           @controllers.IndexController.closedCases
 GET         /at-risk-clients                        @controllers.IndexController.atRiskClients
-GET         /confirmed-appointments                 @controllers.IndexController.confirmedAppointments
+GET         /accepted-appointments                  @controllers.IndexController.acceptedAppointments
 GET         /attended-appointments                  @controllers.IndexController.attendedAppointments
 GET         /cancelled-appointments                 @controllers.IndexController.cancelledAppointments
 
@@ -59,7 +59,7 @@ GET         /team/:teamId                           @controllers.admin.AdminCont
 GET         /team/:teamId/closed-enquiries          @controllers.admin.AdminController.closedEnquiries(teamId: String)
 GET         /team/:teamId/closed-cases              @controllers.admin.AdminController.closedCases(teamId: String)
 GET         /team/:teamId/at-risk-clients           @controllers.admin.AdminController.atRiskClients(teamId: String)
-GET         /team/:teamId/confirmed-appointments    @controllers.admin.AdminController.confirmedAppointments(teamId: String)
+GET         /team/:teamId/accepted-appointments     @controllers.admin.AdminController.acceptedAppointments(teamId: String)
 GET         /team/:teamId/attended-appointments     @controllers.admin.AdminController.attendedAppointments(teamId: String)
 GET         /team/:teamId/cancelled-appointments    @controllers.admin.AdminController.cancelledAppointments(teamId: String)
 

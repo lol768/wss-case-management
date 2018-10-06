@@ -36,7 +36,7 @@ object IndexController {
     declinedAppointments: Seq[AppointmentRender],
     provisionalAppointments: Seq[AppointmentRender],
     appointmentsNeedingOutcome: Seq[AppointmentRender],
-    confirmedAppointments: Int,
+    acceptedAppointments: Int,
     attendedAppointments: Int,
     cancelledAppointments: Int,
     clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
@@ -105,10 +105,10 @@ class IndexController @Inject()(
           appointments.findDeclinedAppointments(usercode),
           appointments.findProvisionalAppointments(usercode),
           appointments.findAppointmentsNeedingOutcome(usercode),
-          appointments.countConfirmedAppointments(usercode),
+          appointments.countAcceptedAppointments(usercode),
           appointments.countAttendedAppointments(usercode),
           appointments.countCancelledAppointments(usercode),
-        ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, confirmedAppointments, attendedAppointments, cancelledAppointments) =>
+        ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments) =>
           cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successFlatMapTo { caseClients =>
             val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map { case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients ++ (declinedAppointments ++ provisionalAppointments ++ appointmentsNeedingOutcome).map { a => a.appointment.id -> a.clients.map(_.universityID) }
 
@@ -125,7 +125,7 @@ class IndexController @Inject()(
                 declinedAppointments,
                 provisionalAppointments,
                 appointmentsNeedingOutcome,
-                confirmedAppointments,
+                acceptedAppointments,
                 attendedAppointments,
                 cancelledAppointments,
                 resolvedClients,
@@ -176,14 +176,14 @@ class IndexController @Inject()(
     )
   }
 
-  def confirmedAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    appointments.findConfirmedAppointments(currentUser().usercode).successFlatMap { appointments =>
+  def acceptedAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    appointments.findAcceptedAppointments(currentUser().usercode).successFlatMap { appointments =>
       val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
 
       profiles.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
         val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
 
-        Ok(views.html.admin.confirmedAppointments(appointments, resolvedClients, None))
+        Ok(views.html.admin.acceptedAppointments(appointments, resolvedClients, None))
       })
     }
   }

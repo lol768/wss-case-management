@@ -28,14 +28,11 @@ class AppointmentController @Inject()(
 
     appointments.getClients(request.appointment.id).successFlatMap { clients =>
       val client = clients.find(_.universityID == universityID).get
-      if (client.state == AppointmentState.Confirmed || client.state == AppointmentState.Attended) {
+      if (client.state == AppointmentState.Accepted || client.state == AppointmentState.Attended) {
         // Trying to accept an appointment that's already accepted or happened long ago; just treat as a no-op
         Future.successful(redirectBack())
-      } else appointments.clientAccept(request.appointment.id, universityID).successMap { appointment =>
-        if (appointment.state == AppointmentState.Confirmed)
-          redirectBack().flashing("success" -> Messages("flash.appointment.confirmed"))
-        else
-          redirectBack().flashing("success" -> Messages("flash.appointment.accepted"))
+      } else appointments.clientAccept(request.appointment.id, universityID).successMap { _ =>
+        redirectBack().flashing("success" -> Messages("flash.appointment.accepted"))
       }
     }
   }
