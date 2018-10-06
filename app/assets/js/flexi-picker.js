@@ -20,6 +20,7 @@ export default class FlexiPicker {
     includeGroups = false,
     prefixGroups = '',
     universityId = false,
+    team = '',
   } = {}) {
     const self = this;
     const $element = $(input);
@@ -37,6 +38,7 @@ export default class FlexiPicker {
     this.includeGroups = includeGroups;
     this.prefixGroups = prefixGroups;
     this.universityId = universityId;
+    this.team = team;
 
     this.richResultField = new RichResultField(input);
     this.currentQuery = null;
@@ -128,6 +130,7 @@ export default class FlexiPicker {
       includeUsers: this.includeUsers,
       includeGroups: this.includeGroups,
       universityId: this.universityId,
+      team: this.team,
       query,
       exact: options.exact, // if true, only returns 100% matches.
     })
@@ -159,6 +162,7 @@ $.fn.flexiPicker = function initFlexiPicker(options = {}) {
       includeUsers: $this.data('include-users') !== false,
       prefixGroups: $this.data('prefix-groups') || '',
       universityId: $this.data('universityid'),
+      team: $this.data('team') || '',
     };
     $.extend(allOptions, options);
     $this.data('flexi-picker', new FlexiPicker(element, allOptions));
