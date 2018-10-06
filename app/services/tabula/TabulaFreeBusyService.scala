@@ -13,7 +13,7 @@ import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
 import services.FreeBusyService
-import services.FreeBusyService.{FreeBusyPeriod, FreeBusyType}
+import services.FreeBusyService.{FreeBusyPeriod, FreeBusyStatus}
 import services.tabula.TabulaFreeBusyService._
 import system.{Logging, TimingCategories}
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
@@ -85,7 +85,7 @@ class TabulaFreeBusyServiceImpl @Inject()(
                 FreeBusyPeriod(
                   start = event.start.atZone(JavaTime.timeZone).toOffsetDateTime,
                   end = event.end.atZone(JavaTime.timeZone).toOffsetDateTime,
-                  `type` = FreeBusyType.Busy
+                  status = FreeBusyStatus.Busy
                 )
               })
             )

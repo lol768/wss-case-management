@@ -6,7 +6,7 @@ import helpers.JavaTime
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
-import services.FreeBusyService.{FreeBusyPeriod, FreeBusyType}
+import services.FreeBusyService.{FreeBusyPeriod, FreeBusyStatus}
 
 class FreeBusyServiceTest extends PlaySpec with MockitoSugar with ScalaFutures {
 
@@ -27,38 +27,40 @@ class FreeBusyServiceTest extends PlaySpec with MockitoSugar with ScalaFutures {
 
       val allPeriods = Seq(
         // Monday 9am - 10am Busy
-        FreeBusyPeriod(start = monday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(tenAM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.Busy),
+        FreeBusyPeriod(start = monday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(tenAM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy),
         // Monday 9am - 11am Busy
-        FreeBusyPeriod(start = monday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.Busy),
+        FreeBusyPeriod(start = monday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy),
         // Monday 11am - 3pm working elsewhere
-        FreeBusyPeriod(start = monday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(threePM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.WorkingElsewhere),
+        FreeBusyPeriod(start = monday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(threePM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.WorkingElsewhere),
         // Monday 2pm - 3pm Busy
-        FreeBusyPeriod(start = monday.atTime(twoPM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(threePM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.Busy),
+        FreeBusyPeriod(start = monday.atTime(twoPM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(threePM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy),
         // Tuesday 9am - 2pm Out of Office
-        FreeBusyPeriod(start = tuesday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = tuesday.atTime(twoPM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.OutOfOffice),
+        FreeBusyPeriod(start = tuesday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = tuesday.atTime(twoPM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.OutOfOffice),
+        // Tuesday 10am - 11am Out of Office
+        FreeBusyPeriod(start = tuesday.atTime(tenAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = tuesday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.OutOfOffice),
         // Tuesday midday - 1pm Busy
-        FreeBusyPeriod(start = tuesday.atTime(midday).atZone(JavaTime.timeZone).toOffsetDateTime, end = tuesday.atTime(onePM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.Busy),
+        FreeBusyPeriod(start = tuesday.atTime(midday).atZone(JavaTime.timeZone).toOffsetDateTime, end = tuesday.atTime(onePM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy),
         // Wednesday 9am - 10am Busy
-        FreeBusyPeriod(start = wednesday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = wednesday.atTime(tenAM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.Busy),
+        FreeBusyPeriod(start = wednesday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = wednesday.atTime(tenAM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy),
         // Wednesday 9:30am - 10am Busy
-        FreeBusyPeriod(start = wednesday.atTime(nineThirtyAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = wednesday.atTime(tenAM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.Busy),
+        FreeBusyPeriod(start = wednesday.atTime(nineThirtyAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = wednesday.atTime(tenAM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy),
         // Wednesday 9:30am - 11am Busy
-        FreeBusyPeriod(start = wednesday.atTime(nineThirtyAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = wednesday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.Busy)
+        FreeBusyPeriod(start = wednesday.atTime(nineThirtyAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = wednesday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy)
       )
 
       FreeBusyPeriod.combine(allPeriods) mustBe Seq(
         // Monday 9am - 11am Busy
-        FreeBusyPeriod(start = monday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.Busy),
+        FreeBusyPeriod(start = monday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy),
         // Monday 11am - 3pm working elsewhere
-        FreeBusyPeriod(start = monday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(threePM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.WorkingElsewhere),
+        FreeBusyPeriod(start = monday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(threePM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.WorkingElsewhere),
         // Monday 2pm - 3pm Busy
-        FreeBusyPeriod(start = monday.atTime(twoPM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(threePM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.Busy),
+        FreeBusyPeriod(start = monday.atTime(twoPM).atZone(JavaTime.timeZone).toOffsetDateTime, end = monday.atTime(threePM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy),
         // Tuesday 9am - 2pm Out of Office
-        FreeBusyPeriod(start = tuesday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = tuesday.atTime(twoPM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.OutOfOffice),
+        FreeBusyPeriod(start = tuesday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = tuesday.atTime(twoPM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.OutOfOffice),
         // Tuesday midday - 1pm Busy
-        FreeBusyPeriod(start = tuesday.atTime(midday).atZone(JavaTime.timeZone).toOffsetDateTime, end = tuesday.atTime(onePM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.Busy),
+        FreeBusyPeriod(start = tuesday.atTime(midday).atZone(JavaTime.timeZone).toOffsetDateTime, end = tuesday.atTime(onePM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy),
         // Wednesday 9am - 11am Busy
-        FreeBusyPeriod(start = wednesday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = wednesday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, `type` = FreeBusyType.Busy)
+        FreeBusyPeriod(start = wednesday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = wednesday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy)
       )
     }
   }
