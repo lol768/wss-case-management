@@ -470,7 +470,7 @@ class AppointmentServiceImpl @Inject()(
     auditService.audit('AppointmentSendClientReminder, appointmentID.toString, 'Appointment, Json.obj()) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).map(_.appointment).result.head
-        clients <- getClientsDBIO(appointmentID).map(_.map(_.asAppointmentClient))
+        clients <- getClientsQuery(appointmentID).map(_.appointmentClient).result
       } yield (appointment, clients)).flatMap { case (appointment, clients) =>
         notificationService.appointmentReminder(appointment, clients.filterNot(_.state == AppointmentState.Cancelled).map(_.universityID).toSet).map(sr =>
           ServiceResults.logErrors(sr, logger, ())
