@@ -200,6 +200,9 @@ class AppointmentServiceTest extends AbstractDaoTest {
       )).serviceValue
 
       service.search(AppointmentSearchQuery(query = Some("some text")), 5).serviceValue mustBe Seq(a)
+
+      service.search(AppointmentSearchQuery(location = Some(NamedLocation("W0.01"))), 5).serviceValue mustBe Seq(a)
+      service.search(AppointmentSearchQuery(location = Some(NamedLocation("ACCR"))), 5).serviceValue mustBe Seq()
     }
   }
 }

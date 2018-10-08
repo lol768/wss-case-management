@@ -133,6 +133,7 @@ class AppointmentDaoImpl @Inject()(
         q.createdBefore.map { d => a.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.startAfter.map { d => a.start.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.startBefore.map { d => a.start.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
+        q.location.map { location => a.searchableLocation.? @@ plainToTsQuery(location.name, Some("english")) },
         q.teamMember.map { member => a.teamMember.? === member },
         q.team.map { team => a.team.? === team },
         q.teamMember.map { member => a.teamMember.? === member },
@@ -266,6 +267,7 @@ object AppointmentDao {
     def start = column[OffsetDateTime]("start_utc")
     def duration = column[Duration]("duration_secs")
     def location = column[Option[Location]]("location")
+    def searchableLocation = toTsVector(location.asColumnOf[String], Some("english"))
     def team = column[Team]("team_id")
     def teamMember = column[Usercode]("team_member")
     def appointmentType = column[AppointmentType]("appointment_type")
