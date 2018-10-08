@@ -16,10 +16,21 @@
   acceptedAppointmentsRoute: Call,
   attendedAppointmentsRoute: Call,
   cancelledAppointmentsRoute: Call,
-  showStaffMember: Boolean = true,
+  searchScope: String,
+  searchScopeValue: String,
+  placeholderSuffix: String
 )(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
-@* TODO Search box *@
+@b3.vertical.formCSRF(routes.AppointmentSearchController.search(),
+  'class -> "appointment-search",
+  Symbol("data-search-scope") -> searchScope,
+  Symbol("data-search-scope-value") -> searchScopeValue
+) { implicit ifc =>
+  @b3.free('_class -> "search-default") {
+    <i class="fal fa-search"></i>
+    <input type="text" class="form-control input-lg" placeholder="Search cases@placeholderSuffix" />
+  }
+}
 
 <p><a href="@createRoute" class="btn btn-default">Create a new appointment</a></p>
 

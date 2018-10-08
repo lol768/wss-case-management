@@ -5,6 +5,7 @@ import java.time.Duration
 import akka.Done
 import domain.ExtendedPostgresProfile.api._
 import domain._
+import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.{AbstractDaoTest, AppointmentDao, CaseDao}
 import helpers.{DataFixture, JavaTime}
 import play.api.libs.json.Json
@@ -196,6 +197,18 @@ class AppointmentServiceTest extends AbstractDaoTest {
       service.deleteNote(a.id, n2.id, n2.lastUpdated).serviceValue mustBe Done
 
       service.getNotes(a.id).serviceValue mustBe Seq(n1Updated)
+    }
+
+    "search" in withData(new AppointmentFixture) { a =>
+      service.addNote(a.id, AppointmentNoteSave(
+        text = "Here's some text to search",
+        teamMember = Usercode("cuscav")
+      )).serviceValue
+
+      service.search(AppointmentSearchQuery(query = Some("some text")), 5).serviceValue mustBe Seq(a)
+
+      service.search(AppointmentSearchQuery(location = Some(NamedLocation("W0.01"))), 5).serviceValue mustBe Seq(a)
+      service.search(AppointmentSearchQuery(location = Some(NamedLocation("ACCR"))), 5).serviceValue mustBe Seq()
     }
   }
 }

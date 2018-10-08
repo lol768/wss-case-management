@@ -61,7 +61,10 @@
         controllers.admin.routes.AppointmentController.createForm(team.id),
         controllers.admin.routes.AdminController.acceptedAppointments(team.id),
         controllers.admin.routes.AdminController.attendedAppointments(team.id),
-        controllers.admin.routes.AdminController.cancelledAppointments(team.id)
+        controllers.admin.routes.AdminController.cancelledAppointments(team.id),
+        "team",
+        team.id,
+        s" assigned to ${team.name}"
       )
     </div>
   </div>

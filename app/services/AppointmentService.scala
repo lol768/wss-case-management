@@ -265,7 +265,7 @@ class AppointmentServiceImpl @Inject()(
     ))
 
   override def search(query: AppointmentSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]] =
-    ???
+    daoRunner.run(dao.searchQuery(query).take(limit).result).map(r => Right(r.map(_.asAppointment)))
 
   override def findDeclinedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(dao.findDeclinedQuery.filter(_.team === team))
