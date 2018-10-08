@@ -7,7 +7,7 @@
   rows: Int = 5,
 )(implicit messagesProvider: MessagesProvider, requestHeader: RequestHeader)
 
-@b3.vertical.formCSRF(action, 'enctype -> "multipart/form-data") { implicit ifc =>
+@b3.vertical.formCSRF(action, 'enctype -> "multipart/form-data", 'class -> "no-double-submit-protection") { implicit ifc =>
   @b3.free('_label -> "Add a message", '_class -> messageForm("text").error.map(_ => "has-error").getOrElse("")) {
     <div class="flex">
       @b3.textarea(messageForm("text"), 'rows -> rows)(b3.clear.fieldConstructorSpecific, messagesProvider)
