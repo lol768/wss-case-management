@@ -1,6 +1,6 @@
 package domain
 
-import java.time.Duration
+import java.time.{Duration, LocalDate}
 import java.util.UUID
 
 import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
@@ -30,6 +30,68 @@ object Fixtures {
       usercode = Usercode("ss1"),
       universityId = Some(UniversityID("1700001")),
       name = Name(Some("Studentsupport"), Some("User1"))
+    )
+  }
+
+  object profiles {
+    val mat: SitsProfile = SitsProfile(
+      universityID = UniversityID("0672089"),
+      usercode = Usercode("u0672089"),
+      fullName = "Mathew Mannion",
+      dateOfBirth = LocalDate.of(1984, 8, 19),
+      phoneNumber = None,
+      warwickEmail = Some("m.mannion@warwick.ac.uk"),
+      alternateEmail = None,
+      address = None,
+      residence = None,
+      department = SitsDepartment("IN", "IT Services"),
+      course = None,
+      route = None,
+      courseStatus = None,
+      enrolmentStatus = None,
+      attendance = None,
+      group = None,
+      yearOfStudy = None,
+      startDate = None,
+      endDate = None,
+      nationality = None,
+      dualNationality = None,
+      tier4VisaRequired = None,
+      disability = None,
+      photo = None,
+      personalTutors = Nil,
+      researchSupervisors = Nil,
+      userType = UserType.Staff
+    )
+
+    val undergraduate = SitsProfile(
+      universityID = UniversityID("1672089"),
+      usercode = Usercode("u1672089"),
+      fullName = "Mathew Mannion",
+      dateOfBirth = LocalDate.of(1984, 8, 19),
+      phoneNumber = None,
+      warwickEmail = Some("m.mannion@warwick.ac.uk"),
+      alternateEmail = None,
+      address = None,
+      residence = None,
+      department = SitsDepartment("CH", "Chemistry"),
+      course = None,
+      route = None,
+      courseStatus = None,
+      enrolmentStatus = None,
+      attendance = None,
+      group = Some(StudentGroup.Undergraduate),
+      yearOfStudy = Some(YearOfStudy(1, "1")),
+      startDate = None,
+      endDate = None,
+      nationality = None,
+      dualNationality = None,
+      tier4VisaRequired = None,
+      disability = None,
+      photo = None,
+      personalTutors = Nil,
+      researchSupervisors = Nil,
+      userType = UserType.Student
     )
   }
 
