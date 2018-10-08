@@ -1,5 +1,5 @@
 package domain.dao
-import java.time.{LocalDate, OffsetDateTime}
+import java.time.{Duration, LocalDate, OffsetDateTime}
 import java.util.UUID
 
 import akka.Done
@@ -8,19 +8,16 @@ import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.AppointmentDao._
+import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext
-import java.time.Duration
-
-import helpers.JavaTime
-import services.AuditLogContext
-
 import scala.language.higherKinds
 
 @ImplementedBy(classOf[AppointmentDaoImpl])
@@ -39,6 +36,8 @@ trait AppointmentDao {
   def findConfirmedQuery: Query[Appointments, StoredAppointment, Seq]
   def findAttendedQuery: Query[Appointments, StoredAppointment, Seq]
   def findCancelledQuery: Query[Appointments, StoredAppointment, Seq]
+  def searchQuery(query: AppointmentSearchQuery): Query[Appointments, StoredAppointment, Seq]
+
 
   def insertClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredAppointmentClient]]
   def updateClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[StoredAppointmentClient]
@@ -123,6 +122,29 @@ class AppointmentDaoImpl @Inject()(
   override def findCancelledQuery: Query[Appointments, StoredAppointment, Seq] =
     appointments.table
       .filter(_.isCancelled)
+
+  override def searchQuery(q: AppointmentSearchQuery): Query[Appointments, StoredAppointment, Seq] = {
+    def queries(a: Appointments, n: Rep[Option[AppointmentNotes]]): Seq[Rep[Option[Boolean]]] =
+      Seq[Option[Rep[Option[Boolean]]]](
+        q.query.filter(_.nonEmpty).map { queryStr =>
+          n.map(_.searchableText) @@ plainToTsQuery(queryStr.bind, Some("english"))
+        },
+        q.createdAfter.map { d => a.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
+        q.createdBefore.map { d => a.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
+        q.startAfter.map { d => a.start.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
+        q.startBefore.map { d => a.start.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
+        q.teamMember.map { member => a.teamMember.? === member },
+        q.team.map { team => a.team.? === team },
+        q.teamMember.map { member => a.teamMember.? === member },
+        q.appointmentType.map { appointmentType => a.appointmentType.? === appointmentType }
+      ).flatten
+
+    appointments.table
+      .withNotes
+      .filter { case (a, n) => queries(a, n).reduce(_ && _) }
+      .distinct
+      .map { case (a, _) => a }
+  }
 
   override def insertClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredAppointmentClient]] =
     appointmentClients.insertAll(clients.toSeq)

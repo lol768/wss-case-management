@@ -11,6 +11,7 @@ import MessageThreads from './message-threads';
 import CasePicker from './case-picker';
 import CaseSearch from './case-search';
 import EnquirySearch from './enquiry-search';
+import AppointmentSearch from './appointment-search';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -51,6 +52,10 @@ $(() => {
 
   $('.enquiry-search').each((i, container) => {
     EnquirySearch(container);
+  });
+
+  $('.appointment-search').each((i, container) => {
+    AppointmentSearch(container);
   });
 
   $('html')
