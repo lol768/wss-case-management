@@ -307,7 +307,7 @@ class NotificationServiceImpl @Inject()(
 
   override def newAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(clients) { clientUsers =>
-      val url = s"https://$domain${controllers.routes.IndexController.home().withFragment("myappointments").path}"
+      val url = s"https://$domain${controllers.appointments.routes.AppointmentController.redirectToMyAppointments().path}"
 
       emailService.queue(
         Email(
@@ -334,7 +334,7 @@ class NotificationServiceImpl @Inject()(
 
   override def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(clients) { clientUsers =>
-      val url = s"https://$domain${controllers.routes.IndexController.home().withFragment("myappointments").path}"
+      val url = s"https://$domain${controllers.appointments.routes.AppointmentController.redirectToMyAppointments().path}"
 
       emailService.queue(
         Email(
@@ -361,7 +361,7 @@ class NotificationServiceImpl @Inject()(
 
   override def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(clients) { clientUsers =>
-      val url = s"https://$domain${controllers.routes.IndexController.home().withFragment("myappointments").path}"
+      val url = s"https://$domain${controllers.appointments.routes.AppointmentController.redirectToMyAppointments().path}"
 
       emailService.queue(
         Email(
@@ -415,7 +415,7 @@ class NotificationServiceImpl @Inject()(
 
   override def appointmentReminder(appointment: Appointment, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
     withUsers(clients) { clientUsers =>
-      val url = s"https://$domain${controllers.routes.IndexController.home().withFragment("myappointments").path}"
+      val url = s"https://$domain${controllers.appointments.routes.AppointmentController.redirectToMyAppointments().path}"
 
       emailService.queue(
         Email(
