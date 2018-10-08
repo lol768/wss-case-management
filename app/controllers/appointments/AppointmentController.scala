@@ -20,8 +20,12 @@ class AppointmentController @Inject()(
 
   import appointmentActionFilters._
 
-  private def redirectBack(): Result =
+  private def doRedirectToMyAppointments(): Result =
     Redirect(controllers.routes.IndexController.home().withFragment("myappointments"))
+
+  def redirectToMyAppointments = Action { implicit request =>
+    doRedirectToMyAppointments()
+  }
 
   def accept(appointmentKey: IssueKey): Action[AnyContent] = CanClientManageAppointmentAction(appointmentKey).async { implicit request =>
     val universityID = currentUser().universityId.get
@@ -30,9 +34,9 @@ class AppointmentController @Inject()(
       val client = clients.find(_.universityID == universityID).get
       if (client.state != AppointmentState.Provisional) {
         // Can only accept appointments that are provisional for you
-        Future.successful(redirectBack())
+        Future.successful(doRedirectToMyAppointments())
       } else appointments.clientAccept(request.appointment.id, universityID).successMap { _ =>
-        redirectBack().flashing("success" -> Messages("flash.appointment.accepted"))
+        doRedirectToMyAppointments().flashing("success" -> Messages("flash.appointment.accepted"))
       }
     }
   }
@@ -41,14 +45,14 @@ class AppointmentController @Inject()(
     val universityID = currentUser().universityId.get
 
     Form(single("cancellationReason" -> AppointmentCancellationReason.formField)).bindFromRequest().fold(
-      _ => Future.successful(redirectBack()), // Ignore
+      _ => Future.successful(doRedirectToMyAppointments()), // Ignore
       cancellationReason => appointments.getClients(request.appointment.id).successFlatMap { clients =>
         val client = clients.find(_.universityID == universityID).get
         if (client.state == AppointmentState.Cancelled && client.cancellationReason.contains(cancellationReason)) {
           // Trying to decline an appointment with a no-op
-          Future.successful(redirectBack())
+          Future.successful(doRedirectToMyAppointments())
         } else appointments.clientDecline(request.appointment.id, universityID, cancellationReason).successMap { appointment =>
-          redirectBack().flashing("success" -> Messages("flash.appointment.declined"))
+          doRedirectToMyAppointments().flashing("success" -> Messages("flash.appointment.declined"))
         }
       }
     )
