@@ -330,7 +330,7 @@
     }
 
     @tags.sectioned.section("case", "Messages", isCollapsible = clients.size == 1) {
-      <div class="panel-group" id="messages-accordion" role="tablist" aria-multiselectable="true">
+      <div class="panel-group message-threads" id="messages-accordion" role="tablist" aria-multiselectable="true">
       @clients.map { maybeClient =>
         @defining(SitsProfile.universityId(maybeClient)) { universityId: UniversityID =>
           @defining(c.messages.byClient.getOrElse(universityId, Nil)) { messages: Seq[MessageRender] =>

@@ -38,7 +38,7 @@ $(() => {
     ClientSearch(container);
   });
 
-  $('.panel-group.enquiries').each((i, container) => {
+  $('.message-threads').each((i, container) => {
     MessageThreads(container);
   });
 

@@ -27,21 +27,23 @@
     @tags.icons.enquiryState(issueRender.issue.state)
     @subject
   </h2>
-  <div class="thread thread--client panel panel-default">
-    <div class="panel-body">
-      @issueRender.messages.map { message =>
-        @views.html.tags.messages.message(
-          message = message.message,
-          files = message.files,
-          clientName = "You",
-          teamName = s"${message.message.team.getOrElse(issueRender.issue.team).name} team",
-          attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id.get, f.id))
-      }
-    </div>
-    <div class="panel-footer">
-      @if(issueRender.issue.state != IssueState.Closed) {
-        @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), f, supportedMimeTypes)
-      }
+  <div class="message-threads">
+    <div class="thread thread--client panel panel-default">
+      <div class="panel-body">
+        @issueRender.messages.map { message =>
+          @views.html.tags.messages.message(
+            message = message.message,
+            files = message.files,
+            clientName = "You",
+            teamName = s"${message.message.team.getOrElse(issueRender.issue.team).name} team",
+            attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id.get, f.id))
+        }
+      </div>
+      <div class="panel-footer">
+        @if(issueRender.issue.state != IssueState.Closed) {
+          @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), f, supportedMimeTypes)
+        }
+      </div>
     </div>
   </div>
 }
