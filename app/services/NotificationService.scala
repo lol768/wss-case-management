@@ -10,15 +10,31 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.mailer.Email
+import play.api.mvc.Call
 import services.tabula.ProfileService
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.core.timing.TimingContext
 import warwick.sso._
+import NotificationService._
+import play.twirl.api.TxtFormat
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters
 import scala.concurrent.{ExecutionContext, Future}
+
+object NotificationService {
+  type Domain = String
+  
+  implicit class DomainAwareUrlBuilder(val route: Call) {
+    def build(implicit domain: Domain): String = route.absoluteURL(true, domain)
+  }
+
+  val fromAddress = "no-reply@warwick.ac.uk"
+  val clientSubjectPrefix = "Wellbeing Support Services:"
+  val teamSubjectPrefix = "Case Management:"
+
+}
 
 @ImplementedBy(classOf[NotificationServiceImpl])
 trait NotificationService {
@@ -48,85 +64,61 @@ class NotificationServiceImpl @Inject()(
   config: Configuration,
 )(implicit executionContext: ExecutionContext) extends NotificationService {
 
-  private lazy val domain: String = config.get[String]("domain")
+  private implicit lazy val domain: NotificationService.Domain = config.get[String]("domain")
   private lazy val initialTeam = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
+
 
   override def newRegistration(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withInitialTeamUsers { users =>
-      val url = s"https://$domain${controllers.admin.routes.ClientController.client(universityID).url}"
+      val url = controllers.admin.routes.ClientController.client(universityID).build
 
-      emailService.queue(
-        Email(
-          subject = "Case Management: New registration received",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.newregistration(url).toString.trim)
-        ),
-        users
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            Set[String]().asJava,
-            Set(permissionService.webgroupFor(initialTeam).string).asJava,
-            "New registration received",
-            url,
-            null,
-            "new-registration"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$teamSubjectPrefix New registration received",
+        body = views.txt.emails.newregistration(url),
+        recipients = users,
+        activity = buildActivity(
+          initialTeam,
+          "New registration received",
+          url,
+          "new-registration"
+        )
+      )
     }
   }
 
   override def registrationInvite(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
-    val url = s"https://$domain${controllers.registration.routes.RegisterController.form().url}"
+    val url = controllers.registration.routes.RegisterController.form().build
     withUser(universityID) { user =>
-      emailService.queue(
-        Email(
-          subject = "Register for Wellbeing Support Services",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.registrationinvite(user, url).toString.trim)
-        ),
-        Seq(user)
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            Set(user.usercode.string).asJava,
-            "Register for Wellbeing Support Services",
-            url,
-            "You have been invited to register for Wellbeing Support Services",
-            "registration-invite"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = "Register for Wellbeing Support Services",
+        body = views.txt.emails.registrationinvite(user, url),
+        recipients = Seq(user),
+        activity = buildActivity(
+          Set(user),
+          "Register for Wellbeing Support Services",
+          url,
+          "registration-invite",
+          "You have been invited to register for Wellbeing Support Services"
+        )
+      )
     }
   }
 
   override def newEnquiry(enquiry: Enquiry)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
     withInitialTeamUsers { users =>
-      val url = s"https://$domain${controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).url}"
+      val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).build
 
-      emailService.queue(
-        Email(
-          subject = "Case Management: New enquiry received",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.newenquiry(url).toString.trim)
-        ),
-        users
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            Set[String]().asJava,
-            Set(permissionService.webgroupFor(initialTeam).string).asJava,
-            "New enquiry received",
-            url,
-            null,
-            "new-enquiry"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$teamSubjectPrefix New enquiry received",
+        body = views.txt.emails.newenquiry(url),
+        recipients = users,
+        activity = buildActivity(
+          initialTeam,
+          "New enquiry received",
+          url,
+          "new-enquiry"
+        )
+      )
     }
 
   override def enquiryMessage(enquiry: Enquiry, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
@@ -138,55 +130,37 @@ class NotificationServiceImpl @Inject()(
 
   private def enquiryMessageToTeam(enquiry: Enquiry)(implicit ac: AuditLogContext) = {
     withTeamUsers(enquiry.team) { users =>
-      val url = s"https://$domain${controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).url}"
+      val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).build
 
-      emailService.queue(
-        Email(
-          subject = "Case Management: Enquiry message from client received",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.enquirymessagefromclient(url).toString.trim)
-        ),
-        users
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            Set[String]().asJava,
-            Set(permissionService.webgroupFor(enquiry.team).string).asJava,
-            "Enquiry message from client received",
-            url,
-            null,
-            "enquiry-message-from-client"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$teamSubjectPrefix Enquiry message from client received",
+        body = views.txt.emails.enquirymessagefromclient(url),
+        recipients = users,
+        activity = buildActivity(
+          enquiry.team,
+          "Enquiry message from client received",
+          url,
+          "enquiry-message-from-client"
+        )
+      )
     }
   }
 
   private def messageToClient(client: UniversityID, team: Team, id: UUID)(implicit ac: AuditLogContext) = {
     withUser(client) { user =>
-      val url = s"https://$domain${controllers.routes.ClientMessagesController.messages(id).url}"
+      val url = controllers.routes.ClientMessagesController.messages(id).build
 
-      emailService.queue(
-        Email(
-          subject = s"A message from the ${team.name} team has been received",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.messagefromteam(user, team, url).toString.trim)
-        ),
-        Seq(user)
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            Set(user.usercode.string).asJava,
-            Set[String]().asJava,
-            s"The ${team.name} team has sent a message",
-            url,
-            null,
-            "message-from-team"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$clientSubjectPrefix A message from the ${team.name} team has been received",
+        body = views.txt.emails.messagefromteam(user, team, url),
+        recipients = Seq(user),
+        activity = buildActivity(
+          Set(user),
+          s"The ${team.name} team has sent a message",
+          url,
+          "message-from-team"
+        )
+      )
     }
   }
 
@@ -199,55 +173,37 @@ class NotificationServiceImpl @Inject()(
 
   private def caseMessageToTeam(c: Case)(implicit ac: AuditLogContext) = {
     withTeamUsers(c.team) { users =>
-      val url = s"https://$domain${controllers.admin.routes.CaseController.view(c.key.get).url}"
+      val url = controllers.admin.routes.CaseController.view(c.key.get).build
 
-      emailService.queue(
-        Email(
-          subject = "Case Management: Case message from client received",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.casemessagefromclient(url).toString.trim)
-        ),
-        users
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            Set[String]().asJava,
-            Set(permissionService.webgroupFor(c.team).string).asJava,
-            "Case message from client received",
-            url,
-            null,
-            "case-message-from-client"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$teamSubjectPrefix Case message from client received",
+        body = views.txt.emails.casemessagefromclient(url),
+        recipients = users,
+        activity = buildActivity(
+          c.team,
+          "Case message from client received",
+          url,
+          "case-message-from-client"
+        )
+      )
     }
   }
 
   override def enquiryReassign(enquiry: Enquiry)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
     withTeamUsers(enquiry.team) { users =>
-      val url = s"https://$domain${controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).url}"
+      val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).build
 
-      emailService.queue(
-        Email(
-          subject = "Case Management: Enquiry assigned",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.enquiryreassigned(url).toString.trim)
-        ),
-        users
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            Set[String]().asJava,
-            Set(permissionService.webgroupFor(enquiry.team).string).asJava,
-            "Enquiry assigned",
-            url,
-            null,
-            "enquiry-assigned"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$teamSubjectPrefix Enquiry assigned",
+        body = views.txt.emails.enquiryreassigned(url),
+        recipients = users,
+        activity = buildActivity(
+          enquiry.team,
+          "Enquiry assigned",
+          url,
+          "enquiry-assigned"
+        )
+      )
     }
 
   override def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
@@ -255,189 +211,166 @@ class NotificationServiceImpl @Inject()(
       Future.successful(Right(new Activity()))
     } else {
       withUsers(newOwners) { users =>
-        val url = s"https://$domain${controllers.admin.routes.CaseController.view(clientCase.key.get).url}"
+        val url = controllers.admin.routes.CaseController.view(clientCase.key.get).build
 
-        emailService.queue(
-          Email(
-            subject = "Case Management: New case owner",
-            from = "no-reply@warwick.ac.uk",
-            bodyText = Some(views.txt.emails.newcaseowner(url).toString.trim)
-          ),
-          users.toSeq
-        ).flatMap {
-          case Left(errors) => Future.successful(Left(errors))
-          case _ =>
-            val activity = new Activity(
-              newOwners.map(_.string).asJava,
-              "New case owner",
-              url,
-              null,
-              "case-owner-assigned"
-            )
-            sendAndHandleResponse(activity)
-        }
+        queueEmailAndSendActivity(
+          subject = s"$teamSubjectPrefix New case owner",
+          body = views.txt.emails.newcaseowner(url),
+          recipients = users.toSeq,
+          activity = buildActivity(
+            users,
+            "New case owner",
+            url,
+            "case-owner-assigned"
+          )
+        )
       }
     }
 
   override def caseReassign(clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
     withTeamUsers(clientCase.team) { users =>
-      val url = s"https://$domain${controllers.admin.routes.CaseController.view(clientCase.key.get).url}"
+      val url = controllers.admin.routes.CaseController.view(clientCase.key.get).build
 
-      emailService.queue(
-        Email(
-          subject = "Case Management: Case assigned",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.casereassigned(url).toString.trim)
-        ),
-        users
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            Set[String]().asJava,
-            Set(permissionService.webgroupFor(clientCase.team).string).asJava,
-            "Case assigned",
-            url,
-            null,
-            "case-assigned"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$teamSubjectPrefix Case assigned",
+        body = views.txt.emails.casereassigned(url),
+        recipients = users,
+        activity = buildActivity(
+          clientCase.team,
+          "Case assigned",
+          url,
+          "case-assigned"
+        )
+      )
     }
 
   override def newAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(clients) { clientUsers =>
-      val url = s"https://$domain${controllers.appointments.routes.AppointmentController.redirectToMyAppointments().path}"
+      val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
-      emailService.queue(
-        Email(
-          subject = s"Wellbeing Support Services: new appointment created",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.newAppointment(url).toString.trim)
-        ),
-        clientUsers.toSeq
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            clientUsers.map(_.usercode.string).asJava,
-            Set[String]().asJava,
-            s"New appointment created",
-            url,
-            null,
-            "appointment-created-message"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$clientSubjectPrefix New appointment created",
+        body = views.txt.emails.newAppointment(url),
+        recipients = clientUsers.toSeq,
+        activity = buildActivity(
+          clientUsers,
+          "New appointment created",
+          url,
+          "appointment-created-message"
+        )
+      )
     }
   }
 
   override def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(clients) { clientUsers =>
-      val url = s"https://$domain${controllers.appointments.routes.AppointmentController.redirectToMyAppointments().path}"
+      val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
-      emailService.queue(
-        Email(
-          subject = s"Wellbeing Support Services: appointment cancelled",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.cancelledAppointment(url).toString.trim)
-        ),
-        clientUsers.toSeq
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            clientUsers.map(_.usercode.string).asJava,
-            Set[String]().asJava,
-            s"Appointment cancelled",
-            url,
-            null,
-            "appointment-cancelled-message"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$clientSubjectPrefix Appointment cancelled",
+        body = views.txt.emails.cancelledAppointment(url),
+        recipients = clientUsers.toSeq,
+        activity = buildActivity(
+          clientUsers,
+          "Appointment cancelled",
+          url,
+          "appointment-cancelled-message"
+        )
+      )
     }
   }
 
   override def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(clients) { clientUsers =>
-      val url = s"https://$domain${controllers.appointments.routes.AppointmentController.redirectToMyAppointments().path}"
+      val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
-      emailService.queue(
-        Email(
-          subject = s"Wellbeing Support Services: appointment updated",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.changedAppointment(url).toString.trim)
-        ),
-        clientUsers.toSeq
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            clientUsers.map(_.usercode.string).asJava,
-            Set[String]().asJava,
-            s"Appointment updated",
-            url,
-            null,
-            "appointment-updated-message"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$clientSubjectPrefix Appointment updated",
+        body = views.txt.emails.changedAppointment(url),
+        recipients = clientUsers.toSeq,
+        activity = buildActivity(
+          clientUsers,
+          "Appointment updated",
+          url,
+          "appointment-updated-message"
+        )
+      )
     }
   }
 
   override def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUser(appointment.teamMember) { teamMember =>
-      val url = s"https://$domain${controllers.admin.routes.AppointmentController.view(appointment.key).url}"
+      val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
 
-      emailService.queue(
-        Email(
-          subject = s"Case Management: Appointment ${clientState.clientDescription}",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.appointmentResponse(url, clientState.clientDescription.toLowerCase).toString.trim)
-        ),
-        Seq(teamMember)
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            Set(teamMember.usercode.string).asJava,
-            Set[String]().asJava,
-            s"Appointment ${clientState.clientDescription}",
-            url,
-            null,
-            "appointment-confirmation-message"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$teamSubjectPrefix Appointment ${clientState.clientDescription}",
+        body = views.txt.emails.appointmentResponse(url, clientState.clientDescription.toLowerCase),
+        recipients = Seq(teamMember),
+        activity = buildActivity(
+          Set(teamMember),
+          s"Appointment ${clientState.clientDescription}",
+          url,
+          "appointment-confirmation-message"
+        )
+      )
     }
   }
 
   override def appointmentReminder(appointment: Appointment, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
     withUsers(clients) { clientUsers =>
-      val url = s"https://$domain${controllers.appointments.routes.AppointmentController.redirectToMyAppointments().path}"
+      val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
-      emailService.queue(
-        Email(
-          subject = s"Wellbeing Support Services: appointment reminder",
-          from = "no-reply@warwick.ac.uk",
-          bodyText = Some(views.txt.emails.appointmentReminder(appointment.start, url).toString.trim)
-        ),
-        clientUsers.toSeq
-      ).flatMap {
-        case Left(errors) => Future.successful(Left(errors))
-        case _ =>
-          val activity = new Activity(
-            clientUsers.map(_.usercode.string).asJava,
-            Set[String]().asJava,
-            s"Reminder: You have an appointment at ${JavaTime.Relative(appointment.start)}",
-            url,
-            null,
-            "appointment-reminder-message"
-          )
-          sendAndHandleResponse(activity)
-      }
+      queueEmailAndSendActivity(
+        subject = s"$clientSubjectPrefix Appointment reminder",
+        body = views.txt.emails.appointmentReminder(appointment.start, url),
+        recipients = clientUsers.toSeq,
+        activity = buildActivity(
+          clientUsers,
+          s"Reminder: You have an appointment at ${JavaTime.Relative(appointment.start)}",
+          url,
+          "appointment-reminder-message"
+        )
+      )
     }
+
+  private def queueEmailAndSendActivity(subject: String, body: TxtFormat.Appendable, recipients: Seq[User], activity: Activity)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
+    emailService.queue(
+      Email(
+        subject = subject,
+        from = fromAddress,
+        bodyText = Some(body.toString.trim)
+      ),
+      recipients
+    ).flatMap {
+      case Left(errors) => Future.successful(Left(errors))
+      case _ => sendAndHandleResponse(activity)
+    }
+
+  private def buildActivity(users: Set[User], title: String, url: String, activityType: String): Activity =
+    buildActivity(users, title, url, activityType, null)
+
+  private def buildActivity(users: Set[User], title: String, url: String, activityType: String, text: String): Activity =
+    new Activity(
+      users.map(_.usercode.string).asJava,
+      Set[String]().asJava,
+      title,
+      url,
+      text,
+      activityType
+    )
+
+  private def buildActivity(team: Team, title: String, url: String, activityType: String): Activity =
+    buildActivity(team, title, url, activityType, null)
+
+  private def buildActivity(team: Team, title: String, url: String, activityType: String, text: String): Activity =
+    new Activity(
+      Set[String]().asJava,
+      Set(permissionService.webgroupFor(team).string).asJava,
+      title,
+      url,
+      text,
+      activityType
+    )
 
   private def sendAndHandleResponse(activity: Activity)(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     FutureConverters.toScala(myWarwickService.sendAsNotification(activity)).map { resultList =>
