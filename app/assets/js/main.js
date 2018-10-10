@@ -38,7 +38,7 @@ $(() => {
     ClientSearch(container);
   });
 
-  $('.panel-group.enquiries').each((i, container) => {
+  $('.message-threads').each((i, container) => {
     MessageThreads(container);
   });
 
@@ -79,7 +79,14 @@ $(() => {
       }
     });
 
-  $('form').not('.no-dirty-check').areYouSure();
+  $('form')
+    .not('.no-dirty-check')
+    .areYouSure()
+    .end()
+    .not('no-double-submit-protection')
+    .on('submit', (e) => {
+      $(e.target).find('button[type=submit]').prop('disabled', true);
+    });
 
   $('.toggle-element').each((i, container) => {
     const $this = $(container);

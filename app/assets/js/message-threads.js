@@ -21,9 +21,10 @@ export default function MessageThreads(container) {
   // And on load
   $('.collapse.in .panel-body').scrollTop(Number.MAX_SAFE_INTEGER);
 
-  function checkAndUpdateSendButton() {
-    const $textarea = $('.collapse.in .panel-footer textarea');
-    const $button = $('.collapse.in .panel-footer button[type=submit]');
+  function checkAndUpdateSendButton(e) {
+    const $thread = (e !== undefined) ? $(e.target).closest('.thread') : $container;
+    const $textarea = $thread.find('.panel-footer textarea');
+    const $button = $thread.find('.panel-footer button[type=submit]');
     if (_.trim($textarea.val()).length === 0) {
       $button.prop('disabled', true);
     } else {
@@ -59,6 +60,7 @@ export default function MessageThreads(container) {
           $form.closest('.panel').find('.panel-body').append($('<div/>').html(response.data.message).unwrap());
           $('.collapse.in .panel-body').scrollTop(Number.MAX_SAFE_INTEGER);
           $form.trigger('reset');
+          $form.find('textarea').prop('rows', 1);
         } else {
           log.error(response);
           if (response.errors && response.errors.length) {
