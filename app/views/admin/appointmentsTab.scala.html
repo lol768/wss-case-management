@@ -10,7 +10,6 @@
   acceptedAppointments: Int,
   attendedAppointments: Int,
   cancelledAppointments: Int,
-  clientLookup: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
   userLookup: Option[Map[Usercode, User]],
   createRoute: Call,
   acceptedAppointmentsRoute: Call,
@@ -34,9 +33,9 @@
 
 <p><a href="@createRoute" class="btn btn-default">Create a new appointment</a></p>
 
-@views.html.admin.appointmentTable(Some("Appointments needing attention"), declinedAppointments, clientLookup, userLookup)
-@views.html.admin.appointmentTable(Some("Appointment requests awaiting a response"), provisionalAppointments, clientLookup, userLookup)
-@views.html.admin.appointmentTable(Some("Appointments needing outcome"), appointmentsNeedingOutcome, clientLookup, userLookup)
+@views.html.admin.appointmentTable(Some("Appointments needing attention"), declinedAppointments, userLookup)
+@views.html.admin.appointmentTable(Some("Appointment requests awaiting a response"), provisionalAppointments, userLookup)
+@views.html.admin.appointmentTable(Some("Appointments needing outcome"), appointmentsNeedingOutcome, userLookup)
 
 @if(acceptedAppointments > 0) {
   <details data-toggle="load" data-href="@acceptedAppointmentsRoute" data-target=".content">

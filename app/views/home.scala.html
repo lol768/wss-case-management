@@ -115,7 +115,7 @@
             (@a.appointment.appointmentType.description)
           </td>
           <td>
-            @a.clients.find(_.universityID == context.user.get.universityId.get).map { client =>
+            @a.clients.find(_.client.universityID == context.user.get.universityId.get).map { client =>
               @if(client.state != AppointmentState.Provisional) {
                 <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
                   @tags.icons.appointmentState(client.state, client = true)
@@ -179,7 +179,7 @@
     clientInformation.appointments.count(a =>
       a.appointment.start.isAfter(JavaTime.offsetDateTime) &&
           a.appointment.state != AppointmentState.Cancelled &&
-          a.clients.find(c => context.user.flatMap(_.universityId).contains(c.universityID))
+          a.clients.find(c => context.user.flatMap(_.universityId).contains(c.client.universityID))
               .forall(_.state != AppointmentState.Cancelled)
     )
   ) { count =>
@@ -261,7 +261,6 @@
             info.acceptedAppointments,
             info.attendedAppointments,
             info.cancelledAppointments,
-            info.clients,
             None,
             controllers.admin.routes.AppointmentController.createSelectTeam(),
             routes.IndexController.acceptedAppointments,

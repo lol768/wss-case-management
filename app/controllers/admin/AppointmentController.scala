@@ -107,18 +107,11 @@ class AppointmentController @Inject()(
 
   private def renderAppointment(appointmentKey: IssueKey, appointmentNoteForm: Form[AppointmentNoteFormData], cancelForm: Form[CancelAppointmentData])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
     appointments.findForRender(appointmentKey).successFlatMap { render =>
-      profiles.getProfiles(render.clients.map(_.universityID)).successMap { clientProfiles =>
+      profiles.getProfiles(render.clients.map(_.client.universityID)).successMap { clientProfiles =>
         val usercodes = render.notes.map(_.teamMember) ++ Seq(render.appointment.teamMember)
         val userLookup = userLookupService.getUsers(usercodes).toOption.getOrElse(Map())
 
-        val clients =
-          render.clients.toSeq
-            .map { client =>
-              client ->
-                clientProfiles.get(client.universityID)
-                  .fold[Either[UniversityID, SitsProfile]](Left(client.universityID))(Right.apply)
-            }
-            .sortBy { case (_, e) => (e.isLeft, e.right.map(_.fullName).toOption) }
+        val clients = render.clients.map(c => c -> clientProfiles.get(c.client.universityID)).toMap
 
         Ok(views.html.admin.appointments.view(
           render,
@@ -217,7 +210,7 @@ class AppointmentController @Inject()(
           a.appointment,
           form(a.appointment.team, profiles, cases, Some(a.appointment.lastUpdated))
             .fill(AppointmentFormData(
-              a.clients.map(_.universityID),
+              a.clients.map(_.client.universityID),
               a.clientCase.flatMap(_.id),
               AppointmentSave(
                 a.appointment.start,

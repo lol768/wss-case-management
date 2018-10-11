@@ -110,7 +110,7 @@ class IndexController @Inject()(
           appointments.countCancelledAppointments(usercode),
         ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments) =>
           cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successFlatMapTo { caseClients =>
-            val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map { case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients ++ (declinedAppointments ++ provisionalAppointments ++ appointmentsNeedingOutcome).map { a => a.appointment.id -> a.clients.map(_.universityID) }
+            val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map { case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients
 
             profiles.getProfiles(clients.values.flatten.toSet).successMapTo { clientProfiles =>
               val resolvedClients = clients.mapValues(_.map(c => clientProfiles.get(c).map(Right.apply).getOrElse(Left(c))))
@@ -177,38 +177,20 @@ class IndexController @Inject()(
   }
 
   def acceptedAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    appointments.findAcceptedAppointments(currentUser().usercode).successFlatMap { appointments =>
-      val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
-
-      profiles.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
-        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-
-        Ok(views.html.admin.acceptedAppointments(appointments, resolvedClients, None))
-      })
+    appointments.findAcceptedAppointments(currentUser().usercode).successMap { appointments =>
+      Ok(views.html.admin.acceptedAppointments(appointments, None))
     }
   }
 
   def attendedAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    appointments.findAttendedAppointments(currentUser().usercode).successFlatMap { appointments =>
-      val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
-
-      profiles.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
-        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-
-        Ok(views.html.admin.attendedAppointments(appointments, resolvedClients, None))
-      })
+    appointments.findAttendedAppointments(currentUser().usercode).successMap { appointments =>
+      Ok(views.html.admin.attendedAppointments(appointments, None))
     }
   }
 
   def cancelledAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    appointments.findCancelledAppointments(currentUser().usercode).successFlatMap { appointments =>
-      val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
-
-      profiles.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
-        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-
-        Ok(views.html.admin.cancelledAppointments(appointments, resolvedClients, None))
-      })
+    appointments.findCancelledAppointments(currentUser().usercode).successMap { appointments =>
+      Ok(views.html.admin.cancelledAppointments(appointments, None))
     }
   }
 

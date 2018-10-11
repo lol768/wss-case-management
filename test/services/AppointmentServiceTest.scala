@@ -6,9 +6,11 @@ import akka.Done
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
-import domain.dao.{AbstractDaoTest, AppointmentDao, CaseDao}
+import domain.dao.ClientDao.StoredClient
+import domain.dao.{AbstractDaoTest, AppointmentDao, CaseDao, ClientDao}
 import helpers.{DataFixture, JavaTime}
 import play.api.libs.json.Json
+import uk.ac.warwick.util.core.DateTimeUtils
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.Future
@@ -20,9 +22,11 @@ class AppointmentServiceTest extends AbstractDaoTest {
   class AppointmentFixture extends DataFixture[Appointment] {
     override def setup(): Appointment = {
       val stored = Fixtures.appointments.newStoredAppointment()
+      val storedAppointmentClient = Fixtures.appointments.newStoredClient(stored.id)
       execWithCommit(
         (AppointmentDao.appointments.table += stored) andThen
-        (AppointmentDao.appointmentClients.table += Fixtures.appointments.newStoredClient(stored.id))
+        (ClientDao.clients.table += StoredClient(storedAppointmentClient.universityID, None, JavaTime.offsetDateTime)) andThen
+        (AppointmentDao.appointmentClients.table += storedAppointmentClient)
       )
       stored.asAppointment
     }
@@ -63,35 +67,41 @@ class AppointmentServiceTest extends AbstractDaoTest {
     }
 
     "find for render" in withData(new AppointmentFixture) { _ =>
-      val singleClientNoCase = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, None).serviceValue
+      val now = JavaTime.offsetDateTime
 
-      service.findForRender(singleClientNoCase.key).serviceValue mustBe AppointmentRender(
-        singleClientNoCase,
-        Set(
-          AppointmentClient(UniversityID("0672089"), AppointmentState.Provisional, None)
-        ),
-        None,
-        Seq()
-      )
+      DateTimeUtils.useMockDateTime(now.toInstant, () => {
+        val singleClientNoCase = service.create(AppointmentSave(now, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, None).serviceValue
+
+        service.findForRender(singleClientNoCase.key).serviceValue mustBe AppointmentRender(
+          singleClientNoCase,
+          Set(
+            AppointmentClient(Client(UniversityID("0672089"), None, now), AppointmentState.Provisional, None)
+          ),
+          None,
+          Seq()
+        )
+      })
 
       // Create a case to link to
       val c = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase()))
 
-      val multipleClientsWithCase = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, Some(c.id.get)).serviceValue
+      DateTimeUtils.useMockDateTime(now.toInstant, () => {
+        val multipleClientsWithCase = service.create(AppointmentSave(now, Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, Some(c.id.get)).serviceValue
 
-      // Add some notes
-      val note1 = service.addNote(multipleClientsWithCase.id, AppointmentNoteSave("Note 1 test", Usercode("cusfal"))).serviceValue
-      val note2 = service.addNote(multipleClientsWithCase.id, AppointmentNoteSave("Note 2 test", Usercode("cusfal"))).serviceValue
+        // Add some notes
+        val note1 = service.addNote(multipleClientsWithCase.id, AppointmentNoteSave("Note 1 test", Usercode("cusfal"))).serviceValue
+        val note2 = service.addNote(multipleClientsWithCase.id, AppointmentNoteSave("Note 2 test", Usercode("cusfal"))).serviceValue
 
-      service.findForRender(multipleClientsWithCase.key).serviceValue mustBe AppointmentRender(
-        multipleClientsWithCase,
-        Set(
-          AppointmentClient(UniversityID("0672088"), AppointmentState.Provisional, None),
-          AppointmentClient(UniversityID("0672089"), AppointmentState.Provisional, None)
-        ),
-        Some(c),
-        Seq(note1, note2)
-      )
+        service.findForRender(multipleClientsWithCase.key).serviceValue mustBe AppointmentRender(
+          multipleClientsWithCase,
+          Set(
+            AppointmentClient(Client(UniversityID("0672088"), None, now), AppointmentState.Provisional, None),
+            AppointmentClient(Client(UniversityID("0672089"), None, now), AppointmentState.Provisional, None)
+          ),
+          Some(c),
+          Seq(note2, note1)
+        )
+      })
     }
 
     "find recently viewed" in withData(new AppointmentFixture) { a =>

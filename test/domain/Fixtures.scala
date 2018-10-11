@@ -4,15 +4,15 @@ import java.time.{Duration, LocalDate}
 import java.util.UUID
 
 import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
-import domain.dao.{AppointmentDao, CaseDao, UploadedFileDao}
+import domain.dao.{AppointmentDao, CaseDao, ClientDao, UploadedFileDao}
 import domain.dao.CaseDao.Case
 import helpers.JavaTime
 import warwick.sso._
 
 object Fixtures {
   object users {
-    val noUniId = Users.create(Usercode("nouniid"))
-    val studentNewVisitor = Users.create(
+    val noUniId: User = Users.create(Usercode("nouniid"))
+    val studentNewVisitor: User = Users.create(
       usercode = Usercode("student1"),
       universityId = Some(UniversityID("9900001")),
       student = true,
@@ -114,7 +114,7 @@ object Fixtures {
       ownerType = ownerType
     )
 
-    def newEnquiryMessage(enquiry: UUID, client: UniversityID) = newMessage(
+    def newEnquiryMessage(enquiry: UUID, client: UniversityID): Message = newMessage(
       ownerId = enquiry,
       ownerType = MessageOwner.Enquiry,
       client = client
@@ -196,11 +196,13 @@ object Fixtures {
       Enquiry.enquiries.table.delete andThen
       Enquiry.enquiries.versionsTable.delete andThen
       Message.messages.table.delete andThen
-      Message.messages.versionsTable.delete
+      Message.messages.versionsTable.delete andThen
       Owner.owners.table.delete andThen
-      Owner.owners.versionsTable.delete
+      Owner.owners.versionsTable.delete andThen
+      ClientDao.clients.table.delete andThen
+      ClientDao.clients.versionsTable.delete andThen
       sql"ALTER SEQUENCE SEQ_CASE_ID RESTART WITH 1000".asUpdate andThen
-      sql"ALTER SEQUENCE SEQ_APPOINTMENT_KEY RESTART WITH 1000".asUpdate
+      sql"ALTER SEQUENCE SEQ_APPOINTMENT_KEY RESTART WITH 1000".asUpdate andThen
       sql"ALTER SEQUENCE SEQ_ENQUIRY_KEY RESTART WITH 1000".asUpdate
   }
 }

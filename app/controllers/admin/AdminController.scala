@@ -69,7 +69,7 @@ class AdminController @Inject()(
       appointments.countCancelledAppointments(teamRequest.team),
     ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments) =>
       cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successFlatMap { caseClients =>
-        val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map{ case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients ++ (declinedAppointments ++ provisionalAppointments ++ appointmentsNeedingOutcome).map { a => a.appointment.id -> a.clients.map(_.universityID) }
+        val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map{ case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients
         f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments, clients)
       }
     }
@@ -104,44 +104,29 @@ class AdminController @Inject()(
   }
 
   def acceptedAppointments(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    appointments.findAcceptedAppointments(teamRequest.team).successFlatMap { appointments =>
-      val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
+    appointments.findAcceptedAppointments(teamRequest.team).successMap { appointments =>
+      val usercodes = appointments.map(_.appointment.teamMember).toSet
+      val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
 
-      profileService.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
-        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-        val usercodes = appointments.map(_.appointment.teamMember).toSet
-        val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
-
-        Ok(views.html.admin.acceptedAppointments(appointments, resolvedClients, Some(userLookup)))
-      })
+      Ok(views.html.admin.acceptedAppointments(appointments, Some(userLookup)))
     }
   }
 
   def attendedAppointments(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    appointments.findAttendedAppointments(teamRequest.team).successFlatMap { appointments =>
-      val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
+    appointments.findAttendedAppointments(teamRequest.team).successMap { appointments =>
+      val usercodes = appointments.map(_.appointment.teamMember).toSet
+      val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
 
-      profileService.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
-        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-        val usercodes = appointments.map(_.appointment.teamMember).toSet
-        val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
-
-        Ok(views.html.admin.attendedAppointments(appointments, resolvedClients, Some(userLookup)))
-      })
+      Ok(views.html.admin.attendedAppointments(appointments, Some(userLookup)))
     }
   }
 
   def cancelledAppointments(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    appointments.findCancelledAppointments(teamRequest.team).successFlatMap { appointments =>
-      val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
+    appointments.findCancelledAppointments(teamRequest.team).successMap { appointments =>
+      val usercodes = appointments.map(_.appointment.teamMember).toSet
+      val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
 
-      profileService.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
-        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-        val usercodes = appointments.map(_.appointment.teamMember).toSet
-        val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
-
-        Ok(views.html.admin.cancelledAppointments(appointments, resolvedClients, Some(userLookup)))
-      })
+      Ok(views.html.admin.cancelledAppointments(appointments, Some(userLookup)))
     }
   }
 
