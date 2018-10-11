@@ -1,18 +1,26 @@
 @import (inline) "fullcalendar/dist/fullcalendar.css";
 
 .fc {
-  .fc-list-table {
-    &.table-striped tbody tr {
-      background-color: transparent;
-      &.fc-list-heading {
-        background-color: @table-bg-accent;
-      }
-    }
+  .fc-event-container {
+    .link-colour(@text-color);
   }
 
-  button.btn-sm {
-    .button-size(@padding-small-vertical; @padding-small-horizontal; @font-size-small; @line-height-small; @btn-border-radius-small);
-    border-radius: @button-border-radius-small;
-    height: auto;
+  .fc-event, .fc-event-dot {
+    &.Provisional {
+      background-color: @state-info-bg;
+      border-color: @state-info-text;
+
+      #gradient > .striped();
+    }
+
+    &.Accepted, &.Attended {
+      background-color: @state-success-bg;
+      border-color: @state-success-text;
+    }
+
+    &.Cancelled {
+      background-color: @state-danger-bg;
+      border-color: @state-danger-text;
+    }
   }
 }

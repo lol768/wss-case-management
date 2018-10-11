@@ -20,7 +20,7 @@ import warwick.sso.{AuthenticatedRequest, UniversityID, User, UserLookupService,
 import scala.concurrent.{ExecutionContext, Future}
 
 object AppointmentSearchController {
-  val form = Form(mapping(
+  val form: Form[AppointmentSearchQuery] = Form(mapping(
     "query" -> optional(text),
     "createdAfter" -> optional(localDate),
     "createdBefore" -> optional(localDate),
@@ -29,7 +29,8 @@ object AppointmentSearchController {
     "location" -> optional(Location.formField),
     "team" -> optional(Teams.formField),
     "member" -> optional(nonEmptyText).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string)),
-    "appointmentType" -> optional(AppointmentType.formField)
+    "appointmentType" -> optional(AppointmentType.formField),
+    "states" -> set(AppointmentState.formField),
   )(AppointmentSearchQuery.apply)(AppointmentSearchQuery.unapply))
 }
 

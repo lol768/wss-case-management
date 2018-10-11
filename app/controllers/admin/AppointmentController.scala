@@ -1,5 +1,6 @@
 package controllers.admin
 
+import java.time.format.DateTimeFormatter
 import java.time.{Duration, OffsetDateTime}
 import java.util.UUID
 
@@ -7,7 +8,8 @@ import controllers.BaseController
 import controllers.admin.AppointmentController._
 import controllers.refiners._
 import domain._
-import helpers.ServiceResults.ServiceError
+import domain.dao.CaseDao.Case
+import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{FormHelpers, JavaTime}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -138,51 +140,57 @@ class AppointmentController @Inject()(
     )
   }
 
-  def createSelectTeam(forCase: Option[IssueKey], client: Option[UniversityID]): Action[AnyContent] = AnyTeamMemberRequiredAction { implicit request =>
+  def createSelectTeam(forCase: Option[IssueKey], client: Option[UniversityID], start: Option[OffsetDateTime], duration: Option[Duration]): Action[AnyContent] = AnyTeamMemberRequiredAction { implicit request =>
     permissions.teams(request.context.user.get.usercode).fold(showErrors, teams => {
       if (teams.size == 1)
-        Redirect(controllers.admin.routes.AppointmentController.createForm(teams.head.id, forCase, client))
+        Redirect(controllers.admin.routes.AppointmentController.createForm(teams.head.id, forCase, client, start, duration))
       else
-        Ok(views.html.admin.appointments.createSelectTeam(teams, forCase, client))
+        Ok(views.html.admin.appointments.createSelectTeam(teams, forCase, client, start, duration))
     })
   }
 
-  def createForm(teamId: String, forCase: Option[IssueKey], client: Option[UniversityID]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+  def createForm(teamId: String, forCase: Option[IssueKey], client: Option[UniversityID], start: Option[OffsetDateTime], duration: Option[Duration]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     val baseForm = form(teamRequest.team, profiles, cases)
     val baseBind = Map("appointment.teamMember" -> teamRequest.context.user.get.usercode.string)
 
-    (forCase, client) match {
-      case (Some(_), Some(_)) => Future.successful(
+    if (forCase.nonEmpty && client.nonEmpty) {
+      Future.successful(
         BadRequest("Can't specify both forCase and client")
       )
+    } else {
+      val getCase: Future[ServiceResult[Option[Case]]] = forCase.map { caseKey =>
+        cases.find(caseKey).map(_.right.map(Some.apply))
+      }.getOrElse(Future.successful(Right(None)))
 
-      case (Some(caseKey), _) => cases.find(caseKey).successFlatMap { clientCase =>
-        cases.getClients(clientCase.id.get).successMap { clients =>
+      val binds: Seq[Future[Map[String, String]]] = Seq(
+        Some(Future.successful(baseBind)),
+        forCase.map { caseKey =>
+          cases.find(caseKey).flatMap(_.fold(
+            _ => Future.successful(Map.empty[String, String]),
+            clientCase => cases.getClients(clientCase.id.get).map(_.fold(
+              _ => Map("case" -> clientCase.id.get.toString),
+              clients => Map(
+                "case" -> clientCase.id.get.toString
+              ) ++ clients.toSeq.zipWithIndex.map { case (universityID, index) =>
+                s"clients[$index]" -> universityID.string
+              }.toMap
+            ))
+          ))
+        },
+        client.map { universityID => Future.successful(Map("clients[0]" -> universityID.string)) },
+        start.map { dt => Future.successful(Map("appointment.start" -> dt.toLocalDateTime.format(DateTimeFormatter.ofPattern(FormHelpers.Html5LocalDateTimePattern)))) },
+        duration.map { dur => Future.successful(Map("appointment.duration" -> dur.getSeconds.toString)) }
+      ).flatten
+
+      Future.sequence(binds).map(_.reduce(_ ++ _)).flatMap { bind =>
+        getCase.successMap { clientCase =>
           Ok(views.html.admin.appointments.create(
             teamRequest.team,
-            baseForm.bind(baseBind ++ Map(
-              "case" -> clientCase.id.get.toString
-            ) ++ clients.toSeq.zipWithIndex.map { case (universityID, index) =>
-              s"clients[$index]" -> universityID.string
-            }.toMap).discardingErrors,
-            Some(clientCase)
+            baseForm.bind(bind).discardingErrors,
+            clientCase
           ))
         }
       }
-
-      case (_, Some(universityID)) => Future.successful(
-        Ok(views.html.admin.appointments.create(
-          teamRequest.team,
-          baseForm.bind(baseBind ++ Map(
-            "clients[0]" -> universityID.string
-          )).discardingErrors,
-          None
-        ))
-      )
-
-      case _ => Future.successful(
-        Ok(views.html.admin.appointments.create(teamRequest.team, baseForm.bind(baseBind).discardingErrors, None))
-      )
     }
   }
 

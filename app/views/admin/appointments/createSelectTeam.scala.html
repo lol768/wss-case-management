@@ -1,11 +1,14 @@
-@import domain.Team
-@import domain.IssueKey
+@import java.time.{Duration, OffsetDateTime}
+
+@import domain.{IssueKey, Team}
 @import warwick.sso.UniversityID
 
 @(
   teams: Seq[Team],
   forCase: Option[IssueKey],
-  client: Option[UniversityID]
+  client: Option[UniversityID],
+  start: Option[OffsetDateTime],
+  duration: Option[Duration],
 )(implicit context: RequestContext)
 
 @main("Create an appointment - select team") {
@@ -13,7 +16,7 @@
 
   <ul>
     @teams.map { team =>
-      <li><a href="@controllers.admin.routes.AppointmentController.createForm(team.id, forCase, client)">@team.name</a></li>
+      <li><a href="@controllers.admin.routes.AppointmentController.createForm(team.id, forCase, client, start, duration)">@team.name</a></li>
     }
   </ul>
 }

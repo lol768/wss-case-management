@@ -8,6 +8,7 @@ import enumeratum.{EnumEntry, PlayEnum}
 import helpers.JavaTime
 import play.api.data.format.Formatter
 import play.api.data.{FormError, Forms, Mapping}
+import play.api.libs.json.{Json, Writes}
 import warwick.sso.{UniversityID, User, Usercode}
 
 import scala.collection.immutable
@@ -84,6 +85,52 @@ case class AppointmentRender(
   notes: Seq[AppointmentNote]
 )
 
+object AppointmentRender {
+  def writer(clientLookup: Map[UUID, Set[Either[UniversityID, SitsProfile]]], userLookup: Map[Usercode, User]): Writes[AppointmentRender] = (o: AppointmentRender) => Json.obj(
+    "id" -> o.appointment.id,
+    "key" -> o.appointment.key.string,
+    "subject" -> o.appointment.subject(Some(userLookup), clientLookup.get(o.appointment.id)),
+    "start" -> o.appointment.start,
+    "end" -> o.appointment.end,
+    "url" -> controllers.admin.routes.AppointmentController.view(o.appointment.key).url,
+    "duration" -> o.appointment.duration,
+    "location" -> Json.toJsFieldJsValueWrapper(o.appointment.location)(Writes.optionWithNull(Location.writer)),
+    "team" -> Json.toJsFieldJsValueWrapper(o.appointment.team)(Teams.writer),
+    "teamMember" -> Json.obj(
+      "usercode" -> o.appointment.teamMember.string,
+      "fullName" -> userLookup.get(o.appointment.teamMember).flatMap(_.name.full),
+    ),
+    "appointmentType" -> o.appointment.appointmentType,
+    "state" -> o.appointment.state,
+    "cancellationReason" -> o.appointment.cancellationReason,
+    "case" -> o.clientCase.map { clientCase =>
+      Json.obj(
+        "id" -> clientCase.id,
+        "key" -> clientCase.key.map(_.string),
+        "subject" -> clientCase.subject,
+      )
+    },
+    "clients" -> o.clients.map { client =>
+      val profile =
+        clientLookup.get(o.appointment.id)
+          .toSeq
+          .flatMap(_.toSeq.flatMap(_.right.toSeq))
+          .find(_.universityID == client.universityID)
+
+      Json.obj(
+        "client" -> Json.obj(
+          "universityID" -> client.universityID.string,
+          "fullName" -> profile.map(_.fullName),
+        ),
+        "state" -> client.state,
+        "cancellationReason" -> client.cancellationReason,
+      )
+    },
+    "created" -> o.appointment.created,
+    "lastUpdated" -> o.appointment.lastUpdated,
+  )
+}
+
 case class AppointmentClient(
   universityID: UniversityID,
   state: AppointmentState,
@@ -122,6 +169,14 @@ object Location {
   }
 
   val formField: Mapping[Location] = Forms.of(Formatter)
+  val writer: Writes[Location] = {
+    case NamedLocation(name) => Json.obj("name" -> name)
+    case MapLocation(name, locationId, syllabusPlusName) => Json.obj(
+      "name" -> name,
+      "locationId" -> locationId,
+      "syllabusPlusName" -> syllabusPlusName
+    )
+  }
 }
 
 case class NamedLocation(name: String) extends Location
