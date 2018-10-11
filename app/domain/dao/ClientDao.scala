@@ -1,28 +1,32 @@
 package domain.dao
 
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 
 import com.google.inject.ImplementedBy
-import domain._
-import helpers.JavaTime
-import services.AuditLogContext
-import warwick.sso.{UniversityID, Usercode}
-import domain.ExtendedPostgresProfile.api._
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
+import domain._
 import domain.dao.ClientDao.StoredClient
 import domain.dao.ClientDao.StoredClient.{ClientVersions, Clients, VersionedTableQuery}
+import helpers.JavaTime
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.{Index, PrimaryKey, ProvenShape}
+import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 @ImplementedBy(classOf[ClientDaoImpl])
 trait ClientDao {
   def insert(client: StoredClient)(implicit ac: AuditLogContext): DBIO[StoredClient]
   def update(client: StoredClient, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredClient]
   def get(universityID: UniversityID): DBIO[Option[StoredClient]]
+  def get(universityIDs: Set[UniversityID]): DBIO[Seq[StoredClient]]
+  def getOlderThan(duration: FiniteDuration): Query[Clients, StoredClient, Seq]
 }
 
 object ClientDao {
@@ -95,8 +99,8 @@ object ClientDao {
 class ClientDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit executionContext: ExecutionContext) extends ClientDao with HasDatabaseConfigProvider[JdbcProfile] {
-  import domain.dao.ClientDao._
   import dbConfig.profile.api._
+  import domain.dao.ClientDao._
 
   override def insert(client: StoredClient)(implicit ac: AuditLogContext): DBIO[StoredClient] =
     clients.insert(client)
@@ -106,4 +110,10 @@ class ClientDaoImpl @Inject()(
 
   override def get(universityID: UniversityID): DBIO[Option[StoredClient]] =
     clients.table.filter(_.universityID === universityID).take(1).result.headOption
+
+  override def get(universityIDs: Set[UniversityID]): DBIO[Seq[StoredClient]] =
+    clients.table.filter(_.universityID.inSet(universityIDs)).result
+
+  override def getOlderThan(duration: FiniteDuration): Query[Clients, StoredClient, Seq] =
+    clients.table.filter(_.version < JavaTime.offsetDateTime.minus(duration.toDays, ChronoUnit.DAYS))
 }

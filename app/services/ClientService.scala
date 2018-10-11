@@ -11,11 +11,18 @@ import slick.dbio.DBIOAction
 import warwick.sso.UniversityID
 import helpers.ServiceResults.Implicits._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
+import domain.ExtendedPostgresProfile.api._
+
+object ClientService {
+  val UpdateRequiredWindow: FiniteDuration = 7.days
+}
 
 @ImplementedBy(classOf[ClientServiceImpl])
 trait ClientService {
   def getOrAddClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
-  def updateClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
+  def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
+  def updateClients(details: Map[UniversityID, Option[String]])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
 }
 
 class ClientServiceImpl @Inject()(
@@ -44,5 +51,16 @@ class ClientServiceImpl @Inject()(
 
   }
 
-  override def updateClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]] = ???
+  override def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]] =
+    daoRunner.run(dao.getOlderThan(ClientService.UpdateRequiredWindow).result)
+      .map(r => Right(r.map(_.asClient)))
+
+  override def updateClients(details: Map[UniversityID, Option[String]])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]] =
+    daoRunner.run(for {
+      existing <- dao.get(details.keySet)
+      updated <- DBIOAction.sequence(
+        existing.map(client => dao.update(client.copy(fullName = details(client.universityID)), client.version))
+      )
+    } yield Right(updated.map(_.asClient)))
+
 }
