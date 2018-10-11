@@ -50,14 +50,11 @@ object JavaTime {
 
   object Relative {
 
-    private val dateWeekdayFormatter = DateTimeFormatter.ofPattern("EEE")
     private val dateFullWithoutYearFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
     private val dateFullFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy")
 
     private val onlyTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     private val todayTimeFormatter = DateTimeFormatter.ofPattern("'Today' HH:mm")
-    private val yesterdayTimeFormatter = DateTimeFormatter.ofPattern("'Yesterday' HH:mm")
-    private val weekdayTimeFormatter = DateTimeFormatter.ofPattern("EEE HH:mm")
     private val dateTimeFullWithoutYearFormatter = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm")
     private val dateTimeFullFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm")
 
