@@ -6,7 +6,6 @@
 @import domain.IssueRender
 @(
   issueRender: IssueRender,
-  client: Option[SitsProfile],
   f: Form[String],
   supportedMimeTypes: Seq[MediaType],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)

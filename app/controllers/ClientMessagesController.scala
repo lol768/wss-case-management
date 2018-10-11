@@ -7,7 +7,6 @@ import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.refiners.{ClientIssueActionFilters, IssueSpecificRequest}
 import domain._
 import domain.dao.CaseDao.Case
-import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -37,21 +36,17 @@ class ClientMessagesController @Inject()(
   import canClientViewIssueActionRefiner._
 
   private def renderMessages(issue: Issue, f: Form[String])(implicit request: IssueSpecificRequest[_]): Future[Result] =
-    ServiceResults.zip(
-      matchIssue(
-        issue,
-        _ => enquiryService.getForRender(issue.id.get).map(_.map(_.toIssue)),
-        _ => caseService.findForClient(issue.id.get, currentUser.universityId.get).map(_.map(_.toIssue))
-      ),
-      profiles.getProfile(currentUser.universityId.get).map(_.value),
-    ).successMap { case (issueRender, client) =>
+    matchIssue(
+      issue,
+      _ => enquiryService.getForRender(issue.id.get).map(_.map(_.toIssue)),
+      _ => caseService.findForClient(issue.id.get, currentUser.universityId.get).map(_.map(_.toIssue))
+    ).successMap(issueRender =>
       Ok(views.html.clientMessages(
         issueRender,
-        client,
         f,
         uploadedFileControllerHelper.supportedMimeTypes
       ))
-    }
+    )
 
   def messages(id: java.util.UUID): Action[AnyContent] = CanClientViewIssueAction(id).async { implicit request =>
     renderMessages(request.issue, form)

@@ -10,7 +10,6 @@ import domain.dao.CaseDao.Case
 import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.mvc.{Action, AnyContent, Result}
-import services.tabula.ProfileService
 import services.{AppointmentService, CaseService, ClientSummaryService, EnquiryService}
 import warwick.sso.UserLookupService
 
@@ -22,7 +21,6 @@ class AdminController @Inject()(
   enquiries: EnquiryService,
   cases: CaseService,
   clientSummaryService: ClientSummaryService,
-  profileService: ProfileService,
   userLookupService: UserLookupService,
   appointments: AppointmentService,
 )(implicit executionContext: ExecutionContext) extends BaseController {
