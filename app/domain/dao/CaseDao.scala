@@ -333,6 +333,7 @@ object CaseDao {
   case class CaseMessages(data: Seq[MessageRender]) {
     lazy val byClient: Map[UniversityID, Seq[MessageRender]] = data.groupBy(_.message.client)
     lazy val teamMembers: Set[Usercode] = data.flatMap(_.message.teamMember).toSet
+    lazy val length: Int = data.length
   }
 
   case class CaseVersion(

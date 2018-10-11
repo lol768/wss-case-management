@@ -6,8 +6,8 @@
 
 @(
   testUsers: Seq[(SitsDepartment, Seq[(UserType, Seq[(Option[Route], Seq[SitsProfile])])])],
-  testTeamMembers: Seq[(Team, Seq[User])],
-  testAdmins: Seq[User]
+  testTeamMembers: Seq[(Team, Seq[(User, Option[String])])],
+  testAdmins: Seq[(User, Option[String])]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main("Masquerade") {
@@ -67,7 +67,7 @@
           <h4>Admins</h4>
 
           <ul>
-            @testAdmins.map { user =>
+            @testAdmins.map { case (user, photo) =>
               <li>
                 @b3.inline.formCSRF(warwick.sso.routes.MasqueradeController.masquerade(), 'class -> "inline-form") { implicit ifc =>
                   <input type="hidden" name="usercode" value="@user.usercode.string">
@@ -77,6 +77,9 @@
                   </button>
                 }
 
+                @photo.map { url =>
+                  <img class="img-thumbnail img-circle" src="@url?s=24">
+                }
                 @user.name.full
               </li>
             }
@@ -87,7 +90,7 @@
           <h4>@team.name team</h4>
 
           <ul>
-            @users.map { user =>
+            @users.map { case (user, photo) =>
               <li>
                 @b3.inline.formCSRF(warwick.sso.routes.MasqueradeController.masquerade(), 'class -> "inline-form") { implicit ifc =>
                   <input type="hidden" name="usercode" value="@user.usercode.string">
@@ -97,6 +100,9 @@
                   </button>
                 }
 
+                @photo.map { url =>
+                  <img class="img-thumbnail img-circle" src="@url?s=24">
+                }
                 @user.name.full
               </li>
             }

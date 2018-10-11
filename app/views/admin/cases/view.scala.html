@@ -231,7 +231,7 @@
       </div>
     </div>
 
-    @tags.sectioned.section("case", "Case links", isCollapsible=true) {
+    @tags.sectioned.section("case", "Case links", isCollapsible=true, isOpen=true) {
       @if(c.outgoingCaseLinks.nonEmpty ||  c.incomingCaseLinks.nonEmpty){
         @caseLinks(c.outgoingCaseLinks, _.outwardDescription, _.incoming)
         @caseLinks(c.incomingCaseLinks, _.inwardDescription, _.outgoing)
@@ -240,7 +240,7 @@
       }
     }
 
-    @tags.sectioned.section("case", "Documents", isCollapsible=true) {
+    @tags.sectioned.section("case", "Documents", isCollapsible=true, isOpen=true) {
       @if(c.documents.nonEmpty) {
         <ul class="list-unstyled">
           @c.documents.map { doc =>
@@ -265,7 +265,7 @@
       }
     }
 
-    @tags.sectioned.section("case", "Appointments", isCollapsible=true) {
+    @tags.sectioned.section("case", "Appointments", isCollapsible=true, isOpen=true) {
       @if(appointments.nonEmpty) {
         <table class="table table-default">
           <thead>
@@ -298,7 +298,7 @@
       }
     }
 
-    @tags.sectioned.section("case", "Case notes", isCollapsible=true) {
+    @tags.sectioned.section("case", s"Case notes (${caseNotes.length})", isCollapsible=true) {
       @if(c.clientCase.state != IssueState.Closed) {
         @b3.vertical.formCSRF(controllers.admin.routes.CaseController.addNote(c.clientCase.key.get)) { implicit ifc =>
           <div class="panel panel-default panel-form">
@@ -319,7 +319,7 @@
       @caseNotes.map { case (note, user) => @caseNote(note, user)}
     }
 
-    @tags.sectioned.section("case", "Messages", isCollapsible = profiles.size == 1) {
+    @tags.sectioned.section("case", s"Messages (${c.messages.length})", isCollapsible = profiles.size == 1) {
       <div class="panel-group message-threads" id="messages-accordion" role="tablist" aria-multiselectable="true">
       @profiles.keySet.toSeq.sorted.map { client =>
         @defining(c.messages.byClient.getOrElse(client.universityID, Nil)) { messages: Seq[MessageRender] =>
