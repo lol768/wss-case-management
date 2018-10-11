@@ -58,7 +58,7 @@ class OwnersController @Inject()(
         },
         data => {
           enquiryService.setOwners(request.enquiry.id.get, data.toSet).successMap(_ =>
-            Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key.get))
+            Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key))
               .flashing("success" -> Messages("flash.enquiry.owners.updated"))
           )
         }
@@ -70,10 +70,10 @@ class OwnersController @Inject()(
     enquiryService.getOwners(Set(request.enquiry.id.get)).successFlatMap { ownerMap =>
       val currentOwners = ownerMap.getOrElse(request.enquiry.id.get, Set())
       if (currentOwners.contains(currentUser.usercode)) {
-        Future.successful(Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key.get)))
+        Future.successful(Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key)))
       } else {
         enquiryService.setOwners(request.enquiry.id.get, currentOwners + currentUser.usercode).successMap(_ =>
-          Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key.get))
+          Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key))
             .flashing("success" -> Messages("flash.enquiry.owners.updated"))
         )
       }

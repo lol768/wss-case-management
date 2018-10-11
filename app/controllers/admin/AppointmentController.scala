@@ -155,8 +155,8 @@ class AppointmentController @Inject()(
             teamRequest.team,
             baseForm.bind(baseBind ++ Map(
               "case" -> clientCase.id.get.toString
-            ) ++ clients.toSeq.zipWithIndex.map { case (universityID, index) =>
-              s"clients[$index]" -> universityID.string
+            ) ++ clients.toSeq.zipWithIndex.map { case (c, index) =>
+              s"clients[$index]" -> c.universityID.string
             }.toMap).discardingErrors,
             Some(clientCase)
           ))

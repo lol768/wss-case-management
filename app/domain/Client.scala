@@ -16,6 +16,8 @@ case class Client(
       -1
     } else if (that.fullName.nonEmpty && this.fullName.isEmpty) {
       1
+    } else if (this.fullName.isEmpty && that.fullName.isEmpty) {
+      this.universityID.string.compare(that.universityID.string)
     } else {
       this.fullName.get.compare(that.fullName.get)
     }

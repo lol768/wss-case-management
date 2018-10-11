@@ -11,7 +11,7 @@
 @import warwick.sso._
 @(
   c: Case.FullyJoined,
-  clients: Seq[Either[UniversityID, SitsProfile]],
+  profiles: Map[Client, Option[SitsProfile]],
   owners: Seq[User],
   caseNotes: Seq[(CaseNote, Option[User])],
   sectionNotes: Map[CaseNoteType, Seq[(CaseNote, Option[User])]],
@@ -65,7 +65,7 @@
     <div class="panel-footer">
       <div class="pull-right">
         <a class="btn btn-default btn-xs" href="@controllers.admin.routes.CaseController.editNoteForm(c.clientCase.key.get, note.id)">Edit</a>
-        @defining(CaseController.deleteForm(note.lastUpdated).fill(note.lastUpdated)) { form =>
+        @defining(CaseController.deleteForm(note.lastUpdated).fill(note.lastUpdated)) { form: Form[OffsetDateTime] =>
           @b3.inline.formCSRF(controllers.admin.routes.CaseController.deleteNote(c.clientCase.key.get, note.id), 'class -> "inline-form") { implicit ifc =>
             @b3.validatedHidden(form, "version")
             <button type="submit" class="btn btn-default btn-xs" data-toggle="confirm-submit" data-message="Are you sure you want to delete this case note?">Delete</button>
@@ -104,17 +104,14 @@
 @main(s"${c.clientCase.key.get.string} ${c.clientCase.subject}") {
   <div class="case-details">
     <div class="case-details--header">
-      @clients.map {
-        case Left(universityID) => {
-          <h5><a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a></h5>
-        }
-        case Right(profile) => {
-          <h5>
-            <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.fullName</a>,
-            @profile.universityID.string,
+      @profiles.keySet.toSeq.sorted.map { client =>
+        <h5>
+          <a href="@controllers.admin.routes.ClientController.client(client.universityID)">@client.safeFullName</a>,
+          @client.universityID.string,
+          @profiles.get(client).flatten.map { profile =>
             @views.tags.profiles.typeAndDepartment(profile)
-          </h5>
-        }
+          }
+        </h5>
       }
     </div>
     <div class="case-details--actions row">
@@ -172,7 +169,7 @@
         }
 
         @originalEnquiry.map { enquiry => @tags.sectioned.detail("Original enquiry"){
-            <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)">@enquiry.key.get.string @enquiry.subject</a>
+            <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key)">@enquiry.key.string @enquiry.subject</a>
             -
             @helpers.JavaTime.Relative(enquiry.created)
         }}
@@ -251,7 +248,7 @@
               <a href="@controllers.admin.routes.CaseDocumentController.download(c.clientCase.key.get, doc.entity.id)">@doc.entity.file.fileName</a>,
               @doc.entity.documentType.description,
               added @helpers.JavaTime.Relative(doc.entity.created) by @tags.creatorAndTeam(doc.creator)
-              @defining(CaseDocumentController.deleteForm(doc.entity.lastUpdated).fill(doc.entity.lastUpdated)) { form =>
+              @defining(CaseDocumentController.deleteForm(doc.entity.lastUpdated).fill(doc.entity.lastUpdated)) { form: Form[OffsetDateTime] =>
                 @b3.inline.formCSRF(controllers.admin.routes.CaseDocumentController.delete(c.clientCase.key.get, doc.entity.id), 'class -> "inline-form") { implicit ifc =>
                   @b3.validatedHidden(form, "version")
                   <button type="submit" class="btn btn-sm btn-link" data-toggle="confirm-submit" data-message="Are you sure you want to delete this document?">
@@ -322,75 +319,73 @@
       @caseNotes.map { case (note, user) => @caseNote(note, user)}
     }
 
-    @tags.sectioned.section("case", "Messages", isCollapsible = clients.size == 1) {
+    @tags.sectioned.section("case", "Messages", isCollapsible = profiles.size == 1) {
       <div class="panel-group message-threads" id="messages-accordion" role="tablist" aria-multiselectable="true">
-      @clients.map { maybeClient =>
-        @defining(SitsProfile.universityId(maybeClient)) { universityId: UniversityID =>
-          @defining(c.messages.byClient.getOrElse(universityId, Nil)) { messages: Seq[MessageRender] =>
-            <div class="thread panel panel-default">
-              <div class="panel-heading" role="tab" id="thread-heading-@universityId.string">
-                <h4 class="panel-title">
-                @if(clients.size > 1){
-                  <a class="collapsed" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-thread-@universityId.string" aria-expanded="true" aria-controls="collapse-thread-@universityId">
-                    <div class="pull-right">
-                      @messages.lastOption.map { m =>
-                        @JavaTime.Relative(m.message.created)
-                      }
-                      <i class="fas fa-fw fa-angle-down"></i>
-                      <i class="fas fa-fw fa-angle-up"></i>
-                    </div>
-                    @tags.clientFullName(maybeClient)
-                    @if(messages.isEmpty) {
-                      (No messages)
-                    } else {
-                      (@tags.p(messages.length, "message")())
-                    }
-                  </a>
-                } else {
+      @profiles.keySet.toSeq.sorted.map { client =>
+        @defining(c.messages.byClient.getOrElse(client.universityID, Nil)) { messages: Seq[MessageRender] =>
+          <div class="thread panel panel-default">
+            <div class="panel-heading" role="tab" id="thread-heading-@client.universityID.string">
+              <h4 class="panel-title">
+              @if(profiles.size > 1){
+                <a class="collapsed" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-thread-@client.universityID.string" aria-expanded="true" aria-controls="collapse-thread-@client.universityID">
                   <div class="pull-right">
-                  @messages.lastOption.map { m =>
-                    @JavaTime.Relative(m.message.created)
-                  }
-                  </div>
-                  @if(messages.isEmpty) {
-                    No messages
-                  } else {
-                    @tags.p(messages.length, "message")()
-                  }
-                }
-
-                </h4>
-              </div>
-              <div id="collapse-thread-@universityId.string" class="panel-collapse @if(clients.size > 1){ collapse }" role="tabpanel" aria-labelledby="thread-heading-@universityId.string">
-                @if(messages.nonEmpty){
-                  <div class="panel-body">
-                    @messages.map { render =>
-                      @views.html.tags.messages.message(
-                        render.message,
-                        render.files,
-                        "Client",
-                        render.message.teamMember
-                            .flatMap { usercode =>
-                          userLookup.get(usercode)
-                              .filter(_.isFound)
-                              .flatMap(_.name.full)
-                              .map { name => s"$name, ${render.message.team.getOrElse(c.clientCase.team).name} team" }
-                        }.getOrElse(s"${render.message.team.getOrElse(c.clientCase.team).name} team"),
-                        f => controllers.admin.routes.CaseMessageController.download(c.clientCase.key.get, f.id),
-                        // TODO last view date for cases
-                        None
-                      )
+                    @messages.lastOption.map { m =>
+                      @JavaTime.Relative(m.message.created)
                     }
+                    <i class="fas fa-fw fa-angle-down"></i>
+                    <i class="fas fa-fw fa-angle-up"></i>
                   </div>
-                }
-                <div class="panel-footer">
-                @if(c.clientCase.state != IssueState.Closed) {
-                  @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.clientCase.key.get, universityId), messageForm, supportedMimeTypes)
+                  @client.safeFullName
+                  @if(messages.isEmpty) {
+                    (No messages)
+                  } else {
+                    (@tags.p(messages.length, "message")())
+                  }
+                </a>
+              } else {
+                <div class="pull-right">
+                @messages.lastOption.map { m =>
+                  @JavaTime.Relative(m.message.created)
                 }
                 </div>
+                @if(messages.isEmpty) {
+                  No messages
+                } else {
+                  @tags.p(messages.length, "message")()
+                }
+              }
+
+              </h4>
+            </div>
+            <div id="collapse-thread-@client.universityID.string" class="panel-collapse @if(profiles.size > 1){ collapse }" role="tabpanel" aria-labelledby="thread-heading-@client.universityID.string">
+              @if(messages.nonEmpty){
+                <div class="panel-body">
+                  @messages.map { render =>
+                    @views.html.tags.messages.message(
+                      render.message,
+                      render.files,
+                      "Client",
+                      render.message.teamMember
+                          .flatMap { usercode =>
+                        userLookup.get(usercode)
+                            .filter(_.isFound)
+                            .flatMap(_.name.full)
+                            .map { name => s"$name, ${render.message.team.getOrElse(c.clientCase.team).name} team" }
+                      }.getOrElse(s"${render.message.team.getOrElse(c.clientCase.team).name} team"),
+                      f => controllers.admin.routes.CaseMessageController.download(c.clientCase.key.get, f.id),
+                      // TODO last view date for cases
+                      None
+                    )
+                  }
+                </div>
+              }
+              <div class="panel-footer">
+              @if(c.clientCase.state != IssueState.Closed) {
+                @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.clientCase.key.get, client.universityID), messageForm, supportedMimeTypes)
+              }
               </div>
             </div>
-          }
+          </div>
         }
       }
       </div>

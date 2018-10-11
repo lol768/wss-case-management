@@ -6,6 +6,7 @@
 @import domain.{AppointmentRender, Enquiry, MessageData, SitsProfile, Team}
 @import warwick.sso.{UniversityID, User, Usercode}
 
+@import domain.Client
 @(team: Team,
   enquiriesRequiringAction: Seq[(Enquiry, MessageData)],
   enquiriesAwaitingClient: Seq[(Enquiry, MessageData)],
@@ -18,7 +19,7 @@
   acceptedAppointments: Int,
   attendedAppointments: Int,
   cancelledAppointments: Int,
-  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
+  caseClients: Map[UUID, Set[Client]],
   userLookup: Map[Usercode, User]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
@@ -40,10 +41,10 @@
 
   <div class="tab-content">
     <div role="tabpanel" class="tab-pane active" id="enquiries">
-      @views.html.admin.enquiriesTab(enquiriesRequiringAction, enquiriesAwaitingClient, closedEnquiries, clients, controllers.admin.routes.AdminController.closedEnquiries(team.id), "team", team.id, s" assigned to ${team.name}")
+      @views.html.admin.enquiriesTab(enquiriesRequiringAction, enquiriesAwaitingClient, closedEnquiries, controllers.admin.routes.AdminController.closedEnquiries(team.id), "team", team.id, s" assigned to ${team.name}")
     </div>
     <div role="tabpanel" class="tab-pane" id="cases">
-      @views.html.admin.casesTab(openCases, closedCases, clients, controllers.admin.routes.CaseController.createForm(team.id), controllers.admin.routes.AdminController.closedCases(team.id), "team", team.id, s" assigned to ${team.name}")
+      @views.html.admin.casesTab(openCases, closedCases, caseClients, controllers.admin.routes.CaseController.createForm(team.id), controllers.admin.routes.AdminController.closedCases(team.id), "team", team.id, s" assigned to ${team.name}")
     </div>
     <div role="tabpanel" class="tab-pane" id="clients">
       @views.html.admin.clientsTab(controllers.admin.routes.AdminController.atRiskClients(team.id))

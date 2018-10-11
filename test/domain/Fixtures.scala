@@ -4,7 +4,7 @@ import java.time.{Duration, LocalDate}
 import java.util.UUID
 
 import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
-import domain.dao.{AppointmentDao, CaseDao, ClientDao, UploadedFileDao}
+import domain.dao._
 import domain.dao.CaseDao.Case
 import helpers.JavaTime
 import warwick.sso._
@@ -193,8 +193,8 @@ object Fixtures {
       AppointmentDao.appointments.versionsTable.delete andThen
       CaseDao.cases.table.delete andThen
       CaseDao.cases.versionsTable.delete andThen
-      Enquiry.enquiries.table.delete andThen
-      Enquiry.enquiries.versionsTable.delete andThen
+      EnquiryDao.enquiries.table.delete andThen
+      EnquiryDao.enquiries.versionsTable.delete andThen
       Message.messages.table.delete andThen
       Message.messages.versionsTable.delete andThen
       Owner.owners.table.delete andThen

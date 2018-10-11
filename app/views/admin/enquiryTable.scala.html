@@ -3,23 +3,21 @@
 @import domain.{Enquiry, MessageData, SitsProfile}
 @import warwick.sso.UniversityID
 
+@import domain.Client
+@import services.EnquiryService
 @(
   title: Option[String],
   enquiries: Seq[(Enquiry, MessageData)],
-  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
   emptyMessage: Option[String] = None
 )(implicit context: RequestContext)
 
 @enquiryRow(enquiry: Enquiry, message: MessageData) = {
   <tr>
     <td>
-      @clients.get(enquiry.id.get).flatMap(_.headOption).map {
-        case Left(universityID) => {<a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a>}
-        case Right(p) => {<a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>}
-      }
+      <a href="@controllers.admin.routes.ClientController.client(enquiry.client.universityID)">@enquiry.client.safeFullName</a>
     </td>
     <td>
-      <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get)">@enquiry.key.get.string @enquiry.subject</a>
+      <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key)">@enquiry.key.string @enquiry.subject</a>
     </td>
     <td>@helpers.JavaTime.Relative(message.created)</td>
   </tr>
@@ -36,7 +34,7 @@
       </tr>
     </thead>
     <tbody>
-      @enquiries.map { case (enquiry, message) =>
+      @enquiries.sortBy(_._2.created).reverse.map { case (enquiry, message) =>
         @enquiryRow(enquiry, message)
       }
     </tbody>

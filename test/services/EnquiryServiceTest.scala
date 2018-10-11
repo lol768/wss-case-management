@@ -1,7 +1,8 @@
 package services
 
+import domain.IssueState.Open
 import domain._
-import domain.dao.{AbstractDaoTest, DaoRunner}
+import domain.dao.AbstractDaoTest
 import helpers.{DataFixture, JavaTime}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -21,9 +22,6 @@ class EnquiryServiceTest extends AbstractDaoTest {
       )
 
   private val enquiryService = get[EnquiryService]
-  private val runner = get[DaoRunner]
-
-  import profile.api._
 
   val uniId1 = UniversityID("1")
 
@@ -31,12 +29,11 @@ class EnquiryServiceTest extends AbstractDaoTest {
     override def setup(): Unit = {
       for (_ <- 1 to 10) {
         val enquiryDate = JavaTime.offsetDateTime.minusDays(10L).plusHours(Random.nextInt(24*20).toLong)
-        val enquiry = enquiryService.save(Enquiry(
+        val enquiry = enquiryService.save(EnquirySave(
           universityID = uniId1,
           subject = "Enquiry",
           team = Teams.WellbeingSupport,
-          version = enquiryDate,
-          created = enquiryDate
+          state = Open
         ), MessageSave(
           "Hello", MessageSender.Client, None
         ), Nil).serviceValue
@@ -63,8 +60,8 @@ class EnquiryServiceTest extends AbstractDaoTest {
       withData(new EnquiriesFixture(addMessages = false)) { _ =>
         val result = enquiryService.findEnquiriesForClient(uniId1).serviceValue
         val enquiries = result.map(_.enquiry)
-        val ids = enquiries.map(e => (e.id, e.version)).mkString("\n")
-        val idsSorted = enquiries.sortBy(_.version).reverse.map(e => (e.id, e.version)).mkString("\n")
+        val ids = enquiries.map(e => (e.id, e.lastUpdated)).mkString("\n")
+        val idsSorted = enquiries.sortBy(_.lastUpdated).reverse.map(e => (e.id, e.lastUpdated)).mkString("\n")
         ids mustBe idsSorted
       }
     }

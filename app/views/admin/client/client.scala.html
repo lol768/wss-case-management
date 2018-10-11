@@ -251,8 +251,8 @@
               @defining(enquiries.filter { r => r.enquiry.state != IssueState.Closed }) { open: Seq[EnquiryRender] =>
                 @open.map { case render =>
                   <tr>
-                    <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key.get)" target="_blank">@render.enquiry.key.get.string</a></td>
-                    <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key.get)" target="_blank">@render.enquiry.subject</a></td>
+                    <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.key.string</a></td>
+                    <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.subject</a></td>
                     <td>@render.enquiry.team.name</td>
                     <td>@render.messages.lastOption.map { m =>
                       @JavaTime.Relative(m.message.created.toLocalDate).capitalize
@@ -278,10 +278,10 @@
             @defining(enquiries.filter { r => r.enquiry.state == IssueState.Closed }) { closed: Seq[EnquiryRender] =>
               @closed.map { render =>
                 <tr>
-                  <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key.get)" target="_blank">@render.enquiry.key.get.string</a></td>
-                  <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key.get)" target="_blank">@render.enquiry.subject</a></td>
+                  <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.key.string</a></td>
+                  <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.subject</a></td>
                   <td>@render.enquiry.team.name</td>
-                  <td>@JavaTime.Relative(render.enquiry.version.toLocalDate).capitalize</td>
+                  <td>@JavaTime.Relative(render.enquiry.lastUpdated.toLocalDate).capitalize</td>
                 </tr>
               }
             }

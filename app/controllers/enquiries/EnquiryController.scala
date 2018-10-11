@@ -4,6 +4,7 @@ import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.refiners.CanViewEnquiryActionRefiner
 import controllers.{BaseController, UploadedFileControllerHelper}
 import domain.Enquiry.{FormData => Data}
+import domain.IssueState.Open
 import domain._
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
@@ -38,11 +39,11 @@ class EnquiryController @Inject()(
     Enquiry.form.bindFromRequest().fold(
       formWithErrors => Future.successful(render(formWithErrors)),
       formData => {
-        val enquiry = Enquiry(
-          id = None,
+        val enquiry = EnquirySave(
           universityID = request.context.user.get.universityId.get,
           subject = formData.subject,
-          team = initialTeam
+          team = initialTeam,
+          state = Open
         )
 
         val message = domain.MessageSave(
