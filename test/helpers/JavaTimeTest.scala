@@ -85,12 +85,6 @@ class JavaTimeTest extends PlaySpec with MockitoSugar {
       }
     }
 
-    "handle OffsetDateTime only weekday" in {
-      JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(offsetDateTime("2018-03-21T11:13:14.000"), onlyWeekday = true) must be ("Wed 21 Mar, 11:13")
-      }
-    }
-
     "handle OffsetDateTime this year" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
         JavaTime.Relative(offsetDateTime("2018-03-03T11:13:14.000")) must be ("Sat 3 Mar, 11:13")

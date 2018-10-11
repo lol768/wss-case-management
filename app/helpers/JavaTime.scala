@@ -77,7 +77,7 @@ object JavaTime {
 
     }
 
-    def apply(date: OffsetDateTime, printToday: Boolean = true, onlyWeekday: Boolean = false): String = {
+    def apply(date: OffsetDateTime, printToday: Boolean = true): String = {
       val now = offsetDateTime
 
       if (date.toLocalDate.isEqual(now.toLocalDate)) {
