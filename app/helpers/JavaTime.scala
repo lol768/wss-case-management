@@ -71,9 +71,7 @@ object JavaTime {
       } else {
         val yesterday = now.minusDays(1)
 
-        if (date.get(WeekFields.ISO.weekOfWeekBasedYear) == yesterday.get(WeekFields.ISO.weekOfWeekBasedYear)) {
-          dateWeekdayFormatter.format(date)
-        } else if (date.getYear == yesterday.getYear) {
+        if (date.getYear == yesterday.getYear) {
           dateFullWithoutYearFormatter.format(date)
         } else {
           dateFullFormatter.format(date)
@@ -91,10 +89,6 @@ object JavaTime {
         } else {
           onlyTimeFormatter.format(date)
         }
-      } else if (date.toLocalDate.isEqual(now.toLocalDate.minusDays(1))) {
-        yesterdayTimeFormatter.format(date)
-      } else if (onlyWeekday || date.get(WeekFields.ISO.weekOfWeekBasedYear) == now.get(WeekFields.ISO.weekOfWeekBasedYear)) {
-        weekdayTimeFormatter.format(date)
       } else if (date.getYear == now.getYear) {
         dateTimeFullWithoutYearFormatter.format(date)
       } else {
