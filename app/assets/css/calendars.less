@@ -1,0 +1,18 @@
+@import (inline) "fullcalendar/dist/fullcalendar.css";
+
+.fc {
+  .fc-list-table {
+    &.table-striped tbody tr {
+      background-color: transparent;
+      &.fc-list-heading {
+        background-color: @table-bg-accent;
+      }
+    }
+  }
+
+  button.btn-sm {
+    .button-size(@padding-small-vertical; @padding-small-horizontal; @font-size-small; @line-height-small; @btn-border-radius-small);
+    border-radius: @button-border-radius-small;
+    height: auto;
+  }
+}

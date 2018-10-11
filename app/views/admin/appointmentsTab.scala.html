@@ -28,11 +28,13 @@
 ) { implicit ifc =>
   @b3.free('_class -> "search-default") {
     <i class="fal fa-search"></i>
-    <input type="text" class="form-control input-lg" placeholder="Search cases@placeholderSuffix" />
+    <input type="text" class="form-control input-lg" placeholder="Search appointments@placeholderSuffix" />
   }
 }
 
 <p><a href="@createRoute" class="btn btn-default">Create a new appointment</a></p>
+
+<div class="appointment-calendar"></div>
 
 @views.html.admin.appointmentTable(Some("Appointments needing attention"), declinedAppointments, clientLookup, userLookup)
 @views.html.admin.appointmentTable(Some("Appointment requests awaiting a response"), provisionalAppointments, clientLookup, userLookup)
