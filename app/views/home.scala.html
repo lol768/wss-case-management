@@ -116,14 +116,18 @@
           </td>
           <td>
             @a.clients.find(_.universityID == context.user.get.universityId.get).map { client =>
-              @if(client.state != AppointmentState.Provisional) {
-                <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
-                  @tags.icons.appointmentState(client.state, client = true)
-                  @if(client.state == AppointmentState.Cancelled) {
-                    Declined
-                  } else {
-                    @client.state
-                  }
+              @if(a.appointment.state == AppointmentState.Provisional) {
+                @if(client.state != AppointmentState.Provisional) {
+                  <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
+                    @tags.icons.appointmentState(client.state, client = true)
+                    @client.state.clientDescription
+                  </span>
+                  &nbsp;
+                }
+              } else {
+                <span class="label label-@a.appointment.state.labelType" @a.appointment.cancellationReason.map { r => title="@r.description" }>
+                  @tags.icons.appointmentState(a.appointment.state)
+                  @a.appointment.state
                 </span>
                 &nbsp;
               }
