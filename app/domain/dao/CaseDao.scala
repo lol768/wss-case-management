@@ -8,7 +8,9 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.CaseDao._
+import domain.dao.AppointmentDao.AppointmentCase
+import domain.dao.AppointmentDao.AppointmentCase.AppointmentCases
+import domain.dao.CaseDao.{Cases, _}
 import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
@@ -27,6 +29,7 @@ trait CaseDao {
   def find(id: UUID): DBIO[Case]
   def find(ids: Set[UUID]): DBIO[Seq[Case]]
   def find(key: IssueKey): DBIO[Case]
+  def findAll(ids: Set[UUID]): DBIO[Seq[Case]]
   def findByIDQuery(id: UUID): Query[Cases, Case, Seq]
   def findByIDsQuery(ids: Set[UUID]): Query[Cases, Case, Seq]
   def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq]
@@ -77,6 +80,9 @@ class CaseDaoImpl @Inject()(
   override def find(key: IssueKey): DBIO[Case] =
     findByKeyQuery(key).result.head
 
+  override def findAll(ids: Set[UUID]): DBIO[Seq[Case]] =
+    findByIDsQuery(ids).result
+
   override def findByIDQuery(id: UUID): Query[Cases, Case, Seq] =
     cases.table.filter(_.id === id)
 
@@ -100,7 +106,7 @@ class CaseDaoImpl @Inject()(
 
           // Need to search CaseNote fields separately otherwise the @+ will stop it matching cases
           // with no notes
-          (c.searchableKey @+ c.searchableSubject) @@ query ||
+          (c.searchableId @+ c.searchableKey @+ c.searchableSubject) @@ query ||
           n.map(_.searchableText) @@ query
         },
         q.createdAfter.map { d => c.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
@@ -326,6 +332,9 @@ object CaseDao {
       incomingCaseLinks: Seq[EntityAndCreator[CaseLink]],
       messages: CaseMessages
     )
+
+    // oldest first
+    val dateOrdering: Ordering[Case] = Ordering.by[Case, OffsetDateTime](_.created)(JavaTime.dateTimeOrdering)
   }
 
   case class CaseMessages(data: Seq[MessageRender]) {
@@ -380,6 +389,7 @@ object CaseDao {
     with CommonProperties {
     override def matchesPrimaryKey(other: Case): Rep[Boolean] = id === other.id.orNull
     def id = column[UUID]("id", O.PrimaryKey)
+    def searchableId = toTsVector(id.asColumnOf[String], Some("english"))
 
     def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 

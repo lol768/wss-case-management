@@ -174,7 +174,7 @@ class CaseController @Inject()(
       profiles.getProfiles(c.clients).successMap { clientProfiles =>
         Ok(views.html.admin.cases.view(
           c,
-          c.clients.toSeq
+          (c.clients.toSeq ++ a.flatMap(_.clients.map(_.universityID))).distinct
             .map { id => clientProfiles.get(id).map(Right.apply).getOrElse(Left(id)) }
             .sortBy { e => (e.isLeft, e.right.map(_.fullName).toOption) },
           ownerUsers,

@@ -4,6 +4,7 @@ import _ from 'lodash-es';
 import 'bootstrap-3-typeahead';
 import { postJsonWithCredentials } from './serverpipe';
 import RichResultField from './rich-result-field';
+import MultiplePickers from './multiple-picker';
 
 /**
  * An AJAX autocomplete-style picker that can return a variety of different
@@ -178,55 +179,9 @@ $.fn.flexiPicker = function initFlexiPicker(options = {}) {
 $(() => {
   $('.flexi-picker').flexiPicker();
 
-  /*
-  * Handle the multiple-flexi picker, by dynamically expanding to always
-  * have at least one empty picker field.
-  */
-  // Each set of pickers will be in a .flexi-picker-collection
   $('.flexi-picker-collection').each((i, collection) => {
-    const $collection = $(collection);
-    const $blankInput = $collection
-      .find('.flexi-picker-container')
-      .first()
-      .clone()
-      .find('input')
-      .val('')
-      .end();
-    $blankInput.find('a.btn').remove(); // this button is added by initFlexiPicker, so remove it now or we'll see double
-
-    // check whenever field is changed or focused
-    if ($collection.data('automatic') === true) {
-      $collection.on('change focus', 'input', (ev) => {
-        // remove empty pickers
-        const $inputs = $collection.find('input');
-        if ($inputs.length > 1) {
-          $inputs
-            .not(':focus')
-            .not(':last')
-            .filter((j, element) => (element.value || '').trim() === '')
-            .closest('.flexi-picker-container')
-            .remove();
-        }
-
-        // if last picker is nonempty OR focused, append an blank picker.
-        const $last = $inputs.last();
-        const lastFocused = (ev.type === 'focusin' && ev.target === $last[0]);
-        if (lastFocused || $last.val().trim() !== '') {
-          const input = $blankInput.clone();
-          $collection.append(input);
-          input.find('input').first().flexiPicker({});
-        }
-      });
-    } else {
-      $collection.append($('<button />')
-        .attr({ type: 'button' })
-        .addClass('btn').addClass('btn btn-xs btn-default')
-        .html('Add another')
-        .on('click', () => {
-          const input = $blankInput.clone();
-          $(this).before(input);
-          input.find('input').first().flexiPicker({});
-        }));
-    }
+    MultiplePickers(collection, (element) => {
+      $(element).flexiPicker();
+    });
   });
 });

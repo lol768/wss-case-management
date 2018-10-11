@@ -9,6 +9,7 @@ import ClientSearch from './client-search';
 import UserListPopovers from './user-list-popovers';
 import MessageThreads from './message-threads';
 import CasePicker from './case-picker';
+import MultiplePickers from './multiple-picker';
 import CaseSearch from './case-search';
 import EnquirySearch from './enquiry-search';
 import AppointmentSearch from './appointment-search';
@@ -45,6 +46,13 @@ $(() => {
   $('.case-picker').each((i, container) => {
     CasePicker(container);
   });
+
+  $('.case-picker-collection').each((i, collection) => {
+    MultiplePickers(collection, (element) => {
+      CasePicker(element);
+    });
+  });
+
 
   $('.case-search').each((i, container) => {
     CaseSearch(container);

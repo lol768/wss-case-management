@@ -31,6 +31,7 @@ trait CaseService {
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]]
+  def findAll(id: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def findFull(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]]
   def findFull(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]]
   def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]]
@@ -135,6 +136,9 @@ class CaseServiceImpl @Inject() (
     daoRunner.run(dao.find(caseKey)).map(Right(_)).recover {
       case _: NoSuchElementException => ServiceResults.error[Case](s"Could not find a Case with key ${caseKey.string}")
     }
+
+  override def findAll(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
+    daoRunner.run(dao.find(ids)).map(Right.apply)
 
   private def findFullyJoined(query: Query[Cases, Case, Seq])(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]] =
     daoRunner.run(for {

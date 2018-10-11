@@ -145,7 +145,6 @@ object Fixtures {
     def newStoredAppointment(issueKey: Int = 1234): StoredAppointment = StoredAppointment(
       UUID.randomUUID(),
       IssueKey(IssueKeyType.Appointment, issueKey),
-      None,
       JavaTime.offsetDateTime
         .withHour(14).withMinute(0).withSecond(0).withNano(0),
       Duration.ofMinutes(45),

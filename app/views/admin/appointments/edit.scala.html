@@ -5,14 +5,14 @@
 @(
   appointment: Appointment,
   form: Form[AppointmentFormData],
-  relatedCase: Option[Case]
+  relatedCases: Set[Case]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Edit appointment ${appointment.key.string}") {
   @b3.vertical.formCSRF(controllers.admin.routes.AppointmentController.edit(appointment.key)) { implicit ifc =>
     @b3.validatedHidden(form, "version")
 
-    @appointmentFields(form, relatedCase)
+    @appointmentFields(form, relatedCases)
 
     @tags.submitOrCancel("Update", controllers.admin.routes.AppointmentController.view(appointment.key))
   }

@@ -80,7 +80,7 @@ case class AppointmentSave(
 case class AppointmentRender(
   appointment: Appointment,
   clients: Set[AppointmentClient],
-  clientCase: Option[Case],
+  clientCases: Set[Case],
   notes: Seq[AppointmentNote]
 )
 

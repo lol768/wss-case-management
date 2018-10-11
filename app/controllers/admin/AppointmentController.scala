@@ -4,7 +4,7 @@ import java.time.{Duration, OffsetDateTime}
 import java.util.UUID
 
 import controllers.BaseController
-import controllers.admin.AppointmentController._
+import controllers.admin.AppointmentController.{form, _}
 import controllers.refiners._
 import domain._
 import helpers.ServiceResults.ServiceError
@@ -26,7 +26,7 @@ import scala.util.Try
 object AppointmentController {
   case class AppointmentFormData(
     clients: Set[UniversityID],
-    caseID: Option[UUID],
+    cases: Set[Option[UUID]],
     appointment: AppointmentSave,
     version: Option[OffsetDateTime]
   )
@@ -48,10 +48,12 @@ object AppointmentController {
       Try(Await.result(caseService.find(id), 5.seconds))
         .toOption.exists(_.isRight)
 
+    "cases" -> set(optional(uuid))
+
     Form(
       mapping(
         "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
-        "case" -> optional(uuid.verifying("error.required", id => isValidCase(id))),
+        "cases" -> set(optional(uuid.verifying("error.required", id => isValidCase(id)))),
         "appointment" -> mapping(
           "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", _.isAfter(JavaTime.offsetDateTime)),
           "duration" -> number(min = 60, max = 120 * 60).transform[Duration](n => Duration.ofSeconds(n.toLong), _.getSeconds.toInt),
@@ -168,11 +170,11 @@ class AppointmentController @Inject()(
           Ok(views.html.admin.appointments.create(
             teamRequest.team,
             baseForm.bind(baseBind ++ Map(
-              "case" -> clientCase.id.get.toString
+              "cases[0]" -> clientCase.id.get.toString
             ) ++ clients.toSeq.zipWithIndex.map { case (universityID, index) =>
               s"clients[$index]" -> universityID.string
             }.toMap).discardingErrors,
-            Some(clientCase)
+            Set(clientCase)
           ))
         }
       }
@@ -183,33 +185,35 @@ class AppointmentController @Inject()(
           baseForm.bind(baseBind ++ Map(
             "clients[0]" -> universityID.string
           )).discardingErrors,
-          None
+          Set.empty
         ))
       )
 
       case _ => Future.successful(
-        Ok(views.html.admin.appointments.create(teamRequest.team, baseForm.bind(baseBind).discardingErrors, None))
+        Ok(views.html.admin.appointments.create(teamRequest.team, baseForm.bind(baseBind).discardingErrors, Set.empty))
       )
     }
   }
 
   def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     form(teamRequest.team, profiles, cases, permissions).bindFromRequest().fold(
-      formWithErrors => formWithErrors.data.get("case") match {
-        case Some(caseID) =>
-          cases.find(UUID.fromString(caseID)).successMap { clientCase =>
-            Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, Some(clientCase)))
+      formWithErrors => formWithErrors.data.keys.filter(_.startsWith("cases")).toSeq match {
+        case caseKeys if caseKeys.nonEmpty =>
+          val ids = caseKeys.map(k => formWithErrors.data(k)).flatMap(id => Try(UUID.fromString(id)).toOption).toSet
+          cases.findAll(ids).successMap { cases =>
+            Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, cases.toSet))
           }
 
-        case None =>
+        case _ =>
           Future.successful(
-            Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, None))
+            Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, Set.empty))
           )
       },
       data => {
         val clients = data.clients.filter(_.string.nonEmpty)
+        val cases = data.cases.flatten.filter(_.toString.nonEmpty)
 
-        appointments.create(data.appointment, clients, teamRequest.team, data.caseID).successMap { appointment =>
+        appointments.create(data.appointment, clients, teamRequest.team, cases).successMap { appointment =>
           Redirect(controllers.admin.routes.AppointmentController.view(appointment.key))
             .flashing("success" -> Messages("flash.appointment.created", appointment.key.string))
         }
@@ -225,7 +229,7 @@ class AppointmentController @Inject()(
           form(a.appointment.team, profiles, cases, permissions, Some(a.appointment.lastUpdated))
             .fill(AppointmentFormData(
               a.clients.map(_.universityID),
-              a.clientCase.flatMap(_.id),
+              a.clientCases.flatMap(c => Some(c.id)),
               AppointmentSave(
                 a.appointment.start,
                 a.appointment.duration,
@@ -235,7 +239,7 @@ class AppointmentController @Inject()(
               ),
               Some(a.appointment.lastUpdated)
             )),
-          a.clientCase
+          a.clientCases
         )
       )
     }
@@ -249,14 +253,15 @@ class AppointmentController @Inject()(
             views.html.admin.appointments.edit(
               a.appointment,
               formWithErrors.bindVersion(a.appointment.lastUpdated),
-              a.clientCase
+              a.clientCases
             )
           )
         ),
         data => {
           val clients = data.clients.filter(_.string.nonEmpty)
+          val cases = data.cases.flatten
 
-          appointments.update(a.appointment.id, data.appointment, clients, data.version.get).successMap { updated =>
+          appointments.update(a.appointment.id, data.appointment, cases, clients, data.version.get).successMap { updated =>
             Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
               .flashing("success" -> Messages("flash.appointment.updated"))
           }
