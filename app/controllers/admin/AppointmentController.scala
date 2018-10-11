@@ -31,11 +31,18 @@ object AppointmentController {
     version: Option[OffsetDateTime]
   )
 
-  def form(team: Team, profileService: ProfileService, caseService: CaseService, existingVersion: Option[OffsetDateTime] = None)(implicit t: TimingContext, executionContext: ExecutionContext): Form[AppointmentFormData] = {
+  def form(team: Team, profileService: ProfileService, caseService: CaseService, permissionService: PermissionService, existingVersion: Option[OffsetDateTime] = None)(implicit t: TimingContext, executionContext: ExecutionContext): Form[AppointmentFormData] = {
     // TODO If we're linked to a case, is it valid to have an appointment with someone who isn't a client on the case?
     def isValid(u: UniversityID): Boolean =
       Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
         .toOption.exists(_.isRight)
+
+    def isValidTeamMember(usercode: Usercode): Boolean =
+      Try(Await.result(permissionService.inAnyTeam(usercode), 5.seconds))
+        .toOption.exists {
+          case Right(true) => true
+          case _ => false
+        }
 
     def isValidCase(id: UUID): Boolean =
       Try(Await.result(caseService.find(id), 5.seconds))
@@ -49,7 +56,7 @@ object AppointmentController {
           "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", _.isAfter(JavaTime.offsetDateTime)),
           "duration" -> number(min = 60, max = 120 * 60).transform[Duration](n => Duration.ofSeconds(n.toLong), _.getSeconds.toInt),
           "location" -> optional(Location.formField),
-          "teamMember" -> nonEmptyText.transform[Usercode](Usercode.apply, _.string), // TODO validate
+          "teamMember" -> nonEmptyText.transform[Usercode](Usercode.apply, _.string).verifying("error.appointment.teamMember.invalid", u => isValidTeamMember(u)),
           "appointmentType" -> AppointmentType.formField
         )(AppointmentSave.apply)(AppointmentSave.unapply),
         "version" -> optional(JavaTime.offsetDateTimeFormField).verifying("error.optimisticLocking", _ == existingVersion)
@@ -148,7 +155,7 @@ class AppointmentController @Inject()(
   }
 
   def createForm(teamId: String, forCase: Option[IssueKey], client: Option[UniversityID]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    val baseForm = form(teamRequest.team, profiles, cases)
+    val baseForm = form(teamRequest.team, profiles, cases, permissions)
     val baseBind = Map("appointment.teamMember" -> teamRequest.context.user.get.usercode.string)
 
     (forCase, client) match {
@@ -187,7 +194,7 @@ class AppointmentController @Inject()(
   }
 
   def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    form(teamRequest.team, profiles, cases).bindFromRequest().fold(
+    form(teamRequest.team, profiles, cases, permissions).bindFromRequest().fold(
       formWithErrors => formWithErrors.data.get("case") match {
         case Some(caseID) =>
           cases.find(UUID.fromString(caseID)).successMap { clientCase =>
@@ -215,7 +222,7 @@ class AppointmentController @Inject()(
       Ok(
         views.html.admin.appointments.edit(
           a.appointment,
-          form(a.appointment.team, profiles, cases, Some(a.appointment.lastUpdated))
+          form(a.appointment.team, profiles, cases, permissions, Some(a.appointment.lastUpdated))
             .fill(AppointmentFormData(
               a.clients.map(_.universityID),
               a.clientCase.flatMap(_.id),
@@ -236,7 +243,7 @@ class AppointmentController @Inject()(
 
   def edit(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
     appointments.findForRender(appointmentKey).successFlatMap { a =>
-      form(a.appointment.team, profiles, cases, Some(a.appointment.lastUpdated)).bindFromRequest().fold(
+      form(a.appointment.team, profiles, cases, permissions, Some(a.appointment.lastUpdated)).bindFromRequest().fold(
         formWithErrors => Future.successful(
           Ok(
             views.html.admin.appointments.edit(
