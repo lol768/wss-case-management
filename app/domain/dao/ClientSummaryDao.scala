@@ -7,6 +7,7 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
+import domain.dao.ClientDao.StoredClient
 import domain.dao.ClientSummaryDao.StoredClientSummary
 import domain.dao.ClientSummaryDao.StoredClientSummary.{ClientSummaries, ReasonableAdjustments, StoredReasonableAdjustment}
 import helpers.JavaTime
@@ -18,6 +19,7 @@ import slick.lifted.{Index, PrimaryKey, ProvenShape}
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext
+import scala.language.higherKinds
 
 @ImplementedBy(classOf[ClientSummaryDaoImpl])
 trait ClientSummaryDao {
@@ -25,8 +27,8 @@ trait ClientSummaryDao {
   def update(summary: StoredClientSummary, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredClientSummary]
   def insertReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Seq[StoredReasonableAdjustment]]
   def deleteReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Done]
-  def get(universityID: UniversityID): DBIO[Option[StoredClientSummary]]
-  def getByAlternativeEmailAddress(email: String): DBIO[Option[StoredClientSummary]]
+  def get(universityID: UniversityID): DBIO[Option[(StoredClientSummary, StoredClient)]]
+  def getByAlternativeEmailAddress(email: String): DBIO[Option[(StoredClientSummary, StoredClient)]]
   def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq]
   def findAtRiskQuery(highMentalHealth: Option[Boolean], riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq]
 }
@@ -57,8 +59,8 @@ object ClientSummaryDao {
         ac.usercode
       ).asInstanceOf[B]
 
-    def asClientSummary(reasonableAdjustments: Set[ReasonableAdjustment]) = ClientSummary(
-      universityID = universityID,
+    def asClientSummary(client: Client, reasonableAdjustments: Set[ReasonableAdjustment]) = ClientSummary(
+      client = client,
       highMentalHealthRisk = highMentalHealthRisk,
       notes = notes,
       alternativeContactNumber = alternativeContactNumber,
@@ -111,6 +113,12 @@ object ClientSummaryDao {
       def * : ProvenShape[StoredClientSummaryVersion] = (universityID, highMentalHealthRisk, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, version, operation, timestamp, auditUser).mapTo[StoredClientSummaryVersion]
       def pk: PrimaryKey = primaryKey("pk_client_summary_version", (universityID, timestamp))
       def idx: Index = index("idx_client_summary_version", (universityID, version))
+    }
+
+    implicit class ClientSummaryExtensions[C[_]](q: Query[ClientSummaries, StoredClientSummary, C]) {
+      def withClient = q
+        .join(ClientDao.clients.table)
+        .on(_.universityID === _.universityID)
     }
 
     val clientSummaries: VersionedTableQuery[StoredClientSummary, StoredClientSummaryVersion, ClientSummaries, ClientSummaryVersions] =
@@ -199,11 +207,11 @@ class ClientSummaryDaoImpl @Inject()(
   override def deleteReasonableAdjustments(adjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Done] =
     reasonableAdjustments.deleteAll(adjustments.toSeq)
 
-  override def get(universityID: UniversityID): DBIO[Option[StoredClientSummary]] =
-    clientSummaries.table.filter(_.universityID === universityID).take(1).result.headOption
+  override def get(universityID: UniversityID): DBIO[Option[(StoredClientSummary, StoredClient)]] =
+    clientSummaries.table.filter(_.universityID === universityID).withClient.take(1).result.headOption
 
-  override def getByAlternativeEmailAddress(email: String): DBIO[Option[StoredClientSummary]] =
-    clientSummaries.table.filter(_.alternativeEmailAddress === email).take(1).result.headOption
+  override def getByAlternativeEmailAddress(email: String): DBIO[Option[(StoredClientSummary, StoredClient)]] =
+    clientSummaries.table.filter(_.alternativeEmailAddress === email).withClient.take(1).result.headOption
 
   override def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq] =
     reasonableAdjustments.table

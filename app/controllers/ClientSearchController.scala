@@ -43,7 +43,7 @@ class ClientSearchController @Inject()(
           } else if (query.contains("@")) {
             // Search for alternate email
             clientSummaryService.getByAlternativeEmailAddress(query).successFlatMap {
-              case Some(summary) => memberSearchService.search(summary.universityID.string).successMap(uniIdMembers =>
+              case Some(summary) => memberSearchService.search(summary.client.universityID.string).successMap(uniIdMembers =>
                 Ok(Json.toJson(API.Success(data = Json.obj(
                   "results" -> uniIdMembers.map(toJson)
                 ))))
