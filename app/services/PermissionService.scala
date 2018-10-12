@@ -33,6 +33,7 @@ trait PermissionService {
 
   def canViewCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def canEditCaseNote(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canAddTeamMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canClientViewCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canAddClientMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
@@ -138,6 +139,14 @@ class PermissionServiceImpl @Inject() (
       isCaseTeam(user, id),
       isCaseOwner(user, id)
     )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+
+  override def canEditCaseNote(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] = {
+    Future.sequence(Seq(
+      // TODO - do we need to check case permissions as well (probably)
+      isAdmin(user), // want this ?
+      caseService.getNote(id).map(_.map(_.teamMember == user))
+    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+  }
 
   override def canAddTeamMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     canEditCase(user.usercode, id)

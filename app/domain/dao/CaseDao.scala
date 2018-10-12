@@ -51,6 +51,7 @@ trait CaseDao {
   def deleteLink(link: StoredCaseLink, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findLinksQuery(caseID: UUID): Query[CaseLinks, StoredCaseLink, Seq]
   def insertNote(note: StoredCaseNote)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
+  def findNote(id: UUID)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
   def updateNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
   def deleteNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq]
@@ -177,6 +178,9 @@ class CaseDaoImpl @Inject()(
 
   override def findLinksQuery(caseID: UUID): Query[CaseLinks, StoredCaseLink, Seq] =
     caseLinks.table.filter { l => l.outgoingCaseID === caseID || l.incomingCaseID === caseID }
+
+  override def findNote(id: UUID)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
+    caseNotes.table.filter(_.id === id).result.head
 
   override def insertNote(note: StoredCaseNote)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
     caseNotes.insert(note)
