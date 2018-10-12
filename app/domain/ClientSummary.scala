@@ -6,12 +6,11 @@ import domain.ClientRiskStatus.{High, Medium}
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.JavaTime
 import play.api.libs.json.{Format, Json}
-import warwick.sso.UniversityID
 
 import scala.collection.immutable
 
 case class ClientSummary(
-  universityID: UniversityID,
+  client: Client,
   highMentalHealthRisk: Option[Boolean],
   notes: String,
   alternativeContactNumber: String,
@@ -54,7 +53,6 @@ object ClientRiskStatus extends PlayEnum[ClientRiskStatus] {
 
 case class AtRiskClient(
   summary: ClientSummary,
-  profile: Option[SitsProfile],
   lastUpdatedEnquiry: Option[OffsetDateTime],
   lastUpdatedCase: Option[OffsetDateTime]
 ) extends Ordered[AtRiskClient] {

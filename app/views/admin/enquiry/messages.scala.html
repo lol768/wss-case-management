@@ -8,7 +8,7 @@
 
 @(
   enquiry: Enquiry,
-  client: Option[SitsProfile],
+  profile: Option[SitsProfile],
   messages: Seq[MessageRender],
   notes: Seq[EnquiryNote],
   owners: Seq[User],
@@ -22,28 +22,23 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
-  title = s"${enquiry.key.get.string} ${enquiry.subject}",
+  title = s"${enquiry.key.string} ${enquiry.subject}",
   icon = tags.icons.enquiryState(enquiry.state)
 ) {
   <div class="enquiry-details">
     <div class="enquiry-details--header">
       <h5>
         <div class="pull-right">
-          @if(enquiry.version.isAfter(messages.last.message.created)) {
-            @JavaTime.Relative(enquiry.version)
+          @if(enquiry.lastUpdated.isAfter(messages.last.message.created)) {
+            @JavaTime.Relative(enquiry.lastUpdated)
           } else {
             @JavaTime.Relative(messages.last.message.created)
           }
         </div>
-
-        @client.map { c =>
-          <a href="@controllers.admin.routes.ClientController.client(c.universityID)">@c.fullName</a>,
-          @c.universityID.string,
-          @views.tags.profiles.typeAndDepartment(c)
-        }.getOrElse {
-          <a href="@controllers.admin.routes.ClientController.client(enquiry.universityID)">
-            @enquiry.universityID.string
-          </a>
+        <a href="@controllers.admin.routes.ClientController.client(enquiry.client.universityID)">@enquiry.client.safeFullName</a>,
+        @enquiry.client.universityID.string,
+        @profile.map { p =>
+          @views.tags.profiles.typeAndDepartment(p)
         }
       </h5>
       <h5>
@@ -121,8 +116,8 @@
 
         @tags.manageOwners(
           owners,
-          controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key.get),
-          controllers.admin.routes.OwnersController.enquirySubmitSelf(enquiry.key.get)
+          controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key),
+          controllers.admin.routes.OwnersController.enquirySubmitSelf(enquiry.key)
         )
 
         @if(linkedCases.nonEmpty) {
@@ -149,7 +144,7 @@
           </div>
           <div class="col-sm-8">
             @if(enquiry.state != IssueState.Closed) {
-              @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.close(enquiry.key.get)) { implicit ifc =>
+              @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.close(enquiry.key)) { implicit ifc =>
                 @b3.validatedHidden(stateChangeForm, "version")
 
                 <p>
@@ -159,7 +154,7 @@
                 </p>
               }
             } else {
-              @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.reopen(enquiry.key.get)) { implicit ifc =>
+              @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.reopen(enquiry.key)) { implicit ifc =>
                 @b3.validatedHidden(stateChangeForm, "version")
 
                 <p>
@@ -171,13 +166,13 @@
             }
 
             <p>
-              <a class="btn btn-default btn-block" href="@controllers.admin.routes.CaseController.createForm(enquiry.team.id, Some(enquiry.key.get))">
+              <a class="btn btn-default btn-block" href="@controllers.admin.routes.CaseController.createForm(enquiry.team.id, Some(enquiry.key))">
                 Create case from enquiry
               </a>
             </p>
 
             <p>
-              <a class="btn btn-default btn-block" href="@controllers.admin.routes.TeamEnquiryController.reassignForm(enquiry.key.get)">
+              <a class="btn btn-default btn-block" href="@controllers.admin.routes.TeamEnquiryController.reassignForm(enquiry.key)">
                 Assign to a different team
               </a>
             </p>
@@ -201,7 +196,7 @@
             @views.html.tags.messages.message(
               render.message,
               render.files,
-              client.map(_.fullName).getOrElse(enquiry.universityID.string),
+              profile.map(_.fullName).getOrElse(enquiry.client.universityID.string),
               render.message.teamMember
                 .flatMap { usercode =>
                   userLookup.get(usercode)
@@ -209,14 +204,14 @@
                     .flatMap(_.name.full)
                     .map { name => s"$name, ${render.message.team.getOrElse(enquiry.team).name} team" }
                 }.getOrElse(s"${render.message.team.getOrElse(enquiry.team).name} team"),
-              f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key.get, f.id),
+              f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key, f.id),
               clientLastRead.filter(_ => render.message.sender == MessageSender.Team).map(_.isAfter(render.message.created))
             )
           }
         </div>
         @if(enquiry.state != IssueState.Closed) {
           <div class="panel-footer">
-            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key.get), messageForm, supportedMimeTypes)
+            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key), messageForm, supportedMimeTypes)
           </div>
         }
       </div>

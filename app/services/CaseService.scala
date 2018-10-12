@@ -12,12 +12,12 @@ import domain._
 import domain.dao.CaseDao.{Case, _}
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{CaseDao, DaoRunner, MessageDao, UploadedFileDao}
+import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import services.CaseService._
-import services.tabula.ProfileService
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
 
@@ -68,8 +68,8 @@ trait CaseService {
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
   def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
 
-  def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]]
-  def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[UniversityID]]]
+  def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Client]]]]
+  def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[Client]]]
 
   def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]]
   def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]]
@@ -80,7 +80,7 @@ trait CaseService {
 
   def reassign(c: Case, team: Team, caseType: Option[CaseType], note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
 
-  def getHistory(id: UUID)(implicit t: TimingContext): Future[ServiceResult[CaseHistory]]
+  def getHistory(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseHistory]]
 
   def findFromOriginalEnquiry(enquiryId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
 }
@@ -93,8 +93,8 @@ class CaseServiceImpl @Inject() (
   notificationService: NotificationService,
   appointmentService: AppointmentService,
   userLookupService: UserLookupService,
-  profileService: ProfileService,
   permissionsService: PermissionService,
+  clientService: ClientService,
   daoRunner: DaoRunner,
   dao: CaseDao,
   messageDao: MessageDao,
@@ -107,13 +107,15 @@ class CaseServiceImpl @Inject() (
 
     val id = UUID.randomUUID()
     auditService.audit('CaseSave, id.toString, 'Case, Json.obj()) {
-      val now = JavaTime.offsetDateTime
-      daoRunner.run(for {
-        nextId <- sql"SELECT nextval('SEQ_CASE_ID')".as[Int].head
-        inserted <- dao.insert(c.copy(id = Some(id), key = Some(IssueKey(IssueKeyType.Case, nextId))))
-        _ <- dao.insertClients(clients.map { universityId => CaseClient(id, universityId, now) })
-        _ <- dao.insertTags(tags.map { t => StoredCaseTag(id, t, now) })
-      } yield inserted).map(Right.apply)
+      clientService.getOrAddClients(clients).successFlatMapTo { _ =>
+        val now = JavaTime.offsetDateTime
+        daoRunner.run(for {
+          nextId <- sql"SELECT nextval('SEQ_CASE_ID')".as[Int].head
+          inserted <- dao.insert(c.copy(id = Some(id), key = Some(IssueKey(IssueKeyType.Case, nextId))))
+          _ <- dao.insertClients(clients.map { universityId => StoredCaseClient(id, universityId, now) })
+          _ <- dao.insertTags(tags.map { t => StoredCaseTag(id, t, now) })
+        } yield inserted).map(Right.apply)
+      }
     }
   }
 
@@ -165,7 +167,7 @@ class CaseServiceImpl @Inject() (
         ).map { case (outgoing, incoming, documents) =>
           Case.FullyJoined(
             clientCase,
-            clients.map(_.client).toSet,
+            clients.map { case (_, c) => c.asClient }.toSet,
             tags.map(_.caseTag).toSet,
             notes.map(_.asCaseNote),
             documents,
@@ -220,26 +222,28 @@ class CaseServiceImpl @Inject() (
 
   override def update(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
     auditService.audit('CaseUpdate, c.id.get.toString, 'Case, Json.obj()) {
-      val now = JavaTime.offsetDateTime
-      daoRunner.run(for {
-        updated <- dao.update(c, version)
-        _ <- updateDifferencesDBIO[CaseClient, UniversityID](
-          clients,
-          dao.findClientsQuery(Set(c.id.get)),
-          _.client,
-          id => CaseClient(c.id.get, id, now),
-          dao.insertClients,
-          dao.deleteClients
-        )
-        _ <- updateDifferencesDBIO[StoredCaseTag, CaseTag](
-          tags,
-          dao.findTagsQuery(Set(c.id.get)),
-          _.caseTag,
-          t => StoredCaseTag(c.id.get, t, now),
-          dao.insertTags,
-          dao.deleteTags
-        )
-      } yield updated).map(Right.apply)
+      clientService.getOrAddClients(clients).successFlatMapTo { _ =>
+        val now = JavaTime.offsetDateTime
+        daoRunner.run(for {
+          updated <- dao.update(c, version)
+          _ <- updateDifferencesDBIO[StoredCaseClient, UniversityID](
+            clients,
+            dao.findClientsQuery(Set(c.id.get)).map { case(client, _) => client },
+            _.universityID,
+            id => StoredCaseClient(c.id.get, id, now),
+            dao.insertClients,
+            dao.deleteClients
+          )
+          _ <- updateDifferencesDBIO[StoredCaseTag, CaseTag](
+            tags,
+            dao.findTagsQuery(Set(c.id.get)),
+            _.caseTag,
+            t => StoredCaseTag(c.id.get, t, now),
+            dao.insertTags,
+            dao.deleteTags
+          )
+        } yield updated).map(Right.apply)
+      }
     }
   }
 
@@ -424,13 +428,13 @@ class CaseServiceImpl @Inject() (
   override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]] =
     ownerService.setCaseOwners(id, owners)
 
-  override def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[UniversityID]]]] = {
+  override def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Client]]]] = {
     daoRunner.run(dao.findClientsQuery(ids).result)
-      .map(_.groupBy(_.caseId).mapValues(_.map(_.client).toSet))
+      .map(_.groupBy { case (c , _) => c.caseId }.mapValues(_.map { case (_, c) => c.asClient }.toSet))
       .map(Right.apply)
   }
 
-  override def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[UniversityID]]] = {
+  override def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[Client]]] = {
     getClients(Set(id)).map(_.right.map(_.getOrElse(id, Set.empty)))
   }
 
@@ -515,7 +519,7 @@ class CaseServiceImpl @Inject() (
       _ => notificationService.caseReassign(c).map(_.right.map(_ => c))
     ))
 
-  override def getHistory(id: UUID)(implicit t: TimingContext): Future[ServiceResult[CaseHistory]] = {
+  override def getHistory(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseHistory]] = {
     ownerService.getCaseOwnerHistory(id).flatMap(result => result.fold(
       errors => Future.successful(Left.apply(errors)),
       rawOwnerHistory => {
@@ -526,7 +530,7 @@ class CaseServiceImpl @Inject() (
         } yield {
           (caseHistory, rawTagHistory, rawClientHistory)
         }).flatMap { case (caseHistory, rawTagHistory, rawClientHistory) =>
-          CaseHistory.apply(caseHistory, rawTagHistory, rawOwnerHistory, rawClientHistory, userLookupService, profileService)
+          CaseHistory.apply(caseHistory, rawTagHistory, rawOwnerHistory, rawClientHistory, userLookupService, clientService)
         }
       }
     ))

@@ -78,8 +78,8 @@ class AppointmentDaoImpl @Inject()(
   override def findByClientQuery(universityID: UniversityID): Query[Appointments, StoredAppointment, Seq] =
     appointments.table
       .withClients
-      .filter { case (_, client) => client.universityID === universityID }
-      .map { case (a, _) => a }
+      .filter { case (_, _, client) => client.universityID === universityID }
+      .map { case (a, _, _) => a }
 
   override def findByCaseQuery(caseID: UUID): Query[Appointments, StoredAppointment, Seq] =
     appointments.table.withCases
@@ -89,10 +89,10 @@ class AppointmentDaoImpl @Inject()(
   override def findDeclinedQuery: Query[Appointments, StoredAppointment, Seq] =
     appointments.table
       .withClients
-      .filter { case (a, client) =>
+      .filter { case (a, client, _) =>
         a.isProvisional && client.isDeclined
       }
-      .map { case (a, _) => a }
+      .map { case (a, _, _) => a }
       .distinct
 
   override def findProvisionalQuery: Query[Appointments, StoredAppointment, Seq] =
@@ -310,8 +310,6 @@ object AppointmentDao {
     def keyIndex = index("idx_appointment_key", key, unique = true)
     def teamIndex = index("idx_appointment_team", (start, team))
     def teamMemberIndex = index("idx_appointment_team_member", (start, teamMember))
-    //def caseIndex = index("idx_appointment_case", caseID)
-    //def caseFK = foreignKey("fk_appointment_case", caseID, CaseDao.cases.table)(_.id.?)
     def stateIndex = index("idx_appointment_state", state)
   }
 
@@ -333,6 +331,9 @@ object AppointmentDao {
     def withClients = q
       .join(appointmentClients.table)
       .on(_.id === _.appointmentID)
+      .join(ClientDao.clients.table)
+      .on { case ((_, ac), c) => ac.universityID === c.universityID }
+      .map { case ((a, ac), c) => (a, ac, c) }
     def withCases = q
       .join(AppointmentCase.appointmentCases.table)
       .on(_.id === _.appointmentID)
@@ -352,8 +353,8 @@ object AppointmentDao {
     created: OffsetDateTime,
     version: OffsetDateTime,
   ) extends Versioned[StoredAppointmentClient] {
-    def asAppointmentClient = AppointmentClient(
-      universityID,
+    def asAppointmentClient(client: Client) = AppointmentClient(
+      client,
       state,
       cancellationReason
     )
@@ -404,8 +405,6 @@ object AppointmentDao {
 
     override def * : ProvenShape[StoredAppointmentClient] =
       (universityID, appointmentID, state, cancellationReason, created, version).mapTo[StoredAppointmentClient]
-    def appointmentClient =
-      (universityID, state, cancellationReason).mapTo[AppointmentClient]
 
     def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
     def isAccepted: Rep[Boolean] = state === (AppointmentState.Accepted: AppointmentState)
@@ -429,6 +428,12 @@ object AppointmentDao {
       (universityID, appointmentID, state, cancellationReason, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentClientVersion]
     def pk = primaryKey("pk_appointment_client_version", (universityID, appointmentID, timestamp))
     def idx = index("idx_appointment_client_version", (universityID, appointmentID, version))
+  }
+
+  implicit class AppointmentClientExtensions[C[_]](q: Query[AppointmentClients, StoredAppointmentClient, C]) {
+    def withClients = q
+      .join(ClientDao.clients.table)
+      .on(_.universityID === _.universityID)
   }
 
   case class StoredAppointmentNote(

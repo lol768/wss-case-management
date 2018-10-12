@@ -11,6 +11,7 @@ import domain._
 import domain.dao.AppointmentDao.AppointmentCase
 import domain.dao.AppointmentDao.AppointmentCase.AppointmentCases
 import domain.dao.CaseDao.{Cases, _}
+import domain.dao.ClientDao.StoredClient
 import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
@@ -41,11 +42,11 @@ trait CaseDao {
   def deleteTags(tags: Set[StoredCaseTag])(implicit ac: AuditLogContext): DBIO[Done]
   def deleteTag(tag: StoredCaseTag)(implicit ac: AuditLogContext): DBIO[Done]
   def findTagsQuery(caseIds: Set[UUID]): Query[CaseTags, StoredCaseTag, Seq]
-  def insertClients(clients: Set[CaseClient])(implicit ac: AuditLogContext): DBIO[Seq[CaseClient]]
-  def insertClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[CaseClient]
-  def deleteClients(client: Set[CaseClient])(implicit ac: AuditLogContext): DBIO[Done]
-  def deleteClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[Done]
-  def findClientsQuery(caseIds: Set[UUID]): Query[CaseClients, CaseClient, Seq]
+  def insertClients(clients: Set[StoredCaseClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredCaseClient]]
+  def insertClient(client: StoredCaseClient)(implicit ac: AuditLogContext): DBIO[StoredCaseClient]
+  def deleteClients(client: Set[StoredCaseClient])(implicit ac: AuditLogContext): DBIO[Done]
+  def deleteClient(client: StoredCaseClient)(implicit ac: AuditLogContext): DBIO[Done]
+  def findClientsQuery(caseIds: Set[UUID]): Query[(CaseClients, StoredClient.Clients), (StoredCaseClient, ClientDao.StoredClient), Seq]
   def insertLink(link: StoredCaseLink)(implicit ac: AuditLogContext): DBIO[StoredCaseLink]
   def deleteLink(link: StoredCaseLink, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findLinksQuery(caseID: UUID): Query[CaseLinks, StoredCaseLink, Seq]
@@ -59,7 +60,7 @@ trait CaseDao {
   def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, Case, Seq]
   def getHistory(id: UUID): DBIO[Seq[CaseVersion]]
   def getTagHistory(caseID: UUID): DBIO[Seq[StoredCaseTagVersion]]
-  def getClientHistory(caseID: UUID): DBIO[Seq[CaseClientVersion]]
+  def getClientHistory(caseID: UUID): DBIO[Seq[StoredCaseClientVersion]]
   def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, Case, Seq]
 }
 
@@ -95,8 +96,8 @@ class CaseDaoImpl @Inject()(
   override def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq] =
     cases.table
       .withClients
-      .filter { case (_, client) => client.client === universityID }
-      .map { case (c, _) => c }
+      .filter { case (_, client, _) => client.universityID === universityID }
+      .map { case (c, _, _) => c }
 
   override def searchQuery(q: CaseSearchQuery): Query[Cases, Case, Seq] = {
     def queries(c: Cases, n: Rep[Option[CaseNotes]], o: Rep[Option[Owner.Owners]]): Seq[Rep[Option[Boolean]]] =
@@ -151,21 +152,22 @@ class CaseDaoImpl @Inject()(
     caseTags.table
       .filter(_.caseId.inSet(caseIds))
 
-  override def insertClients(clients: Set[CaseClient])(implicit ac: AuditLogContext): DBIO[Seq[CaseClient]] =
+  override def insertClients(clients: Set[StoredCaseClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredCaseClient]] =
     caseClients.insertAll(clients.toSeq)
 
-  override def insertClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[CaseClient] =
+  override def insertClient(client: StoredCaseClient)(implicit ac: AuditLogContext): DBIO[StoredCaseClient] =
     caseClients.insert(client)
 
-  override def deleteClients(clients: Set[CaseClient])(implicit ac: AuditLogContext): DBIO[Done] =
+  override def deleteClients(clients: Set[StoredCaseClient])(implicit ac: AuditLogContext): DBIO[Done] =
     caseClients.deleteAll(clients.toSeq)
 
-  override def deleteClient(client: CaseClient)(implicit ac: AuditLogContext): DBIO[Done] =
+  override def deleteClient(client: StoredCaseClient)(implicit ac: AuditLogContext): DBIO[Done] =
     caseClients.delete(client)
 
-  override def findClientsQuery(caseIds: Set[UUID]): Query[CaseClients, CaseClient, Seq] =
+  override def findClientsQuery(caseIds: Set[UUID]): Query[(CaseClients, StoredClient.Clients), (StoredCaseClient, ClientDao.StoredClient), Seq] =
     caseClients.table
       .filter(_.caseId.inSet(caseIds))
+      .withClients
 
   override def insertLink(link: StoredCaseLink)(implicit ac: AuditLogContext): DBIO[StoredCaseLink] =
     caseLinks.insert(link)
@@ -231,7 +233,7 @@ class CaseDaoImpl @Inject()(
     caseTags.versionsTable.filter(t => t.caseId === caseID).result
   }
 
-  override def getClientHistory(caseID: UUID): DBIO[Seq[CaseClientVersion]] = {
+  override def getClientHistory(caseID: UUID): DBIO[Seq[StoredCaseClientVersion]] = {
     caseClients.versionsTable.filter(c => c.caseId === caseID).result
   }
 
@@ -248,7 +250,7 @@ object CaseDao {
   val caseTags: VersionedTableQuery[StoredCaseTag, StoredCaseTagVersion, CaseTags, CaseTagVersions] =
     VersionedTableQuery(TableQuery[CaseTags], TableQuery[CaseTagVersions])
 
-  val caseClients: VersionedTableQuery[CaseClient, CaseClientVersion, CaseClients, CaseClientVersions] =
+  val caseClients: VersionedTableQuery[StoredCaseClient, StoredCaseClientVersion, CaseClients, CaseClientVersions] =
     VersionedTableQuery(TableQuery[CaseClients], TableQuery[CaseClientVersions])
 
   val caseLinks: VersionedTableQuery[StoredCaseLink, StoredCaseLinkVersion, CaseLinks, CaseLinkVersions] =
@@ -324,7 +326,7 @@ object CaseDao {
       */
     case class FullyJoined(
       clientCase: Case,
-      clients: Set[UniversityID],
+      clients: Set[Client],
       tags: Set[CaseTag],
       notes: Seq[CaseNote],
       documents: Seq[EntityAndCreator[CaseDocument]],
@@ -414,6 +416,9 @@ object CaseDao {
     def withClients = q
       .join(caseClients.table)
       .on(_.id === _.caseId)
+      .join(ClientDao.clients.table)
+      .on { case ((_, cc), client) => cc.universityID === client.universityID }
+      .map { case ((c, cc), client) => (c, cc, client) }
     def withNotes = q
       .joinLeft(caseNotes.table)
       .on(_.id === _.caseId)
@@ -501,16 +506,16 @@ object CaseDao {
     def idx = index("idx_case_tag_version", (caseId, caseTag, version))
   }
 
-  case class CaseClient(
+  case class StoredCaseClient(
     caseId: UUID,
-    client: UniversityID,
+    universityID: UniversityID,
     version: OffsetDateTime = OffsetDateTime.now()
-  ) extends Versioned[CaseClient] {
-    override def atVersion(at: OffsetDateTime): CaseClient = copy(version = at)
-    override def storedVersion[B <: StoredVersion[CaseClient]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
-      CaseClientVersion(
+  ) extends Versioned[StoredCaseClient] {
+    override def atVersion(at: OffsetDateTime): StoredCaseClient = copy(version = at)
+    override def storedVersion[B <: StoredVersion[StoredCaseClient]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
+      StoredCaseClientVersion(
         caseId,
-        client,
+        universityID,
         version,
         operation,
         timestamp,
@@ -518,46 +523,52 @@ object CaseDao {
       ).asInstanceOf[B]
   }
 
-  case class CaseClientVersion(
+  case class StoredCaseClientVersion(
     caseId: UUID,
-    client: UniversityID,
+    universityID: UniversityID,
     version: OffsetDateTime = OffsetDateTime.now(),
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[CaseClient]
+  ) extends StoredVersion[StoredCaseClient]
 
   trait CommonClientProperties { self: Table[_] =>
     def caseId = column[UUID]("case_id")
-    def client = column[UniversityID]("university_id")
+    def universityID = column[UniversityID]("university_id")
     def version = column[OffsetDateTime]("version_utc")
   }
 
-  class CaseClients(tag: Tag) extends Table[CaseClient](tag, "client_case_client")
-    with VersionedTable[CaseClient]
+  class CaseClients(tag: Tag) extends Table[StoredCaseClient](tag, "client_case_client")
+    with VersionedTable[StoredCaseClient]
     with CommonClientProperties {
-    override def matchesPrimaryKey(other: CaseClient): Rep[Boolean] =
-      caseId === other.caseId && client === other.client
+    override def matchesPrimaryKey(other: StoredCaseClient): Rep[Boolean] =
+      caseId === other.caseId && universityID === other.universityID
 
-    override def * : ProvenShape[CaseClient] =
-      (caseId, client, version).mapTo[CaseClient]
-    def pk = primaryKey("pk_case_client", (caseId, client))
+    override def * : ProvenShape[StoredCaseClient] =
+      (caseId, universityID, version).mapTo[StoredCaseClient]
+    def pk = primaryKey("pk_case_client", (caseId, universityID))
     def fk = foreignKey("fk_case_client", caseId, cases.table)(_.id)
     def caseIndex = index("idx_case_client", caseId)
-    def clientIndex = index("idx_case_client_university_id", client)
+    def clientIndex = index("idx_case_client_university_id", universityID)
   }
 
-  class CaseClientVersions(tag: Tag) extends Table[CaseClientVersion](tag, "client_case_client_version")
-    with StoredVersionTable[CaseClient]
+  class CaseClientVersions(tag: Tag) extends Table[StoredCaseClientVersion](tag, "client_case_client_version")
+    with StoredVersionTable[StoredCaseClient]
     with CommonClientProperties {
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
     def auditUser = column[Option[Usercode]]("version_user")
 
-    override def * : ProvenShape[CaseClientVersion] =
-      (caseId, client, version, operation, timestamp, auditUser).mapTo[CaseClientVersion]
-    def pk = primaryKey("pk_case_client_version", (caseId, client, timestamp))
-    def idx = index("idx_case_client_version", (caseId, client, version))
+    override def * : ProvenShape[StoredCaseClientVersion] =
+      (caseId, universityID, version, operation, timestamp, auditUser).mapTo[StoredCaseClientVersion]
+    def pk = primaryKey("pk_case_client_version", (caseId, universityID, timestamp))
+    def idx = index("idx_case_client_version", (caseId, universityID, version))
+  }
+
+  implicit class CaseClientExtensions[C[_]](q: Query[CaseClients, StoredCaseClient, C]) {
+    def withClients = q
+      .join(ClientDao.clients.table)
+      .on(_.universityID === _.universityID)
   }
 
   case class StoredCaseLink(

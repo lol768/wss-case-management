@@ -72,7 +72,8 @@ class CaseServiceTest extends AbstractDaoTest {
 
       val fullyJoined = service.findFull(clientCase.key.get).serviceValue
       fullyJoined.clientCase mustBe clientCase
-      fullyJoined.clients mustBe clients
+      fullyJoined.clients.size mustBe 2
+      clients.forall(c => fullyJoined.clients.exists(_.universityID == c)) mustBe true
       fullyJoined.tags mustBe tags
       fullyJoined.outgoingCaseLinks.size mustBe 1
       fullyJoined.outgoingCaseLinks.map(_.entity).exists { l => l.linkType == CaseLinkType.Related && l.outgoing == clientCase && l.incoming == c2 } mustBe true
@@ -191,7 +192,8 @@ class CaseServiceTest extends AbstractDaoTest {
       val c2 = service.update(c1, Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Accommodation, CaseTag.DomesticViolence), c1.version).serviceValue
       c2 mustBe c1.copy(version = c2.version)
 
-      service.getClients(c1.id.get).serviceValue mustBe Set(UniversityID("0672089"), UniversityID("0672088"))
+      service.getClients(c1.id.get).serviceValue.exists(_.universityID == UniversityID("0672089")) mustBe true
+      service.getClients(c1.id.get).serviceValue.exists(_.universityID == UniversityID("0672088")) mustBe true
       service.getCaseTags(c1.id.get).serviceValue mustBe Set(CaseTag.Accommodation, CaseTag.DomesticViolence)
 
       // Replace a client and a tag and update the subject
@@ -199,7 +201,8 @@ class CaseServiceTest extends AbstractDaoTest {
       c3.subject mustBe "Here's an updated subject"
       c3 mustBe c2.copy(version = c3.version, subject = c3.subject)
 
-      service.getClients(c1.id.get).serviceValue mustBe Set(UniversityID("0672089"), UniversityID("1234567"))
+      service.getClients(c1.id.get).serviceValue.exists(_.universityID == UniversityID("0672089")) mustBe true
+      service.getClients(c1.id.get).serviceValue.exists(_.universityID == UniversityID("1234567")) mustBe true
       service.getCaseTags(c1.id.get).serviceValue mustBe Set(CaseTag.Accommodation, CaseTag.HomeSickness)
     }
 

@@ -50,14 +50,11 @@ object JavaTime {
 
   object Relative {
 
-    private val dateWeekdayFormatter = DateTimeFormatter.ofPattern("EEE")
     private val dateFullWithoutYearFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
     private val dateFullFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy")
 
     private val onlyTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     private val todayTimeFormatter = DateTimeFormatter.ofPattern("'Today' HH:mm")
-    private val yesterdayTimeFormatter = DateTimeFormatter.ofPattern("'Yesterday' HH:mm")
-    private val weekdayTimeFormatter = DateTimeFormatter.ofPattern("EEE HH:mm")
     private val dateTimeFullWithoutYearFormatter = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm")
     private val dateTimeFullFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm")
 
@@ -71,9 +68,7 @@ object JavaTime {
       } else {
         val yesterday = now.minusDays(1)
 
-        if (date.get(WeekFields.ISO.weekOfWeekBasedYear) == yesterday.get(WeekFields.ISO.weekOfWeekBasedYear)) {
-          dateWeekdayFormatter.format(date)
-        } else if (date.getYear == yesterday.getYear) {
+        if (date.getYear == yesterday.getYear) {
           dateFullWithoutYearFormatter.format(date)
         } else {
           dateFullFormatter.format(date)
@@ -82,7 +77,7 @@ object JavaTime {
 
     }
 
-    def apply(date: OffsetDateTime, printToday: Boolean = true, onlyWeekday: Boolean = false): String = {
+    def apply(date: OffsetDateTime, printToday: Boolean = true): String = {
       val now = offsetDateTime
 
       if (date.toLocalDate.isEqual(now.toLocalDate)) {
@@ -91,10 +86,6 @@ object JavaTime {
         } else {
           onlyTimeFormatter.format(date)
         }
-      } else if (date.toLocalDate.isEqual(now.toLocalDate.minusDays(1))) {
-        yesterdayTimeFormatter.format(date)
-      } else if (onlyWeekday || date.get(WeekFields.ISO.weekOfWeekBasedYear) == now.get(WeekFields.ISO.weekOfWeekBasedYear)) {
-        weekdayTimeFormatter.format(date)
       } else if (date.getYear == now.getYear) {
         dateTimeFullWithoutYearFormatter.format(date)
       } else {

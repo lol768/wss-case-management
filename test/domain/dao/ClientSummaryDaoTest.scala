@@ -3,11 +3,12 @@ package domain.dao
 import java.time.{Clock, ZonedDateTime}
 
 import domain._
+import domain.dao.ClientDao.StoredClient
 import domain.dao.ClientSummaryDao.StoredClientSummary
 import helpers.JavaTime
 import uk.ac.warwick.util.core.DateTimeUtils
 import warwick.sso.UniversityID
-
+import domain.ExtendedPostgresProfile.api._
 import scala.concurrent.Future
 
 class ClientSummaryDaoTest extends AbstractDaoTest {
@@ -30,6 +31,7 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
       val now = ZonedDateTime.of(2018, 1, 1, 10, 0, 0, 0, JavaTime.timeZone).toInstant
       DateTimeUtils.useMockDateTime(now, () => {
         val test = for {
+          _ <- ClientDao.clients.table += StoredClient(summary.universityID, None, JavaTime.offsetDateTime)
           existsBefore <- dao.get(uniID)
           result <- dao.insert(summary)
           existsAfter <- dao.get(uniID)
@@ -45,7 +47,7 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
             result.riskStatus mustBe summary.riskStatus
 
             existsAfter.isEmpty mustBe false
-            existsAfter mustBe Some(result)
+            existsAfter.get._1 mustBe result
           })
         } yield result
 
@@ -69,6 +71,7 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
         _ <- DBIO.from(Future {
           DateTimeUtils.CLOCK_IMPLEMENTATION = Clock.fixed(earlier, JavaTime.timeZone)
         })
+        _ <- ClientDao.clients.table += StoredClient(summary.universityID, None, JavaTime.offsetDateTime)
         inserted <- dao.insert(summary)
         _ <- DBIO.from(Future {
           DateTimeUtils.CLOCK_IMPLEMENTATION = Clock.fixed(now, JavaTime.timeZone)

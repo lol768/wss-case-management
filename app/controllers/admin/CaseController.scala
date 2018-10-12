@@ -171,12 +171,10 @@ class CaseController @Inject()(
       val (generalNotes, sectionNotes) = caseNotes.partition{ case (note, _) => generalNoteTypes.contains(note.noteType) }
       val sectionNotesByType = sectionNotes.groupBy{ case (note, _) => note.noteType }
 
-      profiles.getProfiles(c.clients).successMap { clientProfiles =>
+      profiles.getProfiles(c.clients.map(_.universityID)).successMap { clientProfiles =>
         Ok(views.html.admin.cases.view(
           c,
-          (c.clients.toSeq ++ a.flatMap(_.clients.map(_.universityID))).distinct
-            .map { id => clientProfiles.get(id).map(Right.apply).getOrElse(Left(id)) }
-            .sortBy { e => (e.isLeft, e.right.map(_.fullName).toOption) },
+          (c.clients.toSeq ++ a.flatMap(_.clients.map(_.client))).distinct.map(client => client -> clientProfiles.get(client.universityID)).toMap,
           ownerUsers,
           generalNotes,
           sectionNotesByType,
@@ -226,7 +224,7 @@ class CaseController @Inject()(
         Ok(views.html.admin.cases.create(
           teamRequest.team,
           baseForm.bind(Map(
-            "clients[0]" -> enquiry.universityID.string,
+            "clients[0]" -> enquiry.client.universityID.string,
             "originalEnquiry" -> enquiry.id.get.toString
           )).discardingErrors
         ))
@@ -277,7 +275,7 @@ class CaseController @Inject()(
           enquiries.get(enquiryId).flatMap(_.fold(
             errors => Future.successful(Left(errors)),
             enquiry =>
-              enquiries.updateState(enquiry, IssueState.Closed, enquiry.version).map(_.right.map(Some(_)))
+              enquiries.updateState(enquiryId, IssueState.Closed, enquiry.lastUpdated).map(_.right.map(Some(_)))
           ))
         }.getOrElse(Future.successful(Right(None)))
 
@@ -321,7 +319,7 @@ class CaseController @Inject()(
           clientCase,
           form(clientCase.team, profiles, enquiries, Some(clientCase.version))
             .fill(CaseFormData(
-              clients,
+              clients.map(_.universityID),
               clientCase.subject,
               clientCase.incidentDate.map { incidentDate =>
                 CaseIncidentFormData(

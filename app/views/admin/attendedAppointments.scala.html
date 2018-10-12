@@ -5,8 +5,7 @@
 
 @(
   appointments: Seq[AppointmentRender],
-  clientLookup: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
   userLookup: Option[Map[Usercode, User]]
 )(implicit context: RequestContext)
 
-@views.html.admin.appointmentTable(Some("Attended appointments"), appointments, clientLookup, userLookup, Some("There are no attended appointments"))
+@views.html.admin.appointmentTable(Some("Attended appointments"), appointments, userLookup, Some("There are no attended appointments"))

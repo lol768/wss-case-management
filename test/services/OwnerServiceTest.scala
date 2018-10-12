@@ -2,15 +2,14 @@ package services
 
 import java.time.ZonedDateTime
 
+import domain.IssueState.Open
 import domain._
-import domain.dao.{AbstractDaoTest, DaoRunner}
+import domain.dao.AbstractDaoTest
 import helpers.{DataFixture, JavaTime}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.ac.warwick.util.core.DateTimeUtils
 import warwick.sso.{UniversityID, Usercode}
-
-import scala.util.Random
 
 class OwnerServiceTest extends AbstractDaoTest {
 
@@ -24,22 +23,17 @@ class OwnerServiceTest extends AbstractDaoTest {
 
   private val enquiryService = get[EnquiryService]
   private val ownerService = get[OwnerService]
-  private val runner = get[DaoRunner]
-
-  import profile.api._
 
   val uniId1 = UniversityID("1")
 
   class EnquiriesFixture extends DataFixture[Unit] {
     override def setup(): Unit = {
       for (_ <- 1 to 10) {
-        val enquiryDate = JavaTime.offsetDateTime.minusDays(10L).plusHours(Random.nextInt(24 * 20).toLong)
-        val enquiry = enquiryService.save(Enquiry(
+        enquiryService.save(EnquirySave(
           universityID = uniId1,
           subject = "Enquiry",
           team = Teams.WellbeingSupport,
-          version = enquiryDate,
-          created = enquiryDate
+          state = Open
         ), MessageSave(
           "Hello", MessageSender.Client, None
         ), Nil).serviceValue

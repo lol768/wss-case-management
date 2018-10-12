@@ -153,7 +153,7 @@ $(() => {
   });
 
   // be sure to bind the confirm-submit handler before other handlers on submit buttons
-  $(':button[data-toggle~="confirm-submit"][data-message]').on('click', function confirmBeforeSubmit(event) {
+  $('a[data-toggle~="confirm-submit"][data-message], :button[data-toggle~="confirm-submit"][data-message]').on('click', function confirmBeforeSubmit(event) {
     const $button = $(this);
     // eslint-disable-next-line no-alert
     if (!window.confirm($button.data('message'))) {
@@ -162,10 +162,11 @@ $(() => {
     }
   });
 
-  $(':button[data-toggle~="remove-submit"][data-target]').on('click', function removeAndSubmit() {
+  $('a[data-toggle~="remove-submit"][data-target], :button[data-toggle~="remove-submit"][data-target]').on('click', function removeAndSubmit(event) {
     const $button = $(this);
     const $form = $button.closest('form');
     $button.closest($button.data('target')).find(':input').remove();
+    event.preventDefault();
     $form.submit();
   });
 

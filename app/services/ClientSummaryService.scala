@@ -14,7 +14,8 @@ import warwick.core.timing.TimingContext
 import warwick.sso.UniversityID
 import domain.ExtendedPostgresProfile.api._
 import helpers.{JavaTime, ServiceResults}
-import services.tabula.ProfileService
+import ServiceResults.Implicits._
+import domain.dao.ClientDao.StoredClient
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -32,7 +33,7 @@ class ClientSummaryServiceImpl @Inject()(
   auditService: AuditService,
   caseService: CaseService,
   enquiryService: EnquiryService,
-  profileService: ProfileService,
+  clientService: ClientService,
   dao: ClientSummaryDao,
   daoRunner: DaoRunner
 )(implicit executionContext: ExecutionContext) extends ClientSummaryService {
@@ -58,12 +59,14 @@ class ClientSummaryServiceImpl @Inject()(
       'ClientSummary,
       Json.toJson(summary)(ClientSummarySave.formatter)
     ) {
-      daoRunner.run(for {
-        inserted <- dao.insert(toStored(universityID, summary))
-        reasonableAdjustments <- dao.insertReasonableAdjustments(summary.reasonableAdjustments.map(r => toStored(universityID, r)))
-      } yield (inserted, reasonableAdjustments)).map { case (inserted, reasonableAdjustments) =>
-        Right(inserted.asClientSummary(reasonableAdjustments.map(_.reasonableAdjustment).toSet))
-      }
+      clientService.getOrAddClients(Set(universityID)).successFlatMapTo(clients =>
+        daoRunner.run(for {
+          inserted <- dao.insert(toStored(universityID, summary))
+          reasonableAdjustments <- dao.insertReasonableAdjustments(summary.reasonableAdjustments.map(r => toStored(universityID, r)))
+        } yield (inserted, reasonableAdjustments)).map { case (inserted, reasonableAdjustments) =>
+          Right(inserted.asClientSummary(clients.head, reasonableAdjustments.map(_.reasonableAdjustment).toSet))
+        }
+      )
     }
 
   override def update(universityID: UniversityID, summary: ClientSummarySave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]] =
@@ -73,20 +76,22 @@ class ClientSummaryServiceImpl @Inject()(
       'ClientSummary,
       Json.toJson(summary)(ClientSummarySave.formatter)
     ) {
-      daoRunner.run(for {
-        updated <- dao.update(toStored(universityID, summary), version)
-        _ <- updateDifferencesDBIO[StoredReasonableAdjustment, ReasonableAdjustment](
-          summary.reasonableAdjustments,
-          dao.getReasonableAdjustmentsQuery(universityID),
-          _.reasonableAdjustment,
-          r => toStored(universityID, r),
-          dao.insertReasonableAdjustments,
-          dao.deleteReasonableAdjustments
-        )
-        updatedAdjustments <- dao.getReasonableAdjustmentsQuery(universityID).result
-      } yield {
-        Right(updated.asClientSummary(updatedAdjustments.map(_.reasonableAdjustment).toSet))
-      })
+      clientService.getOrAddClients(Set(universityID)).successFlatMapTo(clients =>
+        daoRunner.run(for {
+          updated <- dao.update(toStored(universityID, summary), version)
+          _ <- updateDifferencesDBIO[StoredReasonableAdjustment, ReasonableAdjustment](
+            summary.reasonableAdjustments,
+            dao.getReasonableAdjustmentsQuery(universityID),
+            _.reasonableAdjustment,
+            r => toStored(universityID, r),
+            dao.insertReasonableAdjustments,
+            dao.deleteReasonableAdjustments
+          )
+          updatedAdjustments <- dao.getReasonableAdjustmentsQuery(universityID).result
+        } yield {
+          Right(updated.asClientSummary(clients.head, updatedAdjustments.map(_.reasonableAdjustment).toSet))
+        })
+      )
     }
 
   override def get(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]] =
@@ -100,52 +105,47 @@ class ClientSummaryServiceImpl @Inject()(
       dao.findAtRiskQuery(
         if (includeMentalHealth) Some(true) else None,
         Set(ClientRiskStatus.Medium, ClientRiskStatus.High)
-      ).result
+      ).withClient.result
     ).flatMap(summaries =>
-      profileService.getProfiles(summaries.map(_.universityID).toSet).flatMap(_.fold(
-        errors => Future.successful(Left(errors)),
-        profileMap =>
-          ServiceResults.futureSequence(
-            summaries.map { summary =>
-              val casesAndEnquiries = ServiceResults.zip(
-                caseService.findForClient(summary.universityID),
-                enquiryService.findEnquiriesForClient(summary.universityID)
+      ServiceResults.futureSequence(
+        summaries.map { summary =>
+          val casesAndEnquiries = ServiceResults.zip(
+            caseService.findForClient(summary.client.universityID),
+            enquiryService.findEnquiriesForClient(summary.client.universityID)
+          )
+          casesAndEnquiries.map(_.map {
+            case (cases, enquiries) =>
+              AtRiskClient(
+                summary,
+                cases.map(CaseService.lastModified).sorted(JavaTime.dateTimeOrdering).lastOption,
+                enquiries.map(EnquiryService.lastModified).sorted(JavaTime.dateTimeOrdering).lastOption
               )
-              casesAndEnquiries.map(_.map {
-                case (cases, enquiries) =>
-                  AtRiskClient(
-                    summary,
-                    profileMap.get(summary.universityID),
-                    cases.map(CaseService.lastModified).sorted(JavaTime.dateTimeOrdering).lastOption,
-                    enquiries.map(EnquiryService.lastModified).sorted(JavaTime.dateTimeOrdering).lastOption
-                  )
-                case _ =>
-                  // Never actually used but good for typing
-                  AtRiskClient(summary, None, None, None)
-              })
-            }
-          ).map(_.map(_.toSet))
-      ))
+            case _ =>
+              // Never actually used but good for typing
+              AtRiskClient(summary, None, None)
+          })
+        }
+      ).map(_.map(_.toSet))
     )
   }
 
-  private def withReasonableAdjustments(result: DBIO[Option[StoredClientSummary]])(implicit t: TimingContext): Future[Option[ClientSummary]] = {
+  private def withReasonableAdjustments(result: DBIO[Option[(StoredClientSummary, StoredClient)]])(implicit t: TimingContext): Future[Option[ClientSummary]] = {
     daoRunner.run(for {
       summaryOption <- result
       adjustments <- summaryOption match {
-        case Some(summary) => dao.getReasonableAdjustmentsQuery(summary.universityID).result
+        case Some((summary, _)) => dao.getReasonableAdjustmentsQuery(summary.universityID).result
         case None => DBIO.successful(Nil)
       }
     } yield {
-      summaryOption.map(_.asClientSummary(adjustments.map(_.reasonableAdjustment).toSet))
+      summaryOption.map { case (summary, client) => summary.asClientSummary(client.asClient, adjustments.map(_.reasonableAdjustment).toSet) }
     })
   }
 
-  private def withReasonableAdjustmentsSeq(result: DBIO[Seq[StoredClientSummary]])(implicit t: TimingContext): Future[Seq[ClientSummary]] = {
-    daoRunner.run(result).flatMap(summaries => Future.sequence(summaries.map(summary =>
+  private def withReasonableAdjustmentsSeq(result: DBIO[Seq[(StoredClientSummary, StoredClient)]])(implicit t: TimingContext): Future[Seq[ClientSummary]] = {
+    daoRunner.run(result).flatMap(summaries => Future.sequence(summaries.map { case (summary, client) =>
       daoRunner.run(dao.getReasonableAdjustmentsQuery(summary.universityID).result).map(adjustments =>
-        summary.asClientSummary(adjustments.map(_.reasonableAdjustment).toSet)
+        summary.asClientSummary(client.asClient, adjustments.map(_.reasonableAdjustment).toSet)
       )
-    )))
+    }))
   }
 }

@@ -8,7 +8,7 @@ import enumeratum.{EnumEntry, PlayEnum}
 import helpers.JavaTime
 import play.api.data.format.Formatter
 import play.api.data.{FormError, Forms, Mapping}
-import warwick.sso.{UniversityID, User, Usercode}
+import warwick.sso.{User, Usercode}
 
 import scala.collection.immutable
 import scala.util.Try
@@ -31,21 +31,18 @@ case class Appointment(
 
   def subject(
     userLookupOption: Option[Map[Usercode, User]],
-    clientLookupOption: Option[Set[Either[UniversityID, SitsProfile]]]
+    clientsOption: Option[Set[AppointmentClient]]
   ): String = "%s with %s%s%s".format(
     appointmentType.description,
     userLookupOption.map(userLookup =>
       "%s".format(userLookup.get(teamMember).flatMap(_.name.full).getOrElse(teamMember.string))
     ).getOrElse(""),
-    if (userLookupOption.nonEmpty && clientLookupOption.nonEmpty) " and " else "",
-    clientLookupOption.map(clientLookup =>
-      if (clientLookup.size == 1) {
-        clientLookup.head.fold(
-          universityID => universityID.string,
-          sitsProfile => sitsProfile.fullName
-        )
+    if (userLookupOption.nonEmpty && clientsOption.nonEmpty) " and " else "",
+    clientsOption.map(clients =>
+      if (clients.size == 1) {
+        clients.head.client.safeFullName
       } else {
-        s"${clientLookup.size} clients"
+        s"${clients.size} clients"
       }
     ).getOrElse("")
   )
@@ -85,7 +82,7 @@ case class AppointmentRender(
 )
 
 case class AppointmentClient(
-  universityID: UniversityID,
+  client: Client,
   state: AppointmentState,
   cancellationReason: Option[AppointmentCancellationReason]
 )

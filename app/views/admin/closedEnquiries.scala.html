@@ -3,9 +3,6 @@
 @import domain.{Enquiry, MessageData, SitsProfile}
 @import warwick.sso.UniversityID
 
-@(
-  enquiries: Seq[(Enquiry, MessageData)],
-  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
-)(implicit context: RequestContext)
+@(enquiries: Seq[(Enquiry, MessageData)])(implicit context: RequestContext)
 
-@views.html.admin.enquiryTable(None, enquiries, clients, Some("There are no closed enquiries"))
+@views.html.admin.enquiryTable(None, enquiries, Some("There are no closed enquiries"))
