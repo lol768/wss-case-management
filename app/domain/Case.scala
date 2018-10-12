@@ -3,7 +3,7 @@ package domain
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import domain.CaseHistory.History
+import domain.CaseHistory.FieldHistory
 import domain.dao.CaseDao.{Case, CaseVersion, StoredCaseClient, StoredCaseClientVersion, StoredCaseTag, StoredCaseTagVersion}
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.JavaTime
@@ -155,7 +155,7 @@ object CaseDocumentType extends PlayEnum[CaseDocumentType] {
 
 object CaseHistory {
 
-  private type History[A] = Seq[(A, OffsetDateTime, Option[Either[Usercode, User]])]
+  private type FieldHistory[A] = Seq[(A, OffsetDateTime, Option[Either[Usercode, User]])]
 
   val writer: Writes[CaseHistory] = (r: CaseHistory) => Json.obj(
     "subject" -> toJson(r.subject),
@@ -186,11 +186,11 @@ object CaseHistory {
     val usersByUsercode = userLookupService.getUsers(usercodes.distinct).toOption.getOrElse(Map())
     def toUsercodeOrUser(u: Usercode): Either[Usercode, User] = usersByUsercode.get(u).map(Right.apply).getOrElse(Left(u))
 
-    def simpleFieldHistory[A](getValue: CaseVersion => A): History[A] =
+    def simpleFieldHistory[A](getValue: CaseVersion => A): FieldHistory[A] =
       flatten(history.map(c => (getValue(c), c.version, c.auditUser))).map {
         case (c,v,u) => (c, v, u.map(toUsercodeOrUser))
       }
-    
+
     clientService.getOrAddClients(rawClientHistory.map(_.universityID).toSet).map(_.map(clients =>
       CaseHistory(
         subject = simpleFieldHistory(_.subject),
@@ -251,7 +251,7 @@ object CaseHistory {
       .reverse
   }
 
-  private def toJson[A](items: History[A])(implicit itemWriter: Writes[A]): JsValue =
+  private def toJson[A](items: FieldHistory[A])(implicit itemWriter: Writes[A]): JsValue =
     Json.toJson(items.map { case (item, version, auditUser) => Json.obj(
       "value" -> Json.toJson(item),
       "version" -> version,
@@ -265,18 +265,18 @@ object CaseHistory {
 
 
 case class CaseHistory(
-  subject: History[String],
-  team: History[Team],
-  state: History[IssueState],
-  incidentDate: History[Option[OffsetDateTime]],
-  onCampus: History[Option[Boolean]],
-  notifiedPolice: History[Option[Boolean]],
-  notifiedAmbulance: History[Option[Boolean]],
-  notifiedFire: History[Option[Boolean]],
-  originalEnquiry: History[Option[UUID]],
-  caseType: History[Option[CaseType]],
-  cause: History[CaseCause],
-  tags: History[Set[CaseTag]],
+  subject: FieldHistory[String],
+  team: FieldHistory[Team],
+  state: FieldHistory[IssueState],
+  incidentDate: FieldHistory[Option[OffsetDateTime]],
+  onCampus: FieldHistory[Option[Boolean]],
+  notifiedPolice: FieldHistory[Option[Boolean]],
+  notifiedAmbulance: FieldHistory[Option[Boolean]],
+  notifiedFire: FieldHistory[Option[Boolean]],
+  originalEnquiry: FieldHistory[Option[UUID]],
+  caseType: FieldHistory[Option[CaseType]],
+  cause: FieldHistory[CaseCause],
+  tags: FieldHistory[Set[CaseTag]],
   owners: Seq[(Set[Either[Usercode, User]], OffsetDateTime, Option[Either[Usercode, User]])],
-  clients: History[Set[Client]],
+  clients: FieldHistory[Set[Client]],
 )
