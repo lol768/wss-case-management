@@ -8,6 +8,8 @@ import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.AppointmentDao._
+import domain.dao.AppointmentDao.AppointmentCase.AppointmentCases
+import domain.dao.CaseDao.cases
 import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
@@ -38,7 +40,9 @@ trait AppointmentDao {
   def findCancelledQuery: Query[Appointments, StoredAppointment, Seq]
   def searchQuery(query: AppointmentSearchQuery): Query[Appointments, StoredAppointment, Seq]
 
-
+  def casesForAppointmentQuery(appointment: UUID): Query[AppointmentCases, AppointmentCase, Seq]
+  def insertCaseLinks(joins: Set[AppointmentCase])(implicit ac: AuditLogContext): DBIO[Seq[AppointmentCase]]
+  def deleteCaseLinks(joins: Set[AppointmentCase])(implicit ac: AuditLogContext): DBIO[Done]
   def insertClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredAppointmentClient]]
   def updateClient(client: StoredAppointmentClient)(implicit ac: AuditLogContext): DBIO[StoredAppointmentClient]
   def deleteClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Done]
@@ -78,7 +82,9 @@ class AppointmentDaoImpl @Inject()(
       .map { case (a, _, _) => a }
 
   override def findByCaseQuery(caseID: UUID): Query[Appointments, StoredAppointment, Seq] =
-    appointments.table.filter(_.caseID === caseID)
+    appointments.table.withCases
+      .filter { case (_, clientCase) => clientCase.id === caseID }
+      .map { case (a, _) => a }
 
   override def findDeclinedQuery: Query[Appointments, StoredAppointment, Seq] =
     appointments.table
@@ -148,6 +154,16 @@ class AppointmentDaoImpl @Inject()(
       .map { case (a, _) => a }
   }
 
+  override def casesForAppointmentQuery(appointmentId: UUID): Query[AppointmentCases, AppointmentCase, Seq] = {
+    AppointmentCase.appointmentCases.table.filter(ac => ac.appointmentID === appointmentId)
+  }
+
+  override def insertCaseLinks(joins: Set[AppointmentCase])(implicit ac: AuditLogContext): DBIO[Seq[AppointmentCase]] =
+    AppointmentCase.appointmentCases.insertAll(joins.toSeq)
+
+  override def deleteCaseLinks(joins: Set[AppointmentCase])(implicit ac: AuditLogContext): DBIO[Done] =
+    AppointmentCase.appointmentCases.deleteAll(joins.toSeq)
+
   override def insertClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Seq[StoredAppointmentClient]] =
     appointmentClients.insertAll(clients.toSeq)
 
@@ -191,7 +207,6 @@ object AppointmentDao {
   case class StoredAppointment(
     id: UUID,
     key: IssueKey,
-    caseID: Option[UUID],
     start: OffsetDateTime,
     duration: Duration,
     location: Option[Location],
@@ -224,7 +239,6 @@ object AppointmentDao {
       StoredAppointmentVersion(
         id,
         key,
-        caseID,
         start,
         duration,
         location,
@@ -244,7 +258,6 @@ object AppointmentDao {
   case class StoredAppointmentVersion(
     id: UUID,
     key: IssueKey,
-    caseID: Option[UUID],
     start: OffsetDateTime,
     duration: Duration,
     location: Option[Location],
@@ -264,7 +277,6 @@ object AppointmentDao {
   trait CommonAppointmentProperties { self: Table[_] =>
     def key = column[IssueKey]("appointment_key")
     def searchableKey = toTsVector(key.asColumnOf[String], Some("english"))
-    def caseID = column[Option[UUID]]("case_id")
     def start = column[OffsetDateTime]("start_utc")
     def duration = column[Duration]("duration_secs")
     def location = column[Option[Location]]("location")
@@ -285,7 +297,7 @@ object AppointmentDao {
     def id = column[UUID]("id", O.PrimaryKey)
 
     override def * : ProvenShape[StoredAppointment] =
-      (id, key, caseID, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[StoredAppointment]
+      (id, key, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[StoredAppointment]
     def appointment =
       (id, key, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[Appointment]
 
@@ -299,8 +311,6 @@ object AppointmentDao {
     def keyIndex = index("idx_appointment_key", key, unique = true)
     def teamIndex = index("idx_appointment_team", (start, team))
     def teamMemberIndex = index("idx_appointment_team_member", (start, teamMember))
-    def caseIndex = index("idx_appointment_case", caseID)
-    def caseFK = foreignKey("fk_appointment_case", caseID, CaseDao.cases.table)(_.id.?)
     def stateIndex = index("idx_appointment_state", state)
   }
 
@@ -313,7 +323,7 @@ object AppointmentDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredAppointmentVersion] =
-      (id, key, caseID, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
+      (id, key, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
     def pk = primaryKey("pk_appointment_version", (id, timestamp))
     def idx = index("idx_appointment_version", (id, version))
   }
@@ -325,9 +335,12 @@ object AppointmentDao {
       .join(ClientDao.clients.table)
       .on { case ((_, ac), c) => ac.universityID === c.universityID }
       .map { case ((a, ac), c) => (a, ac, c) }
-    def withCase = q
-      .joinLeft(CaseDao.cases.table)
-      .on(_.caseID === _.id)
+    def withCases = q
+      .join(AppointmentCase.appointmentCases.table)
+      .on(_.id === _.appointmentID)
+      .join(CaseDao.cases.table)
+      .on(_._2.caseID === _.id)
+      .map { case ((a, _), c) => (a, c) }
     def withNotes = q
       .joinLeft(appointmentNotes.table)
       .on(_.id === _.appointmentId)
@@ -528,4 +541,72 @@ object AppointmentDao {
       appointmentType.nonEmpty ||
       states.nonEmpty
   }
+
+  case class AppointmentCase(
+    id: UUID,
+    appointmentID: UUID,
+    caseID: UUID,
+    teamMember: Usercode,
+    version: OffsetDateTime
+  ) extends Versioned[AppointmentCase] {
+
+    override def atVersion(at: OffsetDateTime): AppointmentCase = copy(version = at)
+    override def storedVersion[B <: StoredVersion[AppointmentCase]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
+      AppointmentCaseVersion(
+        id,
+        appointmentID,
+        caseID,
+        teamMember,
+        version,
+        operation,
+        timestamp,
+        ac.usercode
+      ).asInstanceOf[B]
+  }
+
+  object AppointmentCase extends Versioning {
+
+    def tupled = (AppointmentCase.apply _).tupled
+
+    sealed trait AppointmentCaseProperties {
+      self: Table[_] =>
+
+      def id = column[UUID]("id")
+      def appointmentID = column[UUID]("appointment_id")
+      def caseID = column[UUID]("case_id")
+      def teamMember = column[Usercode]("team_member")
+      def version = column[OffsetDateTime]("version_utc")
+    }
+
+    class AppointmentCases(tag: Tag) extends Table[AppointmentCase](tag, "appointment_case") with VersionedTable[AppointmentCase] with AppointmentCaseProperties {
+      override def matchesPrimaryKey(other: AppointmentCase): Rep[Boolean] = id === other.id
+      def pk = primaryKey("pk_appointment_case", id)
+      def fkAppointment = foreignKey("fk_appointment_case_appointment", appointmentID, appointments.table)(_.id)
+      def fkCase = foreignKey("fk_appointment_case_case", caseID, cases.table)(_.id)
+      def * : ProvenShape[AppointmentCase] = (id, appointmentID, caseID, teamMember, version).mapTo[AppointmentCase]
+    }
+
+    class AppointmentCaseVersions(tag: Tag) extends Table[AppointmentCaseVersion](tag, "appointment_case_version") with StoredVersionTable[AppointmentCase] with AppointmentCaseProperties {
+      def operation = column[DatabaseOperation]("version_operation")
+      def timestamp = column[OffsetDateTime]("version_timestamp_utc")
+      def auditUser = column[Option[Usercode]]("version_user")
+      def * = (id, appointmentID, caseID, teamMember, version, operation, timestamp, auditUser).mapTo[AppointmentCaseVersion]
+      def pk = primaryKey("pk_appointment_case_version", (id, timestamp))
+    }
+
+    val appointmentCases: VersionedTableQuery[AppointmentCase, AppointmentCaseVersion, AppointmentCases, AppointmentCaseVersions] =
+      VersionedTableQuery(TableQuery[AppointmentCases], TableQuery[AppointmentCaseVersions])
+  }
+
+  case class AppointmentCaseVersion(
+    id: UUID,
+    appointmentID: UUID,
+    caseID: UUID,
+    teamMember: Usercode,
+    version: OffsetDateTime = OffsetDateTime.now(),
+    operation: DatabaseOperation,
+    timestamp: OffsetDateTime,
+    auditUser: Option[Usercode]
+  ) extends StoredVersion[AppointmentCase]
+
 }

@@ -54,9 +54,13 @@
           @a.appointment.appointmentType.description
         }
 
-        @a.clientCase.map { clientCase =>
-          @tags.sectioned.detail("Case") {
-            <a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">@clientCase.key.get.string @clientCase.subject</a>
+        @if(a.clientCases.nonEmpty) {
+          @tags.sectioned.detail("Cases") {
+            <ul class="list-unstyled">
+            @a.clientCases.map { clientCase =>
+              <li><a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">@clientCase.key.get.string @clientCase.subject</a></li>
+            }
+            </ul>
           }
         }
 

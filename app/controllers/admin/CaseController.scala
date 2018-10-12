@@ -174,7 +174,7 @@ class CaseController @Inject()(
       profiles.getProfiles(c.clients.map(_.universityID)).successMap { clientProfiles =>
         Ok(views.html.admin.cases.view(
           c,
-          c.clients.map(client => client -> clientProfiles.get(client.universityID)).toMap,
+          (c.clients.toSeq ++ a.flatMap(_.clients.map(_.client))).distinct.map(client => client -> clientProfiles.get(client.universityID)).toMap,
           ownerUsers,
           generalNotes,
           sectionNotesByType,

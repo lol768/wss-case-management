@@ -8,10 +8,10 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.AppointmentDao.{AppointmentSearchQuery, Appointments, StoredAppointment, StoredAppointmentClient, StoredAppointmentNote}
+import domain.dao.AppointmentDao.{AppointmentCase, AppointmentSearchQuery, Appointments, StoredAppointment, StoredAppointmentClient, StoredAppointmentNote}
 import domain.dao.CaseDao.Case
-import domain.dao.ClientDao.StoredClient
 import domain.dao.{AppointmentDao, DaoRunner}
+import domain.dao.ClientDao.StoredClient
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
@@ -29,8 +29,8 @@ import scala.language.higherKinds
 
 @ImplementedBy(classOf[AppointmentServiceImpl])
 trait AppointmentService {
-  def create(appointment: AppointmentSave, clients: Set[UniversityID], team: Team, caseID: Option[UUID])(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
-  def update(id: UUID, appointment: AppointmentSave, clients: Set[UniversityID], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+  def create(appointment: AppointmentSave, clients: Set[UniversityID], team: Team, caseIDs: Set[UUID])(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+  def update(id: UUID, appointment: AppointmentSave, cases: Set[UUID], clients: Set[UniversityID], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Appointment]]
   def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
@@ -88,11 +88,10 @@ class AppointmentServiceImpl @Inject()(
   scheduler: Scheduler,
 )(implicit ec: ExecutionContext) extends AppointmentService with Logging {
 
-  private def createStoredAppointment(id: UUID, key: IssueKey, save: AppointmentSave, team: Team, caseID: Option[UUID]): StoredAppointment =
+  private def createStoredAppointment(id: UUID, key: IssueKey, save: AppointmentSave, team: Team): StoredAppointment =
     StoredAppointment(
       id,
       key,
-      caseID,
       save.start,
       save.duration,
       save.location,
@@ -105,13 +104,23 @@ class AppointmentServiceImpl @Inject()(
       JavaTime.offsetDateTime
     )
 
-  override def create(appointment: AppointmentSave, clients: Set[UniversityID], team: Team, caseID: Option[UUID])(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
+  private def createCaseLink(appointment:UUID, caseId: UUID, teamMember:Usercode) =
+    AppointmentCase(
+      UUID.randomUUID(),
+      appointment,
+      caseId,
+      teamMember,
+      JavaTime.offsetDateTime
+    )
+
+  override def create(appointment: AppointmentSave, clients: Set[UniversityID], team: Team, caseIDs: Set[UUID])(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
     val id = UUID.randomUUID()
     auditService.audit('AppointmentSave, id.toString, 'Appointment, Json.obj()) {
       clientService.getOrAddClients(clients).successFlatMapTo(_ =>
         daoRunner.run(for {
           nextId <- sql"SELECT nextval('SEQ_APPOINTMENT_KEY')".as[Int].head
-          inserted <- dao.insert(createStoredAppointment(id, IssueKey(IssueKeyType.Appointment, nextId), appointment, team, caseID))
+          inserted <- dao.insert(createStoredAppointment(id, IssueKey(IssueKeyType.Appointment, nextId), appointment, team))
+          _ <- dao.insertCaseLinks(caseIDs.map(cid => createCaseLink(id, cid, appointment.teamMember)))
           _ <- dao.insertClients(clients.map { universityID =>
             StoredAppointmentClient(
               universityID,
@@ -135,7 +144,7 @@ class AppointmentServiceImpl @Inject()(
     }
   }
 
-  override def update(id: UUID, changes: AppointmentSave, clients: Set[UniversityID], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
+  override def update(id: UUID, changes: AppointmentSave, cases: Set[UUID], clients: Set[UniversityID], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
     auditService.audit('AppointmentUpdate, id.toString, 'Appointment, Json.obj()) {
       def newState(existing: StoredAppointment, clientResult: UpdateDifferencesResult[StoredAppointmentClient]): AppointmentState =
         if (existing.state == AppointmentState.Provisional || existing.state == AppointmentState.Cancelled || existing.state == AppointmentState.Attended)
@@ -150,6 +159,14 @@ class AppointmentServiceImpl @Inject()(
       clientService.getOrAddClients(clients).successFlatMapTo(_ =>
         daoRunner.run(for {
           existing <- dao.findByIDQuery(id).result.head
+          _ <- updateDifferencesDBIO[AppointmentCase, UUID](
+            cases,
+            dao.casesForAppointmentQuery(id),
+            _.id,
+            caseId => createCaseLink(id, caseId, changes.teamMember),
+            dao.insertCaseLinks,
+            dao.deleteCaseLinks
+          )
           clientsResult <- updateDifferencesDBIO[StoredAppointmentClient, UniversityID](
             clients,
             dao.findClientsQuery(Set(id)),
@@ -170,7 +187,6 @@ class AppointmentServiceImpl @Inject()(
             StoredAppointment(
               existing.id,
               existing.key,
-              existing.caseID,
               changes.start,
               changes.duration,
               changes.location,
@@ -251,7 +267,7 @@ class AppointmentServiceImpl @Inject()(
     daoRunner.run(
       for {
         withClients <- query.withClients.map { case (a, ac, c) => (a.appointment, ac, c) }.result
-        withCase <- query.withCase.map { case (a, c) => (a.appointment, c) }.result
+        withCase <- query.withCases.map { case (a, c) => (a.appointment, c) }.result
         withNotes <- query.withNotes.map { case (a, n) => (a.appointment, n) }.result
       } yield Right(groupTuples(withClients, withCase, withNotes))
     )
@@ -490,17 +506,17 @@ class AppointmentServiceImpl @Inject()(
 }
 
 object AppointmentService {
-  def groupTuples(withClients: Seq[(Appointment, StoredAppointmentClient, StoredClient)], withCase: Seq[(Appointment, Option[Case])], withNotes: Seq[(Appointment, Option[StoredAppointmentNote])]): Seq[AppointmentRender] = {
+  def groupTuples(withClients: Seq[(Appointment, StoredAppointmentClient, StoredClient)], withCase: Seq[(Appointment, Case)], withNotes: Seq[(Appointment, Option[StoredAppointmentNote])]): Seq[AppointmentRender] = {
     val appointmentsAndClients = OneToMany.join(withClients.map { case (a, ac, c) => (a, ac.asAppointmentClient(c.asClient)) })(Ordering.by[AppointmentClient, String](_.client.universityID.string))
 
-    val appointmentsAndCase = withCase.toMap
+    val appointmentAndCases = OneToMany.join(withCase)(Case.dateOrdering).toMap
 
     val appointmentsAndNotes = OneToMany.leftJoin(withNotes.map { case (a, n) => (a, n.map(_.asAppointmentNote)) })(AppointmentNote.dateOrdering).toMap
 
     appointmentsAndClients.map { case (appointment, clients) => AppointmentRender(
       appointment = appointment,
       clients = clients.toSet,
-      appointmentsAndCase.getOrElse(appointment, None),
+      appointmentAndCases.getOrElse(appointment, Seq()).toSet,
       appointmentsAndNotes.getOrElse(appointment, Seq())
     ) }
       .sortBy(_.appointment.start)(JavaTime.dateTimeOrdering)

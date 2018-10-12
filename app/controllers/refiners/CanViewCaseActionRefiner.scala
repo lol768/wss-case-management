@@ -24,4 +24,7 @@ class CanViewCaseActionRefiner @Inject()(
   def CanViewCaseAction(caseKey: IssueKey): ActionBuilder[CaseSpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithCase(caseKey) andThen CanViewCase
 
+  def CanViewCaseAction(keyOrId: String): ActionBuilder[CaseSpecificRequest, AnyContent] =
+    securityService.SigninRequiredAction andThen WithCase(keyOrId) andThen CanViewCase
+
 }

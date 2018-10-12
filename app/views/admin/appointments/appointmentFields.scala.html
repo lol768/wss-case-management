@@ -5,14 +5,25 @@
 
 @(
   form: Form[AppointmentFormData],
-  relatedCase: Option[Case],
+  relatedCases: Set[Case],
 )(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
 
-@relatedCase.map { c =>
-  @b3.inputWrapped("hidden", form("case"), '_label -> "Case") { input =>
-    @input
-    <p class="form-control-static">@c.key.get.string @c.subject</p>
-  }
+@b3.free('_label -> "Cases", '_class -> form.error("cases").map(_ => "has-error")) {
+  <div class="case-picker-collection" data-automatic="true" data-containers="case-picker-container">
+    @defining(form.data.filter { case (k, v) => k.startsWith("cases[") && v.nonEmpty }.values.toSeq) { values: Seq[String] =>
+      @if(values.nonEmpty){
+        @for(value <- values) {
+          <div class="case-picker-container">
+            <input type="text" class="case-picker form-control" name="cases[]" value="@value" placeholder="Search for a case" autocomplete="off" />
+          </div>
+        }
+      }
+      <div class="case-picker-container">
+        <input type="text" class="case-picker form-control" name="cases[]" placeholder="Search for a case" autocomplete="off" />
+      </div>
+    }
+  </div>
+  @b3.errors(form("cases"))
 }
 
 @b3.free('_label -> "Clients", '_class -> form.error("clients").map(_ => "has-error")) {
