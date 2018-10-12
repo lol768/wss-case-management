@@ -190,7 +190,7 @@ class CaseController @Inject()(
     }
   }
 
-  def renderCase()(implicit request: CaseSpecificRequest[_]): Future[Result] = {
+  private def renderCase()(implicit request: CaseSpecificRequest[_]): Future[Result] = {
     import request.{`case` => c}
     renderCase(
       c.key.get,

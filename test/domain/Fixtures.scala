@@ -12,12 +12,14 @@ import warwick.sso._
 object Fixtures {
   object users {
     val noUniId: User = Users.create(Usercode("nouniid"))
-    val studentNewVisitor: User = Users.create(
-      usercode = Usercode("student1"),
-      universityId = Some(UniversityID("9900001")),
+    private def undergrad(i: Int): User = Users.create(
+      usercode = Usercode(s"student$i"),
+      universityId = Some(UniversityID(f"${9900000+i}%d")),
       student = true,
       undergraduate = true
     )
+    val studentNewVisitor: User = undergrad(1)
+    val studentCaseClient: User = undergrad(2)
 
     private val baseStaff: User = Users.create(
       usercode = null,

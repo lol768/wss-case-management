@@ -12,8 +12,12 @@ trait OneAppPerSuite extends Suite
   with BeforeAndAfterAll {
   self: TestSuite =>
 
-  val postgres = EmbeddedPostgres.builder()
+  val postgres: EmbeddedPostgres = EmbeddedPostgres.builder()
     .setCleanDataDirectory(true)
+    // Set parameters for speed over durability
+    .setServerConfig("fsync", "false")
+    .setServerConfig("synchronous_commit", "off")
+    .setServerConfig("full_page_writes", "false")
     .start()
 
   override protected def afterAll(): Unit = {
