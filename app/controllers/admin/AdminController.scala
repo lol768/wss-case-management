@@ -3,12 +3,14 @@ package controllers.admin
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import controllers.BaseController
 import controllers.refiners.{CanViewTeamActionRefiner, TeamSpecificRequest}
+import controllers.{API, BaseController}
 import domain._
+import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.CaseDao.Case
 import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
+import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Result}
 import services.{AppointmentService, CaseService, ClientSummaryService, EnquiryService}
 import warwick.sso.UserLookupService
@@ -28,11 +30,8 @@ class AdminController @Inject()(
   import canViewTeamActionRefiner._
 
   def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    findEnquiriesAndCasesAndAppointments { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments, caseClients) => {
-      val usercodes = (declinedAppointments ++ provisionalAppointments ++ appointmentsNeedingOutcome).map(_.appointment.teamMember).toSet
-      val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
-
-      Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments, caseClients, userLookup))
+    findEnquiriesAndCasesAndAppointments { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments, caseClients) => {
+      Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments, caseClients))
     }}
   }
 
@@ -42,11 +41,6 @@ class AdminController @Inject()(
       Int,
       Seq[(Case, OffsetDateTime)],
       Int,
-      Seq[AppointmentRender], // Needing re-schedule
-      Seq[AppointmentRender], // Awaiting reply from client (in future)
-      Seq[AppointmentRender], // In the past, Accepted or Provisional
-      Int, // Accepted, in future
-      Int, // Attended
       Int, // Cancelled
       Map[UUID, Set[Client]]
     ) => Result)(implicit teamRequest: TeamSpecificRequest[_]) = {
@@ -56,15 +50,10 @@ class AdminController @Inject()(
       enquiries.countClosedEnquiries(teamRequest.team),
       cases.listOpenCases(teamRequest.team),
       cases.countClosedCases(teamRequest.team),
-      appointments.findDeclinedAppointments(teamRequest.team),
-      appointments.findProvisionalAppointments(teamRequest.team),
-      appointments.findAppointmentsNeedingOutcome(teamRequest.team),
-      appointments.countAcceptedAppointments(teamRequest.team),
-      appointments.countAttendedAppointments(teamRequest.team),
       appointments.countCancelledAppointments(teamRequest.team),
-    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments) =>
+    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments) =>
       cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMap { caseClients =>
-        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments, caseClients)
+        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments, caseClients)
       }
     }
   }
@@ -89,30 +78,31 @@ class AdminController @Inject()(
     )
   }
 
-  def acceptedAppointments(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    appointments.findAcceptedAppointments(teamRequest.team).successMap { appointments =>
-      val usercodes = appointments.map(_.appointment.teamMember).toSet
-      val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
-
-      Ok(views.html.admin.acceptedAppointments(appointments, Some(userLookup)))
-    }
-  }
-
-  def attendedAppointments(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    appointments.findAttendedAppointments(teamRequest.team).successMap { appointments =>
-      val usercodes = appointments.map(_.appointment.teamMember).toSet
-      val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
-
-      Ok(views.html.admin.attendedAppointments(appointments, Some(userLookup)))
-    }
-  }
-
   def cancelledAppointments(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     appointments.findCancelledAppointments(teamRequest.team).successMap { appointments =>
       val usercodes = appointments.map(_.appointment.teamMember).toSet
       val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
 
       Ok(views.html.admin.cancelledAppointments(appointments, Some(userLookup)))
+    }
+  }
+
+  def appointments(teamId: String, start: Option[OffsetDateTime], end: Option[OffsetDateTime]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    appointments.findForSearch(AppointmentSearchQuery(
+      startAfter = start.map(_.toLocalDate),
+      startBefore = end.map(_.toLocalDate),
+      team = Some(teamRequest.team),
+      states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended),
+    )).successMap { appointments =>
+      val usercodes = appointments.map(_.appointment.teamMember).toSet
+      val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
+
+      render {
+        case Accepts.Json() =>
+          Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(appointments)(Writes.seq(AppointmentRender.writer(userLookup))))))
+        case _ =>
+          Redirect(controllers.admin.routes.AdminController.teamHome(teamId).withFragment("appointments"))
+      }
     }
   }
 

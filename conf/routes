@@ -33,8 +33,7 @@ GET         /my-appointments                         @controllers.appointments.A
 GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries
 GET         /closed-cases                           @controllers.IndexController.closedCases
 GET         /at-risk-clients                        @controllers.IndexController.atRiskClients
-GET         /accepted-appointments                  @controllers.IndexController.acceptedAppointments
-GET         /attended-appointments                  @controllers.IndexController.attendedAppointments
+GET         /appointments                           @controllers.IndexController.appointments(start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
 GET         /cancelled-appointments                 @controllers.IndexController.cancelledAppointments
 
 ## Clients ##
@@ -63,8 +62,7 @@ GET         /team/:teamId                           @controllers.admin.AdminCont
 GET         /team/:teamId/closed-enquiries          @controllers.admin.AdminController.closedEnquiries(teamId: String)
 GET         /team/:teamId/closed-cases              @controllers.admin.AdminController.closedCases(teamId: String)
 GET         /team/:teamId/at-risk-clients           @controllers.admin.AdminController.atRiskClients(teamId: String)
-GET         /team/:teamId/accepted-appointments     @controllers.admin.AdminController.acceptedAppointments(teamId: String)
-GET         /team/:teamId/attended-appointments     @controllers.admin.AdminController.attendedAppointments(teamId: String)
+GET         /team/:teamId/appointments              @controllers.admin.AdminController.appointments(teamId: String, start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
 GET         /team/:teamId/cancelled-appointments    @controllers.admin.AdminController.cancelledAppointments(teamId: String)
 
 GET         /team/client/:universityID                          @controllers.admin.ClientController.client(universityID: warwick.sso.UniversityID)
@@ -116,8 +114,8 @@ DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocum
 POST        /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.addMessage(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
 GET         /team/case/:caseKey/attachments/:fileId @controllers.admin.CaseMessageController.download(caseKey: domain.IssueKey, fileId: java.util.UUID)
 
-GET         /team/appointment/create                @controllers.admin.AppointmentController.createSelectTeam(forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
-GET         /team/appointment/create/:teamId        @controllers.admin.AppointmentController.createForm(teamId: String, forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
+GET         /team/appointment/create                @controllers.admin.AppointmentController.createSelectTeam(forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None, start: Option[java.time.OffsetDateTime] ?= None, duration: Option[java.time.Duration] ?= None)
+GET         /team/appointment/create/:teamId        @controllers.admin.AppointmentController.createForm(teamId: String, forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None, start: Option[java.time.OffsetDateTime] ?= None, duration: Option[java.time.Duration] ?= None)
 POST        /team/appointment/create/:teamId        @controllers.admin.AppointmentController.create(teamId: String)
 GET         /team/appointment/:key                  @controllers.admin.AppointmentController.view(key: domain.IssueKey)
 GET         /team/appointment/:key/edit             @controllers.admin.AppointmentController.editForm(key: domain.IssueKey)

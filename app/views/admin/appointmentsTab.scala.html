@@ -1,19 +1,9 @@
-@import java.util.UUID
 
-@import domain.{AppointmentRender, SitsProfile}
-@import warwick.sso.{UniversityID, User, Usercode}
 
 @(
-  declinedAppointments: Seq[AppointmentRender],
-  provisionalAppointments: Seq[AppointmentRender],
-  appointmentsNeedingOutcome: Seq[AppointmentRender],
-  acceptedAppointments: Int,
-  attendedAppointments: Int,
   cancelledAppointments: Int,
-  userLookup: Option[Map[Usercode, User]],
+  eventsRoute: Call,
   createRoute: Call,
-  acceptedAppointmentsRoute: Call,
-  attendedAppointmentsRoute: Call,
   cancelledAppointmentsRoute: Call,
   searchScope: String,
   searchScopeValue: String,
@@ -27,33 +17,13 @@
 ) { implicit ifc =>
   @b3.free('_class -> "search-default") {
     <i class="fal fa-search"></i>
-    <input type="text" class="form-control input-lg" placeholder="Search cases@placeholderSuffix" />
+    <input type="text" class="form-control input-lg" placeholder="Search appointments@placeholderSuffix" />
   }
 }
 
 <p><a href="@createRoute" class="btn btn-default">Create a new appointment</a></p>
 
-@views.html.admin.appointmentTable(Some("Appointments needing attention"), declinedAppointments, userLookup)
-@views.html.admin.appointmentTable(Some("Appointment requests awaiting a response"), provisionalAppointments, userLookup)
-@views.html.admin.appointmentTable(Some("Appointments needing outcome"), appointmentsNeedingOutcome, userLookup)
-
-@if(acceptedAppointments > 0) {
-  <details data-toggle="load" data-href="@acceptedAppointmentsRoute" data-target=".content">
-    <summary>Show @tags.p(acceptedAppointments, "upcoming appointments")()</summary>
-    <div class="content">
-      <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
-    </div>
-  </details>
-}
-
-@if(attendedAppointments > 0) {
-  <details data-toggle="load" data-href="@attendedAppointmentsRoute" data-target=".content">
-    <summary>Show @tags.p(attendedAppointments, "attended appointments")()</summary>
-    <div class="content">
-      <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
-    </div>
-  </details>
-}
+<div class="appointment-calendar no-wide-tables" data-events="@eventsRoute" data-create="@createRoute"></div>
 
 @if(cancelledAppointments > 0) {
   <details data-toggle="load" data-href="@cancelledAppointmentsRoute" data-target=".content">

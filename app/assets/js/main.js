@@ -13,6 +13,7 @@ import MultiplePickers from './multiple-picker';
 import CaseSearch from './case-search';
 import EnquirySearch from './enquiry-search';
 import AppointmentSearch from './appointment-search';
+import AppointmentCalendar from './appointment-calendar';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -64,6 +65,10 @@ $(() => {
 
   $('.appointment-search').each((i, container) => {
     AppointmentSearch(container);
+  });
+
+  $('.appointment-calendar').each((i, container) => {
+    AppointmentCalendar(container);
   });
 
   $('html')
