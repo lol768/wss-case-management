@@ -1,7 +1,7 @@
 package services
 
-trait NoAuditLogging extends NoTimeTracking {
+trait NoAuditLogging {
 
-  implicit val auditLogContext: AuditLogContext = AuditLogContext.empty()(timingContext)
+  implicit val auditLogContext: AuditLogContext = AuditLogContext.empty()
 
 }

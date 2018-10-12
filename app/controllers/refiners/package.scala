@@ -32,21 +32,27 @@ package object refiners {
       override protected def executionContext: ExecutionContext = ec
     }
 
-  def WithCase(caseKey: IssueKey)(implicit caseService: CaseService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, CaseSpecificRequest] =
+  def WithCase(keyOrId: String)(implicit caseService: CaseService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, CaseSpecificRequest] =
     new ActionRefiner[AuthenticatedRequest, CaseSpecificRequest] {
       override protected def refine[A](request: AuthenticatedRequest[A]): Future[Either[Result, CaseSpecificRequest[A]]] = {
         implicit val requestContext: RequestContext = requestContextBuilder(request)
 
-        caseService.find(caseKey).map {
-          case Right(c) =>
-            Right(new CaseSpecificRequest[A](c, request))
-          case _ =>
-            Left(Results.NotFound(views.html.errors.notFound()))
-        }
+        Try(caseService.find(IssueKey.apply(keyOrId)))
+          .toOption
+          .getOrElse(caseService.find(UUID.fromString(keyOrId)))
+          .map {
+            case Right(c) =>
+              Right(new CaseSpecificRequest[A](c, request))
+            case _ =>
+              Left(Results.NotFound(views.html.errors.notFound()))
+          }
       }
 
       override protected def executionContext: ExecutionContext = ec
     }
+
+  def WithCase(caseKey: IssueKey)(implicit caseService: CaseService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, CaseSpecificRequest] =
+    WithCase(caseKey.string)
 
   def WithIssue(id: UUID)(implicit enquiryService: EnquiryService, caseService: CaseService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, IssueSpecificRequest] =
     new ActionRefiner[AuthenticatedRequest, IssueSpecificRequest] {

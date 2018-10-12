@@ -4,7 +4,7 @@ import javax.inject.Inject
 import org.quartz._
 import services.tabula.ProfileService
 import services.{AuditLogContext, ClientService}
-import system.Logging
+import warwick.core.Logging
 import warwick.core.timing.TimingContext
 
 import scala.concurrent.duration.Duration
@@ -18,9 +18,7 @@ class UpdateClientsJob @Inject()(
 )(implicit executionContext: ExecutionContext) extends Job with Logging {
 
   override def execute(context: JobExecutionContext): Unit = {
-    implicit val auditLogContext: AuditLogContext = AuditLogContext.empty()(
-      TimingContext.none // TODO could provide a real context per job run, to track sluggish jobs
-    )
+    implicit val auditLogContext: AuditLogContext = AuditLogContext.empty()
 
     Await.result(
       clientService.getForUpdate.flatMap {

@@ -79,7 +79,7 @@ case class AppointmentSave(
 case class AppointmentRender(
   appointment: Appointment,
   clients: Set[AppointmentClient],
-  clientCase: Option[Case],
+  clientCases: Set[Case],
   notes: Seq[AppointmentNote]
 )
 
@@ -105,7 +105,7 @@ object AppointmentRender {
     ),
     "state" -> o.appointment.state,
     "cancellationReason" -> o.appointment.cancellationReason,
-    "case" -> o.clientCase.map { clientCase =>
+    "cases" -> o.clientCases.map { clientCase =>
       Json.obj(
         "id" -> clientCase.id,
         "key" -> clientCase.key.map(_.string),

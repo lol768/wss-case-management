@@ -18,10 +18,13 @@ class CanViewCaseActionRefiner @Inject()(
   implicit val implicitCaseService: CaseService = caseService
 
   private val CanViewCase = PermissionsFilter[CaseSpecificRequest] { implicit request =>
-    permissionService.canViewCase(request.context.user.get.usercode)
+    permissionService.canViewCase(request.context.user.get.usercode, request.`case`.id.get)
   }
 
   def CanViewCaseAction(caseKey: IssueKey): ActionBuilder[CaseSpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithCase(caseKey) andThen CanViewCase
+
+  def CanViewCaseAction(keyOrId: String): ActionBuilder[CaseSpecificRequest, AnyContent] =
+    securityService.SigninRequiredAction andThen WithCase(keyOrId) andThen CanViewCase
 
 }

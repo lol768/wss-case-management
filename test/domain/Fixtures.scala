@@ -12,12 +12,14 @@ import warwick.sso._
 object Fixtures {
   object users {
     val noUniId: User = Users.create(Usercode("nouniid"))
-    val studentNewVisitor: User = Users.create(
-      usercode = Usercode("student1"),
-      universityId = Some(UniversityID("9900001")),
+    private def undergrad(i: Int): User = Users.create(
+      usercode = Usercode(s"student$i"),
+      universityId = Some(UniversityID(f"${9900000+i}%d")),
       student = true,
       undergraduate = true
     )
+    val studentNewVisitor: User = undergrad(1)
+    val studentCaseClient: User = undergrad(2)
 
     private val baseStaff: User = Users.create(
       usercode = null,
@@ -30,6 +32,25 @@ object Fixtures {
       usercode = Usercode("ss1"),
       universityId = Some(UniversityID("1700001")),
       name = Name(Some("Studentsupport"), Some("User1"))
+    )
+
+    // Staff users here correspond with webgroup members defined in test.conf
+    val ss2: User = baseStaff.copy(
+      usercode = Usercode("ss2"),
+      universityId = Some(UniversityID("1700002")),
+      name = Name(Some("Studentsupport"), Some("User2"))
+    )
+
+    val mh1: User = baseStaff.copy(
+      usercode = Usercode("mh1"),
+      universityId = Some(UniversityID("1700011")),
+      name = Name(Some("MentalHealth"), Some("User1"))
+    )
+
+    val mh2: User = baseStaff.copy(
+      usercode = Usercode("mh2"),
+      universityId = Some(UniversityID("1700012")),
+      name = Name(Some("MentalHealth"), Some("User2"))
     )
   }
 
@@ -122,9 +143,9 @@ object Fixtures {
   }
 
   object cases {
-    def newCase(issueKey: Int = 1234): Case = Case(
-      Some(UUID.randomUUID()),
-      Some(IssueKey(IssueKeyType.Case, issueKey)),
+    def newCaseNoId(): Case = Case(
+      None,
+      None,
       "Mental health assessment",
       JavaTime.offsetDateTime,
       Teams.MentalHealth,
@@ -139,13 +160,17 @@ object Fixtures {
       Some(CaseType.MentalHealthAssessment),
       CaseCause.New
     )
+
+    def newCase(issueKey: Int = 1234): Case = newCaseNoId.copy(
+      id = Some(UUID.randomUUID()),
+      key = Some(IssueKey(IssueKeyType.Case, issueKey))
+    )
   }
 
   object appointments {
     def newStoredAppointment(issueKey: Int = 1234): StoredAppointment = StoredAppointment(
       UUID.randomUUID(),
       IssueKey(IssueKeyType.Appointment, issueKey),
-      None,
       JavaTime.offsetDateTime
         .withHour(14).withMinute(0).withSecond(0).withNano(0),
       Duration.ofMinutes(45),

@@ -15,8 +15,9 @@ import play.api.libs.ws.WSClient
 import services.FreeBusyService
 import services.FreeBusyService.{FreeBusyPeriod, FreeBusyStatus}
 import services.tabula.TabulaFreeBusyService._
-import system.{Logging, TimingCategories}
+import system.TimingCategories
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
+import warwick.core.Logging
 import warwick.core.timing.{TimingContext, TimingService}
 import warwick.sso.UniversityID
 

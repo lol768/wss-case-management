@@ -7,17 +7,13 @@ import play.api.inject.guice.GuiceApplicationBuilder
 
 import scala.reflect.ClassTag
 
-trait OneAppPerSuite extends Suite
-  with org.scalatestplus.play.guice.GuiceOneAppPerSuite
+trait OneServerPerSuite extends Suite
+  with org.scalatestplus.play.guice.GuiceOneServerPerSuite
   with BeforeAndAfterAll {
   self: TestSuite =>
 
-  val postgres: EmbeddedPostgres = EmbeddedPostgres.builder()
+  val postgres = EmbeddedPostgres.builder()
     .setCleanDataDirectory(true)
-    // Set parameters for speed over durability
-    .setServerConfig("fsync", "false")
-    .setServerConfig("synchronous_commit", "off")
-    .setServerConfig("full_page_writes", "false")
     .start()
 
   override protected def afterAll(): Unit = {

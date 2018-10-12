@@ -5,7 +5,7 @@ import java.time.OffsetDateTime
 import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
 import helpers.JavaTime
-import system.Logging
+import warwick.core.Logging
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._

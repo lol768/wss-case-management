@@ -1,0 +1,27 @@
+<configuration>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- encoders are assigned the type
+             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!--<logger name="oracle.jdbc" level="fine" />-->
+
+    <!--<logger name="services" level="debug" />-->
+    <!--<logger name="actors" level="debug" />-->
+    <!--<logger name="controllers" level="debug" />-->
+    <!--<logger name="system" level="debug" />-->
+
+    <logger name="org.jdbcdslog.ConnectionLogger" level="OFF"  /> <!-- Won' log connections -->
+    <logger name="org.jdbcdslog.StatementLogger"  level="INFO" /> <!-- Will log all statements -->
+    <logger name="org.jdbcdslog.ResultSetLogger"  level="OFF"  /> <!-- Won' log result sets -->
+
+    <logger name="system.CookieLifeFilter" level="DEBUG" />
+
+    <root level="error">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>

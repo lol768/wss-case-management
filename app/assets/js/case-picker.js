@@ -62,7 +62,7 @@ export default function CasePicker(element) {
     afterSelect: (item) => {
       if (item) {
         const text = displayItem(item);
-        richResultField.store(item.key, _.escape(text));
+        richResultField.store(item.id, _.escape(text));
         $element.data('item', item);
       }
     },

@@ -131,7 +131,7 @@ routesImport ++= Seq(
 dependencyOverrides += "xml-apis" % "xml-apis" % "1.4.01"
 
 // Because jclouds is terrible
-dependencyOverrides += "com.google.guava" % "guava" % "20.0"
+dependencyOverrides += "com.google.guava" % "guava" % "22.0"
 
 // Because jclouds is terrible
 dependencyOverrides += "com.google.code.gson" % "gson" % "2.5"

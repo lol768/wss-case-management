@@ -12,6 +12,7 @@ import system.Roles
 import warwick.core.timing.{TimingContext, TimingService}
 import warwick.sso.{GroupName, GroupService, RoleService, User, Usercode}
 import ServiceResults.Implicits._
+import warwick.core.Logging
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -30,7 +31,7 @@ trait PermissionService {
   def canAddClientMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canEditEnquiry(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
-  def canViewCase(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def canViewCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canAddTeamMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canClientViewCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
@@ -52,7 +53,7 @@ class PermissionServiceImpl @Inject() (
   appointmentServiceProvider: Provider[AppointmentService],
   config: Configuration,
   timing: TimingService
-)(implicit ec: ExecutionContext) extends PermissionService {
+)(implicit ec: ExecutionContext) extends PermissionService with Logging {
 
   private lazy val enquiryService = enquiryServiceProvider.get()
   private lazy val caseService = caseServiceProvider.get()
@@ -128,11 +129,8 @@ class PermissionServiceImpl @Inject() (
   private def isEnquiryClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     enquiryService.get(id).map(_.map { enquiry => enquiry.client.universityID == user.universityId.get } )
 
-  override def canViewCase(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    Future.sequence(Seq(
-      isAdmin(user),
-      inAnyTeam(user)
-    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+  override def canViewCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    canEditCase(user, id) // view/edit permissions are the same at the moment
 
   override def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(

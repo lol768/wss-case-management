@@ -8,8 +8,9 @@ import play.api.Configuration
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
 import services.PhotoService
-import system.{Logging, TimingCategories}
+import system.TimingCategories
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
+import warwick.core.Logging
 import warwick.core.timing.{TimingContext, TimingService}
 
 import scala.collection.JavaConverters._

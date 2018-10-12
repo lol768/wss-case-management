@@ -9,7 +9,7 @@ import helpers.ServiceResults.{ServiceError, ServiceResult}
 import play.api.data.Form
 import play.api.libs.json.Json
 import play.api.mvc.{Request, RequestHeader, Result, Results}
-import system.Logging
+import warwick.core.Logging
 import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}

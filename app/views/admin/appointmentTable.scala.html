@@ -12,7 +12,7 @@
   emptyMessage: Option[String] = None,
 )(implicit context: RequestContext)
 
-@appointmentRow(appointment: Appointment, clients: Set[AppointmentClient], clientCase: Option[Case]) = {
+@appointmentRow(appointment: Appointment, clients: Set[AppointmentClient], clientCases: Set[Case]) = {
   <tr>
     <td>
       <ul class="list-unstyled">
@@ -57,7 +57,7 @@
     </thead>
     <tbody>
       @appointments.map { a =>
-        @appointmentRow(a.appointment, a.clients, a.clientCase)
+        @appointmentRow(a.appointment, a.clients, a.clientCases)
       }
     </tbody>
   </table>
