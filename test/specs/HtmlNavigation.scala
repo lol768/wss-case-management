@@ -5,6 +5,7 @@ import org.dom4j.io.DOMReader
 import org.htmlcleaner.{DomSerializer, HtmlCleaner}
 import play.api.mvc.Result
 import play.api.test.Helpers._
+import play.twirl.api.HtmlFormat
 import uk.ac.warwick.util.web.Uri
 
 import collection.JavaConverters._
@@ -22,7 +23,7 @@ trait HtmlNavigation {
 
   private lazy val htmlCleaner = {
     val cleaner = new HtmlCleaner()
-    val props = cleaner.getProperties()
+    // val props = cleaner.getProperties
     cleaner
   }
 
@@ -32,7 +33,7 @@ trait HtmlNavigation {
     */
   def contentAsHtml(res: Future[Result]): HtmlNavigator = {
     val tagNode = htmlCleaner.clean(contentAsString(res))
-    val serializer = new DomSerializer(htmlCleaner.getProperties())
+    val serializer = new DomSerializer(htmlCleaner.getProperties)
     val doc: org.w3c.dom.Document = serializer.createDOM(tagNode)
     new HtmlNavigator(new DOMReader().read(doc))
   }
@@ -42,6 +43,8 @@ trait HtmlNavigation {
     * the ID7scape and CASE page layouts.
     */
   class HtmlNavigator(html: Document) {
+    import X._
+
     /**
       * Return all the ID7 navigation links on the given page.
       * It is a flat list, so all the nested items in submenus and secondary and tertiary
@@ -49,15 +52,25 @@ trait HtmlNavigation {
       */
     lazy val navigationPages: Seq[(String, Uri)] =
       xpathElements(html, "//nav[@role='navigation']//a").map { link =>
-        link.getText() -> Uri.parse(link.asInstanceOf[Element].attributeValue("href"))
+         link.getText -> Uri.parse(link.attributeValue("href"))
       }
+
+    // A page may have a nav-tabs as part of its content.
+    lazy val contentTabs: Seq[String] =
+      xpathNodes(html, s"//$MAIN_CONTENT//$NAVTABS//li/a").map(_.getText.trim)
 
     lazy val pageHeading: String =
       html.selectSingleNode("//div[contains(@class,'id7-page-title')]/h1").getText.trim
   }
 
+  // Bits of XPath query for re-use.
+  object X {
+    val MAIN_CONTENT = "div[contains(@class,'id7-main-content')]"
+    val NAVTABS = "ul[contains(@class, 'nav-tabs')]"
+  }
+
   private def xpathNodes(html: Document, path: String): Seq[Node] =
-    html.selectNodes(path).asScala.toSeq
+    html.selectNodes(path).asScala
 
   private def xpathElements(html: Document, path: String): Seq[Element] =
     xpathNodes(html, path).map(_.asInstanceOf[Element])

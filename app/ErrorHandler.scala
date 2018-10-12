@@ -5,7 +5,8 @@ import play.api.Environment
 import play.api.http.{HttpErrorHandler, Status}
 import play.api.libs.json.Json
 import play.api.mvc._
-import system.{ImplicitRequestContext, Logging}
+import system.ImplicitRequestContext
+import warwick.core.Logging
 
 import scala.concurrent.Future
 

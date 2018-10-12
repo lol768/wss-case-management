@@ -4,7 +4,6 @@ import com.opentable.db.postgres.embedded.EmbeddedPostgres
 import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import warwick.sso.{Usercode, Users}
 
 import scala.reflect.ClassTag
 

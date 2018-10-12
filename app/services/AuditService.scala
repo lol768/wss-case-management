@@ -29,7 +29,7 @@ case class AuditLogContext(
 ) extends TimingContext
 
 object AuditLogContext {
-  def empty()(implicit t: TimingContext): AuditLogContext = AuditLogContext(timingData = t.timingData)
+  def empty(t: TimingContext.Data = TimingContext.none.timingData): AuditLogContext = AuditLogContext(timingData = t)
 }
 
 @ImplementedBy(classOf[AuditServiceImpl])

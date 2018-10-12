@@ -31,6 +31,25 @@ object Fixtures {
       universityId = Some(UniversityID("1700001")),
       name = Name(Some("Studentsupport"), Some("User1"))
     )
+
+    // Staff users here correspond with webgroup members defined in test.conf
+    val ss2: User = baseStaff.copy(
+      usercode = Usercode("ss2"),
+      universityId = Some(UniversityID("1700002")),
+      name = Name(Some("Studentsupport"), Some("User2"))
+    )
+
+    val mh1: User = baseStaff.copy(
+      usercode = Usercode("mh1"),
+      universityId = Some(UniversityID("1700011")),
+      name = Name(Some("MentalHealth"), Some("User1"))
+    )
+
+    val mh2: User = baseStaff.copy(
+      usercode = Usercode("mh2"),
+      universityId = Some(UniversityID("1700012")),
+      name = Name(Some("MentalHealth"), Some("User2"))
+    )
   }
 
   object profiles {
@@ -122,9 +141,9 @@ object Fixtures {
   }
 
   object cases {
-    def newCase(issueKey: Int = 1234): Case = Case(
-      Some(UUID.randomUUID()),
-      Some(IssueKey(IssueKeyType.Case, issueKey)),
+    def newCaseNoId(): Case = Case(
+      None,
+      None,
       "Mental health assessment",
       JavaTime.offsetDateTime,
       Teams.MentalHealth,
@@ -138,6 +157,11 @@ object Fixtures {
       None,
       Some(CaseType.MentalHealthAssessment),
       CaseCause.New
+    )
+
+    def newCase(issueKey: Int = 1234): Case = newCaseNoId.copy(
+      id = Some(UUID.randomUUID()),
+      key = Some(IssueKey(IssueKeyType.Case, issueKey))
     )
   }
 

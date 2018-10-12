@@ -5,6 +5,7 @@ import java.util.Date
 import com.google.inject.{Inject, Singleton}
 import org.quartz.TriggerBuilder._
 import org.quartz._
+import warwick.core.Logging
 import services.job.UpdateClientsJob
 
 @Singleton

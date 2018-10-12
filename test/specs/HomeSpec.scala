@@ -19,13 +19,14 @@ class HomeSpec extends BaseSpec {
       val html = contentAsHtml(home)
       html.navigationPages mustBe 'empty
       html.pageHeading mustBe "My messages"
+
+      html.contentTabs mustBe Seq("My messages", "My appointments")
     }
 
-    // FIXME H2 doesn't like the query for getting open enquiries
-    "render team link for member of a test" in {
+    "render team link for member of a team" in {
       val home = req("/").forUser(users.ss1).get()
       val html = contentAsHtml(home)
-      html.navigationPages mustBe Seq((s"${Teams.WellbeingSupport.name.replace("&", "&amp;")} team", Uri.parse(s"/team/${Teams.WellbeingSupport.id}")))
+      html.navigationPages mustBe Seq((s"${Teams.WellbeingSupport.name} team", Uri.parse(s"/team/${Teams.WellbeingSupport.id}")))
     }
 
     "forbid a user without a University ID" in {

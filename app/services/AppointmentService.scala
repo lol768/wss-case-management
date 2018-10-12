@@ -19,9 +19,9 @@ import org.quartz._
 import play.api.libs.json.Json
 import services.AppointmentService._
 import services.job.SendAppointmentClientReminderJob
-import system.Logging
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.core.timing.TimingContext
+import warwick.core.Logging
 import warwick.sso.{UniversityID, Usercode}
 import ServiceResults.Implicits._
 import scala.concurrent.{ExecutionContext, Future}
