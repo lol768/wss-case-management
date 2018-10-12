@@ -9,6 +9,7 @@ import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.AppointmentDao._
 import domain.dao.AppointmentDao.AppointmentCase.AppointmentCases
+import domain.dao.CaseDao.cases
 import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
