@@ -10,8 +10,9 @@ import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.CaseDao.{Case, _}
+import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
-import domain.dao.{CaseDao, DaoRunner, MessageDao, UploadedFileDao}
+import domain.dao._
 import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{JavaTime, ServiceResults}
@@ -20,7 +21,7 @@ import play.api.libs.json.Json
 import services.CaseService._
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
-
+import QueryHelpers._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.higherKinds
 
@@ -95,6 +96,7 @@ class CaseServiceImpl @Inject() (
   userLookupService: UserLookupService,
   permissionsService: PermissionService,
   clientService: ClientService,
+  memberService: MemberService,
   daoRunner: DaoRunner,
   dao: CaseDao,
   messageDao: MessageDao,
@@ -157,11 +159,11 @@ class CaseServiceImpl @Inject() (
       docs <- getDocumentsDBIO(clientCase.id.get)
       (outgoingCaseLinks, incomingCaseLinks) <- getLinksDBIO(clientCase.id.get)
     } yield {
-      val caseDocuments =  docs.map { case ((d, f), n) => d.asCaseDocument(f.asUploadedFile, n.asCaseNote) }
+      val caseDocuments =  docs.map { case (d, f, n, m) => d.asCaseDocument(f.asUploadedFile, n.asCaseNote, m.asMember) }
 
-      ServiceResults.sequence(outgoingCaseLinks.map(c => EntityAndCreator(c, permissionsService, userLookupService)))
-        .flatMap(o => ServiceResults.sequence(incomingCaseLinks.map(c => EntityAndCreator(c, permissionsService, userLookupService)))
-          .flatMap (i => ServiceResults.sequence(caseDocuments.map(c => EntityAndCreator(c, permissionsService, userLookupService)))
+      ServiceResults.sequence(outgoingCaseLinks.map(c => EntityAndCreator(c, permissionsService)))
+        .flatMap(o => ServiceResults.sequence(incomingCaseLinks.map(c => EntityAndCreator(c, permissionsService)))
+          .flatMap (i => ServiceResults.sequence(caseDocuments.map(c => EntityAndCreator(c, permissionsService)))
             .map(d => (o, i, d))
           )
         ).map { case (outgoing, incoming, documents) =>
@@ -296,14 +298,17 @@ class CaseServiceImpl @Inject() (
     }
 
   private def getLinksDBIO(caseID: UUID): DBIO[(Seq[CaseLink], Seq[CaseLink])] =
-    dao.findLinksQuery(caseID)
-      .join(CaseDao.cases.table).on(_.outgoingCaseID === _.id)
-      .join(CaseDao.cases.table).on(_._1.incomingCaseID === _.id)
-      .join(CaseDao.caseNotes.table).on(_._1._1.caseNote === _.id)
+    dao.findLinksQuery(caseID).withMember
+      .join(CaseDao.cases.table).on { case ((l, _), c) => l.outgoingCaseID === c.id }
+      .map { case ((l, c), o) => (l, c, o) }
+      .join(CaseDao.cases.table).on { case ((l, _, _), i) => l.incomingCaseID === i.id }
+      .map { case ((l, c, o), i) => (l, c, o, i) }
+      .join(CaseDao.caseNotes.table).on { case ((l, _, _, _), n) => l.caseNote === n.id }
+      .map { case ((l, c, o, i), n) => (l, c, o, i, n) }
       .result
       .map { results =>
-        results.map { case (((link, outgoing), incoming), note) =>
-          CaseLink(link.id, link.linkType, outgoing, incoming, note.asCaseNote, link.teamMember, link.version)
+        results.map { case (link, linkMember, outgoing, incoming, note) =>
+          CaseLink(link.id, link.linkType, outgoing, incoming, note.asCaseNote, linkMember.asMember, link.version)
         }.partition(_.outgoing.id.get == caseID)
       }
 
@@ -440,34 +445,38 @@ class CaseServiceImpl @Inject() (
 
   override def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]] =
     auditService.audit('CaseAddDocument, caseID.toString, 'Case, Json.obj()) {
-      val documentID = UUID.randomUUID()
-      daoRunner.run(for {
-        f <- uploadedFileService.storeDBIO(in, file, ac.usercode.get)
-        n <- addNoteDBIO(caseID, CaseNoteType.DocumentNote, caseNote)
-        doc <- dao.insertDocument(StoredCaseDocument(
-          documentID,
-          caseID,
-          document.documentType,
-          f.id,
-          document.teamMember,
-          n.id,
-          JavaTime.offsetDateTime,
-          JavaTime.offsetDateTime
-        ))
+      memberService.getOrAddMember(document.teamMember).successFlatMapTo { member =>
+        val documentID = UUID.randomUUID()
+        daoRunner.run(for {
+          f <- uploadedFileService.storeDBIO(in, file, ac.usercode.get)
+          n <- addNoteDBIO(caseID, CaseNoteType.DocumentNote, caseNote)
+          doc <- dao.insertDocument(StoredCaseDocument(
+            documentID,
+            caseID,
+            document.documentType,
+            f.id,
+            document.teamMember,
+            n.id,
+            JavaTime.offsetDateTime,
+            JavaTime.offsetDateTime
+          ))
 
-      } yield doc.asCaseDocument(f, n.asCaseNote)).map(Right.apply)
+        } yield doc.asCaseDocument(f, n.asCaseNote, member)).map(Right.apply)
+      }
     }
 
-  private def getDocumentsDBIO(caseID: UUID): DBIO[Seq[((StoredCaseDocument, StoredUploadedFile), StoredCaseNote)]] =
+  private def getDocumentsDBIO(caseID: UUID): DBIO[Seq[(StoredCaseDocument, StoredUploadedFile, StoredCaseNote, StoredMember)]] =
     dao.findDocumentsQuery(caseID)
       .join(UploadedFileDao.uploadedFiles.table).on(_.fileId === _.id)
       .join(CaseDao.caseNotes.table).on(_._1.caseNote === _.id)
-      .sortBy { case ((d, f), n) => d.created.desc }
+      .join(MemberDao.members.table).on { case (((d, _), _), m) => d.teamMember === m.usercode }
+      .flattenJoin
+      .sortBy { case (d, _, _, _) => d.created.desc }
       .result
 
   override def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]] = {
     daoRunner.run(getDocumentsDBIO(caseID))
-      .map { docs => Right(docs.map { case ((d, f), n) => d.asCaseDocument(f.asUploadedFile, n.asCaseNote) }) }
+      .map { docs => Right(docs.map { case (d, f, n, m) => d.asCaseDocument(f.asUploadedFile, n.asCaseNote, m.asMember) }) }
   }
 
   override def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =

@@ -8,8 +8,6 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.AppointmentDao.AppointmentCase
-import domain.dao.AppointmentDao.AppointmentCase.AppointmentCases
 import domain.dao.CaseDao.{Cases, _}
 import domain.dao.ClientDao.StoredClient
 import helpers.JavaTime
@@ -20,7 +18,7 @@ import services.{AuditLogContext, CaseService}
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
-
+import QueryHelpers._
 import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
 
@@ -413,12 +411,12 @@ object CaseDao {
   }
 
   implicit class CaseExtensions[C[_]](val q: Query[Cases, Case, C]) extends AnyVal {
-    def withClients = q
+    def withClients: Query[(Cases, CaseClients, StoredClient.Clients), (Case, StoredCaseClient, StoredClient), C] = q
       .join(caseClients.table)
       .on(_.id === _.caseId)
       .join(ClientDao.clients.table)
       .on { case ((_, cc), client) => cc.universityID === client.universityID }
-      .map { case ((c, cc), client) => (c, cc, client) }
+      .flattenJoin
     def withNotes = q
       .joinLeft(caseNotes.table)
       .on(_.id === _.caseId)
@@ -650,6 +648,12 @@ object CaseDao {
     def idx = index("idx_case_link_version", (linkType, outgoingCaseID, incomingCaseID, version))
   }
 
+  implicit class CaseLinkExtensions[C[_]](q: Query[CaseLinks, StoredCaseLink, C]) {
+    def withMember = q
+      .join(MemberDao.members.table)
+      .on(_.teamMember === _.usercode)
+  }
+
   case class StoredCaseNote(
     id: UUID,
     caseId: UUID,
@@ -744,11 +748,11 @@ object CaseDao {
     created: OffsetDateTime,
     version: OffsetDateTime
   ) extends Versioned[StoredCaseDocument] {
-    def asCaseDocument(file: UploadedFile, note: CaseNote) = CaseDocument(
+    def asCaseDocument(file: UploadedFile, note: CaseNote, member: Member) = CaseDocument(
       id,
       documentType,
       file,
-      teamMember,
+      member,
       note,
       created,
       version

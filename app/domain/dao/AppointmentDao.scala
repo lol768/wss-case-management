@@ -18,7 +18,7 @@ import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
-
+import QueryHelpers._
 import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
 
@@ -336,7 +336,7 @@ object AppointmentDao {
       .on(_.id === _.appointmentID)
       .join(ClientDao.clients.table)
       .on { case ((_, ac), c) => ac.universityID === c.universityID }
-      .map { case ((a, ac), c) => (a, ac, c) }
+      .flattenJoin
     def withCases = q
       .join(AppointmentCase.appointmentCases.table)
       .on(_.id === _.appointmentID)
@@ -353,7 +353,7 @@ object AppointmentDao {
       .withClients
       .join(MemberDao.members.table)
       .on { case ((a, _, _), m) => a.teamMember === m.usercode }
-      .map { case ((a, ac, c), m) => (a, ac, c, m) }
+      .flattenJoin
   }
 
   case class StoredAppointmentClient(
