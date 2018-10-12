@@ -5,10 +5,11 @@
 @import domain.{SitsProfile, Team}
 @import warwick.sso.UniversityID
 
+@import domain.Client
 @(
   openCases: Seq[(Case, OffsetDateTime)],
   closedCases: Int,
-  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
+  clients: Map[UUID, Set[Client]],
   createRoute: Call,
   closedCasesRoute: Call,
   searchScope: String,

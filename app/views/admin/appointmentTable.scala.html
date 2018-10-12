@@ -8,7 +8,6 @@
 @(
   title: Option[String],
   appointments: Seq[AppointmentRender],
-  clientLookup: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
   userLookup: Option[Map[Usercode, User]],
   emptyMessage: Option[String] = None,
 )(implicit context: RequestContext)
@@ -16,32 +15,18 @@
 @appointmentRow(appointment: Appointment, clients: Set[AppointmentClient], clientCase: Option[Case]) = {
   <tr>
     <td>
-      @clientLookup.get(appointment.id).map { profiles =>
-        <ul class="list-unstyled">
-          @profiles.toSeq.map {
-            case Left(universityID) => {
-              <li>
-                <a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a>
-                @clients.find(_.universityID == universityID).map { client =>
-                  @tags.appointments.clientAppointmentState(appointment, client)
-                }
-              </li>
-            }
-            case Right(p) => {
-              <li>
-                <a href="@controllers.admin.routes.ClientController.client(p.universityID)">@p.fullName</a>
-                @clients.find(_.universityID == p.universityID).map { client =>
-                  @tags.appointments.clientAppointmentState(appointment, client)
-                }
-              </li>
-            }
-          }
-        </ul>
-      }
+      <ul class="list-unstyled">
+        @clients.toSeq.sortBy(_.client).map { client =>
+          <li>
+            <a href="@controllers.admin.routes.ClientController.client(client.client.universityID)">@client.client.safeFullName</a>
+            @tags.appointments.clientAppointmentState(appointment, client)
+          </li>
+        }
+      </ul>
     </td>
     <td>
       @tags.icons.appointmentState(appointment.state)
-      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string @appointment.subject(userLookup, clientLookup.get(appointment.id))</a>
+      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string @appointment.subject(userLookup, Some(clients))</a>
     </td>
     <td>
       @helpers.JavaTime.Relative(appointment.start) &ndash; @appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))

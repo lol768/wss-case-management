@@ -6,35 +6,27 @@
 @import java.time.OffsetDateTime
 @(
   a: AppointmentRender,
-  clients: Seq[(AppointmentClient, Either[UniversityID, SitsProfile])],
+  profiles: Map[AppointmentClient, Option[SitsProfile]],
   userLookup: Map[Usercode, User],
   appointmentNoteForm: Form[AppointmentNoteFormData],
   cancelForm: Form[CancelAppointmentData],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
-  title = s"${a.appointment.key.string} ${a.appointment.subject(Some(userLookup), Some(clients.map(_._2).toSet))}",
+  title = s"${a.appointment.key.string} ${a.appointment.subject(Some(userLookup), Some(a.clients))}",
   icon = tags.icons.appointmentState(a.appointment.state)
 ) {
   <div class="appointment-details">
     <div class="appointment-details--header">
-      @clients.map { case (client, p) =>
-        @p match {
-          case Left(universityID) => {
-            <h5>
-              <a href="@controllers.admin.routes.ClientController.client(universityID)">@universityID.string</a>
-              @tags.appointments.clientAppointmentState(a.appointment, client)
-            </h5>
+      @a.clients.map { client =>
+        <h5>
+          <a href="@controllers.admin.routes.ClientController.client(client.client.universityID)">@client.client.safeFullName</a>,
+          @client.client.universityID.string,
+          @profiles.get(client).flatten.map { profile =>
+            @views.tags.profiles.typeAndDepartment(profile)
           }
-          case Right(profile) => {
-            <h5>
-              <a href="@controllers.admin.routes.ClientController.client(profile.universityID)">@profile.fullName</a>,
-              @profile.universityID.string,
-              @views.tags.profiles.typeAndDepartment(profile)
-              @tags.appointments.clientAppointmentState(a.appointment, client)
-            </h5>
-          }
-        }
+          @tags.appointments.clientAppointmentState(a.appointment, client)
+        </h5>
       }
     </div>
     <div class="appointment-details--actions row">

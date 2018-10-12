@@ -31,7 +31,7 @@ class AppointmentController @Inject()(
     val universityID = currentUser().universityId.get
 
     appointments.getClients(request.appointment.id).successFlatMap { clients =>
-      val client = clients.find(_.universityID == universityID).get
+      val client = clients.find(_.client.universityID == universityID).get
       if (client.state != AppointmentState.Provisional) {
         // Can only accept appointments that are provisional for you
         Future.successful(doRedirectToMyAppointments())
@@ -47,11 +47,11 @@ class AppointmentController @Inject()(
     Form(single("cancellationReason" -> AppointmentCancellationReason.formField)).bindFromRequest().fold(
       _ => Future.successful(doRedirectToMyAppointments()), // Ignore
       cancellationReason => appointments.getClients(request.appointment.id).successFlatMap { clients =>
-        val client = clients.find(_.universityID == universityID).get
+        val client = clients.find(_.client.universityID == universityID).get
         if (client.state == AppointmentState.Cancelled && client.cancellationReason.contains(cancellationReason)) {
           // Trying to decline an appointment with a no-op
           Future.successful(doRedirectToMyAppointments())
-        } else appointments.clientDecline(request.appointment.id, universityID, cancellationReason).successMap { appointment =>
+        } else appointments.clientDecline(request.appointment.id, universityID, cancellationReason).successMap { _ =>
           doRedirectToMyAppointments().flashing("success" -> Messages("flash.appointment.declined"))
         }
       }

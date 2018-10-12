@@ -1,5 +1,7 @@
 package services
 
+import java.util.UUID
+
 import domain._
 import helpers.JavaTime
 import org.scalatestplus.play.PlaySpec
@@ -8,10 +10,9 @@ class EnquiryServiceObjectTest extends PlaySpec {
 
   import services.EnquiryService._
 
-  val enquiryToday = Enquiry(universityID = null, subject = "Enquiry", team = null)
-  private val enquiryLastWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.minusWeeks(1))
-  private val enquiryNextWeek = enquiryToday.copy(version = JavaTime.offsetDateTime.plusWeeks(1))
-  val client = Fixtures.users.studentNewVisitor
+  private val client = Fixtures.users.studentNewVisitor
+  val enquiryToday = Enquiry(id = Some(UUID.randomUUID()), key = IssueKey(IssueKeyType.Enquiry, 1234), client = Client(client.universityId.get, client.name.full, JavaTime.offsetDateTime), subject = "Enquiry", team = null, state = null, lastUpdated = JavaTime.offsetDateTime, created = null)
+  private val enquiryLastWeek = enquiryToday.copy(lastUpdated = JavaTime.offsetDateTime.minusWeeks(1))
 
   val messageTomorrow = MessageData("hello", MessageSender.Client, client.universityId.get, JavaTime.offsetDateTime.plusDays(1), None, None)
   val messageLastWeek = MessageData("hello", MessageSender.Client, client.universityId.get, JavaTime.offsetDateTime.minusWeeks(1), None, None)
@@ -19,11 +20,11 @@ class EnquiryServiceObjectTest extends PlaySpec {
   "lastModified" should {
 
     "always use enquiry if no messages" in {
-      lastModified(EnquiryRender(enquiryLastWeek, Nil, Nil)) mustBe enquiryLastWeek.version
+      lastModified(EnquiryRender(enquiryLastWeek, Nil, Nil)) mustBe enquiryLastWeek.lastUpdated
     }
 
     "use enquiry date if newer" in {
-      lastModified(EnquiryRender(enquiryToday, Seq(MessageRender(messageLastWeek, Nil), MessageRender(messageLastWeek, Nil)), Nil)) mustBe enquiryToday.version
+      lastModified(EnquiryRender(enquiryToday, Seq(MessageRender(messageLastWeek, Nil), MessageRender(messageLastWeek, Nil)), Nil)) mustBe enquiryToday.lastUpdated
     }
 
     "use most recent message if newer" in {

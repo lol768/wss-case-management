@@ -40,7 +40,7 @@ object NotificationService {
 trait NotificationService {
   def newRegistration(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def registrationInvite(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
-  def newEnquiry(enquiry: Enquiry)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def newEnquiry(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def enquiryMessage(enquiry: Enquiry, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def enquiryReassign(enquiry: Enquiry)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
@@ -104,9 +104,9 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  override def newEnquiry(enquiry: Enquiry)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
+  override def newEnquiry(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
     withInitialTeamUsers { users =>
-      val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).build
+      val url = controllers.admin.routes.TeamEnquiryController.messages(enquiryKey).build
 
       queueEmailAndSendActivity(
         subject = s"$teamSubjectPrefix New enquiry received",
@@ -125,12 +125,12 @@ class NotificationServiceImpl @Inject()(
     if (sender == MessageSender.Client) {
       enquiryMessageToTeam(enquiry)
     } else {
-      messageToClient(enquiry.universityID, enquiry.team, enquiry.id.get)
+      messageToClient(enquiry.client.universityID, enquiry.team, enquiry.id.get)
     }
 
   private def enquiryMessageToTeam(enquiry: Enquiry)(implicit ac: AuditLogContext) = {
     withTeamUsers(enquiry.team) { users =>
-      val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).build
+      val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key).build
 
       queueEmailAndSendActivity(
         subject = s"$teamSubjectPrefix Enquiry message from client received",
@@ -191,7 +191,7 @@ class NotificationServiceImpl @Inject()(
 
   override def enquiryReassign(enquiry: Enquiry)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
     withTeamUsers(enquiry.team) { users =>
-      val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get).build
+      val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key).build
 
       queueEmailAndSendActivity(
         subject = s"$teamSubjectPrefix Enquiry assigned",

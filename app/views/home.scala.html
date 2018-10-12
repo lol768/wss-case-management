@@ -115,7 +115,7 @@
             (@a.appointment.appointmentType.description)
           </td>
           <td>
-            @a.clients.find(_.universityID == context.user.get.universityId.get).map { client =>
+            @a.clients.find(_.client.universityID == context.user.get.universityId.get).map { client =>
               @if(a.appointment.state == AppointmentState.Provisional) {
                 @if(client.state != AppointmentState.Provisional) {
                   <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
@@ -183,10 +183,10 @@
     clientInformation.appointments.count(a =>
       a.appointment.start.isAfter(JavaTime.offsetDateTime) &&
           a.appointment.state != AppointmentState.Cancelled &&
-          a.clients.find(c => context.user.flatMap(_.universityId).contains(c.universityID))
+          a.clients.find(c => context.user.flatMap(_.universityId).contains(c.client.universityID))
               .forall(_.state != AppointmentState.Cancelled)
     )
-  ) { count =>
+  ) { count: Int =>
     @if(count > 0) {
       <span class="badge">@count</span>
     }
@@ -249,10 +249,10 @@
 
       <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="enquiries">
-          @views.html.admin.enquiriesTab(info.enquiriesRequiringAction, info.enquiriesAwaitingClient, info.closedEnquiries, info.clients, routes.IndexController.closedEnquiries, "member", context.user.get.usercode.string, " assigned to me")
+          @views.html.admin.enquiriesTab(info.enquiriesRequiringAction, info.enquiriesAwaitingClient, info.closedEnquiries, routes.IndexController.closedEnquiries, "member", context.user.get.usercode.string, " assigned to me")
         </div>
         <div role="tabpanel" class="tab-pane" id="cases">
-          @views.html.admin.casesTab(info.openCases, info.closedCases, info.clients, controllers.admin.routes.CaseController.createSelectTeam(), routes.IndexController.closedCases, "member", context.user.get.usercode.string, " assigned to me")
+          @views.html.admin.casesTab(info.openCases, info.closedCases, info.caseClients, controllers.admin.routes.CaseController.createSelectTeam(), routes.IndexController.closedCases, "member", context.user.get.usercode.string, " assigned to me")
         </div>
         <div role="tabpanel" class="tab-pane" id="clients">
           @views.html.admin.clientsTab(routes.IndexController.atRiskClients)
@@ -265,7 +265,6 @@
             info.acceptedAppointments,
             info.attendedAppointments,
             info.cancelledAppointments,
-            info.clients,
             None,
             controllers.admin.routes.AppointmentController.createSelectTeam(),
             routes.IndexController.acceptedAppointments,

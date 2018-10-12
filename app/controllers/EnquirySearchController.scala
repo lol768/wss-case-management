@@ -2,8 +2,8 @@ package controllers
 
 import controllers.API.Response._
 import controllers.EnquirySearchController._
-import controllers.refiners.{AnyTeamActionRefiner, CanViewEnquiryActionRefiner, PermissionsFilter}
-import domain.Enquiry.EnquirySearchQuery
+import controllers.refiners.{AnyTeamActionRefiner, CanViewEnquiryActionRefiner}
+import domain.dao.EnquiryDao.EnquirySearchQuery
 import domain.{Enquiry, IssueKey, IssueStateFilter, Teams}
 import helpers.JavaTime
 import helpers.Json.JsonClientError
@@ -12,7 +12,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms.{localDate, mapping, nonEmptyText, optional, text}
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.mvc.{Action, ActionFilter, AnyContent}
+import play.api.mvc.{Action, AnyContent}
 import services.{EnquiryService, PermissionService}
 import warwick.sso.{AuthenticatedRequest, Usercode}
 
@@ -86,7 +86,7 @@ class EnquirySearchController @Inject()(
 
   private def toJson(e: Enquiry, category: Option[String] = None): JsObject = Json.obj(
     "id" -> e.id.get,
-    "key" -> e.key.get.string,
+    "key" -> e.key.string,
     "subject" -> e.subject,
     "team" -> e.team.name,
     "created" -> e.created.format(JavaTime.iSO8601DateFormat),

@@ -8,7 +8,7 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("Reassign enquiry") {
-  @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.reassign(enquiry.key.get)) { implicit fc =>
+  @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.reassign(enquiry.key)) { implicit fc =>
     @b3.validatedHidden(form, "version")
 
     @b3.radio(form("team"),
@@ -23,6 +23,6 @@
       'helpOnTop -> true
     )
 
-    @tags.submitOrCancel("Reassign", controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get))
+    @tags.submitOrCancel("Reassign", controllers.admin.routes.TeamEnquiryController.messages(enquiry.key))
   }
 }
