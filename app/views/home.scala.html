@@ -1,17 +1,13 @@
 @import controllers.IndexController.{ClientInformation, TeamMemberInformation}
 @import controllers.RequestContext
-@import domain.{AppointmentCancellationReason, AppointmentRender, AppointmentState, EnquiryRender, Registration, Teams}
+@import domain.dao.CaseDao.Case
+@import domain.{AppointmentCancellationReason, AppointmentRender, AppointmentState, Enquiry, IssueRender, Registration}
 @import helpers.JavaTime
 @import org.apache.tika.mime.MediaType
 @import play.api.data.Form
 @import play.api.data.Forms._
 @import warwick.sso.{User, Usercode}
 
-@import domain.IssueRender
-@import domain.dao.CaseDao.Case
-@import domain.Enquiry
-@import warwick.sso.UniversityID
-@import domain.SitsProfile
 @(
   clientInformation: ClientInformation,
   teamMemberInformation: Option[TeamMemberInformation],
@@ -259,16 +255,9 @@
         </div>
         <div role="tabpanel" class="tab-pane" id="appointments">
           @views.html.admin.appointmentsTab(
-            info.declinedAppointments,
-            info.provisionalAppointments,
-            info.appointmentsNeedingOutcome,
-            info.acceptedAppointments,
-            info.attendedAppointments,
             info.cancelledAppointments,
-            None,
+            routes.IndexController.appointments(),
             controllers.admin.routes.AppointmentController.createSelectTeam(),
-            routes.IndexController.acceptedAppointments,
-            routes.IndexController.attendedAppointments,
             routes.IndexController.cancelledAppointments,
             "member",
             context.user.get.usercode.string,

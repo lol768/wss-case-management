@@ -137,7 +137,8 @@ class AppointmentDaoImpl @Inject()(
         q.teamMember.map { member => a.teamMember.? === member },
         q.team.map { team => a.team.? === team },
         q.teamMember.map { member => a.teamMember.? === member },
-        q.appointmentType.map { appointmentType => a.appointmentType.? === appointmentType }
+        q.appointmentType.map { appointmentType => a.appointmentType.? === appointmentType },
+        q.states.headOption.map { _ => a.state.inSet(q.states).? }
       ).flatten
 
     appointments.table
@@ -511,7 +512,8 @@ object AppointmentDao {
     location: Option[Location] = None,
     team: Option[Team] = None,
     teamMember: Option[Usercode] = None,
-    appointmentType: Option[AppointmentType] = None
+    appointmentType: Option[AppointmentType] = None,
+    states: Set[AppointmentState] = Set()
   ) {
     def isEmpty: Boolean = !nonEmpty
     def nonEmpty: Boolean =
@@ -523,6 +525,7 @@ object AppointmentDao {
       team.nonEmpty ||
       teamMember.nonEmpty ||
       location.nonEmpty ||
-      appointmentType.nonEmpty
+      appointmentType.nonEmpty ||
+      states.nonEmpty
   }
 }

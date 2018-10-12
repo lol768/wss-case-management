@@ -123,6 +123,10 @@ libraryDependencies += specs2 % Test
 // other, legacy style, accesses its actions statically.
 routesGenerator := InjectedRoutesGenerator
 
+routesImport ++= Seq(
+  "system.Binders._",
+)
+
 // https://bugs.elab.warwick.ac.uk/browse/SSO-1653
 dependencyOverrides += "xml-apis" % "xml-apis" % "1.4.01"
 

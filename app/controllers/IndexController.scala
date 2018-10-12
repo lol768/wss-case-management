@@ -6,11 +6,12 @@ import java.util.UUID
 import controllers.IndexController.{ClientInformation, TeamMemberInformation}
 import controllers.refiners.AnyTeamActionRefiner
 import domain._
+import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.CaseDao.Case
 import helpers.ServiceResults.ServiceResult
 import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent}
 import services._
 import warwick.sso.{AuthenticatedRequest, User, UserLookupService, Usercode}
@@ -32,11 +33,6 @@ object IndexController {
     closedEnquiries: Int,
     openCases: Seq[(Case, OffsetDateTime)],
     closedCases: Int,
-    declinedAppointments: Seq[AppointmentRender],
-    provisionalAppointments: Seq[AppointmentRender],
-    appointmentsNeedingOutcome: Seq[AppointmentRender],
-    acceptedAppointments: Int,
-    attendedAppointments: Int,
     cancelledAppointments: Int,
     caseClients: Map[UUID, Set[Client]],
   )
@@ -100,13 +96,8 @@ class IndexController @Inject()(
           enquiries.countClosedEnquiries(usercode),
           cases.listOpenCases(usercode),
           cases.countClosedCases(usercode),
-          appointments.findDeclinedAppointments(usercode),
-          appointments.findProvisionalAppointments(usercode),
-          appointments.findAppointmentsNeedingOutcome(usercode),
-          appointments.countAcceptedAppointments(usercode),
-          appointments.countAttendedAppointments(usercode),
           appointments.countCancelledAppointments(usercode),
-        ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, declinedAppointments, provisionalAppointments, appointmentsNeedingOutcome, acceptedAppointments, attendedAppointments, cancelledAppointments) =>
+        ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments) =>
           cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMapTo { caseClients =>
             Some(TeamMemberInformation(
               teams,
@@ -115,11 +106,6 @@ class IndexController @Inject()(
               closedEnquiries,
               openCases,
               closedCases,
-              declinedAppointments,
-              provisionalAppointments,
-              appointmentsNeedingOutcome,
-              acceptedAppointments,
-              attendedAppointments,
               cancelledAppointments,
               caseClients
             ))
@@ -160,21 +146,27 @@ class IndexController @Inject()(
     )
   }
 
-  def acceptedAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    appointments.findAcceptedAppointments(currentUser().usercode).successMap { appointments =>
-      Ok(views.html.admin.acceptedAppointments(appointments, None))
-    }
-  }
-
-  def attendedAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    appointments.findAttendedAppointments(currentUser().usercode).successMap { appointments =>
-      Ok(views.html.admin.attendedAppointments(appointments, None))
-    }
-  }
-
   def cancelledAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     appointments.findCancelledAppointments(currentUser().usercode).successMap { appointments =>
       Ok(views.html.admin.cancelledAppointments(appointments, None))
+    }
+  }
+
+  def appointments(start: Option[OffsetDateTime], end: Option[OffsetDateTime]): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    appointments.findForSearch(AppointmentSearchQuery(
+      startAfter = start.map(_.toLocalDate),
+      startBefore = end.map(_.toLocalDate),
+      teamMember = Some(currentUser().usercode),
+      states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended),
+    )).successMap { appointments =>
+      val userLookup = Map(currentUser().usercode -> currentUser())
+
+      render {
+        case Accepts.Json() =>
+          Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(appointments)(Writes.seq(AppointmentRender.writer(userLookup))))))
+        case _ =>
+          Redirect(routes.IndexController.home().withFragment("appointments"))
+      }
     }
   }
 
