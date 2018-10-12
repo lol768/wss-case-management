@@ -11,7 +11,7 @@ export default function AppointmentCalendar(container) {
   $container.fullCalendar({
     header: {
       left: 'title',
-      center: 'month,agendaWeek,agendaDay,listAll',
+      center: 'agendaFourWeek,agendaWeek,agendaDay,listAll',
       right: 'prev,next',
     },
     themeSystem: 'bootstrap3',
@@ -39,6 +39,13 @@ export default function AppointmentCalendar(container) {
     timezone: 'Europe/London',
     views: {
       agendaWeek: {
+        columnFormat: 'ddd D/MM',
+        selectable: true,
+      },
+      agendaFourWeek: {
+        type: 'basic',
+        duration: { weeks: 4 },
+        buttonText: 'next 4 weeks',
         columnFormat: 'ddd D/MM',
         selectable: true,
       },
