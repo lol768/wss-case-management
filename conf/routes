@@ -23,7 +23,7 @@ POST        /service/appointmentsearch/:key         @controllers.AppointmentSear
 GET         /service/clientsearch                   @controllers.ClientSearchController.search(query: String ?= "")
 GET         /service/casesearch                     @controllers.CaseSearchController.search
 POST        /service/casesearch                     @controllers.CaseSearchController.search
-POST        /service/casesearch/:keyOrId            @controllers.CaseSearchController.lookup(caseKeyorId: String)
+POST        /service/casesearch/:keyOrId            @controllers.CaseSearchController.lookup(keyOrId: String)
 GET         /service/enquirysearch                  @controllers.EnquirySearchController.search
 POST        /service/enquirysearch                  @controllers.EnquirySearchController.search
 POST        /service/enquirysearch/:key             @controllers.EnquirySearchController.lookup(key: domain.IssueKey)
