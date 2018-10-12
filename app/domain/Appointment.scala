@@ -100,7 +100,7 @@ object AppointmentRender {
     "appointmentType" -> o.appointment.appointmentType,
     "state" -> o.appointment.state,
     "cancellationReason" -> o.appointment.cancellationReason,
-    "case" -> o.clientCase.map { clientCase =>
+    "cases" -> o.clientCases.map { clientCase =>
       Json.obj(
         "id" -> clientCase.id,
         "key" -> clientCase.key.map(_.string),
