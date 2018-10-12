@@ -1,6 +1,18 @@
 @import (inline) "fullcalendar/dist/fullcalendar.css";
 
 .fc {
+  /* Position buttons actually in the center */
+  .fc-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .fc-header-toolbar h2 {
+    font-size: @font-size-h3;
+    color: @text-color;
+  }
+
   .fc-event-container {
     .link-colour(@text-color);
   }

@@ -15,7 +15,6 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 class UpdateClientsJob @Inject()(
   clientService: ClientService,
   profileService: ProfileService,
-  scheduler: Scheduler
 )(implicit executionContext: ExecutionContext) extends Job with Logging {
 
   override def execute(context: JobExecutionContext): Unit = {
