@@ -63,7 +63,7 @@ class CaseSearchController @Inject()(
     )
   }
 
-  def lookup(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey) { implicit caseRequest =>
+  def lookup(caseKeyorId: String): Action[AnyContent] = CanViewCaseAction(caseKeyorId) { implicit caseRequest =>
     Ok(Json.toJson(API.Success(data = Json.obj(
       "results" -> Seq(toJson(caseRequest.`case`))
     ))))
