@@ -3,6 +3,7 @@ package domain
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import domain.CaseHistory.History
 import domain.dao.CaseDao.{Case, CaseVersion, StoredCaseClient, StoredCaseClientVersion, StoredCaseTag, StoredCaseTagVersion}
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.JavaTime
@@ -154,6 +155,8 @@ object CaseDocumentType extends PlayEnum[CaseDocumentType] {
 
 object CaseHistory {
 
+  private type History[A] = Seq[(A, OffsetDateTime, Option[Either[Usercode, User]])]
+
   val writer: Writes[CaseHistory] = (r: CaseHistory) => Json.obj(
     "subject" -> toJson(r.subject),
     "team" -> toJson(r.team)(Teams.writer),
@@ -183,41 +186,35 @@ object CaseHistory {
     val usersByUsercode = userLookupService.getUsers(usercodes.distinct).toOption.getOrElse(Map())
     def toUsercodeOrUser(u: Usercode): Either[Usercode, User] = usersByUsercode.get(u).map(Right.apply).getOrElse(Left(u))
 
+    def simpleFieldHistory[A](getValue: CaseVersion => A): History[A] =
+      flatten(history.map(c => (getValue(c), c.version, c.auditUser))).map {
+        case (c,v,u) => (c, v, u.map(toUsercodeOrUser))
+      }
+    
     clientService.getOrAddClients(rawClientHistory.map(_.universityID).toSet).map(_.map(clients =>
       CaseHistory(
-        subject = flatten(history.map(c => (c.subject, c.version, c.auditUser)).toList)
-          .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
-        team = flatten(history.map(c => (c.team, c.version, c.auditUser)).toList)
-          .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
-        state = flatten(history.map(c => (c.state, c.version, c.auditUser)).toList)
-          .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
-        incidentDate = flatten(history.map(c => (c.incidentDate, c.version, c.auditUser)).toList)
-          .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
-        onCampus = flatten(history.map(c => (c.onCampus, c.version, c.auditUser)).toList)
-          .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
-        notifiedPolice = flatten(history.map(c => (c.notifiedPolice, c.version, c.auditUser)).toList)
-          .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
-        notifiedAmbulance = flatten(history.map(c => (c.notifiedAmbulance, c.version, c.auditUser)).toList)
-          .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
-        notifiedFire = flatten(history.map(c => (c.notifiedFire, c.version, c.auditUser)).toList)
-          .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
-        originalEnquiry = flatten(history.map(c => (c.originalEnquiry, c.version, c.auditUser)).toList)
-          .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
-        caseType = flatten(history.map(c => (c.caseType, c.version, c.auditUser)).toList)
-          .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
-        cause = flatten(history.map(c => (c.cause, c.version, c.auditUser)).toList)
-          .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
-        tags = flattenCollection[StoredCaseTag, StoredCaseTagVersion](rawTagHistory.toList)
+        subject = simpleFieldHistory(_.subject),
+        team = simpleFieldHistory(_.team),
+        state = simpleFieldHistory(_.state),
+        incidentDate = simpleFieldHistory(_.incidentDate),
+        onCampus = simpleFieldHistory(_.onCampus),
+        notifiedPolice = simpleFieldHistory(_.notifiedPolice),
+        notifiedAmbulance = simpleFieldHistory(_.notifiedAmbulance),
+        notifiedFire = simpleFieldHistory(_.notifiedFire),
+        originalEnquiry = simpleFieldHistory(_.originalEnquiry),
+        caseType = simpleFieldHistory(_.caseType),
+        cause = simpleFieldHistory(_.cause),
+        tags = flattenCollection[StoredCaseTag, StoredCaseTagVersion](rawTagHistory)
           .map { case (tags, v, u) => (tags.map(_.caseTag), v, u.map(toUsercodeOrUser))},
-        owners = flattenCollection[Owner, OwnerVersion](rawOwnerHistory.toList)
+        owners = flattenCollection[Owner, OwnerVersion](rawOwnerHistory)
           .map { case (owners, v, u) => (owners.map(o => usersByUsercode.get(o.userId).map(Right.apply).getOrElse(Left(o.userId))), v, u.map(toUsercodeOrUser))},
-        clients = flattenCollection[StoredCaseClient, StoredCaseClientVersion](rawClientHistory.toList)
+        clients = flattenCollection[StoredCaseClient, StoredCaseClientVersion](rawClientHistory)
           .map { case (c, v, u) => (c.map(c => clients.find(_.universityID == c.universityID).get), v, u.map(toUsercodeOrUser))},
       )
     ))
   }
 
-  private def flatten[A](items: List[(A, OffsetDateTime, Option[Usercode])]): Seq[(A, OffsetDateTime, Option[Usercode])] = (items match {
+  private def flatten[A](items: Seq[(A, OffsetDateTime, Option[Usercode])]): Seq[(A, OffsetDateTime, Option[Usercode])] = (items.toList match {
     case Nil => Nil
     case head :: Nil => Seq(head)
     case head :: tail => tail.foldLeft(Seq(head)) { (foldedItems, item) =>
@@ -229,14 +226,14 @@ object CaseHistory {
     }
   }).reverse
 
-  private def flattenCollection[A <: Versioned[A], B <: StoredVersion[A]](items: List[B]): Seq[(Set[A], OffsetDateTime, Option[Usercode])] = {
+  private def flattenCollection[A <: Versioned[A], B <: StoredVersion[A]](items: Seq[B]): Seq[(Set[A], OffsetDateTime, Option[Usercode])] = {
     def toSpecificItem(item: B): A = item match {
       case tag: StoredCaseTagVersion => StoredCaseTag(tag.caseId, tag.caseTag, tag.version).asInstanceOf[A]
       case owner: OwnerVersion => Owner(owner.entityId, owner.entityType, owner.userId, owner.version).asInstanceOf[A]
       case client: StoredCaseClientVersion => StoredCaseClient(client.caseId, client.universityID, client.version).asInstanceOf[A]
       case _ => throw new IllegalArgumentException("Unsupported versioned item")
     }
-    val result = items.sortBy(_.timestamp) match {
+    val result = items.toList.sortBy(_.timestamp) match {
       case Nil => Nil
       case head :: Nil => List((Set(toSpecificItem(head)), head.version, head.auditUser))
       case head :: tail => tail.foldLeft[Seq[(Set[A], OffsetDateTime, Option[Usercode])]](Seq((Set(toSpecificItem(head)), head.version, head.auditUser))) { (result, item) =>
@@ -254,7 +251,7 @@ object CaseHistory {
       .reverse
   }
 
-  private def toJson[A](items: Seq[(A, OffsetDateTime, Option[Either[Usercode, User]])])(implicit itemWriter: Writes[A]): JsValue =
+  private def toJson[A](items: History[A])(implicit itemWriter: Writes[A]): JsValue =
     Json.toJson(items.map { case (item, version, auditUser) => Json.obj(
       "value" -> Json.toJson(item),
       "version" -> version,
@@ -266,19 +263,20 @@ object CaseHistory {
 
 }
 
+
 case class CaseHistory(
-  subject: Seq[(String, OffsetDateTime, Option[Either[Usercode, User]])],
-  team: Seq[(Team, OffsetDateTime, Option[Either[Usercode, User]])],
-  state: Seq[(IssueState, OffsetDateTime, Option[Either[Usercode, User]])],
-  incidentDate: Seq[(Option[OffsetDateTime], OffsetDateTime, Option[Either[Usercode, User]])],
-  onCampus: Seq[(Option[Boolean], OffsetDateTime, Option[Either[Usercode, User]])],
-  notifiedPolice: Seq[(Option[Boolean], OffsetDateTime, Option[Either[Usercode, User]])],
-  notifiedAmbulance: Seq[(Option[Boolean], OffsetDateTime, Option[Either[Usercode, User]])],
-  notifiedFire: Seq[(Option[Boolean], OffsetDateTime, Option[Either[Usercode, User]])],
-  originalEnquiry: Seq[(Option[UUID], OffsetDateTime, Option[Either[Usercode, User]])],
-  caseType: Seq[(Option[CaseType], OffsetDateTime, Option[Either[Usercode, User]])],
-  cause: Seq[(CaseCause, OffsetDateTime, Option[Either[Usercode, User]])],
-  tags: Seq[(Set[CaseTag], OffsetDateTime, Option[Either[Usercode, User]])],
+  subject: History[String],
+  team: History[Team],
+  state: History[IssueState],
+  incidentDate: History[Option[OffsetDateTime]],
+  onCampus: History[Option[Boolean]],
+  notifiedPolice: History[Option[Boolean]],
+  notifiedAmbulance: History[Option[Boolean]],
+  notifiedFire: History[Option[Boolean]],
+  originalEnquiry: History[Option[UUID]],
+  caseType: History[Option[CaseType]],
+  cause: History[CaseCause],
+  tags: History[Set[CaseTag]],
   owners: Seq[(Set[Either[Usercode, User]], OffsetDateTime, Option[Either[Usercode, User]])],
-  clients: Seq[(Set[Client], OffsetDateTime, Option[Either[Usercode, User]])],
+  clients: History[Set[Client]],
 )
