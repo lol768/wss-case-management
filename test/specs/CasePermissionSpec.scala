@@ -66,7 +66,7 @@ class CasePermissionSpec extends BaseSpec with BeforeAndAfterAll {
 
     "be denied to a non-owner from different team" in {
       val page = caseViewReq(firstKey).forUser(Fixtures.users.ss2).get()
-      status(page) mustBe BAD_REQUEST
+      status(page) mustBe NOT_FOUND
     }
 
     "be denied to an owner who isn't in WSS" in {

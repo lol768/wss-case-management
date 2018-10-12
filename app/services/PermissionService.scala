@@ -130,10 +130,7 @@ class PermissionServiceImpl @Inject() (
     enquiryService.get(id).map(_.map { enquiry => enquiry.client.universityID == user.universityId.get } )
 
   override def canViewCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    Future.sequence(Seq(
-      isAdmin(user),
-      isCaseTeam(user, id)
-    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+    canEditCase(user, id) // view/edit permissions are the same at the moment
 
   override def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(
