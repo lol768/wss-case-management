@@ -3,11 +3,11 @@
 @import domain.{Enquiry, MessageData, SitsProfile, Team}
 @import warwick.sso.UniversityID
 
+@import domain.Client
 @(
   requiringAction: Seq[(Enquiry, MessageData)],
   awaitingClient: Seq[(Enquiry, MessageData)],
   closedEnquiries: Int,
-  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
   closedEnquiriesRoute: Call,
   searchScope: String,
   searchScopeValue: String,
@@ -25,8 +25,8 @@
   }
 }
 
-@views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction, clients)
-@views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient, clients)
+@views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction)
+@views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient)
 
 @if(closedEnquiries == 0) {
   <p>No closed enquiries to show</p>

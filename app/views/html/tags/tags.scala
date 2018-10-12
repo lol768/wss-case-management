@@ -1,12 +1,9 @@
 package views.html
 
-import domain.{Creator, SitsProfile}
+import domain.Creator
 import warwick.sso._
 
 package object tags {
-
-  def clientFullName(e: Either[UniversityID, SitsProfile]): String =
-    e.fold(_.string, _.fullName)
 
   def teamMemberFullName(e: Either[Usercode, User]): String =
     e.fold(_.string, u => u.name.full.getOrElse(u.usercode.string))

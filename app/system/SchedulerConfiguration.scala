@@ -3,15 +3,20 @@ package system
 import java.util.Date
 
 import com.google.inject.{Inject, Singleton}
-import org.quartz.CronScheduleBuilder._
-import org.quartz.JobBuilder._
 import org.quartz.TriggerBuilder._
 import org.quartz._
+import services.job.UpdateClientsJob
 
 @Singleton
 class SchedulerConfiguration @Inject()(
   implicit scheduler: Scheduler
 ) extends Logging {
+
+  configureScheduledJob(
+    "UpdateClientsJob",
+    JobBuilder.newJob(classOf[UpdateClientsJob]),
+    CronScheduleBuilder.cronSchedule("0 0 */12 * * ?") // Twice a day
+  )
 
   logger.info("Starting the scheduler")
   scheduler.start()

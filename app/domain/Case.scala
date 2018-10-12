@@ -3,14 +3,13 @@ package domain
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import domain.dao.CaseDao.{Case, CaseClient, CaseClientVersion, CaseVersion, StoredCaseTag, StoredCaseTagVersion}
+import domain.dao.CaseDao.{Case, CaseVersion, StoredCaseClient, StoredCaseClientVersion, StoredCaseTag, StoredCaseTagVersion}
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import play.api.libs.json.{JsValue, Json, Writes}
-import services.tabula.ProfileService
-import warwick.core.timing.TimingContext
-import warwick.sso.{UniversityID, User, UserLookupService, Usercode}
+import services.{AuditLogContext, ClientService}
+import warwick.sso.{User, UserLookupService, Usercode}
 
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
@@ -169,22 +168,22 @@ object CaseHistory {
     "cause" -> toJson(r.cause.map { case (cause, v, u) => (cause.description, v, u) }),
     "tags" -> toJson(r.tags.map { case (tags, v, u) => (tags.map(_.description).toSeq.sorted.mkString(", "), v, u) }),
     "owners" -> toJson(r.owners.map { case (owners, v, u) => (owners.map(o => o.map(user => user.name.full.getOrElse(user.usercode.string)).fold(_.string, n => n)).toSeq.sorted.mkString(", "), v, u) }),
-    "clients" -> toJson(r.clients.map { case (clients, v, u) => (clients.map(c => c.map(_.fullName).fold(_.string, n => n)).toSeq.sorted.mkString(", "), v, u) })
+    "clients" -> toJson(r.clients.map { case (clients, v, u) => (clients.map(c => c.safeFullName).toSeq.sorted.mkString(", "), v, u) })
   )
 
   def apply(
     history: Seq[CaseVersion],
     rawTagHistory: Seq[StoredCaseTagVersion],
     rawOwnerHistory: Seq[OwnerVersion],
-    rawClientHistory: Seq[CaseClientVersion],
+    rawClientHistory: Seq[StoredCaseClientVersion],
     userLookupService: UserLookupService,
-    profileService: ProfileService
-  )(implicit t: TimingContext, ec: ExecutionContext): Future[ServiceResult[CaseHistory]] = {
+    clientService: ClientService
+  )(implicit ac: AuditLogContext, ec: ExecutionContext): Future[ServiceResult[CaseHistory]] = {
     val usercodes = Seq(history, rawTagHistory, rawOwnerHistory, rawClientHistory).flatten.flatMap(_.auditUser) ++ rawOwnerHistory.map(_.userId)
     val usersByUsercode = userLookupService.getUsers(usercodes.distinct).toOption.getOrElse(Map())
     def toUsercodeOrUser(u: Usercode): Either[Usercode, User] = usersByUsercode.get(u).map(Right.apply).getOrElse(Left(u))
 
-    profileService.getProfiles(rawClientHistory.map(_.client).toSet).map(_.map(profiles =>
+    clientService.getOrAddClients(rawClientHistory.map(_.universityID).toSet).map(_.map(clients =>
       CaseHistory(
         subject = flatten(history.map(c => (c.subject, c.version, c.auditUser)).toList)
           .map { case (c, v, u) => (c, v, u.map(toUsercodeOrUser)) },
@@ -212,8 +211,8 @@ object CaseHistory {
           .map { case (tags, v, u) => (tags.map(_.caseTag), v, u.map(toUsercodeOrUser))},
         owners = flattenCollection[Owner, OwnerVersion](rawOwnerHistory.toList)
           .map { case (owners, v, u) => (owners.map(o => usersByUsercode.get(o.userId).map(Right.apply).getOrElse(Left(o.userId))), v, u.map(toUsercodeOrUser))},
-        clients = flattenCollection[CaseClient, CaseClientVersion](rawClientHistory.toList)
-          .map { case (clients, v, u) => (clients.map(c => profiles.get(c.client).map(Right.apply).getOrElse(Left(c.client))), v, u.map(toUsercodeOrUser))},
+        clients = flattenCollection[StoredCaseClient, StoredCaseClientVersion](rawClientHistory.toList)
+          .map { case (c, v, u) => (c.map(c => clients.find(_.universityID == c.universityID).get), v, u.map(toUsercodeOrUser))},
       )
     ))
   }
@@ -234,7 +233,7 @@ object CaseHistory {
     def toSpecificItem(item: B): A = item match {
       case tag: StoredCaseTagVersion => StoredCaseTag(tag.caseId, tag.caseTag, tag.version).asInstanceOf[A]
       case owner: OwnerVersion => Owner(owner.entityId, owner.entityType, owner.userId, owner.version).asInstanceOf[A]
-      case client: CaseClientVersion => CaseClient(client.caseId, client.client, client.version).asInstanceOf[A]
+      case client: StoredCaseClientVersion => StoredCaseClient(client.caseId, client.universityID, client.version).asInstanceOf[A]
       case _ => throw new IllegalArgumentException("Unsupported versioned item")
     }
     val result = items.sortBy(_.timestamp) match {
@@ -281,5 +280,5 @@ case class CaseHistory(
   cause: Seq[(CaseCause, OffsetDateTime, Option[Either[Usercode, User]])],
   tags: Seq[(Set[CaseTag], OffsetDateTime, Option[Either[Usercode, User]])],
   owners: Seq[(Set[Either[Usercode, User]], OffsetDateTime, Option[Either[Usercode, User]])],
-  clients: Seq[(Set[Either[UniversityID, SitsProfile]], OffsetDateTime, Option[Either[Usercode, User]])],
+  clients: Seq[(Set[Client], OffsetDateTime, Option[Either[Usercode, User]])],
 )

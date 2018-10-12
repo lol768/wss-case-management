@@ -32,13 +32,13 @@ object TeamEnquiryController {
   def reassignEnquiryForm(enquiry: Enquiry): Form[ReassignEnquiryData] = Form(
     mapping(
       "team" -> Teams.formField,
-      "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version),
+      "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.lastUpdated),
       "message" -> nonEmptyText
     )(ReassignEnquiryData.apply)(ReassignEnquiryData.unapply)
   )
 
   def stateChangeForm(enquiry: Enquiry): Form[OffsetDateTime] = Form(single(
-    "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.version)
+    "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.lastUpdated)
   ))
 
   val messageForm = Form(single("text" -> nonEmptyText))
@@ -64,7 +64,7 @@ class TeamEnquiryController @Inject()(
   private def renderMessages(enquiry: Enquiry, stateChangeForm: Form[OffsetDateTime], messageForm: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
     ServiceResults.zip(
       service.getForRender(enquiry.id.get),
-      profiles.getProfile(enquiry.universityID).map(_.value),
+      profiles.getProfile(enquiry.client.universityID).map(_.value),
       service.getOwners(Set(enquiry.id.get)),
       permissionService.canViewTeamFuture(currentUser.usercode, enquiry.team),
       caseService.findFromOriginalEnquiry(enquiry.id.get)
@@ -98,7 +98,7 @@ class TeamEnquiryController @Inject()(
   def renderMessages()(implicit request: EnquirySpecificRequest[_]): Future[Result] =
     renderMessages(
       request.enquiry,
-      stateChangeForm(request.enquiry).fill(request.enquiry.version),
+      stateChangeForm(request.enquiry).fill(request.enquiry.lastUpdated),
       messageForm
     )
 
@@ -126,7 +126,7 @@ class TeamEnquiryController @Inject()(
         val enquiry = request.enquiry
 
         service.addMessage(enquiry, message, files.map { f => (f.in, f.metadata) }).successMap { case (m, f) =>
-          val messageData = MessageData(m.text, m.sender, enquiry.universityID, m.created, m.teamMember, m.team)
+          val messageData = MessageData(m.text, m.sender, enquiry.client.universityID, m.created, m.teamMember, m.team)
           render {
             case Accepts.Json() =>
               val clientName = "Client"
@@ -167,8 +167,8 @@ class TeamEnquiryController @Inject()(
         messageForm
       ),
       version =>
-        service.updateState(request.enquiry, newState, version).successMap { enquiry =>
-          Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiry.key.get))
+        service.updateState(request.enquiry.id.get, newState, version).successMap { enquiry =>
+          Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiry.key))
             .flashing("success" -> Messages(s"flash.enquiry.$newState"))
         }
     )
@@ -182,7 +182,7 @@ class TeamEnquiryController @Inject()(
     )
 
   def reassignForm(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey) { implicit request =>
-    Ok(views.html.admin.enquiry.reassign(request.enquiry, reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.version, ""))))
+    Ok(views.html.admin.enquiry.reassign(request.enquiry, reassignEnquiryForm(request.enquiry).fill(ReassignEnquiryData(request.enquiry.team, request.enquiry.lastUpdated, ""))))
   }
 
   def reassign(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
@@ -190,7 +190,7 @@ class TeamEnquiryController @Inject()(
       formWithErrors => Future.successful(
         Ok(views.html.admin.enquiry.reassign(
           request.enquiry,
-          formWithErrors.bindVersion(request.enquiry.version)
+          formWithErrors.bindVersion(request.enquiry.lastUpdated)
         ))
       ),
       data =>
@@ -202,7 +202,7 @@ class TeamEnquiryController @Inject()(
             request.context.user.get.usercode
           )
 
-          service.reassign(request.enquiry, data.team, note, data.version).successMap { _ =>
+          service.reassign(request.enquiry.id.get, data.team, note, data.version).successMap { _ =>
             Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
               .flashing("success" -> Messages("flash.enquiry.reassigned", data.team.name))
           }

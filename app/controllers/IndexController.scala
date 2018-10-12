@@ -8,14 +8,13 @@ import controllers.refiners.AnyTeamActionRefiner
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.CaseDao.Case
-import helpers.{JavaTime, ServiceResults}
 import helpers.ServiceResults.ServiceResult
+import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent}
 import services._
-import services.tabula.ProfileService
-import warwick.sso.{AuthenticatedRequest, UniversityID, User, UserLookupService, Usercode}
+import warwick.sso.{AuthenticatedRequest, User, UserLookupService, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -35,7 +34,7 @@ object IndexController {
     openCases: Seq[(Case, OffsetDateTime)],
     closedCases: Int,
     cancelledAppointments: Int,
-    clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]],
+    caseClients: Map[UUID, Set[Client]],
   )
 }
 
@@ -48,7 +47,6 @@ class IndexController @Inject()(
   registrations: RegistrationService,
   audit: AuditService,
   cases: CaseService,
-  profiles: ProfileService,
   clientSummaries: ClientSummaryService,
   appointments: AppointmentService,
   userLookupService: UserLookupService,
@@ -100,23 +98,17 @@ class IndexController @Inject()(
           cases.countClosedCases(usercode),
           appointments.countCancelledAppointments(usercode),
         ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments) =>
-          cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successFlatMapTo { caseClients =>
-            val clients = (enquiriesNeedingReply ++ enquiriesAwaitingClient).map { case (e, _) => e.id.get -> Set(e.universityID) }.toMap ++ caseClients
-
-            profiles.getProfiles(clients.values.flatten.toSet).successMapTo { clientProfiles =>
-              val resolvedClients = clients.mapValues(_.map(c => clientProfiles.get(c).map(Right.apply).getOrElse(Left(c))))
-
-              Some(TeamMemberInformation(
-                teams,
-                enquiriesNeedingReply,
-                enquiriesAwaitingClient,
-                closedEnquiries,
-                openCases,
-                closedCases,
-                cancelledAppointments,
-                resolvedClients,
-              ))
-            }
+          cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMapTo { caseClients =>
+            Some(TeamMemberInformation(
+              teams,
+              enquiriesNeedingReply,
+              enquiriesAwaitingClient,
+              closedEnquiries,
+              openCases,
+              closedCases,
+              cancelledAppointments,
+              caseClients
+            ))
           }
         }
       }
@@ -133,23 +125,15 @@ class IndexController @Inject()(
   }
 
   def closedEnquiries: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    enquiries.findClosedEnquiries(currentUser().usercode).successFlatMap { enquiries =>
-      val clients = enquiries.map { case (e, _) => e.id.get -> Set(e.universityID) }.toMap
-
-      profiles.getProfiles(clients.values.flatten.toSet).successMap { profiles =>
-        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-        Ok(views.html.admin.closedEnquiries(enquiries, resolvedClients))
-      }
+    enquiries.findClosedEnquiries(currentUser().usercode).successMap { enquiries =>
+      Ok(views.html.admin.closedEnquiries(enquiries))
     }
   }
 
   def closedCases: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     cases.listClosedCases(currentUser().usercode).successFlatMap { closedCases =>
-      cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successFlatMap { clients =>
-        profiles.getProfiles(clients.values.flatten.toSet).successMap { profiles =>
-          val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-          Ok(views.html.admin.closedCases(closedCases, resolvedClients))
-        }
+      cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+        Ok(views.html.admin.closedCases(closedCases, clients))
       }
     }
   }
@@ -163,14 +147,8 @@ class IndexController @Inject()(
   }
 
   def cancelledAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    appointments.findCancelledAppointments(currentUser().usercode).successFlatMap { appointments =>
-      val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
-
-      profiles.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
-        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-
-        Ok(views.html.admin.cancelledAppointments(appointments, resolvedClients, None))
-      })
+    appointments.findCancelledAppointments(currentUser().usercode).successMap { appointments =>
+      Ok(views.html.admin.cancelledAppointments(appointments, None))
     }
   }
 
@@ -180,20 +158,15 @@ class IndexController @Inject()(
       startBefore = end.map(_.toLocalDate),
       teamMember = Some(currentUser().usercode),
       states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended),
-    )).successFlatMap { appointments =>
-      val clients = appointments.map { a => a.appointment.id -> a.clients.map(_.universityID) }.toMap
+    )).successMap { appointments =>
+      val userLookup = Map(currentUser().usercode -> currentUser())
 
-      profiles.getProfiles(clients.values.flatten.toSet).successMap(profiles => {
-        val resolvedClients = clients.mapValues(_.map(c => profiles.get(c).map(Right.apply).getOrElse(Left(c))))
-        val userLookup = Map(currentUser().usercode -> currentUser())
-
-        render {
-          case Accepts.Json() =>
-            Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(appointments)(Writes.seq(AppointmentRender.writer(resolvedClients, userLookup))))))
-          case _ =>
-            Redirect(routes.IndexController.home().withFragment("appointments"))
-        }
-      })
+      render {
+        case Accepts.Json() =>
+          Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(appointments)(Writes.seq(AppointmentRender.writer(userLookup))))))
+        case _ =>
+          Redirect(routes.IndexController.home().withFragment("appointments"))
+      }
     }
   }
 

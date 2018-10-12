@@ -5,7 +5,7 @@ import domain.{Teams, UserType}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.mvc.{Action, AnyContent}
-import services.SecurityService
+import services.{PhotoService, SecurityService}
 import services.tabula.ProfileService
 import system.Roles.Masquerader
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
@@ -16,6 +16,7 @@ import scala.concurrent.ExecutionContext
 class MasqueradeController @Inject()(
   securityService: SecurityService,
   profiles: ProfileService,
+  photos: PhotoService,
   userLookupService: UserLookupService,
   configuration: Configuration,
 )(implicit executionContext: ExecutionContext) extends BaseController {
@@ -47,12 +48,20 @@ class MasqueradeController @Inject()(
       val testTeamMembers =
         testTeamMemberUsers.flatMap { case (teamId, usercodes) =>
           userLookupService.getUsers(usercodes.map(Usercode.apply)).toOption.map(_.values)
-            .map { users => Teams.fromId(teamId) -> users.toSeq.sortBy { u => (u.name.last, u.name.first, u.usercode.string) } }
+            .map { users =>
+              Teams.fromId(teamId) ->
+                users.toSeq.sortBy { u => (u.name.last, u.name.first, u.usercode.string) }
+                  .map { user => user -> user.universityId.map(photos.photoUrl) }
+            }
         }
         .toSeq
         .sortBy { case (team, _) => team.name }
 
-      val testAdmins = userLookupService.getUsers(testAdminUsers.map(Usercode.apply)).toOption.map(_.values.toSeq).getOrElse(Seq())
+      val testAdmins =
+        userLookupService.getUsers(testAdminUsers.map(Usercode.apply))
+          .toOption
+          .map(_.values.toSeq.map { user => user -> user.universityId.map(photos.photoUrl) })
+          .getOrElse(Seq())
 
       Ok(views.html.sysadmin.masquerade(testUsers, testTeamMembers, testAdmins))
     }

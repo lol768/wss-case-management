@@ -5,9 +5,10 @@
 @import domain.dao.CaseDao.Case
 @import warwick.sso.UniversityID
 
+@import domain.Client
 @(
   cases: Seq[(Case, OffsetDateTime)],
-  clients: Map[UUID, Set[Either[UniversityID, SitsProfile]]]
+  clients: Map[UUID, Set[Client]]
 )(implicit context: RequestContext)
 
 @views.html.admin.caseTable(None, cases, clients, Some("There are no closed cases"))

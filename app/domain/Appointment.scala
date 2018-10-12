@@ -9,7 +9,7 @@ import helpers.JavaTime
 import play.api.data.format.Formatter
 import play.api.data.{FormError, Forms, Mapping}
 import play.api.libs.json.{Json, Writes}
-import warwick.sso.{UniversityID, User, Usercode}
+import warwick.sso.{User, Usercode}
 
 import scala.collection.immutable
 import scala.util.Try
@@ -32,21 +32,18 @@ case class Appointment(
 
   def subject(
     userLookupOption: Option[Map[Usercode, User]],
-    clientLookupOption: Option[Set[Either[UniversityID, SitsProfile]]]
+    clientsOption: Option[Set[AppointmentClient]]
   ): String = "%s with %s%s%s".format(
     appointmentType.description,
     userLookupOption.map(userLookup =>
       "%s".format(userLookup.get(teamMember).flatMap(_.name.full).getOrElse(teamMember.string))
     ).getOrElse(""),
-    if (userLookupOption.nonEmpty && clientLookupOption.nonEmpty) " and " else "",
-    clientLookupOption.map(clientLookup =>
-      if (clientLookup.size == 1) {
-        clientLookup.head.fold(
-          universityID => universityID.string,
-          sitsProfile => sitsProfile.fullName
-        )
+    if (userLookupOption.nonEmpty && clientsOption.nonEmpty) " and " else "",
+    clientsOption.map(clients =>
+      if (clients.size == 1) {
+        clients.head.client.safeFullName
       } else {
-        s"${clientLookup.size} clients"
+        s"${clients.size} clients"
       }
     ).getOrElse("")
   )
@@ -86,10 +83,10 @@ case class AppointmentRender(
 )
 
 object AppointmentRender {
-  def writer(clientLookup: Map[UUID, Set[Either[UniversityID, SitsProfile]]], userLookup: Map[Usercode, User]): Writes[AppointmentRender] = (o: AppointmentRender) => Json.obj(
+  def writer(userLookup: Map[Usercode, User]): Writes[AppointmentRender] = (o: AppointmentRender) => Json.obj(
     "id" -> o.appointment.id,
     "key" -> o.appointment.key.string,
-    "subject" -> o.appointment.subject(Some(userLookup), clientLookup.get(o.appointment.id)),
+    "subject" -> o.appointment.subject(Some(userLookup), Some(o.clients)),
     "start" -> o.appointment.start,
     "end" -> o.appointment.end,
     "url" -> controllers.admin.routes.AppointmentController.view(o.appointment.key).url,
@@ -111,16 +108,10 @@ object AppointmentRender {
       )
     },
     "clients" -> o.clients.map { client =>
-      val profile =
-        clientLookup.get(o.appointment.id)
-          .toSeq
-          .flatMap(_.toSeq.flatMap(_.right.toSeq))
-          .find(_.universityID == client.universityID)
-
       Json.obj(
         "client" -> Json.obj(
-          "universityID" -> client.universityID.string,
-          "fullName" -> profile.map(_.fullName),
+          "universityID" -> client.client.universityID.string,
+          "fullName" -> client.client.fullName,
         ),
         "state" -> client.state,
         "cancellationReason" -> client.cancellationReason,
@@ -132,7 +123,7 @@ object AppointmentRender {
 }
 
 case class AppointmentClient(
-  universityID: UniversityID,
+  client: Client,
   state: AppointmentState,
   cancellationReason: Option[AppointmentCancellationReason]
 )

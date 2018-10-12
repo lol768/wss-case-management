@@ -5,17 +5,16 @@ import controllers.AppointmentSearchController._
 import controllers.refiners.{AnyTeamActionRefiner, AppointmentActionFilters}
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
-import helpers.{JavaTime, ServiceResults}
 import helpers.Json.JsonClientError
 import helpers.ServiceResults.ServiceResult
+import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
-import services.tabula.ProfileService
 import services.{AppointmentService, PermissionService}
-import warwick.sso.{AuthenticatedRequest, UniversityID, User, UserLookupService, Usercode}
+import warwick.sso.{AuthenticatedRequest, User, UserLookupService, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,7 +39,6 @@ class AppointmentSearchController @Inject()(
   appointmentActionFilters: AppointmentActionFilters,
   appointmentService: AppointmentService,
   permissions: PermissionService,
-  profileService: ProfileService,
   userLookupService: UserLookupService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
@@ -76,19 +74,16 @@ class AppointmentSearchController @Inject()(
             results.successFlatMap { appointments =>
               ServiceResults.futureSequence(
                 appointments.map(a => appointmentService.getClients(a.id).map(_.map(c => a -> c)))
-              ).successFlatMap { appointmentsAndClients =>
-                val universityIDs = appointmentsAndClients.flatMap { case (_, c) => c.map(_.universityID) }
-                profileService.getProfiles(universityIDs.toSet).successMap { profiles =>
-                  val userLookup = userLookupService.getUsers(appointments.map(_.teamMember)).toOption.getOrElse(Map())
-                  Ok(Json.toJson(API.Success(data = Json.obj(
-                    "results" -> appointmentsAndClients.map { case (a, c) => toJson(
-                      a,
-                      userLookup,
-                      c.map(c => profiles.get(c.universityID).map(Right.apply).getOrElse(Left(c.universityID))),
-                      Some(category)
-                    )}
-                  ))))
-                }
+              ).successMap { appointmentsAndClients =>
+                val userLookup = userLookupService.getUsers(appointments.map(_.teamMember)).toOption.getOrElse(Map())
+                Ok(Json.toJson(API.Success(data = Json.obj(
+                  "results" -> appointmentsAndClients.map { case (a, c) => toJson(
+                    a,
+                    userLookup,
+                    c,
+                    Some(category)
+                  )}
+                ))))
               }
             }
           }
@@ -98,23 +93,21 @@ class AppointmentSearchController @Inject()(
   }
 
   def lookup(appointmentKey: IssueKey): Action[AnyContent] = CanViewAppointmentAction(appointmentKey).async { implicit request =>
-    appointmentService.getClients(request.appointment.id).successFlatMap(clients =>
-      profileService.getProfiles(clients.map(_.universityID)).successMap(profiles =>
-        Ok(Json.toJson(API.Success(data = Json.obj(
-          "results" -> Seq(toJson(
-            request.appointment,
-            userLookupService.getUser(request.appointment.teamMember).toOption.map(u => request.appointment.teamMember -> u).toMap,
-            clients.map(c => profiles.get(c.universityID).map(Right.apply).getOrElse(Left(c.universityID))),
-          ))
-        ))))
-      )
+    appointmentService.getClients(request.appointment.id).successMap(clients =>
+      Ok(Json.toJson(API.Success(data = Json.obj(
+        "results" -> Seq(toJson(
+          request.appointment,
+          userLookupService.getUser(request.appointment.teamMember).toOption.map(u => request.appointment.teamMember -> u).toMap,
+          clients,
+        ))
+      ))))
     )
   }
 
   private def toJson(
     a: Appointment,
     teamMemberUser: Map[Usercode, User],
-    clients: Set[Either[UniversityID, SitsProfile]],
+    clients: Set[AppointmentClient],
     category: Option[String] = None
   ): JsObject = Json.obj(
     "id" -> a.id,

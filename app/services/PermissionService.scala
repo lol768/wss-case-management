@@ -126,7 +126,7 @@ class PermissionServiceImpl @Inject() (
     }
 
   private def isEnquiryClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    enquiryService.get(id).map(_.map { enquiry => enquiry.universityID == user.universityId.get } )
+    enquiryService.get(id).map(_.map { enquiry => enquiry.client.universityID == user.universityId.get } )
 
   override def canViewCase(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     Future.sequence(Seq(
@@ -172,7 +172,7 @@ class PermissionServiceImpl @Inject() (
   private def isCaseClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     user.universityId.map { uniId =>
       caseService.getClients(id).map {
-        _.map(_.contains(uniId))
+        _.map(_.exists(_.universityID == uniId))
       }
     }.getOrElse {
       // No Uni ID; client of nothing
@@ -203,7 +203,7 @@ class PermissionServiceImpl @Inject() (
   private def isAppointmentClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     user.universityId.map { uniId =>
       appointmentService.getClients(id).map {
-        _.map(_.exists(_.universityID == uniId))
+        _.map(_.exists(_.client.universityID == uniId))
       }
     }.getOrElse {
       // No Uni ID; client of nothing

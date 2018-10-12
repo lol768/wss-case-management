@@ -9,8 +9,7 @@ import org.mockito.Mockito.{RETURNS_SMART_NULLS, _}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
-import services.NoAuditLogging
-import services.tabula.ProfileService
+import services.{ClientService, NoAuditLogging}
 import uk.ac.warwick.util.core.DateTimeUtils
 import warwick.sso.{UniversityID, User, UserLookupService, Usercode, Users}
 
@@ -23,8 +22,8 @@ class CaseHistoryTest extends PlaySpec with MockitoSugar with ScalaFutures with 
   private val userLookupService = mock[UserLookupService](RETURNS_SMART_NULLS)
   when(userLookupService.getUsers(Seq.empty[Usercode])).thenReturn(Try(Map.empty[Usercode, User]))
   when(userLookupService.getUsers(Seq(Usercode("cusfal")))).thenReturn(Try(Map(Usercode("cusfal") -> Users.create(Usercode("cusfal")))))
-  private val profileService = mock[ProfileService](RETURNS_SMART_NULLS)
-  when(profileService.getProfiles(Set.empty[UniversityID])).thenReturn(Future.successful(Right(Map.empty[UniversityID, SitsProfile])))
+  private val clientService = mock[ClientService](RETURNS_SMART_NULLS)
+  when(clientService.getOrAddClients(Set.empty[UniversityID])).thenReturn(Future.successful(Right(Seq.empty[Client])))
 
   "CaseHistory" should {
 
@@ -42,7 +41,7 @@ class CaseHistoryTest extends PlaySpec with MockitoSugar with ScalaFutures with 
           StoredCaseTagVersion(caseID, CaseTag.Bullying, now.minusMinutes(4), DatabaseOperation.Insert, now.minusMinutes(4), Some(Usercode("cusfal"))),
           StoredCaseTagVersion(caseID, CaseTag.Alcohol, now.minusMinutes(5), DatabaseOperation.Insert, now.minusMinutes(5), Some(Usercode("cusfal")))
         )
-        val result = CaseHistory.apply(Seq(), history, Seq(), Seq(), userLookupService, profileService).futureValue.right.get
+        val result = CaseHistory.apply(Seq(), history, Seq(), Seq(), userLookupService, clientService).futureValue.right.get
         result.tags.head._1 mustBe Set(CaseTag.Accommodation, CaseTag.Alcohol, CaseTag.Antisocial, CaseTag.Bullying)
         result.tags.head._2 mustBe now
         result.tags(1)._1 mustBe Set(CaseTag.Alcohol, CaseTag.Antisocial, CaseTag.Bullying)

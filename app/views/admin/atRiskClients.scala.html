@@ -22,11 +22,11 @@
       </tr>
     </thead>
     <tbody>
-    @clients.toSeq.sorted.map { case AtRiskClient(summary, profile, lastCaseUpdated, lastEnquiryUpdated) =>
+    @clients.toSeq.sorted.map { case AtRiskClient(summary, lastCaseUpdated, lastEnquiryUpdated) =>
     <tr>
       <td>
-        <a href="@controllers.admin.routes.ClientController.client(summary.universityID)">
-          @profile.map(_.fullName).getOrElse(summary.universityID.string)
+        <a href="@controllers.admin.routes.ClientController.client(summary.client.universityID)">
+          @summary.client.safeFullName
         </a>
       </td>
       @if(showMentalHealth) {
