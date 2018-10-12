@@ -4,8 +4,7 @@
 @import warwick.sso.{UniversityID, User, Usercode}
 
 @(
-  appointments: Seq[AppointmentRender],
-  userLookup: Option[Map[Usercode, User]]
+  appointments: Seq[AppointmentRender]
 )(implicit context: RequestContext)
 
-@views.html.admin.appointmentTable(Some("Cancelled appointments"), appointments, userLookup, Some("There are no cancelled appointments"))
+@views.html.admin.appointmentTable(Some("Cancelled appointments"), appointments, Some("There are no cancelled appointments"))

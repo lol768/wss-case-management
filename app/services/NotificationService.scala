@@ -299,7 +299,7 @@ class NotificationServiceImpl @Inject()(
   }
 
   override def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
-    withUser(appointment.teamMember) { teamMember =>
+    withUser(appointment.teamMember.usercode) { teamMember =>
       val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
 
       queueEmailAndSendActivity(

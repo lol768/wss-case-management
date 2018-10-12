@@ -9,7 +9,7 @@ import helpers.JavaTime
 import play.api.data.format.Formatter
 import play.api.data.{FormError, Forms, Mapping}
 import play.api.libs.json.{Json, Writes}
-import warwick.sso.{User, Usercode}
+import warwick.sso.Usercode
 
 import scala.collection.immutable
 import scala.util.Try
@@ -21,7 +21,7 @@ case class Appointment(
   duration: Duration,
   location: Option[Location],
   team: Team,
-  teamMember: Usercode,
+  teamMember: Member,
   appointmentType: AppointmentType,
   state: AppointmentState,
   cancellationReason: Option[AppointmentCancellationReason],
@@ -30,15 +30,10 @@ case class Appointment(
 ) {
   val end: OffsetDateTime = start.plus(duration)
 
-  def subject(
-    userLookupOption: Option[Map[Usercode, User]],
-    clientsOption: Option[Set[AppointmentClient]]
-  ): String = "%s with %s%s%s".format(
+  def subject(clientsOption: Option[Set[AppointmentClient]]): String = "%s with %s%s%s".format(
     appointmentType.description,
-    userLookupOption.map(userLookup =>
-      "%s".format(userLookup.get(teamMember).flatMap(_.name.full).getOrElse(teamMember.string))
-    ).getOrElse(""),
-    if (userLookupOption.nonEmpty && clientsOption.nonEmpty) " and " else "",
+    teamMember.safeFullName,
+    if (clientsOption.nonEmpty) " and " else "",
     clientsOption.map(clients =>
       if (clients.size == 1) {
         clients.head.client.safeFullName
@@ -83,10 +78,10 @@ case class AppointmentRender(
 )
 
 object AppointmentRender {
-  def writer(userLookup: Map[Usercode, User]): Writes[AppointmentRender] = (o: AppointmentRender) => Json.obj(
+  def writer: Writes[AppointmentRender] = (o: AppointmentRender) => Json.obj(
     "id" -> o.appointment.id,
     "key" -> o.appointment.key.string,
-    "subject" -> o.appointment.subject(Some(userLookup), Some(o.clients)),
+    "subject" -> o.appointment.subject(Some(o.clients)),
     "start" -> o.appointment.start,
     "end" -> o.appointment.end,
     "url" -> controllers.admin.routes.AppointmentController.view(o.appointment.key).url,
@@ -94,8 +89,8 @@ object AppointmentRender {
     "location" -> Json.toJsFieldJsValueWrapper(o.appointment.location)(Writes.optionWithNull(Location.writer)),
     "team" -> Json.toJsFieldJsValueWrapper(o.appointment.team)(Teams.writer),
     "teamMember" -> Json.obj(
-      "usercode" -> o.appointment.teamMember.string,
-      "fullName" -> userLookup.get(o.appointment.teamMember).flatMap(_.name.full),
+      "usercode" -> o.appointment.teamMember.usercode.string,
+      "fullName" -> o.appointment.teamMember.fullName,
     ),
     "appointmentType" -> o.appointment.appointmentType,
     "state" -> o.appointment.state,
@@ -228,7 +223,7 @@ object AppointmentCancellationReason extends PlayEnum[AppointmentCancellationRea
 case class AppointmentNote(
   id: UUID,
   text: String,
-  teamMember: Usercode,
+  teamMember: Member,
   created: OffsetDateTime = OffsetDateTime.now(),
   lastUpdated: OffsetDateTime = OffsetDateTime.now()
 )

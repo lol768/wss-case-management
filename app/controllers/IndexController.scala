@@ -14,7 +14,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent}
 import services._
-import warwick.sso.{AuthenticatedRequest, User, UserLookupService, Usercode}
+import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -22,8 +22,7 @@ object IndexController {
   case class ClientInformation(
     issues: Seq[IssueRender],
     registration: Option[Registration],
-    appointments: Seq[AppointmentRender],
-    userLookup: Map[Usercode, User]
+    appointments: Seq[AppointmentRender]
   )
 
   case class TeamMemberInformation(
@@ -49,7 +48,6 @@ class IndexController @Inject()(
   cases: CaseService,
   clientSummaries: ClientSummaryService,
   appointments: AppointmentService,
-  userLookupService: UserLookupService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
   import anyTeamActionRefiner._
@@ -68,10 +66,7 @@ class IndexController @Inject()(
       { case (clientEnquiries, clientCases, registration, a) =>
         val issues = (clientEnquiries.map(_.toIssue) ++ clientCases.map(_.toIssue)).sortBy(_.lastUpdatedDate)(JavaTime.dateTimeOrdering).reverse
 
-        val usercodes = a.map(_.appointment.teamMember).toSet
-        val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
-
-        val result = Future.successful(Right(ClientInformation(issues, registration, a, userLookup)))
+        val result = Future.successful(Right(ClientInformation(issues, registration, a)))
 
         // Record an EnquiryView or CaseView event for the first issue as that's open by default in the accordion
         issues.headOption.map(issue => issue.issue match {
@@ -148,7 +143,7 @@ class IndexController @Inject()(
 
   def cancelledAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     appointments.findCancelledAppointments(currentUser().usercode).successMap { appointments =>
-      Ok(views.html.admin.cancelledAppointments(appointments, None))
+      Ok(views.html.admin.cancelledAppointments(appointments))
     }
   }
 
@@ -159,11 +154,9 @@ class IndexController @Inject()(
       teamMember = Some(currentUser().usercode),
       states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended),
     )).successMap { appointments =>
-      val userLookup = Map(currentUser().usercode -> currentUser())
-
       render {
         case Accepts.Json() =>
-          Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(appointments)(Writes.seq(AppointmentRender.writer(userLookup))))))
+          Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(appointments)(Writes.seq(AppointmentRender.writer)))))
         case _ =>
           Redirect(routes.IndexController.home().withFragment("appointments"))
       }

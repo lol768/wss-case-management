@@ -281,14 +281,14 @@
               <td>
                 @tags.icons.appointmentState(a.appointment.state)
                 <a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)">
-                  @a.appointment.key.string @a.appointment.subject(Some(userLookup), Some(a.clients))
+                  @a.appointment.key.string @a.appointment.subject(Some(a.clients))
                 </a>
               </td>
               <td>
                 @helpers.JavaTime.Relative(a.appointment.start) &ndash;
                 @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
               </td>
-              <td>@userLookup.get(a.appointment.teamMember).flatMap(_.name.full)</td>
+              <td>@a.appointment.teamMember.safeFullName</td>
             </tr>
           }
           </tbody>
