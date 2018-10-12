@@ -10,10 +10,8 @@ import warwick.core.timing.TimingContext
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-/**
-  * Sends a single outgoing email for a particular user.
-  */
 @PersistJobDataAfterExecution
+@DisallowConcurrentExecution
 class UpdateClientsJob @Inject()(
   clientService: ClientService,
   profileService: ProfileService,
