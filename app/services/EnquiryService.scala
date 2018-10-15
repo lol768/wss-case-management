@@ -19,6 +19,7 @@ import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
 import ServiceResults.Implicits._
 import domain.dao.ClientDao.StoredClient
+import domain.dao.MemberDao.StoredMember
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -85,7 +86,8 @@ class EnquiryServiceImpl @Inject() (
   daoRunner: DaoRunner,
   notificationService: NotificationService,
   uploadedFileService: UploadedFileService,
-  clientService: ClientService
+  clientService: ClientService,
+  memberService: MemberService
 )(implicit ec: ExecutionContext) extends EnquiryService {
 
   import EnquiryService._
@@ -140,14 +142,16 @@ class EnquiryServiceImpl @Inject() (
 
   override def reassign(id: UUID, team: Team, note: EnquiryNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] =
     auditService.audit('EnquiryReassign, id.toString, 'Enquiry, Json.obj("team" -> team.id)) {
-      daoRunner.run(for {
-        (existing, client) <- enquiryDao.findByIDQuery(id).withClient.result.head
-        stored <- enquiryDao.update(existing.copy(team = team), version)
-        _ <- addNoteDBIO(stored.id, EnquiryNoteType.Referral, note)
-      } yield (stored, client)).flatMap { case (stored, client) =>
-        val enquiry = stored.asEnquiry(client.asClient)
-        notificationService.enquiryReassign(enquiry).map(_.map(_ => enquiry))
-      }
+      memberService.getOrAddMember(note.teamMember).successFlatMapTo(_ =>
+        daoRunner.run(for {
+          (existing, client) <- enquiryDao.findByIDQuery(id).withClient.result.head
+          stored <- enquiryDao.update(existing.copy(team = team), version)
+          _ <- addNoteDBIO(stored.id, EnquiryNoteType.Referral, note)
+        } yield (stored, client)).flatMap { case (stored, client) =>
+          val enquiry = stored.asEnquiry(client.asClient)
+          notificationService.enquiryReassign(enquiry).map(_.map(_ => enquiry))
+        }
+      )
     }
 
   private def addNoteDBIO(enquiryID: UUID, noteType: EnquiryNoteType, note: EnquiryNoteSave)(implicit ac: AuditLogContext): DBIO[StoredEnquiryNote] =
@@ -194,7 +198,7 @@ class EnquiryServiceImpl @Inject() (
       withClientAndMessages <- enquiries.withClientAndMessages.map {
         case (e, c, mf) => (e, c, mf.map { case (m, f) => (m.messageData, f) })
       }.result
-      notes <- enquiryDao.findNotesQuery(withClientAndMessages.map { case (e, _, _) => e.id }.toSet).result
+      notes <- enquiryDao.findNotesQuery(withClientAndMessages.map { case (e, _, _) => e.id }.toSet).withMember.result
     } yield (withClientAndMessages, notes)).map { case (withClientAndMessages, notes) =>
       Right(groupTuples(withClientAndMessages, notes))
     }
@@ -227,7 +231,7 @@ class EnquiryServiceImpl @Inject() (
       withClientAndMessages <- query.withClientAndMessages.map {
         case (e, c, mf) => (e, c, mf.map { case (m, f) => (m.messageData, f) })
       }.result
-      notes <- enquiryDao.findNotesQuery(withClientAndMessages.map { case (e, _, _) => e.id }.toSet).result
+      notes <- enquiryDao.findNotesQuery(withClientAndMessages.map { case (e, _, _) => e.id }.toSet).withMember.result
     } yield (withClientAndMessages, notes)
 
   override def getForRender(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]] =
@@ -348,10 +352,13 @@ class EnquiryServiceImpl @Inject() (
 }
 
 object EnquiryService {
-  def groupTuples(messageTuples: Seq[(StoredEnquiry, StoredClient, Option[(MessageData, Option[StoredUploadedFile])])], notes: Seq[StoredEnquiryNote]): Seq[EnquiryRender] = {
+  def groupTuples(messageTuples: Seq[(StoredEnquiry, StoredClient, Option[(MessageData, Option[StoredUploadedFile])])], notes: Seq[(StoredEnquiryNote, StoredMember)]): Seq[EnquiryRender] = {
     val enquiriesAndMessages = MessageData.groupOwnerAndMessage(messageTuples.map { case (e, c, m) => (e.asEnquiry(c.asClient), m) })
 
-    val notesByEnquiry = notes.groupBy(_.enquiryID).mapValues(_.map(_.asEnquiryNote).sorted(EnquiryNote.dateOrdering)).withDefaultValue(Seq())
+    val notesByEnquiry = notes
+      .groupBy { case (n, _) => n.enquiryID }
+      .mapValues(_.map { case (n, m) => n.asEnquiryNote(m.asMember) }.sorted(EnquiryNote.dateOrdering))
+      .withDefaultValue(Seq())
 
     sortByRecent(enquiriesAndMessages.map { case (e, m) =>
       EnquiryRender(

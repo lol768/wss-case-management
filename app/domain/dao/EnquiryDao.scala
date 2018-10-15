@@ -254,11 +254,11 @@ object EnquiryDao {
     created: OffsetDateTime,
     version: OffsetDateTime
   ) extends Versioned[StoredEnquiryNote] {
-    def asEnquiryNote = EnquiryNote(
+    def asEnquiryNote(member: Member) = EnquiryNote(
       id,
       noteType,
       text,
-      teamMember,
+      member,
       created,
       version
     )
@@ -327,6 +327,12 @@ object EnquiryDao {
       (id, enquiryID, noteType, text, teamMember, created, version, operation, timestamp, auditUser).mapTo[StoredEnquiryNoteVersion]
     def pk = primaryKey("pk_enquiry_note_version", (id, timestamp))
     def idx = index("idx_enquiry_note_version", (id, version))
+  }
+
+  implicit class EnquiryNoteExtensions[C[_]](q: Query[EnquiryNotes, StoredEnquiryNote, C]) {
+    def withMember = q
+      .join(MemberDao.members.table)
+      .on(_.teamMember === _.usercode)
   }
 
   case class EnquirySearchQuery(

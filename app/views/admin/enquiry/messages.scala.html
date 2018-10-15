@@ -97,7 +97,7 @@
                                 @views.utils.nl2br(note.text)
                               </div>
                               <div class="panel-footer">
-                                <div class="author">@userLookup.get(note.teamMember).flatMap(_.name.full).getOrElse(s"[unknown user ${note.teamMember.string}]")</div>
+                                <div class="author">@note.teamMember.safeFullName</div>
                               </div>
                             </div>
                           }
