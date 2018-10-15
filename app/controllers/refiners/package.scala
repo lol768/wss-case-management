@@ -54,6 +54,23 @@ package object refiners {
   def WithCase(caseKey: IssueKey)(implicit caseService: CaseService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, CaseSpecificRequest] =
     WithCase(caseKey.string)
 
+  def WithCaseNote(uuid: UUID)(implicit caseService: CaseService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, CaseNoteSpecificRequest] =
+    new ActionRefiner[AuthenticatedRequest, CaseNoteSpecificRequest] {
+      override protected def refine[A](request: AuthenticatedRequest[A]): Future[Either[Result, CaseNoteSpecificRequest[A]]] = {
+        implicit val requestContext: RequestContext = requestContextBuilder(request)
+
+        caseService.getNote(uuid)
+          .map {
+            case Right(cn) =>
+              Right(new CaseNoteSpecificRequest[A](cn, request))
+            case _ =>
+              Left(Results.NotFound(views.html.errors.notFound()))
+          }
+      }
+
+      override protected def executionContext: ExecutionContext = ec
+    }
+
   def WithIssue(id: UUID)(implicit enquiryService: EnquiryService, caseService: CaseService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, IssueSpecificRequest] =
     new ActionRefiner[AuthenticatedRequest, IssueSpecificRequest] {
       override protected def refine[A](request: AuthenticatedRequest[A]): Future[Either[Result, IssueSpecificRequest[A]]] = {

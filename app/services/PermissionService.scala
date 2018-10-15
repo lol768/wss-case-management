@@ -33,6 +33,7 @@ trait PermissionService {
 
   def canViewCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def canEditCaseNote(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canAddTeamMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canClientViewCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canAddClientMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
@@ -68,6 +69,13 @@ class PermissionServiceImpl @Inject() (
       ServiceResults.sequence(Seq(isAdminImpl(user)) ++ Teams.all.map(inTeam(user, _)))
         .right.map(_.contains(true))
 
+  private def oneOf(checks: Future[ServiceResult[Boolean]] *): Future[ServiceResult[Boolean]] =
+    Future.sequence(checks).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+
+  private def forAll(checks: Future[ServiceResult[Boolean]] *): Future[ServiceResult[Boolean]] =
+    Future.sequence(checks).map(results => ServiceResults.sequence(results).map(_.forall(is => is)))
+
+
   override def inAnyTeam(users: Set[Usercode]): ServiceResult[Map[Usercode, Boolean]] = {
     users.toSeq.map(user => user -> inAnyTeamImpl(user)).partition { case (_, result) => result.isLeft } match {
       case (Nil, results) => Right(results.collect { case (user, Right(x)) => user -> x }.toMap)
@@ -89,17 +97,17 @@ class PermissionServiceImpl @Inject() (
     Future.successful(canViewTeam(user, team))
 
   override def canViewEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    Future.sequence(Seq(
+    oneOf(
       isAdmin(user.usercode),
       inAnyTeam(user.usercode)
-    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+    )
 
   override def canAddTeamMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    Future.sequence(Seq(
+    oneOf(
       isAdmin(user.usercode),
       isEnquiryTeam(user.usercode, id),
       isEnquiryOwner(user.usercode, id)
-    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+    )
 
   override def canClientViewEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     isEnquiryClient(user, id)
@@ -108,11 +116,11 @@ class PermissionServiceImpl @Inject() (
     isEnquiryClient(user, id)
 
   override def canEditEnquiry(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    Future.sequence(Seq(
+    oneOf(
       isAdmin(user),
       isEnquiryTeam(user, id),
       isEnquiryOwner(user, id)
-    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+    )
 
   private def isEnquiryTeam(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     enquiryService.get(id).map(_.flatMap { enquiry => inTeam(user, enquiry.team) } )
@@ -133,27 +141,35 @@ class PermissionServiceImpl @Inject() (
     canEditCase(user, id) // view/edit permissions are the same at the moment
 
   override def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    Future.sequence(Seq(
+    oneOf(
       isAdmin(user),
       isCaseTeam(user, id),
       isCaseOwner(user, id)
-    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+    )
+
+  override def canEditCaseNote(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] = {
+    caseService.getNote(id).successFlatMapTo(noteAndCase => {
+      canEditCase(user, noteAndCase.clientCase.id.get).successMapTo(canEditNote => {
+        canEditNote && noteAndCase.note.teamMember == user
+      })
+    })
+  }
 
   override def canAddTeamMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     canEditCase(user.usercode, id)
 
   override def canClientViewCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    Future.sequence(Seq(
+    forAll(
       isCaseClient(user, id),
       caseHasMessages(user, id)
-    )).map(results => ServiceResults.sequence(results).map(_.forall(is => is)))
+    )
 
 
   override def canAddClientMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    Future.sequence(Seq(
+    forAll(
       isCaseClient(user, id),
       caseHasMessages(user, id)
-    )).map(results => ServiceResults.sequence(results).map(_.forall(is => is)))
+    )
 
   private def isCaseTeam(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     caseService.find(id).map(_.flatMap(c => inTeam(user, c.team)))
@@ -186,17 +202,17 @@ class PermissionServiceImpl @Inject() (
     }
 
   override def canViewAppointment(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    Future.sequence(Seq(
+    oneOf(
       isAdmin(user),
       inAnyTeam(user)
-    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+    )
 
   override def canEditAppointment(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    Future.sequence(Seq(
+    oneOf(
       isAdmin(user),
       isAppointmentTeam(user, id),
       isAppointmentTeamMember(user, id)
-    )).map(results => ServiceResults.sequence(results).map(_.contains(true)))
+    )
 
   private def isAppointmentClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     user.universityId.map { uniId =>
