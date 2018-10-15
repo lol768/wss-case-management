@@ -180,10 +180,12 @@ class CaseDaoImpl @Inject()(
 
   override def findNote(id: UUID): DBIO[NoteAndCase] =
     caseNotes.table.filter(_.id === id)
+      .withMember
       .join(cases.table)
-      .on((n, c) => n.caseId === c.id)
+      .on { case ((n, _), c) => n.caseId === c.id }
+      .flattenJoin
       .result.head
-      .map { case (n, c) => NoteAndCase(n.asCaseNote, c)}
+      .map { case (n, m, c) => NoteAndCase(n.asCaseNote(m.asMember), c)}
 
   override def insertNote(note: StoredCaseNote)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
     caseNotes.insert(note)

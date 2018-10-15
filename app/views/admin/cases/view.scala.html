@@ -62,7 +62,7 @@
     @views.utils.nl2br(note.text)
     </div>
     <div class="panel-footer">
-      @if(context.user.exists(_.usercode == note.teamMember)) {
+      @if(context.user.exists(_.usercode == note.teamMember.usercode)) {
         <div class="pull-right">
           <a class="btn btn-default btn-xs" href="@controllers.admin.routes.CaseController.editNoteForm(c.clientCase.key.get, note.id)">
             Edit</a>
@@ -75,7 +75,7 @@
           }
         </div>
       }
-      <div class="author">@user.flatMap(_.name.full).getOrElse(s"[unknown user ${note.teamMember.string}]")</div>
+      <div class="author">@note.teamMember.safeFullName</div>
     </div>
   </div>
 }

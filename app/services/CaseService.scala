@@ -354,8 +354,8 @@ class CaseServiceImpl @Inject() (
   override def getNote(id: UUID)(implicit t: TimingContext): Future[ServiceResult[NoteAndCase]] =
     daoRunner.run(dao.findNote(id)).map(Right.apply)
 
-  private def getNotesDBIO(caseID: UUID): DBIO[Seq[StoredCaseNote]] =
-    dao.findNotesQuery(caseID).sortBy(_.created.desc).result
+  private def getNotesDBIO(caseID: UUID): DBIO[Seq[(StoredCaseNote, StoredMember)]] =
+    dao.findNotesQuery(caseID).sortBy(_.created.desc).withMember.result
 
   override def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]] =
     daoRunner.run(getNotesDBIO(caseID)).map(notes => Right(notes.map { case (n, m) => n.asCaseNote(m.asMember) }))
