@@ -8,8 +8,6 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.AppointmentDao.AppointmentCase
-import domain.dao.AppointmentDao.AppointmentCase.AppointmentCases
 import domain.dao.CaseDao.{Cases, _}
 import domain.dao.ClientDao.StoredClient
 import helpers.JavaTime
@@ -51,7 +49,7 @@ trait CaseDao {
   def deleteLink(link: StoredCaseLink, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findLinksQuery(caseID: UUID): Query[CaseLinks, StoredCaseLink, Seq]
   def insertNote(note: StoredCaseNote)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
-  def findNote(id: UUID)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
+  def findNote(id: UUID): DBIO[NoteAndCase]
   def updateNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
   def deleteNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq]
@@ -179,8 +177,12 @@ class CaseDaoImpl @Inject()(
   override def findLinksQuery(caseID: UUID): Query[CaseLinks, StoredCaseLink, Seq] =
     caseLinks.table.filter { l => l.outgoingCaseID === caseID || l.incomingCaseID === caseID }
 
-  override def findNote(id: UUID)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
-    caseNotes.table.filter(_.id === id).result.head
+  override def findNote(id: UUID): DBIO[NoteAndCase] =
+    caseNotes.table.filter(_.id === id)
+      .join(cases.table)
+      .on((n, c) => n.caseId === c.id)
+      .result.head
+      .map { case (n, c) => NoteAndCase(n.asCaseNote, c)}
 
   override def insertNote(note: StoredCaseNote)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
     caseNotes.insert(note)
@@ -318,6 +320,11 @@ object CaseDao {
       CaseService.lastModified(this)
     )
   }
+
+  case class NoteAndCase(
+    note: CaseNote,
+    clientCase: Case
+  )
 
   object Case {
     def tupled = (apply _).tupled

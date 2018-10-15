@@ -2,7 +2,6 @@ package controllers.refiners
 
 import java.util.UUID
 
-import domain.IssueKey
 import javax.inject.{Inject, Singleton}
 import play.api.mvc._
 import services.{CaseService, PermissionService, SecurityService}
@@ -20,7 +19,7 @@ class CanEditCaseNoteActionRefiner @Inject()(
   private implicit val implicitCaseService: CaseService = caseService
 
   private val CanEditCaseNote = PermissionsFilter[CaseNoteSpecificRequest] { implicit request =>
-    permissionService.canEditCaseNote(request.context.user.get.usercode, request.caseNote.id)
+    permissionService.canEditCaseNote(request.context.user.get.usercode, request.noteAndCase.note.id)
   }
 
   def CanEditCaseNoteAction(id: UUID): ActionBuilder[CaseNoteSpecificRequest, AnyContent] =
