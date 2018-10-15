@@ -82,8 +82,12 @@ class NavigationServiceImpl @Inject() (
     permission.teams(usercode).right.map(_.map(teamHome)).getOrElse(Nil)
 
   override def getNavigation(loginContext: LoginContext): Seq[Navigation] =
+    Seq(new NavigationPage("Me", controllers.routes.IndexController.home()) {
+      override def isActive(path: String): Boolean = path.equals(route.url)
+    }) ++
     teamLinks(loginContext) ++
     masqueraderLinks(loginContext) ++
     adminMenu(loginContext) ++
     sysadminMenu(loginContext)
+
 }
