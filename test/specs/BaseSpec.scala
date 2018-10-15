@@ -33,7 +33,7 @@ abstract class BaseSpec
   // This might be a bad idea. Experimenting with ways to make all the specs
   // be readable and not too repetitive.
   case class req(path: String, user: Option[User] = None) {
-    def forUser(u: User) = copy(user = Some(u))
+    def forUser(u: User) = copy(user = Option(u))
     def get(): Future[Result] = {
       val plainReq = FakeRequest(GET, path)
       val req = user.map(plainReq.withUser(_)).getOrElse(plainReq)

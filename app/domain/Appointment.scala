@@ -9,6 +9,7 @@ import helpers.JavaTime
 import play.api.data.format.Formatter
 import play.api.data.{FormError, Forms, Mapping}
 import play.api.libs.json.{Json, Writes}
+import uk.ac.warwick.util.termdates.AcademicYear
 import warwick.sso.Usercode
 
 import scala.collection.immutable
@@ -83,6 +84,7 @@ object AppointmentRender {
     "key" -> o.appointment.key.string,
     "subject" -> o.appointment.subject(Some(o.clients)),
     "start" -> o.appointment.start,
+    "weekNumber" -> AcademicYear.forDate(o.appointment.start).getAcademicWeek(o.appointment.start).getWeekNumber,
     "end" -> o.appointment.end,
     "url" -> controllers.admin.routes.AppointmentController.view(o.appointment.key).url,
     "duration" -> o.appointment.duration,
@@ -92,7 +94,10 @@ object AppointmentRender {
       "usercode" -> o.appointment.teamMember.usercode.string,
       "fullName" -> o.appointment.teamMember.fullName,
     ),
-    "appointmentType" -> o.appointment.appointmentType,
+    "appointmentType" -> Json.obj(
+      "id" -> o.appointment.appointmentType,
+      "description" -> o.appointment.appointmentType.description,
+    ),
     "state" -> o.appointment.state,
     "cancellationReason" -> o.appointment.cancellationReason,
     "cases" -> o.clientCases.map { clientCase =>

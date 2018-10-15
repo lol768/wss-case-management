@@ -62,16 +62,20 @@
     @views.utils.nl2br(note.text)
     </div>
     <div class="panel-footer">
-      <div class="pull-right">
-        <a class="btn btn-default btn-xs" href="@controllers.admin.routes.CaseController.editNoteForm(c.clientCase.key.get, note.id)">Edit</a>
-        @defining(CaseController.deleteForm(note.lastUpdated).fill(note.lastUpdated)) { form: Form[OffsetDateTime] =>
-          @b3.inline.formCSRF(controllers.admin.routes.CaseController.deleteNote(c.clientCase.key.get, note.id), 'class -> "inline-form") { implicit ifc =>
-            @b3.validatedHidden(form, "version")
-            <button type="submit" class="btn btn-default btn-xs" data-toggle="confirm-submit" data-message="Are you sure you want to delete this case note?">Delete</button>
+      @if(context.user.exists(_.usercode == note.teamMember)) {
+        <div class="pull-right">
+          <a class="btn btn-default btn-xs" href="@controllers.admin.routes.CaseController.editNoteForm(c.clientCase.key.get, note.id)">
+            Edit</a>
+          @defining(CaseController.deleteForm(note.lastUpdated).fill(note.lastUpdated)) { form: Form[OffsetDateTime] =>
+            @b3.inline.formCSRF(controllers.admin.routes.CaseController.deleteNote(c.clientCase.key.get, note.id), 'class -> "inline-form") { implicit ifc =>
+              @b3.validatedHidden(form, "version")
+              <button type="submit" class="btn btn-default btn-xs" data-toggle="confirm-submit" data-message="Are you sure you want to delete this case note?">
+                Delete</button>
+            }
           }
-        }
-      </div>
-      <div class="author">@note.teamMember.safeFullName</div>
+        </div>
+      }
+      <div class="author">@user.flatMap(_.name.full).getOrElse(s"[unknown user ${note.teamMember.string}]")</div>
     </div>
   </div>
 }

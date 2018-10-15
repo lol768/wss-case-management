@@ -52,6 +52,7 @@ trait CaseService {
   def deleteLink(caseID: UUID, linkID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
   def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
+  def getNote(id: UUID)(implicit t: TimingContext): Future[ServiceResult[NoteAndCase]]
   def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]]
   def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def deleteNote(caseID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
@@ -350,8 +351,11 @@ class CaseServiceImpl @Inject() (
       )
     }
 
-  private def getNotesDBIO(caseID: UUID): DBIO[Seq[(StoredCaseNote, StoredMember)]] =
-    dao.findNotesQuery(caseID).sortBy(_.created.desc).withMember.result
+  override def getNote(id: UUID)(implicit t: TimingContext): Future[ServiceResult[NoteAndCase]] =
+    daoRunner.run(dao.findNote(id)).map(Right.apply)
+
+  private def getNotesDBIO(caseID: UUID): DBIO[Seq[StoredCaseNote]] =
+    dao.findNotesQuery(caseID).sortBy(_.created.desc).result
 
   override def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]] =
     daoRunner.run(getNotesDBIO(caseID)).map(notes => Right(notes.map { case (n, m) => n.asCaseNote(m.asMember) }))

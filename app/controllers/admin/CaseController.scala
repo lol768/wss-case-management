@@ -5,7 +5,7 @@ import java.util.UUID
 
 import controllers.{BaseController, UploadedFileControllerHelper}
 import controllers.admin.CaseController._
-import controllers.refiners._
+import controllers.refiners.{CanEditCaseActionRefiner, _}
 import domain._
 import domain.dao.CaseDao.Case
 import domain.CaseNoteType._
@@ -139,6 +139,7 @@ class CaseController @Inject()(
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   canViewCaseActionRefiner: CanViewCaseActionRefiner,
   canEditCaseActionRefiner: CanEditCaseActionRefiner,
+  canEditCaseNoteActionRefiner: CanEditCaseNoteActionRefiner,
   uploadedFileControllerHelper: UploadedFileControllerHelper
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
@@ -146,6 +147,7 @@ class CaseController @Inject()(
   import canEditCaseActionRefiner._
   import canViewCaseActionRefiner._
   import canViewTeamActionRefiner._
+  import canEditCaseNoteActionRefiner._
   import CaseMessageController.messageForm
 
   def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData], messageForm: Form[String])(implicit request: CaseSpecificRequest[_]): Future[Result] = {
@@ -183,7 +185,7 @@ class CaseController @Inject()(
     }
   }
 
-  def renderCase()(implicit request: CaseSpecificRequest[_]): Future[Result] = {
+  private def renderCase()(implicit request: CaseSpecificRequest[_]): Future[Result] = {
     import request.{`case` => c}
     renderCase(
       c.key.get,
@@ -463,62 +465,51 @@ class CaseController @Inject()(
     )
   }
 
-  def editNoteForm(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    withCaseNote(id) { note =>
-      Future.successful(
+  def editNoteForm(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanEditCaseNoteAction(id).async { implicit noteRequest =>
+    val note = noteRequest.note
+    Future.successful(
+      Ok(
+        views.html.admin.cases.editNote(
+          caseKey,
+          note,
+          caseNoteForm(note.lastUpdated).fill(CaseNoteFormData(note.text, note.lastUpdated))
+        )
+      )
+    )
+  }
+
+  def editNote(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanEditCaseNoteAction(id).async { implicit noteRequest =>
+    caseNoteForm(noteRequest.note.lastUpdated).bindFromRequest().fold(
+      formWithErrors => Future.successful(
         Ok(
           views.html.admin.cases.editNote(
             caseKey,
-            note,
-            caseNoteForm(note.lastUpdated).fill(CaseNoteFormData(note.text, note.lastUpdated))
+            noteRequest.note,
+            formWithErrors.bindVersion(noteRequest.note.lastUpdated)
           )
         )
-      )
-    }
+      ),
+      data =>
+        cases.updateNote(noteRequest.`case`.id.get, noteRequest.note.id, CaseNoteSave(data.text, noteRequest.context.user.get.usercode), data.version).successMap { _ =>
+          Redirect(controllers.admin.routes.CaseController.view(caseKey))
+            .flashing("success" -> Messages("flash.case.noteUpdated"))
+        }
+    )
   }
 
-  def editNote(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    withCaseNote(id) { note =>
-      caseNoteForm(note.lastUpdated).bindFromRequest().fold(
-        formWithErrors => Future.successful(
-          Ok(
-            views.html.admin.cases.editNote(
-              caseKey,
-              note,
-              formWithErrors.bindVersion(note.lastUpdated)
-            )
-          )
-        ),
-        data =>
-          cases.updateNote(caseRequest.`case`.id.get, note.id, CaseNoteSave(data.text, caseRequest.context.user.get.usercode), data.version).successMap { _ =>
-            Redirect(controllers.admin.routes.CaseController.view(caseKey))
-              .flashing("success" -> Messages("flash.case.noteUpdated"))
-          }
-      )
-    }
+  def deleteNote(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanEditCaseNoteAction(id).async { implicit noteRequest =>
+    deleteForm(noteRequest.note.lastUpdated).bindFromRequest().fold(
+      formWithErrors => Future.successful(
+        // Nowhere to show a validation error so just fall back to an error page
+        showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
+      ),
+      version =>
+        cases.deleteNote(noteRequest.`case`.id.get, noteRequest.note.id, version).successMap { _ =>
+          Redirect(controllers.admin.routes.CaseController.view(caseKey))
+            .flashing("success" -> Messages("flash.case.noteDeleted"))
+        }
+    )
   }
-
-  def deleteNote(caseKey: IssueKey, id: UUID): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    withCaseNote(id) { note =>
-      deleteForm(note.lastUpdated).bindFromRequest().fold(
-        formWithErrors => Future.successful(
-          // Nowhere to show a validation error so just fall back to an error page
-          showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
-        ),
-        version =>
-          cases.deleteNote(caseRequest.`case`.id.get, note.id, version).successMap { _ =>
-            Redirect(controllers.admin.routes.CaseController.view(caseKey))
-              .flashing("success" -> Messages("flash.case.noteDeleted"))
-          }
-      )
-    }
-  }
-
-  private def withCaseNote(id: UUID)(f: CaseNote => Future[Result])(implicit caseRequest: CaseSpecificRequest[AnyContent]): Future[Result] =
-    cases.getNotes(caseRequest.`case`.id.get).successFlatMap { notes =>
-      notes.find(_.id == id).map(f)
-        .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
-    }
 
   def reassignForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
     Ok(views.html.admin.cases.reassign(caseRequest.`case`, caseReassignForm(caseRequest.`case`).fill(ReassignCaseData(
@@ -544,10 +535,10 @@ class CaseController @Inject()(
           )
         } else {
           if (data.team == caseRequest.`case`.team) // No change
-            Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(data.team.id)))
+            Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(data.team.id).withFragment("cases")))
           else
             cases.reassign(caseRequest.`case`, data.team, data.caseType, CaseNoteSave(data.message, caseRequest.context.user.get.usercode), data.version).successMap { _ =>
-              Redirect(controllers.admin.routes.AdminController.teamHome(caseRequest.`case`.team.id))
+              Redirect(controllers.admin.routes.AdminController.teamHome(caseRequest.`case`.team.id).withFragment("cases"))
                 .flashing("success" -> Messages("flash.case.reassigned", data.team.name))
             }
         }

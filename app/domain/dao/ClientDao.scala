@@ -27,6 +27,7 @@ trait ClientDao {
   def get(universityID: UniversityID): DBIO[Option[StoredClient]]
   def get(universityIDs: Set[UniversityID]): DBIO[Seq[StoredClient]]
   def getOlderThan(duration: FiniteDuration): Query[Clients, StoredClient, Seq]
+  def findByNameQuery(name: String): Query[Clients, StoredClient, Seq]
 }
 
 object ClientDao {
@@ -116,4 +117,12 @@ class ClientDaoImpl @Inject()(
 
   override def getOlderThan(duration: FiniteDuration): Query[Clients, StoredClient, Seq] =
     clients.table.filter(_.version < JavaTime.offsetDateTime.minus(duration.toDays, ChronoUnit.DAYS))
+
+  override def findByNameQuery(name: String): Query[Clients, StoredClient, Seq] =
+    clients.table.filter(c =>
+      c.fullName.nonEmpty &&
+        c.fullName.toLowerCase.like(
+          name.split(" ").map(_.trim.toLowerCase).map(n => s"$n%").mkString("")
+        )
+    )
 }

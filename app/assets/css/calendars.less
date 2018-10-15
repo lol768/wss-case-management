@@ -1,6 +1,8 @@
 @import (inline) "fullcalendar/dist/fullcalendar.css";
 
 .fc {
+  body & { font-size: inherit; } // Undo crimes
+
   /* Position buttons actually in the center */
   .fc-center {
     position: absolute;
@@ -33,6 +35,68 @@
     &.Cancelled {
       background-color: @state-danger-bg;
       border-color: @state-danger-text;
+    }
+  }
+
+  // Undo FullCalendar's horrible table styling
+  table.fc-table-table {
+    table-layout: auto;
+    font-size: inherit;
+    border-bottom: 0;
+
+    th, td {
+      border-width: 0;
+    }
+  }
+
+  // Styling for table view
+  .fc-table-table {
+    border-collapse: separate;
+    border-spacing: 8px 16px;
+
+    .fc-table-heading {
+      background-color: lighten(@brand-colour, 55%);
+
+      .fc-table-heading--week {
+        font-size: 90%;
+      }
+    }
+
+    .fc-table-item {
+      &.Provisional {
+        background-color: @state-info-bg;
+        border-color: @state-info-text;
+
+        #gradient > .striped();
+      }
+
+      &.Accepted, &.Attended {
+        background-color: @state-success-bg;
+        border-color: @state-success-text;
+      }
+
+      &.Cancelled {
+        background-color: @state-danger-bg;
+        border-color: @state-danger-text;
+      }
+
+      &.fc-has-url {
+        cursor: pointer;
+      }
+
+      .fc-table-item--time--end-time,
+      .fc-table-item--title--key,
+      .fc-table-item--details--team-member {
+        font-size: 90%;
+      }
+
+      .fc-table-item--time {
+        text-align: right;
+
+        .fc-table-item--time--end-time {
+          color: @gray-light;
+        }
+      }
     }
   }
 }
