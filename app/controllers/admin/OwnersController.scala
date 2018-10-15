@@ -106,7 +106,7 @@ class OwnersController @Inject()(
     caseService.getOwners(Set(request.`case`.id.get)).successFlatMap { ownerMap =>
       val currentOwners = ownerMap.getOrElse(request.`case`.id.get, Set())
       if (currentOwners.contains(currentUser.usercode)) {
-        Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(request.`case`.team.id)))
+        Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(request.`case`.team.id).withFragment("cases")))
       } else {
         caseService.setOwners(request.`case`.id.get, currentOwners + currentUser.usercode).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(request.`case`.key.get))
