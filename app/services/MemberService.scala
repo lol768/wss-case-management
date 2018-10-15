@@ -20,6 +20,7 @@ object MemberService {
 @ImplementedBy(classOf[MemberServiceImpl])
 trait MemberService {
   def getOrAddMember(usercode: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Member]]
+  def getOrAddMember(usercode: Option[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Option[Member]]]
   def getOrAddMembers(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
   def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
   def updateMembers(details: Map[Usercode, Option[String]])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
@@ -33,6 +34,12 @@ class MemberServiceImpl @Inject()(
 
   override def getOrAddMember(usercode: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Member]] =
     getOrAddMembers(Set(usercode)).map(_.map(_.head))
+
+  override def getOrAddMember(usercode: Option[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Option[Member]]] =
+    usercode match {
+      case Some(u) => getOrAddMember(u).map(_.map(Option.apply))
+      case _ => Future.successful(Right(None))
+    }
 
   override def getOrAddMembers(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]] = {
     daoRunner.run(DBIOAction.sequence(usercodes.toSeq.map(dao.get))).flatMap(_.partition(_.isEmpty) match {

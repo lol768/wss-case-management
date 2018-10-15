@@ -343,7 +343,6 @@ object CaseDao {
 
   case class CaseMessages(data: Seq[MessageRender]) {
     lazy val byClient: Map[UniversityID, Seq[MessageRender]] = data.groupBy(_.message.client)
-    lazy val teamMembers: Set[Usercode] = data.flatMap(_.message.teamMember).toSet
     lazy val length: Int = data.length
   }
 
@@ -425,10 +424,17 @@ object CaseDao {
       .joinLeft(caseNotes.table)
       .on(_.id === _.caseId)
     def withMessages = q
-      .joinLeft(Message.messages.table.withUploadedFiles)
-      .on { case (c, (m, _)) =>
+      .joinLeft(
+        Message.messages.table
+          .withUploadedFiles
+          .joinLeft(MemberDao.members.table)
+          .on { case ((m, _), member) => m.teamMember.map(_ === member.usercode) }
+          .map { case ((m, f), member) => (m, f, member) }
+      )
+      .on { case (c, (m, _, _)) =>
         c.id === m.ownerId && m.ownerType === (MessageOwner.Case: MessageOwner)
       }
+
 
     def withLastUpdated = q
       .joinLeft(Message.messages.table)

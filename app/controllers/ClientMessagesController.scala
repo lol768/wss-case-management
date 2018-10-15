@@ -74,9 +74,7 @@ class ClientMessagesController @Inject()(
           request.issue,
           e => enquiryService.addMessage(e, message, files.map { f => (f.in, f.metadata) }),
           c => caseService.addMessage(c, currentUser.universityId.get, message, files.map { f => (f.in, f.metadata) })
-        ).successMap { case (m, f) =>
-          val messageData = MessageData(m.text, m.sender, currentUser.universityId.get, m.created, m.teamMember, m.team)
-
+        ).successMap { case (messageData, f) =>
           render {
             case Accepts.Json() =>
               val clientName = "You"

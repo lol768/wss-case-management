@@ -197,13 +197,8 @@
               render.message,
               render.files,
               profile.map(_.fullName).getOrElse(enquiry.client.universityID.string),
-              render.message.teamMember
-                .flatMap { usercode =>
-                  userLookup.get(usercode)
-                    .filter(_.isFound)
-                    .flatMap(_.name.full)
-                    .map { name => s"$name, ${render.message.team.getOrElse(enquiry.team).name} team" }
-                }.getOrElse(s"${render.message.team.getOrElse(enquiry.team).name} team"),
+              render.message.teamMember.map { member => s"${member.safeFullName}, ${render.message.team.getOrElse(enquiry.team).name} team" }
+                .getOrElse(s"${render.message.team.getOrElse(enquiry.team).name} team"),
               f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key, f.id),
               clientLastRead.filter(_ => render.message.sender == MessageSender.Team).map(_.isAfter(render.message.created))
             )

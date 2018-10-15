@@ -365,13 +365,8 @@
                       render.message,
                       render.files,
                       "Client",
-                      render.message.teamMember
-                          .flatMap { usercode =>
-                        userLookup.get(usercode)
-                            .filter(_.isFound)
-                            .flatMap(_.name.full)
-                            .map { name => s"$name, ${render.message.team.getOrElse(c.clientCase.team).name} team" }
-                      }.getOrElse(s"${render.message.team.getOrElse(c.clientCase.team).name} team"),
+                      render.message.teamMember.map { member => s"${member.safeFullName}, ${render.message.team.getOrElse(c.clientCase.team).name} team" }
+                          .getOrElse(s"${render.message.team.getOrElse(c.clientCase.team).name} team"),
                       f => controllers.admin.routes.CaseMessageController.download(c.clientCase.key.get, f.id),
                       // TODO last view date for cases
                       None
