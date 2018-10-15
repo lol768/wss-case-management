@@ -155,7 +155,7 @@ class TableView extends View {
 
   // generates the HTML for the day headers that live amongst the event rows
   dayHeaderHtml(dayDate, weekNumber) {
-    const weekHtml = (weekNumber !== this.lastWeekNumber) ? `<span class='fc-table-heading--week'>(week ${weekNumber})</span>` : '';
+    const weekHtml = (weekNumber !== this.lastWeekNumber) ? `<span class='fc-table-heading--week'>(week ${htmlEscape(weekNumber)})</span>` : '';
     this.lastWeekNumber = weekNumber;
 
     return `<tr class="fc-table-heading" data-date="${dayDate.format('YYYY-MM-DD')}">
@@ -199,27 +199,27 @@ class TableEventRenderer extends EventRenderer {
 
     return `<tr class="${classes.join(' ')}">
         <td class="fc-table-item--time col-sm-1">
-          <span class="fc-table-item--time--start-time">${formatTimeMoment(start)}</span>
+          <span class="fc-table-item--time--start-time">${htmlEscape(formatTimeMoment(start))}</span>
           <br />
-          <span class="fc-table-item--time--end-time">${formatTimeMoment(end)}</span>
+          <span class="fc-table-item--time--end-time">${htmlEscape(formatTimeMoment(end))}</span>
         </td>
         <td class="fc-table-item--title col-sm-4">
           <span class="fc-table-item--title--clients">
-            ${_.map(clients, client => `<a href="/team/client/${client.client.universityID}">${client.client.fullName}</a>`).join('<br />')}
+            ${_.map(clients, client => `<a href="/team/client/${client.client.universityID}">${htmlEscape(client.client.fullName)}</a>`).join('<br />')}
           </span>
           <br />
-          <span class="fc-table-item--title--key">${key}</span>
+          <span class="fc-table-item--title--key">${htmlEscape(key)}</span>
         </td>
         <td class="fa-table-item--details col-sm-4">
-          <span class="fc-table-item--details--type">${appointmentType.description}</span>
+          <span class="fc-table-item--details--type">${htmlEscape(appointmentType.description)}</span>
           <br />
-          <span class="fc-table-item--details--team-member">with ${teamMember.fullName}</span>
+          <span class="fc-table-item--details--team-member">with ${htmlEscape(teamMember.fullName)}</span>
         </td>
         <td class="fa-table-item--location col-sm-2">
           ${location ? htmlEscape(location.name) : ''}
         </td>
         <td class="fa-table-item--state col-sm-1">
-          ${state}
+          ${htmlEscape(state)}
         </td>
       </tr>`;
   }
