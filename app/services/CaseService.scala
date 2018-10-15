@@ -259,11 +259,13 @@ class CaseServiceImpl @Inject() (
     }
 
     auditService.audit(Symbol(s"Case${targetState.entryName}"), caseID.toString, 'Case, Json.obj()) {
-      daoRunner.run(for {
-        clientCase <- dao.find(caseID)
-        updated <- dao.update(clientCase.copy(state = targetState), version)
-        _ <- addNoteDBIO(caseID, noteType, caseNote)
-      } yield updated).map(Right.apply)
+      memberService.getOrAddMember(caseNote.teamMember).successFlatMapTo(_ =>
+        daoRunner.run(for {
+          clientCase <- dao.find(caseID)
+          updated <- dao.update(clientCase.copy(state = targetState), version)
+          _ <- addNoteDBIO(caseID, noteType, caseNote)
+        } yield updated).map(Right.apply)
+      )
     }
   }
 
@@ -291,12 +293,14 @@ class CaseServiceImpl @Inject() (
 
   override def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]] =
     auditService.audit('CaseLinkSave, outgoingID.toString, 'Case, Json.obj("to" -> incomingID.toString, "note" -> caseNote.text)) {
-      daoRunner.run(for {
-        outNote <- addNoteDBIO(outgoingID, CaseNoteType.AssociatedCase, caseNote)
-        // add a note to the linked case - will bump last modified on that case. May want to show it in the UI at some point but won't be exposed for now
-        _ <- addNoteDBIO(incomingID, CaseNoteType.AssociatedCase, caseNote)
-        link <- dao.insertLink(StoredCaseLink(UUID.randomUUID(), linkType, outgoingID, incomingID, outNote.id, caseNote.teamMember))
-      } yield link).map(Right.apply)
+      memberService.getOrAddMember(caseNote.teamMember).successFlatMapTo(_ =>
+        daoRunner.run(for {
+          outNote <- addNoteDBIO(outgoingID, CaseNoteType.AssociatedCase, caseNote)
+          // add a note to the linked case - will bump last modified on that case. May want to show it in the UI at some point but won't be exposed for now
+          _ <- addNoteDBIO(incomingID, CaseNoteType.AssociatedCase, caseNote)
+          link <- dao.insertLink(StoredCaseLink(UUID.randomUUID(), linkType, outgoingID, incomingID, outNote.id, caseNote.teamMember))
+        } yield link).map(Right.apply)
+      )
     }
 
   private def getLinksDBIO(caseID: UUID): DBIO[(Seq[CaseLink], Seq[CaseLink])] =
