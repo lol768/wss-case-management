@@ -83,7 +83,7 @@ case class CaseNote(
   id: UUID,
   noteType: CaseNoteType,
   text: String,
-  teamMember: Usercode,
+  teamMember: Member,
   created: OffsetDateTime = OffsetDateTime.now(),
   lastUpdated: OffsetDateTime = OffsetDateTime.now()
 )

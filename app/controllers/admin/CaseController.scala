@@ -161,15 +161,13 @@ class CaseController @Inject()(
       appointments.findForCase(request.`case`.id.get),
       cases.getHistory(request.`case`.id.get)
     ).successFlatMap { case (c, owners, originalEnquiry, a, history) =>
-      val usercodes = c.notes.map(_.teamMember).toSet ++ owners ++ c.messages.teamMembers
+      val usercodes = owners ++ c.messages.teamMembers
       val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
       val ownerUsers = userLookup.filterKeys(owners.contains).values.toSeq.sortBy { u => (u.name.last, u.name.first) }
 
-      val caseNotes = c.notes.map { note => (note, userLookup.get(note.teamMember)) }
-
       val generalNoteTypes = Seq(GeneralNote, CaseClosed, CaseReopened)
-      val (generalNotes, sectionNotes) = caseNotes.partition{ case (note, _) => generalNoteTypes.contains(note.noteType) }
-      val sectionNotesByType = sectionNotes.groupBy{ case (note, _) => note.noteType }
+      val (generalNotes, sectionNotes) = c.notes.partition(note => generalNoteTypes.contains(note.noteType))
+      val sectionNotesByType = sectionNotes.groupBy(_.noteType)
 
       profiles.getProfiles(c.clients.map(_.universityID)).successMap { clientProfiles =>
         Ok(views.html.admin.cases.view(

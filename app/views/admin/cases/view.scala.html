@@ -13,8 +13,8 @@
   c: Case.FullyJoined,
   profiles: Map[Client, Option[SitsProfile]],
   owners: Seq[User],
-  caseNotes: Seq[(CaseNote, Option[User])],
-  sectionNotes: Map[CaseNoteType, Seq[(CaseNote, Option[User])]],
+  caseNotes: Seq[CaseNote],
+  sectionNotes: Map[CaseNoteType, Seq[CaseNote]],
   originalEnquiry: Option[Enquiry],
   appointments: Seq[AppointmentRender],
   userLookup: Map[Usercode, User],
@@ -46,7 +46,7 @@
   }
 }
 
-@caseNote(note: CaseNote, user: Option[User]) = {
+@caseNote(note: CaseNote) = {
   <div class="panel panel-default">
     <div class="panel-heading">
       <h3 class="panel-title">
@@ -72,13 +72,13 @@
           }
         }
       </div>
-      <div class="author">@user.flatMap(_.name.full).getOrElse(s"[unknown user ${note.teamMember.string}]")</div>
+      <div class="author">@note.teamMember.safeFullName</div>
     </div>
   </div>
 }
 
 @viewSectionNotes(noteType: CaseNoteType, link: String) = {
-  @defining(sectionNotes.getOrElse(noteType, Nil)) { notes: Seq[(CaseNote, Option[User])] =>
+  @defining(sectionNotes.getOrElse(noteType, Nil)) { notes: Seq[CaseNote] =>
     @if(notes.nonEmpty) {
       <a role="button" href="#@noteType.entryName-notes-modal" data-toggle="modal" data-target="#@noteType.entryName-notes-modal">
         View @tags.p(notes.size, link)()
@@ -92,7 +92,7 @@
               <h4 class="modal-title" id="@noteType.entryName-notes-modal-label">@{link.capitalize}s</h4>
             </div>
             <div class="modal-body">
-              @notes.map { case (note, user) => @caseNote(note, user) }
+              @notes.map(n => caseNote(n))
             </div>
           </div>
         </div>
@@ -316,7 +316,7 @@
         }
       }
 
-      @caseNotes.map { case (note, user) => @caseNote(note, user)}
+      @caseNotes.map(caseNote)
     }
 
     @tags.sectioned.section("case", s"Messages (${c.messages.length})", isCollapsible = profiles.size == 1) {

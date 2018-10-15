@@ -52,6 +52,7 @@ trait CaseDao {
   def updateNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
   def deleteNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq]
+  def findNotesQuery(caseIDs: Set[UUID]): Query[CaseNotes, StoredCaseNote, Seq]
   def insertDocument(document: StoredCaseDocument)(implicit ac: AuditLogContext): DBIO[StoredCaseDocument]
   def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq]
@@ -187,6 +188,9 @@ class CaseDaoImpl @Inject()(
 
   override def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq] =
     caseNotes.table.filter(_.caseId === caseID)
+
+  override def findNotesQuery(caseIDs: Set[UUID]): Query[CaseNotes, StoredCaseNote, Seq] =
+    caseNotes.table.filter(_.caseId.inSet(caseIDs))
 
   override def insertDocument(document: StoredCaseDocument)(implicit ac: AuditLogContext): DBIO[StoredCaseDocument] =
     caseDocuments.insert(document)
@@ -663,11 +667,11 @@ object CaseDao {
     created: OffsetDateTime,
     version: OffsetDateTime
   ) extends Versioned[StoredCaseNote] {
-    def asCaseNote = CaseNote(
+    def asCaseNote(member: Member) = CaseNote(
       id,
       noteType,
       text,
-      teamMember,
+      member,
       created,
       version
     )
@@ -736,6 +740,12 @@ object CaseDao {
       (id, caseId, noteType, text, teamMember, created, version, operation, timestamp, auditUser).mapTo[StoredCaseNoteVersion]
     def pk = primaryKey("pk_case_note_version", (id, timestamp))
     def idx = index("idx_case_note_version", (id, version))
+  }
+
+  implicit class CaseNoteExtensions[C[_]](q: Query[CaseNotes, StoredCaseNote, C]) {
+    def withMember = q
+      .join(MemberDao.members.table)
+      .on(_.teamMember === _.usercode)
   }
 
   case class StoredCaseDocument(
