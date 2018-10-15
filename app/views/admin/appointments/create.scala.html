@@ -13,6 +13,6 @@
   @b3.vertical.formCSRF(controllers.admin.routes.AppointmentController.create(team.id)) { implicit ifc =>
     @appointmentFields(form, relatedCases, availableRooms)
 
-    @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id))
+    @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id).withFragment("appointments"))
   }
 }

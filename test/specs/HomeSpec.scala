@@ -17,7 +17,7 @@ class HomeSpec extends BaseSpec {
       contentAsString(home) must include("Make an enquiry")
 
       val html = contentAsHtml(home)
-      html.navigationPages mustBe 'empty
+      html.navigationPages.all mustBe 'empty
       html.pageHeading mustBe "My messages"
 
       html.contentTabs mustBe Seq("My messages", "My appointments")
@@ -26,7 +26,10 @@ class HomeSpec extends BaseSpec {
     "render team link for member of a team" in {
       val home = req("/").forUser(users.ss1).get()
       val html = contentAsHtml(home)
-      html.navigationPages mustBe Seq((s"${Teams.WellbeingSupport.name} team", Uri.parse(s"/team/${Teams.WellbeingSupport.id}")))
+      html.navigationPages.primary mustBe Seq(
+        ("Me", Uri.parse("/")),
+        (s"${Teams.WellbeingSupport.name} team", Uri.parse(s"/team/${Teams.WellbeingSupport.id}"))
+      )
     }
 
     "forbid a user without a University ID" in {

@@ -79,8 +79,17 @@ class NavigationServiceImpl @Inject() (
   def teamLinks(login: LoginContext): Seq[NavigationPage] =
     login.user.map(_.usercode).map(teamLinksForUser).getOrElse(Nil)
 
-  def teamLinksForUser(usercode: Usercode): Seq[NavigationPage] =
-    permission.teams(usercode).right.map(_.map(teamHome)).getOrElse(Nil)
+  def teamLinksForUser(usercode: Usercode): Seq[NavigationPage] = {
+    val teamLinks = permission.teams(usercode).right.map(_.map(teamHome)).getOrElse(Nil)
+
+    if(teamLinks.nonEmpty) {
+      new NavigationPage("Me", controllers.routes.IndexController.home()) {
+        override def isActive(path: String): Boolean = path.equals(route.url)
+      } +: teamLinks
+    } else {
+      teamLinks
+    }
+  }
 
   override def getNavigation(loginContext: LoginContext): Seq[Navigation] =
     teamLinks(loginContext) ++

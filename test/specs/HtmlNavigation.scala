@@ -45,15 +45,27 @@ trait HtmlNavigation {
   class HtmlNavigator(html: Document) {
     import X._
 
+    case class NavigationPages(
+      primary: Seq[(String, Uri)],
+      secondary: Seq[(String, Uri)],
+      tertiary: Seq[(String, Uri)],
+      all: Seq[(String, Uri)]
+    )
+
     /**
       * Return all the ID7 navigation links on the given page.
-      * It is a flat list, so all the nested items in submenus and secondary and tertiary
-      * items are all included. It would be possible to parse these with a bit of work.
       */
-    lazy val navigationPages: Seq[(String, Uri)] =
-      xpathElements(html, "//nav[@role='navigation']//a").map { link =>
-         link.getText -> Uri.parse(link.attributeValue("href"))
-      }
+    lazy val navigationPages: NavigationPages = {
+      def linkElementsToStrings(elements: Seq[Element]) =
+        elements.map(link => link.getText -> Uri.parse(link.attributeValue("href")))
+
+      NavigationPages(
+        linkElementsToStrings(xpathElements(html, "//nav[contains(@class, 'navbar-primary')][@role='navigation']//a")),
+        linkElementsToStrings(xpathElements(html, "//nav[contains(@class, 'navbar-secondary')][@role='navigation']//a")),
+        linkElementsToStrings(xpathElements(html, "//nav[contains(@class, 'navbar-tertiary')][@role='navigation']//a")),
+        linkElementsToStrings(xpathElements(html, "//nav[@role='navigation']//a"))
+      )
+    }
 
     // A page may have a nav-tabs as part of its content.
     lazy val contentTabs: Seq[String] =

@@ -10,9 +10,11 @@ import services.tabula.ProfileService
 import slick.dbio.DBIOAction
 import warwick.sso.UniversityID
 import helpers.ServiceResults.Implicits._
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import domain.ExtendedPostgresProfile.api._
+import warwick.core.timing.TimingContext
 
 object ClientService {
   val UpdateRequiredWindow: FiniteDuration = 7.days
@@ -23,6 +25,7 @@ trait ClientService {
   def getOrAddClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
   def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
   def updateClients(details: Map[UniversityID, Option[String]])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
+  def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Seq[Client]]]
 }
 
 class ClientServiceImpl @Inject()(
@@ -62,5 +65,12 @@ class ClientServiceImpl @Inject()(
         existing.map(client => dao.update(client.copy(fullName = details(client.universityID)), client.version))
       )
     } yield Right(updated.map(_.asClient)))
+
+  override def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Seq[Client]]] =
+    if (query.matches("^\\d{7,}$")) {
+      daoRunner.run(dao.get(UniversityID(query))).map(r => Right(r.toSeq.map(_.asClient)))
+    } else {
+      daoRunner.run(dao.findByNameQuery(query).result).map(r => Right(r.map(_.asClient)))
+    }
 
 }
