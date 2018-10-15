@@ -69,8 +69,6 @@ class TeamEnquiryController @Inject()(
       permissionService.canViewTeamFuture(currentUser.usercode, enquiry.team),
       caseService.findFromOriginalEnquiry(enquiry.id.get)
     ).successFlatMap { case (render, profile, ownersMap, canViewTeam, linkedCases) =>
-      val allUsers = ownersMap.values.flatten
-      val userLookup = userLookupService.getUsers(allUsers.toSeq).getOrElse(Map())
 
       val getClientLastRead: Future[ServiceResult[Option[OffsetDateTime]]] =
         profile.map { p => service.findLastViewDate(enquiry.id.get, p.usercode) }
@@ -82,9 +80,8 @@ class TeamEnquiryController @Inject()(
           profile,
           render.messages,
           render.notes,
-          ownersMap.values.flatten.flatMap(userLookup.get).toSeq.sortBy { u => (u.name.last, u.name.first) },
+          ownersMap.values.flatten.toSet,
           clientLastRead,
-          userLookup,
           stateChangeForm,
           messageForm,
           canViewTeam,

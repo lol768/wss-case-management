@@ -122,7 +122,7 @@ class PermissionServiceImpl @Inject() (
       if (!isInAnyTeam) {
         Future.successful(Right(false))
       } else {
-        enquiryService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).contains(user)))
+        enquiryService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).map(_.usercode).contains(user)))
       }
     }
 
@@ -163,7 +163,7 @@ class PermissionServiceImpl @Inject() (
       if (!isInAnyTeam) {
         Future.successful(Right(false))
       } else {
-        caseService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).contains(user)))
+        caseService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).map(_.usercode).contains(user)))
       }
     }
 

@@ -6,14 +6,14 @@
 @import org.apache.tika.mime.MediaType
 @import warwick.sso.{User, Usercode}
 
+@import domain.Member
 @(
   enquiry: Enquiry,
   profile: Option[SitsProfile],
   messages: Seq[MessageRender],
   notes: Seq[EnquiryNote],
-  owners: Seq[User],
+  owners: Set[Member],
   clientLastRead: Option[OffsetDateTime],
-  userLookup: Map[Usercode, User],
   stateChangeForm: Form[OffsetDateTime],
   messageForm: Form[String],
   canViewEnquiryTeam: Boolean,

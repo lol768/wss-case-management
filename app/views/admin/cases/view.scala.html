@@ -12,12 +12,11 @@
 @(
   c: Case.FullyJoined,
   profiles: Map[Client, Option[SitsProfile]],
-  owners: Seq[User],
+  owners: Set[Member],
   caseNotes: Seq[CaseNote],
   sectionNotes: Map[CaseNoteType, Seq[CaseNote]],
   originalEnquiry: Option[Enquiry],
   appointments: Seq[AppointmentRender],
-  userLookup: Map[Usercode, User],
   noteForm: Form[CaseNoteFormData],
   messageForm: Form[String],
   history: CaseHistory,

@@ -161,10 +161,6 @@ class CaseController @Inject()(
       appointments.findForCase(request.`case`.id.get),
       cases.getHistory(request.`case`.id.get)
     ).successFlatMap { case (c, owners, originalEnquiry, a, history) =>
-      val usercodes = owners
-      val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
-      val ownerUsers = userLookup.filterKeys(owners.contains).values.toSeq.sortBy { u => (u.name.last, u.name.first) }
-
       val generalNoteTypes = Seq(GeneralNote, CaseClosed, CaseReopened)
       val (generalNotes, sectionNotes) = c.notes.partition(note => generalNoteTypes.contains(note.noteType))
       val sectionNotesByType = sectionNotes.groupBy(_.noteType)
@@ -173,12 +169,11 @@ class CaseController @Inject()(
         Ok(views.html.admin.cases.view(
           c,
           (c.clients.toSeq ++ a.flatMap(_.clients.map(_.client))).distinct.map(client => client -> clientProfiles.get(client.universityID)).toMap,
-          ownerUsers,
+          owners,
           generalNotes,
           sectionNotesByType,
           originalEnquiry,
           a,
-          userLookup,
           caseNoteForm,
           messageForm,
           history,
@@ -281,13 +276,13 @@ class CaseController @Inject()(
           cases.create(c, clients, data.tags),
           updateOriginalEnquiry
         ).successFlatMap { case (createdCase, originalEnquiry) =>
-          val setOwners: Future[ServiceResult[Set[Usercode]]] =
+          val setOwners: Future[ServiceResult[Set[Member]]] =
             originalEnquiry.map { enquiry =>
               enquiries.getOwners(Set(enquiry.id.get)).flatMap(_.fold(
                 errors => Future.successful(Left(errors)),
                 ownerMap => {
                   // CASE-133 Add the creating user as an owner
-                  val owners = ownerMap.getOrElse(enquiry.id.get, Set.empty) + teamRequest.context.user.get.usercode
+                  val owners = ownerMap.getOrElse(enquiry.id.get, Set.empty).map(_.usercode) + teamRequest.context.user.get.usercode
                   cases.setOwners(createdCase.id.get, owners)
                 }
               ))

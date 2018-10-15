@@ -8,7 +8,7 @@ import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.MemberDao.StoredMember
-import domain.dao.MemberDao.StoredMember.{ClientVersions, Clients, VersionedTableQuery}
+import domain.dao.MemberDao.StoredMember.{MemberVersions, Members, VersionedTableQuery}
 import helpers.JavaTime
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -26,7 +26,7 @@ trait MemberDao {
   def update(member: StoredMember, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredMember]
   def get(usercode: Usercode): DBIO[Option[StoredMember]]
   def get(usercodes: Set[Usercode]): DBIO[Seq[StoredMember]]
-  def getOlderThan(duration: FiniteDuration): Query[Clients, StoredMember, Seq]
+  def getOlderThan(duration: FiniteDuration): Query[Members, StoredMember, Seq]
 }
 
 object MemberDao {
@@ -71,7 +71,7 @@ object MemberDao {
       def version: Rep[OffsetDateTime] = column[OffsetDateTime]("version_utc")
     }
 
-    class Clients(tag: Tag) extends Table[StoredMember](tag, "member") with VersionedTable[StoredMember] with CommonProperties {
+    class Members(tag: Tag) extends Table[StoredMember](tag, "member") with VersionedTable[StoredMember] with CommonProperties {
       override def matchesPrimaryKey(other: StoredMember): Rep[Boolean] = usercode === other.usercode
 
       def usercode: Rep[Usercode] = column[Usercode]("user_id", O.PrimaryKey)
@@ -79,7 +79,7 @@ object MemberDao {
       def * : ProvenShape[StoredMember] = (usercode, fullName, version).mapTo[StoredMember]
     }
 
-    class ClientVersions(tag: Tag) extends Table[StoredMemberVersion](tag, "member_version") with StoredVersionTable[StoredMember] with CommonProperties {
+    class MemberVersions(tag: Tag) extends Table[StoredMemberVersion](tag, "member_version") with StoredVersionTable[StoredMember] with CommonProperties {
       def usercode: Rep[Usercode] = column[Usercode]("user_id")
       def operation: Rep[DatabaseOperation] = column[DatabaseOperation]("version_operation")
       def timestamp: Rep[OffsetDateTime] = column[OffsetDateTime]("version_timestamp_utc")
@@ -92,8 +92,8 @@ object MemberDao {
 
   }
 
-  val members: VersionedTableQuery[StoredMember, StoredMemberVersion, Clients, ClientVersions] =
-    VersionedTableQuery[StoredMember, StoredMemberVersion, Clients, ClientVersions](TableQuery[Clients], TableQuery[ClientVersions])
+  val members: VersionedTableQuery[StoredMember, StoredMemberVersion, Members, MemberVersions] =
+    VersionedTableQuery[StoredMember, StoredMemberVersion, Members, MemberVersions](TableQuery[Members], TableQuery[MemberVersions])
 }
 
 class MemberDaoImpl @Inject()(
@@ -114,6 +114,6 @@ class MemberDaoImpl @Inject()(
   override def get(usercodes: Set[Usercode]): DBIO[Seq[StoredMember]] =
     members.table.filter(_.usercode.inSet(usercodes)).result
 
-  override def getOlderThan(duration: FiniteDuration): Query[Clients, StoredMember, Seq] =
+  override def getOlderThan(duration: FiniteDuration): Query[Members, StoredMember, Seq] =
     members.table.filter(_.version < JavaTime.offsetDateTime.minus(duration.toDays, ChronoUnit.DAYS))
 }
