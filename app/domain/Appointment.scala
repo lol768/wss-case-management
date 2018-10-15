@@ -6,21 +6,17 @@ import java.util.UUID
 import domain.dao.CaseDao.Case
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.JavaTime
-import play.api.data.format.Formatter
-import play.api.data.{FormError, Forms, Mapping}
 import play.api.libs.json.{Json, Writes}
 import uk.ac.warwick.util.termdates.AcademicYear
 import warwick.sso.{User, Usercode}
 
 import scala.collection.immutable
-import scala.util.Try
 
 case class Appointment(
   id: UUID,
   key: IssueKey,
   start: OffsetDateTime,
   duration: Duration,
-  location: Option[Location],
   team: Team,
   teamMember: Usercode,
   appointmentType: AppointmentType,
@@ -71,7 +67,7 @@ object Appointment {
 case class AppointmentSave(
   start: OffsetDateTime,
   duration: Duration,
-  location: Option[Location],
+  roomID: Option[UUID],
   teamMember: Usercode,
   appointmentType: AppointmentType
 )
@@ -79,6 +75,7 @@ case class AppointmentSave(
 case class AppointmentRender(
   appointment: Appointment,
   clients: Set[AppointmentClient],
+  room: Option[Room],
   clientCases: Set[Case],
   notes: Seq[AppointmentNote]
 )
@@ -93,7 +90,7 @@ object AppointmentRender {
     "end" -> o.appointment.end,
     "url" -> controllers.admin.routes.AppointmentController.view(o.appointment.key).url,
     "duration" -> o.appointment.duration,
-    "location" -> Json.toJsFieldJsValueWrapper(o.appointment.location)(Writes.optionWithNull(Location.writer)),
+    "location" -> Json.toJsFieldJsValueWrapper(o.room)(Writes.optionWithNull(Room.writer)),
     "team" -> Json.toJsFieldJsValueWrapper(o.appointment.team)(Teams.writer),
     "teamMember" -> Json.obj(
       "usercode" -> o.appointment.teamMember.string,
@@ -132,51 +129,6 @@ case class AppointmentClient(
   state: AppointmentState,
   cancellationReason: Option[AppointmentCancellationReason]
 )
-
-sealed abstract class Location {
-  def name: String
-  override def toString: String = name
-}
-
-object Location {
-  def toFormattedString(l: Location): String = l match {
-    case NamedLocation(name) => name
-    case MapLocation(name, locationId, syllabusPlusName) => s"$name|$locationId${syllabusPlusName.map(n => s"|$n").getOrElse("")}"
-  }
-
-  def fromFormattedString(s: String): Location =
-    s.split("\\|", 3) match {
-      case Array(name, locationId, syllabusPlusName) => MapLocation(name, locationId, Some(syllabusPlusName))
-      case Array(name, locationId) => MapLocation(name, locationId)
-      case Array(name) => NamedLocation(name)
-    }
-
-  object Formatter extends Formatter[Location] {
-    override def bind(key: String, data: Map[String, String]): Either[Seq[FormError], Location] = {
-      data.get(key).map(formatted =>
-        Try(fromFormattedString(formatted)).toOption.map(Right.apply)
-          .getOrElse(Left(Seq(FormError(key, "error.location.unknown"))))
-      ).getOrElse(Left(Seq(FormError(key, "missing"))))
-    }
-
-    override def unbind(key: String, value: Location): Map[String, String] = Map(
-      key -> toFormattedString(value)
-    )
-  }
-
-  val formField: Mapping[Location] = Forms.of(Formatter)
-  val writer: Writes[Location] = {
-    case NamedLocation(name) => Json.obj("name" -> name)
-    case MapLocation(name, locationId, syllabusPlusName) => Json.obj(
-      "name" -> name,
-      "locationId" -> locationId,
-      "syllabusPlusName" -> syllabusPlusName
-    )
-  }
-}
-
-case class NamedLocation(name: String) extends Location
-case class MapLocation(name: String, locationId: String, syllabusPlusName: Option[String] = None) extends Location
 
 sealed abstract class AppointmentTypeCategory(val description: String) extends EnumEntry
 object AppointmentTypeCategory extends PlayEnum[AppointmentTypeCategory] {

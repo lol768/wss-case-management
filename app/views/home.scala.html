@@ -107,7 +107,7 @@
           <td>@JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))</td>
           <td>@userLookup.get(a.appointment.teamMember).flatMap(_.name.full), @a.appointment.team.name team</td>
           <td>
-            @a.appointment.location.map(_.name)
+            @a.room.map { r => @tags.mapLink(r) }
             (@a.appointment.appointmentType.description)
           </td>
           <td>

@@ -49,3 +49,7 @@ flash.appointment.declined=You''ve declined the appointment
 flash.appointment.noteAdded=The appointment note has been saved
 flash.appointment.noteUpdated=The appointment note has been updated
 flash.appointment.noteDeleted=The appointment note has been deleted
+flash.building.created=The building has been created
+flash.building.updated=The building has been updated
+flash.room.created=The room has been created
+flash.room.updated=The room has been updated

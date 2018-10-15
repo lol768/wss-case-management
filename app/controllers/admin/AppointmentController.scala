@@ -10,14 +10,14 @@ import controllers.refiners._
 import domain._
 import domain.dao.CaseDao.Case
 import helpers.ServiceResults.{ServiceError, ServiceResult}
-import helpers.{FormHelpers, JavaTime}
+import helpers.{FormHelpers, JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Result}
 import services.tabula.ProfileService
-import services.{AppointmentService, CaseService, PermissionService}
+import services.{AppointmentService, CaseService, LocationService, PermissionService}
 import warwick.core.timing.TimingContext
 import warwick.sso._
 
@@ -33,7 +33,7 @@ object AppointmentController {
     version: Option[OffsetDateTime]
   )
 
-  def form(team: Team, profileService: ProfileService, caseService: CaseService, permissionService: PermissionService, existingVersion: Option[OffsetDateTime] = None)(implicit t: TimingContext, executionContext: ExecutionContext): Form[AppointmentFormData] = {
+  def form(team: Team, profileService: ProfileService, caseService: CaseService, permissionService: PermissionService, locationService: LocationService, existingVersion: Option[OffsetDateTime] = None)(implicit t: TimingContext, executionContext: ExecutionContext): Form[AppointmentFormData] = {
     // TODO If we're linked to a case, is it valid to have an appointment with someone who isn't a client on the case?
     def isValid(u: UniversityID): Boolean =
       Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
@@ -50,7 +50,9 @@ object AppointmentController {
       Try(Await.result(caseService.find(id), 5.seconds))
         .toOption.exists(_.isRight)
 
-    "cases" -> set(optional(uuid))
+    def isValidRoom(id: UUID): Boolean =
+      Try(Await.result(locationService.findRoom(id), 5.seconds))
+        .toOption.exists(_.isRight)
 
     Form(
       mapping(
@@ -59,7 +61,7 @@ object AppointmentController {
         "appointment" -> mapping(
           "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", _.isAfter(JavaTime.offsetDateTime)),
           "duration" -> number(min = 60, max = 120 * 60).transform[Duration](n => Duration.ofSeconds(n.toLong), _.getSeconds.toInt),
-          "location" -> optional(Location.formField),
+          "roomID" -> optional(uuid.verifying("error.required", id => isValidRoom(id))),
           "teamMember" -> nonEmptyText.transform[Usercode](Usercode.apply, _.string).verifying("error.appointment.teamMember.invalid", u => isValidTeamMember(u)),
           "appointmentType" -> AppointmentType.formField
         )(AppointmentSave.apply)(AppointmentSave.unapply),
@@ -107,6 +109,7 @@ class AppointmentController @Inject()(
   appointments: AppointmentService,
   userLookupService: UserLookupService,
   permissions: PermissionService,
+  locations: LocationService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   appointmentActionFilters: AppointmentActionFilters,
@@ -152,7 +155,7 @@ class AppointmentController @Inject()(
   }
 
   def createForm(teamId: String, forCase: Option[IssueKey], client: Option[UniversityID], start: Option[OffsetDateTime], duration: Option[Duration]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    val baseForm = form(teamRequest.team, profiles, cases, permissions)
+    val baseForm = form(teamRequest.team, profiles, cases, permissions, locations)
     val baseBind = Map("appointment.teamMember" -> teamRequest.context.user.get.usercode.string)
 
     if (forCase.nonEmpty && client.nonEmpty) {
@@ -185,11 +188,12 @@ class AppointmentController @Inject()(
       ).flatten
 
       Future.sequence(binds).map(_.reduce(_ ++ _)).flatMap { bind =>
-        getCase.successMap { clientCase =>
+        ServiceResults.zip(getCase, locations.availableRooms).successMap { case (clientCase, availableRooms) =>
           Ok(views.html.admin.appointments.create(
             teamRequest.team,
             baseForm.bind(bind).discardingErrors,
-            clientCase.toSet
+            clientCase.toSet,
+            availableRooms
           ))
         }
       }
@@ -197,19 +201,19 @@ class AppointmentController @Inject()(
   }
 
   def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    form(teamRequest.team, profiles, cases, permissions).bindFromRequest().fold(
+    form(teamRequest.team, profiles, cases, permissions, locations).bindFromRequest().fold(
       formWithErrors => formWithErrors.data.keys.filter(_.startsWith("cases")).toSeq match {
         case caseKeys if caseKeys.nonEmpty =>
           val ids = caseKeys.map(k => formWithErrors.data(k)).flatMap(id => Try(UUID.fromString(id)).toOption).toSet
-          cases.findAll(ids).successMap { cases =>
-            Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, cases.toSet))
+          ServiceResults.zip(cases.findAll(ids), locations.availableRooms).successMap { case (c, availableRooms) =>
+            Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, c.toSet, availableRooms))
           }
 
         case _ =>
-          Future.successful(
-            Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, Set.empty))
-          )
-      },
+          locations.availableRooms.successMap { availableRooms =>
+            Ok (views.html.admin.appointments.create (teamRequest.team, formWithErrors, Set.empty, availableRooms) )
+          }
+        },
       data => {
         val clients = data.clients.filter(_.string.nonEmpty)
         val cases = data.cases.flatten.filter(_.toString.nonEmpty)
@@ -223,38 +227,40 @@ class AppointmentController @Inject()(
   }
 
   def editForm(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
-    appointments.findForRender(appointmentKey).successMap { a =>
+    ServiceResults.zip(appointments.findForRender(appointmentKey), locations.availableRooms).successMap { case (a, availableRooms) =>
       Ok(
         views.html.admin.appointments.edit(
           a.appointment,
-          form(a.appointment.team, profiles, cases, permissions, Some(a.appointment.lastUpdated))
+          form(a.appointment.team, profiles, cases, permissions, locations, Some(a.appointment.lastUpdated))
             .fill(AppointmentFormData(
               a.clients.map(_.client.universityID),
               a.clientCases.flatMap(c => Some(c.id)),
               AppointmentSave(
                 a.appointment.start,
                 a.appointment.duration,
-                a.appointment.location,
+                a.room.map(_.id),
                 a.appointment.teamMember,
                 a.appointment.appointmentType
               ),
               Some(a.appointment.lastUpdated)
             )),
-          a.clientCases
+          a.clientCases,
+          availableRooms
         )
       )
     }
   }
 
   def edit(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
-    appointments.findForRender(appointmentKey).successFlatMap { a =>
-      form(a.appointment.team, profiles, cases, permissions, Some(a.appointment.lastUpdated)).bindFromRequest().fold(
+    ServiceResults.zip(appointments.findForRender(appointmentKey), locations.availableRooms).successFlatMap { case (a, availableRooms) =>
+      form(a.appointment.team, profiles, cases, permissions, locations, Some(a.appointment.lastUpdated)).bindFromRequest().fold(
         formWithErrors => Future.successful(
           Ok(
             views.html.admin.appointments.edit(
               a.appointment,
               formWithErrors.bindVersion(a.appointment.lastUpdated),
-              a.clientCases
+              a.clientCases,
+              availableRooms
             )
           )
         ),

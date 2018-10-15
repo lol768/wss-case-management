@@ -36,9 +36,9 @@
           @helpers.JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
         }
 
-        @a.appointment.location.map { loc =>
+        @a.room.map { room =>
           @tags.sectioned.detail("Location") {
-            @loc.name @* TODO campus map link *@
+            @tags.mapLink(room)
           }
         }
 

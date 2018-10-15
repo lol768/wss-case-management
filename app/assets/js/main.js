@@ -180,4 +180,21 @@ $(() => {
     const $form = $input.closest('form');
     $form.submit();
   });
+
+  $('.map-link').each((i, link) => {
+    const $link = $(link);
+    const mapUrl = `https://campus.warwick.ac.uk/?lite=1&slid=${encodeURIComponent($link.data('lid'))}`;
+    $link.popover({
+      trigger: 'click',
+      container: 'body',
+      template: '<div class="popover wide"><div class="arrow"></div><div class="popover-inner"><div class="popover-content"><p></p></div></div></div>',
+      html: true,
+      content: `<iframe width="300" height="400" frameborder="0" src="${mapUrl}"></iframe>`,
+      placement: 'bottom',
+    });
+    $link.on('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
 });

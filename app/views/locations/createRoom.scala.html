@@ -1,0 +1,15 @@
+@import controllers.locations.LocationsController.RoomFormData
+@import domain.Building
+
+@(
+  buildings: Seq[Building],
+  form: Form[RoomFormData],
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main("Create room") {
+  @b3.vertical.formCSRF(controllers.locations.routes.LocationsController.createRoom()) { implicit ifc =>
+    @roomFields(buildings, form)
+
+    @tags.submitOrCancel("Create", controllers.locations.routes.LocationsController.list())
+  }
+}
