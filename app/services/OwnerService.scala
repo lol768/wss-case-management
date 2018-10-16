@@ -3,51 +3,54 @@ package services
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
+import domain.ExtendedPostgresProfile.api._
+import domain._
+import domain.dao.MemberDao.StoredMember
+import domain.dao.MemberDao.StoredMember.Members
 import domain.dao.{DaoRunner, OwnerDao}
-import domain.{CaseOwner, EnquiryOwner, Owner, OwnerVersion}
+import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsString, Json}
 import warwick.core.timing.TimingContext
 import warwick.sso.Usercode
-import domain.ExtendedPostgresProfile.api._
-import helpers.JavaTime
-
+import helpers.ServiceResults.Implicits._
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[OwnerServiceImpl])
 trait OwnerService {
-  def getCaseOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
-  def setCaseOwners(caseId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
+  def getCaseOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
+  def setCaseOwners(caseId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]]
   def getCaseOwnerHistory(caseId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[OwnerVersion]]]
-  def getEnquiryOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
-  def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
+  def getEnquiryOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
+  def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]]
 }
 
 @Singleton
 class OwnerServiceImpl @Inject()(
   auditService: AuditService,
+  memberService: MemberService,
   ownerDao: OwnerDao,
   daoRunner: DaoRunner,
 )(implicit ec: ExecutionContext) extends OwnerService {
 
-  override def getCaseOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]] = {
-    getOwners(ownerDao.findCaseOwnersQuery(ids))
+  override def getCaseOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]] = {
+    getOwners(ownerDao.findCaseOwnersQuery(ids).withMember)
   }
 
-  override def getEnquiryOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]] = {
-    getOwners(ownerDao.findEnquiryOwnersQuery(ids))
+  override def getEnquiryOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]] = {
+    getOwners(ownerDao.findEnquiryOwnersQuery(ids).withMember)
   }
 
-  private def getOwners(daoQuery: Query[Owner.Owners, Owner, Seq])(implicit t: TimingContext) = {
+  private def getOwners(daoQuery: Query[(Owner.Owners, Members), (Owner, StoredMember), Seq])(implicit t: TimingContext) = {
     val query = daoQuery
 
     daoRunner.run(query.result)
-      .map(_.groupBy(_.entityId).mapValues(_.map(_.userId).toSet))
+      .map(_.groupBy { case (o, _) => o.entityId }.mapValues(_.map { case (_, m) => m.asMember }.toSet))
       .map(Right.apply)
   }
 
-  override def setCaseOwners(caseId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]] = {
+  override def setCaseOwners(caseId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]] = {
     val now = JavaTime.offsetDateTime
     auditService.audit('CaseSetOwners, caseId.toString, 'Case, Json.arr(owners.map(o => JsString(o.string)))) {
       setOwners(
@@ -63,7 +66,7 @@ class OwnerServiceImpl @Inject()(
     }
   }
 
-  override def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]] = {
+  override def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]] = {
     auditService.audit('EnquirySetOwners, enquiryId.toString, 'Enquiry, Json.arr(owners.map(o => JsString(o.string)))) {
       val now = JavaTime.offsetDateTime
       setOwners(
@@ -80,19 +83,20 @@ class OwnerServiceImpl @Inject()(
   }
 
   private def setOwners(owners: Set[Usercode], existingQuery: Query[Owner.Owners, Owner, Seq], entityId: UUID, builder: Usercode => Owner)(implicit ac: AuditLogContext) = {
-    val existing = existingQuery.result
-
-    val needsRemoving = existing.map(_.filterNot(e => owners.contains(e.userId)))
-    val removals = needsRemoving.flatMap(r => DBIO.sequence(r.map(ownerDao.delete)))
-
-    val needsAdding = existing.map(e => owners.toSeq.filterNot(e.map(_.userId).contains))
-    val additions = needsAdding.flatMap(a => DBIO.sequence(a.map(o =>
-      ownerDao.insert(builder(o))
-    )))
-
-    daoRunner.run(DBIO.seq(removals, additions)).flatMap(_ =>
-      daoRunner.run(existingQuery.result).map(_.map(_.userId).toSet)
-    ).map(Right.apply)
+    memberService.getOrAddMembers(owners).successFlatMapTo { members =>
+      daoRunner.run(for {
+        result <- updateDifferencesDBIO[Owner, Usercode](
+          owners,
+          existingQuery,
+          _.userId,
+          builder,
+          ownerDao.insert,
+          ownerDao.delete
+        )
+      } yield {
+        Right(result.all.map(o => members.find(_.usercode == o.userId).get).toSet)
+      })
+    }
   }
 
   override def getCaseOwnerHistory(caseId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[OwnerVersion]]] = {

@@ -67,7 +67,7 @@ case class CaseLink(
   outgoing: Case,
   incoming: Case,
   caseNote: CaseNote,
-  teamMember: Usercode,
+  teamMember: Member,
   updatedDate: OffsetDateTime
 ) extends HasCreator
 
@@ -83,7 +83,7 @@ case class CaseNote(
   id: UUID,
   noteType: CaseNoteType,
   text: String,
-  teamMember: Usercode,
+  teamMember: Member,
   created: OffsetDateTime = OffsetDateTime.now(),
   lastUpdated: OffsetDateTime = OffsetDateTime.now()
 )
@@ -118,7 +118,7 @@ case class CaseDocument(
   id: UUID,
   documentType: CaseDocumentType,
   file: UploadedFile,
-  teamMember: Usercode,
+  teamMember: Member,
   caseNote: CaseNote,
   created: OffsetDateTime = OffsetDateTime.now(),
   lastUpdated: OffsetDateTime = OffsetDateTime.now()

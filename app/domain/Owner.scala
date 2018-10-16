@@ -6,6 +6,7 @@ import java.util.UUID
 import domain.CustomJdbcTypes._
 import enumeratum.{EnumEntry, PlayEnum}
 import ExtendedPostgresProfile.api._
+import domain.dao.MemberDao
 import services.AuditLogContext
 import warwick.sso.Usercode
 
@@ -81,6 +82,12 @@ object Owner extends Versioning {
     def * = (entityId, entityType, userId, version, operation, timestamp, auditUser).mapTo[OwnerVersion]
     def pk = primaryKey("pk_ownerversions", (entityId, entityType, userId, timestamp))
     def idx = index("idx_ownerversions", (entityId, entityType, userId, version))
+  }
+
+  implicit class OwnerExtensions[C[_]](val q: Query[Owners, Owner, C]) extends AnyVal {
+    def withMember = q
+      .join(MemberDao.members.table)
+      .on { case (o, m) => o.userId === m.usercode }
   }
 
   val owners: VersionedTableQuery[Owner, OwnerVersion, Owners, OwnerVersions] =

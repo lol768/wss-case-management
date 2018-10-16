@@ -1,10 +1,11 @@
 package domain.dao
 
+import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.CaseDao.{Case, Cases}
-import helpers.DataFixture
+import domain.dao.MemberDao.StoredMember
+import helpers.{DataFixture, JavaTime}
 import warwick.sso.Usercode
-import domain.ExtendedPostgresProfile.api._
 
 class CaseDaoTest extends AbstractDaoTest {
 
@@ -25,6 +26,10 @@ class CaseDaoTest extends AbstractDaoTest {
 
       val cases = execWithCommit(
         CaseDao.cases.insertAll(Seq(case1, case2, case3, case4, case5, case6, case7, case8))
+      )
+
+      execWithCommit(
+        MemberDao.members.insert(StoredMember(Usercode("u1234567"), None, JavaTime.offsetDateTime))
       )
 
       execWithCommit(

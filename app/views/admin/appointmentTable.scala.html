@@ -5,7 +5,6 @@
 @(
   title: Option[String],
   appointments: Seq[AppointmentRender],
-  userLookup: Option[Map[Usercode, User]],
   emptyMessage: Option[String] = None,
 )(implicit context: RequestContext)
 
@@ -23,14 +22,12 @@
     </td>
     <td>
       @tags.icons.appointmentState(appointment.state)
-      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string @appointment.subject(userLookup, Some(clients))</a>
+      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string @appointment.subject(Some(clients))</a>
     </td>
     <td>
       @helpers.JavaTime.Relative(appointment.start) &ndash; @appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
     </td>
-    @userLookup.map { userLookup =>
-      <td>@userLookup.get(appointment.teamMember).flatMap(_.name.full)</td>
-    }
+    <td>@appointment.teamMember.safeFullName</td>
     <td>
       @room.map(_.name)
       (@appointment.appointmentType.description)
@@ -46,10 +43,8 @@
         <th class="col-sm-2">Clients</th>
         <th class="col-sm-4">Subject</th>
         <th class="col-sm-2">When</th>
-        @if(userLookup.nonEmpty) {
-          <th class="col-sm-2">Staff member</th>
-        }
-        <th class="col-sm-@if(userLookup.nonEmpty) {2} else {4}">Location</th>
+        <th class="col-sm-2">Staff member</th>
+        <th class="col-sm-2">Location</th>
       </tr>
     </thead>
     <tbody>

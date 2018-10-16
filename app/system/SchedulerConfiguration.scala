@@ -6,7 +6,7 @@ import com.google.inject.{Inject, Singleton}
 import org.quartz.TriggerBuilder._
 import org.quartz._
 import warwick.core.Logging
-import services.job.UpdateClientsJob
+import services.job.{UpdateClientsJob, UpdateMembersJob}
 
 @Singleton
 class SchedulerConfiguration @Inject()(
@@ -16,6 +16,12 @@ class SchedulerConfiguration @Inject()(
   configureScheduledJob(
     "UpdateClientsJob",
     JobBuilder.newJob(classOf[UpdateClientsJob]),
+    CronScheduleBuilder.cronSchedule("0 0 */12 * * ?") // Twice a day
+  )
+
+  configureScheduledJob(
+    "UpdateMembersJob",
+    JobBuilder.newJob(classOf[UpdateMembersJob]),
     CronScheduleBuilder.cronSchedule("0 0 */12 * * ?") // Twice a day
   )
 

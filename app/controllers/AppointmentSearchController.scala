@@ -14,7 +14,7 @@ import play.api.data.Forms._
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
 import services.{AppointmentService, PermissionService}
-import warwick.sso.{AuthenticatedRequest, User, UserLookupService, Usercode}
+import warwick.sso.{AuthenticatedRequest, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,8 +38,7 @@ class AppointmentSearchController @Inject()(
   anyTeamActionRefiner: AnyTeamActionRefiner,
   appointmentActionFilters: AppointmentActionFilters,
   appointmentService: AppointmentService,
-  permissions: PermissionService,
-  userLookupService: UserLookupService
+  permissions: PermissionService
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import anyTeamActionRefiner._
@@ -75,11 +74,9 @@ class AppointmentSearchController @Inject()(
               ServiceResults.futureSequence(
                 appointments.map(a => appointmentService.getClients(a.id).map(_.map(c => a -> c)))
               ).successMap { appointmentsAndClients =>
-                val userLookup = userLookupService.getUsers(appointments.map(_.teamMember)).toOption.getOrElse(Map())
                 Ok(Json.toJson(API.Success(data = Json.obj(
                   "results" -> appointmentsAndClients.map { case (a, c) => toJson(
                     a,
-                    userLookup,
                     c,
                     Some(category)
                   )}
@@ -97,7 +94,6 @@ class AppointmentSearchController @Inject()(
       Ok(Json.toJson(API.Success(data = Json.obj(
         "results" -> Seq(toJson(
           request.appointment,
-          userLookupService.getUser(request.appointment.teamMember).toOption.map(u => request.appointment.teamMember -> u).toMap,
           clients,
         ))
       ))))
@@ -106,13 +102,12 @@ class AppointmentSearchController @Inject()(
 
   private def toJson(
     a: Appointment,
-    teamMemberUser: Map[Usercode, User],
     clients: Set[AppointmentClient],
     category: Option[String] = None
   ): JsObject = Json.obj(
     "id" -> a.id,
     "key" -> a.key.string,
-    "subject" -> a.subject(Some(teamMemberUser), Some(clients)),
+    "subject" -> a.subject(Some(clients)),
     "team" -> a.team.name,
     "appointmentType" -> a.appointmentType.description,
     "created" -> a.created.format(JavaTime.iSO8601DateFormat),

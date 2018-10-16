@@ -7,6 +7,7 @@ import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.ClientDao.StoredClient
+import domain.dao.MemberDao.StoredMember
 import domain.dao._
 import helpers.{DataFixture, JavaTime}
 import play.api.libs.json.Json
@@ -21,14 +22,16 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
   class AppointmentFixture extends DataFixture[Appointment] {
     override def setup(): Appointment = {
+      val now = JavaTime.offsetDateTime
       val stored = Fixtures.appointments.newStoredAppointment()
       val storedAppointmentClient = Fixtures.appointments.newStoredClient(stored.id)
       execWithCommit(
+        (MemberDao.members.table += StoredMember(stored.teamMember, None, now)) andThen
         (AppointmentDao.appointments.table += stored) andThen
-        (ClientDao.clients.table += StoredClient(storedAppointmentClient.universityID, None, JavaTime.offsetDateTime)) andThen
+        (ClientDao.clients.table += StoredClient(storedAppointmentClient.universityID, None, now)) andThen
         (AppointmentDao.appointmentClients.table += storedAppointmentClient)
       )
-      stored.asAppointment
+      stored.asAppointment(Member(stored.teamMember, None , now))
     }
 
     override def teardown(): Unit = {

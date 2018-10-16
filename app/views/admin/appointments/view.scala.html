@@ -7,13 +7,12 @@
 @(
   a: AppointmentRender,
   profiles: Map[AppointmentClient, Option[SitsProfile]],
-  userLookup: Map[Usercode, User],
   appointmentNoteForm: Form[AppointmentNoteFormData],
   cancelForm: Form[CancelAppointmentData],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
-  title = s"${a.appointment.key.string} ${a.appointment.subject(Some(userLookup), Some(a.clients))}",
+  title = s"${a.appointment.key.string} ${a.appointment.subject(Some(a.clients))}",
   icon = tags.icons.appointmentState(a.appointment.state)
 ) {
   <div class="appointment-details">
@@ -43,7 +42,7 @@
         }
 
         @tags.sectioned.detail("Team member") {
-          @userLookup.get(a.appointment.teamMember).flatMap(_.name.full).getOrElse(s"Unknown (${a.appointment.teamMember.string})")
+          @a.appointment.teamMember.safeFullName
         }
 
         @tags.sectioned.detail("Team") {
@@ -165,7 +164,7 @@
               }
             </div>
             <div class="author">
-              @userLookup.get(note.teamMember).flatMap(_.name.full).getOrElse(s"[unknown user ${note.teamMember.string}]")
+              @note.teamMember.safeFullName
             </div>
           </div>
         </div>

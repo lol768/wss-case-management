@@ -80,10 +80,7 @@ class AdminController @Inject()(
 
   def cancelledAppointments(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     appointments.findCancelledAppointments(teamRequest.team).successMap { appointments =>
-      val usercodes = appointments.map(_.appointment.teamMember).toSet
-      val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
-
-      Ok(views.html.admin.cancelledAppointments(appointments, Some(userLookup)))
+      Ok(views.html.admin.cancelledAppointments(appointments))
     }
   }
 
@@ -94,12 +91,9 @@ class AdminController @Inject()(
       team = Some(teamRequest.team),
       states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended),
     )).successMap { appointments =>
-      val usercodes = appointments.map(_.appointment.teamMember).toSet
-      val userLookup = userLookupService.getUsers(usercodes.toSeq).toOption.getOrElse(Map())
-
       render {
         case Accepts.Json() =>
-          Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(appointments)(Writes.seq(AppointmentRender.writer(userLookup))))))
+          Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(appointments)(Writes.seq(AppointmentRender.writer)))))
         case _ =>
           Redirect(controllers.admin.routes.AdminController.teamHome(teamId).withFragment("appointments"))
       }

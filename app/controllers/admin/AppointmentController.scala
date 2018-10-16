@@ -122,15 +122,11 @@ class AppointmentController @Inject()(
   private def renderAppointment(appointmentKey: IssueKey, appointmentNoteForm: Form[AppointmentNoteFormData], cancelForm: Form[CancelAppointmentData])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
     appointments.findForRender(appointmentKey).successFlatMap { render =>
       profiles.getProfiles(render.clients.map(_.client.universityID)).successMap { clientProfiles =>
-        val usercodes = render.notes.map(_.teamMember) ++ Seq(render.appointment.teamMember)
-        val userLookup = userLookupService.getUsers(usercodes).toOption.getOrElse(Map())
-
         val clients = render.clients.map(c => c -> clientProfiles.get(c.client.universityID)).toMap
 
         Ok(views.html.admin.appointments.view(
           render,
           clients,
-          userLookup,
           appointmentNoteForm,
           cancelForm
         ))
@@ -239,7 +235,7 @@ class AppointmentController @Inject()(
                 a.appointment.start,
                 a.appointment.duration,
                 a.room.map(_.id),
-                a.appointment.teamMember,
+                a.appointment.teamMember.usercode,
                 a.appointment.appointmentType
               ),
               Some(a.appointment.lastUpdated)

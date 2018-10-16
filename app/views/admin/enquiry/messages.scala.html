@@ -6,14 +6,14 @@
 @import org.apache.tika.mime.MediaType
 @import warwick.sso.{User, Usercode}
 
+@import domain.Member
 @(
   enquiry: Enquiry,
   profile: Option[SitsProfile],
   messages: Seq[MessageRender],
   notes: Seq[EnquiryNote],
-  owners: Seq[User],
+  owners: Set[Member],
   clientLastRead: Option[OffsetDateTime],
-  userLookup: Map[Usercode, User],
   stateChangeForm: Form[OffsetDateTime],
   messageForm: Form[String],
   canViewEnquiryTeam: Boolean,
@@ -97,7 +97,7 @@
                                 @views.utils.nl2br(note.text)
                               </div>
                               <div class="panel-footer">
-                                <div class="author">@userLookup.get(note.teamMember).flatMap(_.name.full).getOrElse(s"[unknown user ${note.teamMember.string}]")</div>
+                                <div class="author">@note.teamMember.safeFullName</div>
                               </div>
                             </div>
                           }
@@ -197,13 +197,8 @@
               render.message,
               render.files,
               profile.map(_.fullName).getOrElse(enquiry.client.universityID.string),
-              render.message.teamMember
-                .flatMap { usercode =>
-                  userLookup.get(usercode)
-                    .filter(_.isFound)
-                    .flatMap(_.name.full)
-                    .map { name => s"$name, ${render.message.team.getOrElse(enquiry.team).name} team" }
-                }.getOrElse(s"${render.message.team.getOrElse(enquiry.team).name} team"),
+              render.message.teamMember.map { member => s"${member.safeFullName}, ${render.message.team.getOrElse(enquiry.team).name} team" }
+                .getOrElse(s"${render.message.team.getOrElse(enquiry.team).name} team"),
               f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key, f.id),
               clientLastRead.filter(_ => render.message.sender == MessageSender.Team).map(_.isAfter(render.message.created))
             )

@@ -247,6 +247,8 @@ object Fixtures {
       Owner.owners.versionsTable.delete andThen
       ClientDao.clients.table.delete andThen
       ClientDao.clients.versionsTable.delete andThen
+      MemberDao.members.table.delete andThen
+      MemberDao.members.versionsTable.delete andThen
       LocationDao.rooms.table.delete andThen
       LocationDao.rooms.versionsTable.delete andThen
       LocationDao.buildings.table.delete andThen
