@@ -190,7 +190,7 @@ $(() => {
       template: '<div class="popover wide"><div class="arrow"></div><div class="popover-inner"><div class="popover-content"><p></p></div></div></div>',
       html: true,
       content: `<iframe width="300" height="400" frameborder="0" src="${mapUrl}"></iframe>`,
-      placement: 'bottom',
+      placement: 'auto bottom',
     });
     $link.on('click', (e) => {
       e.preventDefault();
