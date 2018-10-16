@@ -72,11 +72,11 @@ class CaseMessageController @Inject() (
   }
 
   def download(caseKey: IssueKey, fileId: UUID): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit request =>
-    caseService.findFull(caseKey).successFlatMap { c =>
-      c.messages.data.flatMap(_.files).find(_.id == fileId)
+    caseService.getCaseMessages(request.`case`.id.get).successFlatMap(messages =>
+      messages.data.flatMap(_.files).find(_.id == fileId)
         .map(uploadedFileControllerHelper.serveFile)
         .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
-    }
+    )
   }
 
   private def messageSave(text: String, teamMember: Usercode) = MessageSave(

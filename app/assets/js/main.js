@@ -180,4 +180,17 @@ $(() => {
     const $form = $input.closest('form');
     $form.submit();
   });
+
+  $('details.async[class*="details--section"], div.async[class*="details--section"]').each((i, target) => {
+    const $target = $(target);
+    $target.find('div.content').load($target.data('href'), () => {
+      const $count = $target.find('.control-label .count');
+      if ($count.length > 0) {
+        const count = $target.find('div.content [data-count]').data('count');
+        if (count !== undefined) {
+          $count.text(`(${count})`);
+        }
+      }
+    });
+  });
 });
