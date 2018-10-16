@@ -18,7 +18,7 @@ import services.{AuditLogContext, CaseService}
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
-
+import QueryHelpers._
 import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
 
@@ -53,6 +53,7 @@ trait CaseDao {
   def updateNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
   def deleteNote(note: StoredCaseNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq]
+  def findNotesQuery(caseIDs: Set[UUID]): Query[CaseNotes, StoredCaseNote, Seq]
   def insertDocument(document: StoredCaseDocument)(implicit ac: AuditLogContext): DBIO[StoredCaseDocument]
   def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq]
@@ -179,10 +180,12 @@ class CaseDaoImpl @Inject()(
 
   override def findNote(id: UUID): DBIO[NoteAndCase] =
     caseNotes.table.filter(_.id === id)
+      .withMember
       .join(cases.table)
-      .on((n, c) => n.caseId === c.id)
+      .on { case ((n, _), c) => n.caseId === c.id }
+      .flattenJoin
       .result.head
-      .map { case (n, c) => NoteAndCase(n.asCaseNote, c)}
+      .map { case (n, m, c) => NoteAndCase(n.asCaseNote(m.asMember), c)}
 
   override def insertNote(note: StoredCaseNote)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
     caseNotes.insert(note)
@@ -195,6 +198,9 @@ class CaseDaoImpl @Inject()(
 
   override def findNotesQuery(caseID: UUID): Query[CaseNotes, StoredCaseNote, Seq] =
     caseNotes.table.filter(_.caseId === caseID)
+
+  override def findNotesQuery(caseIDs: Set[UUID]): Query[CaseNotes, StoredCaseNote, Seq] =
+    caseNotes.table.filter(_.caseId.inSet(caseIDs))
 
   override def insertDocument(document: StoredCaseDocument)(implicit ac: AuditLogContext): DBIO[StoredCaseDocument] =
     caseDocuments.insert(document)
@@ -352,7 +358,6 @@ object CaseDao {
 
   case class CaseMessages(data: Seq[MessageRender]) {
     lazy val byClient: Map[UniversityID, Seq[MessageRender]] = data.groupBy(_.message.client)
-    lazy val teamMembers: Set[Usercode] = data.flatMap(_.message.teamMember).toSet
     lazy val length: Int = data.length
   }
 
@@ -424,20 +429,27 @@ object CaseDao {
   }
 
   implicit class CaseExtensions[C[_]](val q: Query[Cases, Case, C]) extends AnyVal {
-    def withClients = q
+    def withClients: Query[(Cases, CaseClients, StoredClient.Clients), (Case, StoredCaseClient, StoredClient), C] = q
       .join(caseClients.table)
       .on(_.id === _.caseId)
       .join(ClientDao.clients.table)
       .on { case ((_, cc), client) => cc.universityID === client.universityID }
-      .map { case ((c, cc), client) => (c, cc, client) }
+      .flattenJoin
     def withNotes = q
       .joinLeft(caseNotes.table)
       .on(_.id === _.caseId)
     def withMessages = q
-      .joinLeft(Message.messages.table.withUploadedFiles)
-      .on { case (c, (m, _)) =>
+      .joinLeft(
+        Message.messages.table
+          .withUploadedFiles
+          .joinLeft(MemberDao.members.table)
+          .on { case ((m, _), member) => m.teamMember.map(_ === member.usercode) }
+          .map { case ((m, f), member) => (m, f, member) }
+      )
+      .on { case (c, (m, _, _)) =>
         c.id === m.ownerId && m.ownerType === (MessageOwner.Case: MessageOwner)
       }
+
 
     def withLastUpdated = q
       .joinLeft(Message.messages.table)
@@ -661,6 +673,12 @@ object CaseDao {
     def idx = index("idx_case_link_version", (linkType, outgoingCaseID, incomingCaseID, version))
   }
 
+  implicit class CaseLinkExtensions[C[_]](q: Query[CaseLinks, StoredCaseLink, C]) {
+    def withMember = q
+      .join(MemberDao.members.table)
+      .on(_.teamMember === _.usercode)
+  }
+
   case class StoredCaseNote(
     id: UUID,
     caseId: UUID,
@@ -670,11 +688,11 @@ object CaseDao {
     created: OffsetDateTime,
     version: OffsetDateTime
   ) extends Versioned[StoredCaseNote] {
-    def asCaseNote = CaseNote(
+    def asCaseNote(member: Member) = CaseNote(
       id,
       noteType,
       text,
-      teamMember,
+      member,
       created,
       version
     )
@@ -745,6 +763,12 @@ object CaseDao {
     def idx = index("idx_case_note_version", (id, version))
   }
 
+  implicit class CaseNoteExtensions[C[_]](q: Query[CaseNotes, StoredCaseNote, C]) {
+    def withMember = q
+      .join(MemberDao.members.table)
+      .on(_.teamMember === _.usercode)
+  }
+
   case class StoredCaseDocument(
     id: UUID,
     caseId: UUID,
@@ -755,11 +779,11 @@ object CaseDao {
     created: OffsetDateTime,
     version: OffsetDateTime
   ) extends Versioned[StoredCaseDocument] {
-    def asCaseDocument(file: UploadedFile, note: CaseNote) = CaseDocument(
+    def asCaseDocument(file: UploadedFile, note: CaseNote, member: Member) = CaseDocument(
       id,
       documentType,
       file,
-      teamMember,
+      member,
       note,
       created,
       version

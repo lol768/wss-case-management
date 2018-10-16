@@ -16,8 +16,8 @@ import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[OwnerDaoImpl])
 trait OwnerDao {
-  def insert(owner: Owner)(implicit ac: AuditLogContext): DBIO[Owner]
-  def delete(owner: Owner)(implicit ac: AuditLogContext): DBIO[Done]
+  def insert(owners: Set[Owner])(implicit ac: AuditLogContext): DBIO[Seq[Owner]]
+  def delete(owners: Set[Owner])(implicit ac: AuditLogContext): DBIO[Done]
   def findEnquiryOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq]
   def findCaseOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq]
   def getCaseOwnerHistory(id: UUID): DBIO[Seq[OwnerVersion]]
@@ -29,11 +29,11 @@ class OwnerDaoImpl @Inject() (
 )(implicit ec: ExecutionContext)
   extends OwnerDao with HasDatabaseConfigProvider[JdbcProfile] {
 
-  override def insert(owner: Owner)(implicit ac: AuditLogContext): DBIO[Owner] =
-    Owner.owners += owner
+  override def insert(owners: Set[Owner])(implicit ac: AuditLogContext): DBIO[Seq[Owner]] =
+    Owner.owners ++= owners.toSeq
 
-  override def delete(owner: Owner)(implicit ac: AuditLogContext): DBIO[Done] =
-    Owner.owners.delete(owner)
+  override def delete(owners: Set[Owner])(implicit ac: AuditLogContext): DBIO[Done] =
+    Owner.owners.deleteAll(owners.toSeq)
 
   override def findCaseOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq] =
     Owner.owners.table

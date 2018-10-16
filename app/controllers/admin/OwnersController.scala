@@ -34,7 +34,7 @@ class OwnersController @Inject()(
   def enquiryForm(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
     enquiryService.getOwners(Set(request.enquiry.id.get)).successMap(owners =>
       Ok(views.html.admin.enquiry.owners(
-        ownersForm.fill(owners.getOrElse(request.enquiry.id.get, Set()).toSeq.sortBy(_.string)),
+        ownersForm.fill(owners.getOrElse(request.enquiry.id.get, Set()).map(_.usercode).toSeq.sortBy(_.string)),
         request.enquiry
       ))
     )
@@ -43,7 +43,7 @@ class OwnersController @Inject()(
   def caseForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit request =>
     caseService.getOwners(Set(request.`case`.id.get)).successMap(owners =>
       Ok(views.html.admin.cases.owners(
-        ownersForm.fill(owners.getOrElse(request.`case`.id.get, Set()).toSeq.sortBy(_.string)),
+        ownersForm.fill(owners.getOrElse(request.`case`.id.get, Set()).map(_.usercode).toSeq.sortBy(_.string)),
         request.`case`
       ))
     )
@@ -69,10 +69,10 @@ class OwnersController @Inject()(
   def enquirySubmitSelf(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
     enquiryService.getOwners(Set(request.enquiry.id.get)).successFlatMap { ownerMap =>
       val currentOwners = ownerMap.getOrElse(request.enquiry.id.get, Set())
-      if (currentOwners.contains(currentUser.usercode)) {
+      if (currentOwners.map(_.usercode).contains(currentUser.usercode)) {
         Future.successful(Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key)))
       } else {
-        enquiryService.setOwners(request.enquiry.id.get, currentOwners + currentUser.usercode).successMap(_ =>
+        enquiryService.setOwners(request.enquiry.id.get, currentOwners.map(_.usercode) + currentUser.usercode).successMap(_ =>
           Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key))
             .flashing("success" -> Messages("flash.enquiry.owners.updated"))
         )
@@ -90,7 +90,7 @@ class OwnersController @Inject()(
         data => {
           caseService.getOwners(Set(request.`case`.id.get)).successFlatMap(previousOwners =>
             caseService.setOwners(request.`case`.id.get, data.toSet).successFlatMap { updatedOwners =>
-              val newOwners = updatedOwners -- previousOwners.getOrElse(request.`case`.id.get, Set())
+              val newOwners = updatedOwners.map(_.usercode) -- previousOwners.getOrElse(request.`case`.id.get, Set()).map(_.usercode)
               notificationService.newCaseOwner(newOwners, request.`case`).successMap(_ =>
                 Redirect(controllers.admin.routes.CaseController.view(request.`case`.key.get))
                   .flashing("success" -> Messages("flash.case.owners.updated"))
@@ -105,10 +105,10 @@ class OwnersController @Inject()(
   def caseSubmitSelf(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit request =>
     caseService.getOwners(Set(request.`case`.id.get)).successFlatMap { ownerMap =>
       val currentOwners = ownerMap.getOrElse(request.`case`.id.get, Set())
-      if (currentOwners.contains(currentUser.usercode)) {
+      if (currentOwners.map(_.usercode).contains(currentUser.usercode)) {
         Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(request.`case`.team.id).withFragment("cases")))
       } else {
-        caseService.setOwners(request.`case`.id.get, currentOwners + currentUser.usercode).successMap { _ =>
+        caseService.setOwners(request.`case`.id.get, currentOwners.map(_.usercode) + currentUser.usercode).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(request.`case`.key.get))
             .flashing("success" -> Messages("flash.case.owners.updated"))
         }

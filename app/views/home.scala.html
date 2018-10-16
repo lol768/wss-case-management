@@ -86,7 +86,7 @@
   }
 }
 
-@renderClientAppointments(appointments: Seq[AppointmentRender], userLookup: Map[Usercode, User]) = {
+@renderClientAppointments(appointments: Seq[AppointmentRender]) = {
   <table class="table table-default">
     <thead>
       <tr>
@@ -102,10 +102,10 @@
         <tr>
           <td>
             @tags.icons.appointmentState(a.appointment.state)
-            @a.appointment.subject(Some(userLookup), None)
+            @a.appointment.subject(None)
           </td>
           <td>@JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))</td>
-          <td>@userLookup.get(a.appointment.teamMember).flatMap(_.name.full), @a.appointment.team.name team</td>
+          <td>@a.appointment.teamMember.safeFullName, @a.appointment.team.name team</td>
           <td>
             @a.appointment.location.map(_.name)
             (@a.appointment.appointmentType.description)
@@ -209,7 +209,7 @@
         @renderClientMessages(clientInformation.issues, clientInformation.registration)
       </div>
       <div role="tabpanel" class="tab-pane" id="myappointments">
-        @renderClientAppointments(clientInformation.appointments, clientInformation.userLookup)
+        @renderClientAppointments(clientInformation.appointments)
       </div>
     </div>
   }
@@ -268,7 +268,7 @@
           @renderClientMessages(clientInformation.issues, clientInformation.registration)
         </div>
         <div role="tabpanel" class="tab-pane" id="myappointments">
-          @renderClientAppointments(clientInformation.appointments, clientInformation.userLookup)
+          @renderClientAppointments(clientInformation.appointments)
         </div>
       </div>
     }

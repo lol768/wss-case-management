@@ -238,11 +238,17 @@ object EnquiryDao {
       .map { case (e, c) => (e, c) }
     def withClientAndMessages = q
       .withClient
-      .joinLeft(Message.messages.table.withUploadedFiles)
-      .on { case ((e, _), (m, _)) =>
+      .joinLeft(
+        Message.messages.table
+          .withUploadedFiles
+          .joinLeft(MemberDao.members.table)
+          .on { case ((m, _), member) => m.teamMember.map(_ === member.usercode) }
+          .map { case ((m, f), member) => (m, f, member) }
+      )
+      .on { case ((e, _), (m, _, _)) =>
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
-      .map { case ((e, c), mf) => (e, c, mf) }
+      .map { case ((e, c), mfm) => (e, c, mfm) }
   }
 
   case class StoredEnquiryNote(
@@ -254,11 +260,11 @@ object EnquiryDao {
     created: OffsetDateTime,
     version: OffsetDateTime
   ) extends Versioned[StoredEnquiryNote] {
-    def asEnquiryNote = EnquiryNote(
+    def asEnquiryNote(member: Member) = EnquiryNote(
       id,
       noteType,
       text,
-      teamMember,
+      member,
       created,
       version
     )
@@ -327,6 +333,12 @@ object EnquiryDao {
       (id, enquiryID, noteType, text, teamMember, created, version, operation, timestamp, auditUser).mapTo[StoredEnquiryNoteVersion]
     def pk = primaryKey("pk_enquiry_note_version", (id, timestamp))
     def idx = index("idx_enquiry_note_version", (id, version))
+  }
+
+  implicit class EnquiryNoteExtensions[C[_]](q: Query[EnquiryNotes, StoredEnquiryNote, C]) {
+    def withMember = q
+      .join(MemberDao.members.table)
+      .on(_.teamMember === _.usercode)
   }
 
   case class EnquirySearchQuery(

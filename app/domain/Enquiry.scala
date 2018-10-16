@@ -63,7 +63,7 @@ case class EnquiryNote(
   id: UUID,
   noteType: EnquiryNoteType,
   text: String,
-  teamMember: Usercode,
+  teamMember: Member,
   created: OffsetDateTime = OffsetDateTime.now(),
   lastUpdated: OffsetDateTime = OffsetDateTime.now()
 )

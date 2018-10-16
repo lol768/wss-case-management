@@ -18,7 +18,7 @@ import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
-
+import QueryHelpers._
 import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
 
@@ -53,6 +53,7 @@ trait AppointmentDao {
   def updateNote(note: StoredAppointmentNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredAppointmentNote]
   def deleteNote(note: StoredAppointmentNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findNotesQuery(appointmentID: UUID): Query[AppointmentNotes, StoredAppointmentNote, Seq]
+  def findNotesQuery(appointmentIDs: Set[UUID]): Query[AppointmentNotes, StoredAppointmentNote, Seq]
 }
 
 @Singleton
@@ -192,6 +193,9 @@ class AppointmentDaoImpl @Inject()(
   override def findNotesQuery(appointmentID: UUID): Query[AppointmentNotes, StoredAppointmentNote, Seq] =
     appointmentNotes.table.filter(_.appointmentId === appointmentID)
 
+  override def findNotesQuery(appointmentIDs: Set[UUID]): Query[AppointmentNotes, StoredAppointmentNote, Seq] =
+    appointmentNotes.table.filter(_.appointmentId.inSet(appointmentIDs))
+
 }
 
 object AppointmentDao {
@@ -218,14 +222,14 @@ object AppointmentDao {
     created: OffsetDateTime,
     version: OffsetDateTime,
   ) extends Versioned[StoredAppointment] {
-    def asAppointment = Appointment(
+    def asAppointment(member: Member) = Appointment(
       id,
       key,
       start,
       duration,
       location,
       team,
-      teamMember,
+      member,
       appointmentType,
       state,
       cancellationReason,
@@ -298,8 +302,6 @@ object AppointmentDao {
 
     override def * : ProvenShape[StoredAppointment] =
       (id, key, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[StoredAppointment]
-    def appointment =
-      (id, key, start, duration, location, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[Appointment]
 
     def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
     def isAccepted: Rep[Boolean] = state === (AppointmentState.Accepted: AppointmentState)
@@ -334,7 +336,7 @@ object AppointmentDao {
       .on(_.id === _.appointmentID)
       .join(ClientDao.clients.table)
       .on { case ((_, ac), c) => ac.universityID === c.universityID }
-      .map { case ((a, ac), c) => (a, ac, c) }
+      .flattenJoin
     def withCases = q
       .join(AppointmentCase.appointmentCases.table)
       .on(_.id === _.appointmentID)
@@ -344,6 +346,14 @@ object AppointmentDao {
     def withNotes = q
       .joinLeft(appointmentNotes.table)
       .on(_.id === _.appointmentId)
+    def withMember = q
+      .join(MemberDao.members.table)
+      .on { case (a, m) => a.teamMember === m.usercode }
+    def withClientsAndMember = q
+      .withClients
+      .join(MemberDao.members.table)
+      .on { case ((a, _, _), m) => a.teamMember === m.usercode }
+      .flattenJoin
   }
 
   case class StoredAppointmentClient(
@@ -445,10 +455,10 @@ object AppointmentDao {
     created: OffsetDateTime,
     version: OffsetDateTime
   ) extends Versioned[StoredAppointmentNote] {
-    def asAppointmentNote = AppointmentNote(
+    def asAppointmentNote(member: Member) = AppointmentNote(
       id,
       text,
-      teamMember,
+      member,
       created,
       version
     )
@@ -514,6 +524,12 @@ object AppointmentDao {
       (id, appointmentId, text, teamMember, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentNoteVersion]
     def pk = primaryKey("pk_appointment_note_version", (id, timestamp))
     def idx = index("idx_appointment_note_version", (id, version))
+  }
+
+  implicit class AppointmentNoteExtensions[C[_]](q: Query[AppointmentNotes, StoredAppointmentNote, C]) {
+    def withMember = q
+      .join(MemberDao.members.table)
+      .on(_.teamMember === _.usercode)
   }
 
   case class AppointmentSearchQuery(

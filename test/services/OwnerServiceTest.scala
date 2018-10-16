@@ -1,6 +1,6 @@
 package services
 
-import java.time.ZonedDateTime
+import java.time.{OffsetDateTime, ZonedDateTime}
 
 import domain.IssueState.Open
 import domain._
@@ -62,8 +62,8 @@ class OwnerServiceTest extends AbstractDaoTest {
 
         val initialOwners = ownerService.getEnquiryOwners(Set(enquiry.id.get)).serviceValue(enquiry.id.get)
         initialOwners.size mustBe 2
-        initialOwners.contains(owner1) mustBe true
-        initialOwners.contains(owner2) mustBe true
+        initialOwners.contains(Member(owner1, None, OffsetDateTime.ofInstant(before, JavaTime.timeZone))) mustBe true
+        initialOwners.contains(Member(owner2, None, OffsetDateTime.ofInstant(before, JavaTime.timeZone))) mustBe true
 
         DateTimeUtils.useMockDateTime(now, () => {
           ownerService.setEnquiryOwners(enquiry.id.get, Set(owner2, owner3)).serviceValue
@@ -71,9 +71,9 @@ class OwnerServiceTest extends AbstractDaoTest {
 
         val updatedOwners = ownerService.getEnquiryOwners(Set(enquiry.id.get)).serviceValue(enquiry.id.get)
         updatedOwners.size mustBe 2
-        updatedOwners.contains(owner1) mustBe false
-        updatedOwners.contains(owner2) mustBe true
-        updatedOwners.contains(owner3) mustBe true
+        updatedOwners.contains(Member(owner1, None, OffsetDateTime.ofInstant(before, JavaTime.timeZone))) mustBe false
+        updatedOwners.contains(Member(owner2, None, OffsetDateTime.ofInstant(before, JavaTime.timeZone))) mustBe true
+        updatedOwners.contains(Member(owner3, None, OffsetDateTime.ofInstant(now, JavaTime.timeZone))) mustBe true
       }
     }
   }

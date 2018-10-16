@@ -10,8 +10,9 @@ import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.CaseDao.{Case, _}
+import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
-import domain.dao.{CaseDao, DaoRunner, MessageDao, UploadedFileDao}
+import domain.dao._
 import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{JavaTime, ServiceResults}
@@ -20,7 +21,7 @@ import play.api.libs.json.Json
 import services.CaseService._
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
-
+import QueryHelpers._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.higherKinds
 
@@ -66,8 +67,8 @@ trait CaseService {
   def countOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def countClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
-  def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]]
-  def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]]
+  def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
+  def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]]
 
   def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Client]]]]
   def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[Client]]]
@@ -76,7 +77,7 @@ trait CaseService {
   def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]]
   def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
-  def addMessage(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(Message, Seq[UploadedFile])]]
+  def addMessage(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(MessageData, Seq[UploadedFile])]]
   def hasMessagesForClient(id: UUID, client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
   def reassign(c: Case, team: Team, caseType: Option[CaseType], note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
@@ -96,6 +97,7 @@ class CaseServiceImpl @Inject() (
   userLookupService: UserLookupService,
   permissionsService: PermissionService,
   clientService: ClientService,
+  memberService: MemberService,
   daoRunner: DaoRunner,
   dao: CaseDao,
   messageDao: MessageDao,
@@ -148,9 +150,11 @@ class CaseServiceImpl @Inject() (
       (clientCase, messages) <-
         query.withMessages
           .sortBy { case (_, mf) => mf.map(_._1.created) }
-          .map { case (c, mf) => (c, mf.map { case (m, f) => (m.messageData, f) }) }
           .result
-          .map { results => MessageData.groupOwnerAndMessage[Case](results) }
+          .map { results => MessageData.groupOwnerAndMessage[Case](results.map { case (c, m) => (
+            c,
+            m.map { case (msg, f, member) => (msg.asMessageData(member.map(_.asMember)), f) }
+          ) }) }
           .map { _.head }
       clients <- dao.findClientsQuery(Set(clientCase.id.get)).result
       tags <- dao.findTagsQuery(Set(clientCase.id.get)).result
@@ -158,11 +162,11 @@ class CaseServiceImpl @Inject() (
       docs <- getDocumentsDBIO(clientCase.id.get)
       (outgoingCaseLinks, incomingCaseLinks) <- getLinksDBIO(clientCase.id.get)
     } yield {
-      val caseDocuments =  docs.map { case ((d, f), n) => d.asCaseDocument(f.asUploadedFile, n.asCaseNote) }
+      val caseDocuments =  docs.map { case (d, f, n, docMember, noteMember) => d.asCaseDocument(f.asUploadedFile, n.asCaseNote(noteMember.asMember), docMember.asMember) }
 
-      ServiceResults.sequence(outgoingCaseLinks.map(c => EntityAndCreator(c, permissionsService, userLookupService)))
-        .flatMap(o => ServiceResults.sequence(incomingCaseLinks.map(c => EntityAndCreator(c, permissionsService, userLookupService)))
-          .flatMap (i => ServiceResults.sequence(caseDocuments.map(c => EntityAndCreator(c, permissionsService, userLookupService)))
+      ServiceResults.sequence(outgoingCaseLinks.map(c => EntityAndCreator(c, permissionsService)))
+        .flatMap(o => ServiceResults.sequence(incomingCaseLinks.map(c => EntityAndCreator(c, permissionsService)))
+          .flatMap (i => ServiceResults.sequence(caseDocuments.map(c => EntityAndCreator(c, permissionsService)))
             .map(d => (o, i, d))
           )
         ).map { case (outgoing, incoming, documents) =>
@@ -170,7 +174,7 @@ class CaseServiceImpl @Inject() (
             clientCase,
             clients.map { case (_, c) => c.asClient }.toSet,
             tags.map(_.caseTag).toSet,
-            notes.map(_.asCaseNote),
+            notes.map { case (n, m) => n.asCaseNote(m.asMember) },
             documents,
             outgoing,
             incoming,
@@ -203,12 +207,12 @@ class CaseServiceImpl @Inject() (
     daoRunner.run(for {
       withMessages <- query.withMessages
         .map { case (c, mf) => (c,
-          mf.filter { case (m, _) => m.client === universityID }.map { case (m, f) => (m.messageData, f) }
+          mf.filter { case (m, _, _) => m.client === universityID }
         ) }
         .result
-      withNotes <- query.withNotes.result
-    } yield (withMessages, withNotes)).map { case (withMessages, withNotes) =>
-      groupTuples(withMessages, withNotes)
+      notes <- dao.findNotesQuery(withMessages.map { case (c, _) => c.id.get }.toSet).withMember.result
+    } yield (withMessages, notes)).map { case (withMessages, notes) =>
+      groupTuples(withMessages, notes)
     }
   }
 
@@ -256,11 +260,13 @@ class CaseServiceImpl @Inject() (
     }
 
     auditService.audit(Symbol(s"Case${targetState.entryName}"), caseID.toString, 'Case, Json.obj()) {
-      daoRunner.run(for {
-        clientCase <- dao.find(caseID)
-        updated <- dao.update(clientCase.copy(state = targetState), version)
-        _ <- addNoteDBIO(caseID, noteType, caseNote)
-      } yield updated).map(Right.apply)
+      memberService.getOrAddMember(caseNote.teamMember).successFlatMapTo(_ =>
+        daoRunner.run(for {
+          clientCase <- dao.find(caseID)
+          updated <- dao.update(clientCase.copy(state = targetState), version)
+          _ <- addNoteDBIO(caseID, noteType, caseNote)
+        } yield updated).map(Right.apply)
+      )
     }
   }
 
@@ -288,23 +294,28 @@ class CaseServiceImpl @Inject() (
 
   override def addLink(linkType: CaseLinkType, outgoingID: UUID, incomingID: UUID, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[StoredCaseLink]] =
     auditService.audit('CaseLinkSave, outgoingID.toString, 'Case, Json.obj("to" -> incomingID.toString, "note" -> caseNote.text)) {
-      daoRunner.run(for {
-        outNote <- addNoteDBIO(outgoingID, CaseNoteType.AssociatedCase, caseNote)
-        // add a note to the linked case - will bump last modified on that case. May want to show it in the UI at some point but won't be exposed for now
-        _ <- addNoteDBIO(incomingID, CaseNoteType.AssociatedCase, caseNote)
-        link <- dao.insertLink(StoredCaseLink(UUID.randomUUID(), linkType, outgoingID, incomingID, outNote.id, caseNote.teamMember))
-      } yield link).map(Right.apply)
+      memberService.getOrAddMember(caseNote.teamMember).successFlatMapTo(_ =>
+        daoRunner.run(for {
+          outNote <- addNoteDBIO(outgoingID, CaseNoteType.AssociatedCase, caseNote)
+          // add a note to the linked case - will bump last modified on that case. May want to show it in the UI at some point but won't be exposed for now
+          _ <- addNoteDBIO(incomingID, CaseNoteType.AssociatedCase, caseNote)
+          link <- dao.insertLink(StoredCaseLink(UUID.randomUUID(), linkType, outgoingID, incomingID, outNote.id, caseNote.teamMember))
+        } yield link).map(Right.apply)
+      )
     }
 
   private def getLinksDBIO(caseID: UUID): DBIO[(Seq[CaseLink], Seq[CaseLink])] =
-    dao.findLinksQuery(caseID)
-      .join(CaseDao.cases.table).on(_.outgoingCaseID === _.id)
-      .join(CaseDao.cases.table).on(_._1.incomingCaseID === _.id)
-      .join(CaseDao.caseNotes.table).on(_._1._1.caseNote === _.id)
+    dao.findLinksQuery(caseID).withMember
+      .join(CaseDao.cases.table).on { case ((l, _), c) => l.outgoingCaseID === c.id }
+      .flattenJoin
+      .join(CaseDao.cases.table).on { case ((l, _, _), i) => l.incomingCaseID === i.id }
+      .flattenJoin
+      .join(CaseDao.caseNotes.table.withMember).on { case ((l, _, _, _), (n, _)) => l.caseNote === n.id }
+      .map { case ((l, lm, o, i), (n, nm)) => (l, lm, o, i, n, nm) }
       .result
       .map { results =>
-        results.map { case (((link, outgoing), incoming), note) =>
-          CaseLink(link.id, link.linkType, outgoing, incoming, note.asCaseNote, link.teamMember, link.version)
+        results.map { case (link, linkMember, outgoing, incoming, note, noteMember) =>
+          CaseLink(link.id, link.linkType, outgoing, incoming, note.asCaseNote(noteMember.asMember), linkMember.asMember, link.version)
         }.partition(_.outgoing.id.get == caseID)
       }
 
@@ -334,24 +345,29 @@ class CaseServiceImpl @Inject() (
 
   override def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]] =
     auditService.audit('CaseAddGeneralNote, caseID.toString, 'Case, Json.obj()) {
-      daoRunner.run(addNoteDBIO(caseID, CaseNoteType.GeneralNote, note)).map { n => Right(n.asCaseNote) }
+      memberService.getOrAddMember(note.teamMember).successFlatMapTo(member =>
+        daoRunner.run(addNoteDBIO(caseID, CaseNoteType.GeneralNote, note))
+          .map { n => Right(n.asCaseNote(member)) }
+      )
     }
 
   override def getNote(id: UUID)(implicit t: TimingContext): Future[ServiceResult[NoteAndCase]] =
     daoRunner.run(dao.findNote(id)).map(Right.apply)
 
-  private def getNotesDBIO(caseID: UUID): DBIO[Seq[StoredCaseNote]] =
-    dao.findNotesQuery(caseID).sortBy(_.created.desc).result
+  private def getNotesDBIO(caseID: UUID): DBIO[Seq[(StoredCaseNote, StoredMember)]] =
+    dao.findNotesQuery(caseID).sortBy(_.created.desc).withMember.result
 
   override def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]] =
-    daoRunner.run(getNotesDBIO(caseID)).map { notes => Right(notes.map(_.asCaseNote)) }
+    daoRunner.run(getNotesDBIO(caseID)).map(notes => Right(notes.map { case (n, m) => n.asCaseNote(m.asMember) }))
 
   override def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]] =
     auditService.audit('CaseNoteUpdate, caseID.toString, 'Case, Json.obj("noteID" -> noteID.toString)) {
-      daoRunner.run(for {
-        existing <- dao.findNotesQuery(caseID).filter(_.id === noteID).result.head
-        updated <- dao.updateNote(existing.copy(text = note.text, teamMember = note.teamMember), version)
-      } yield updated).map { n => Right(n.asCaseNote) }
+      memberService.getOrAddMember(note.teamMember).successFlatMapTo(member =>
+        daoRunner.run(for {
+          existing <- dao.findNotesQuery(caseID).filter(_.id === noteID).result.head
+          updated <- dao.updateNote(existing.copy(text = note.text, teamMember = note.teamMember), version)
+        } yield updated).map { n => Right(n.asCaseNote(member)) }
+      )
     }
 
   override def deleteNote(caseID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
@@ -426,10 +442,10 @@ class CaseServiceImpl @Inject() (
         .length.result
     ).map(Right.apply)
 
-  override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Usercode]]]] =
+  override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]] =
     ownerService.getCaseOwners(ids)
 
-  override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Usercode]]] =
+  override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]] =
     ownerService.setCaseOwners(id, owners)
 
   override def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Client]]]] = {
@@ -444,34 +460,43 @@ class CaseServiceImpl @Inject() (
 
   override def addDocument(caseID: UUID, document: CaseDocumentSave, in: ByteSource, file: UploadedFileSave, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseDocument]] =
     auditService.audit('CaseAddDocument, caseID.toString, 'Case, Json.obj()) {
-      val documentID = UUID.randomUUID()
-      daoRunner.run(for {
-        f <- uploadedFileService.storeDBIO(in, file, ac.usercode.get)
-        n <- addNoteDBIO(caseID, CaseNoteType.DocumentNote, caseNote)
-        doc <- dao.insertDocument(StoredCaseDocument(
-          documentID,
-          caseID,
-          document.documentType,
-          f.id,
-          document.teamMember,
-          n.id,
-          JavaTime.offsetDateTime,
-          JavaTime.offsetDateTime
-        ))
+      memberService.getOrAddMembers(Set(document.teamMember, caseNote.teamMember)).successFlatMapTo { members =>
+        val documentID = UUID.randomUUID()
+        daoRunner.run(for {
+          f <- uploadedFileService.storeDBIO(in, file, ac.usercode.get)
+          n <- addNoteDBIO(caseID, CaseNoteType.DocumentNote, caseNote)
+          doc <- dao.insertDocument(StoredCaseDocument(
+            documentID,
+            caseID,
+            document.documentType,
+            f.id,
+            document.teamMember,
+            n.id,
+            JavaTime.offsetDateTime,
+            JavaTime.offsetDateTime
+          ))
 
-      } yield doc.asCaseDocument(f, n.asCaseNote)).map(Right.apply)
+        } yield doc.asCaseDocument(
+          f,
+          n.asCaseNote(members.find(_.usercode == n.teamMember).get),
+          members.find(_.usercode == doc.teamMember).get
+        )).map(Right.apply)
+      }
     }
 
-  private def getDocumentsDBIO(caseID: UUID): DBIO[Seq[((StoredCaseDocument, StoredUploadedFile), StoredCaseNote)]] =
+  private def getDocumentsDBIO(caseID: UUID): DBIO[Seq[(StoredCaseDocument, StoredUploadedFile, StoredCaseNote, StoredMember, StoredMember)]] =
     dao.findDocumentsQuery(caseID)
       .join(UploadedFileDao.uploadedFiles.table).on(_.fileId === _.id)
       .join(CaseDao.caseNotes.table).on(_._1.caseNote === _.id)
-      .sortBy { case ((d, f), n) => d.created.desc }
+      .join(MemberDao.members.table).on { case (((d, _), _), m) => d.teamMember === m.usercode }
+      .join(MemberDao.members.table).on { case ((((_, _), n), _), m) => n.teamMember === m.usercode }
+      .flattenJoin
+      .sortBy { case (d, _, _, _, _) => d.created.desc }
       .result
 
   override def getDocuments(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseDocument]]] = {
     daoRunner.run(getDocumentsDBIO(caseID))
-      .map { docs => Right(docs.map { case ((d, f), n) => d.asCaseDocument(f.asUploadedFile, n.asCaseNote) }) }
+      .map { docs => Right(docs.map { case (d, f, n, docMember, noteMember) => d.asCaseDocument(f.asUploadedFile, n.asCaseNote(noteMember.asMember), docMember.asMember) }) }
   }
 
   override def deleteDocument(caseID: UUID, documentID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
@@ -484,15 +509,16 @@ class CaseServiceImpl @Inject() (
     }
 
 
-  override def addMessage(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(Message, Seq[UploadedFile])]] = {
+  override def addMessage(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(MessageData, Seq[UploadedFile])]] = {
     auditService.audit('CaseAddMessage, `case`.id.get.toString, 'Case, Json.obj("client" -> client.string)) {
-      daoRunner.run(
-        addMessageDBIO(`case`, client, message, files, ac.usercode.get)
-      ).map(Right.apply)
-    }.flatMap(_.fold(
-      errors => Future.successful(Left(errors)),
-      { case (m, file) => notificationService.caseMessage(`case`, client, m.sender).map(_.right.map(_ => (m, file))) }
-    ))
+      memberService.getOrAddMember(message.teamMember).successFlatMapTo(member =>
+        daoRunner.run(addMessageDBIO(`case`, client, message, files, ac.usercode.get)).flatMap { case (m, file) =>
+          notificationService.caseMessage(`case`, client, m.sender).map(_.map(_ =>
+            (m.asMessageData(member), file)
+          ))
+        }
+      )
+    }
   }
 
   override def hasMessagesForClient(id: UUID, client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
@@ -546,13 +572,19 @@ class CaseServiceImpl @Inject() (
 }
 
 object CaseService {
-  def groupTuples(messagesTuples: Seq[(Case, Option[(MessageData, Option[StoredUploadedFile])])], notesTuples: Seq[(Case, Option[StoredCaseNote])]): Seq[CaseRender] = {
-    val casesAndMessages =
-      MessageData.groupOwnerAndMessage(messagesTuples)
-    val casesAndNotes =
-      OneToMany.leftJoin(notesTuples.map { case (c, n) => (c, n.map(_.asCaseNote)) })(CaseNote.dateOrdering).toMap
+  def groupTuples(messagesTuples: Seq[(Case, Option[(Message, Option[StoredUploadedFile], Option[StoredMember])])], notes: Seq[(StoredCaseNote, StoredMember)]): Seq[CaseRender] = {
+    val casesAndMessages = MessageData.groupOwnerAndMessage(
+      messagesTuples.map { case (c, m) => (
+        c,
+        m.map { case (msg, f, member) => (msg.asMessageData(member.map(_.asMember)), f) }
+      ) }
+    )
 
-    sortByRecent(casesAndMessages.map { case (c, m) => CaseRender(c, m.distinct, casesAndNotes.getOrElse(c, Nil)) })
+    val notesByCase = notes.groupBy { case (n, _) => n.caseId }
+      .mapValues(_.map { case (n, m) => n.asCaseNote(m.asMember) }.sorted(CaseNote.dateOrdering)
+      ).withDefaultValue(Seq())
+
+    sortByRecent(casesAndMessages.map { case (c, m) => CaseRender(c, m.distinct, notesByCase(c.id.get)) })
   }
 
   /**

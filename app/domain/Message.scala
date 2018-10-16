@@ -49,6 +49,15 @@ case class Message (
       timestamp,
       ac.usercode
     ).asInstanceOf[B]
+
+  def asMessageData(member: Option[Member]) = MessageData(
+    text = text,
+    sender = sender,
+    client = client,
+    created = created,
+    teamMember = member,
+    team = team
+  )
 }
 
 object Message extends Versioning {
@@ -77,7 +86,6 @@ object Message extends Versioning {
     def id = column[UUID]("id", O.PrimaryKey)
 
     def * = (id, text, sender, client, teamMember, team, ownerId, ownerType, created, version).mapTo[Message]
-    def messageData = (text, sender, client, created, teamMember, team).mapTo[MessageData]
   }
 
   class MessageVersions(tag: Tag) extends Table[MessageVersion](tag, "message_version") with StoredVersionTable[Message] with CommonProperties {
@@ -154,7 +162,7 @@ case class MessageData (
   sender: MessageSender,
   client: UniversityID,
   created: OffsetDateTime,
-  teamMember: Option[Usercode],
+  teamMember: Option[Member],
   team: Option[Team]
 )
 

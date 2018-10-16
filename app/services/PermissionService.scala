@@ -130,7 +130,7 @@ class PermissionServiceImpl @Inject() (
       if (!isInAnyTeam) {
         Future.successful(Right(false))
       } else {
-        enquiryService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).contains(user)))
+        enquiryService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).map(_.usercode).contains(user)))
       }
     }
 
@@ -150,7 +150,7 @@ class PermissionServiceImpl @Inject() (
   override def canEditCaseNote(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] = {
     caseService.getNote(id).successFlatMapTo(noteAndCase => {
       canEditCase(user, noteAndCase.clientCase.id.get).successMapTo(canEditNote => {
-        canEditNote && noteAndCase.note.teamMember == user
+        canEditNote && noteAndCase.note.teamMember.usercode == user
       })
     })
   }
@@ -179,7 +179,7 @@ class PermissionServiceImpl @Inject() (
       if (!isInAnyTeam) {
         Future.successful(Right(false))
       } else {
-        caseService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).contains(user)))
+        caseService.getOwners(Set(id)).map(_.map(_.getOrElse(id, Set()).map(_.usercode).contains(user)))
       }
     }
 
@@ -237,7 +237,7 @@ class PermissionServiceImpl @Inject() (
         if (!isInAnyTeam) {
           Future.successful(Right(false))
         } else {
-          appointmentService.find(id).map(_.flatMap(a => Right(a.teamMember == user)))
+          appointmentService.find(id).map(_.flatMap(a => Right(a.teamMember.usercode == user)))
         }
     )
 

@@ -226,6 +226,8 @@ object Fixtures {
       Owner.owners.versionsTable.delete andThen
       ClientDao.clients.table.delete andThen
       ClientDao.clients.versionsTable.delete andThen
+      MemberDao.members.table.delete andThen
+      MemberDao.members.versionsTable.delete andThen
       sql"ALTER SEQUENCE SEQ_CASE_ID RESTART WITH 1000".asUpdate andThen
       sql"ALTER SEQUENCE SEQ_APPOINTMENT_KEY RESTART WITH 1000".asUpdate andThen
       sql"ALTER SEQUENCE SEQ_ENQUIRY_KEY RESTART WITH 1000".asUpdate
