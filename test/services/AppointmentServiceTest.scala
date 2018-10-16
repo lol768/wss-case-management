@@ -7,7 +7,7 @@ import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.ClientDao.StoredClient
-import domain.dao.{AbstractDaoTest, AppointmentDao, CaseDao, ClientDao}
+import domain.dao._
 import helpers.{DataFixture, JavaTime}
 import play.api.libs.json.Json
 import uk.ac.warwick.util.core.DateTimeUtils
@@ -38,7 +38,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
   "AppointmentServiceTest" should {
     "create" in withData(new AppointmentFixture) { _ =>
-      val created = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, Set.empty).serviceValue
+      val created = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(15), None, Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, Set.empty).serviceValue
       created.id must not be null
       created.key.string mustBe "APP-1000"
       created.duration mustBe Duration.ofMinutes(15)
@@ -59,7 +59,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
     }
 
     "find by client" in withData(new AppointmentFixture) { _ =>
-      val created = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, Set.empty).serviceValue
+      val created = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(15), None, Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, Set.empty).serviceValue
       val created2 = service.create(AppointmentSave(JavaTime.offsetDateTime.minusHours(1), Duration.ofMinutes(10), None, Usercode("u1234444"), AppointmentType.Skype), Set(UniversityID("0672089"), UniversityID("0672088")), Teams.WellbeingSupport, Set.empty).serviceValue
 
       service.findForClient(UniversityID("0672089")).serviceValue.map(_.appointment) mustBe Seq(created2, created)
@@ -71,13 +71,14 @@ class AppointmentServiceTest extends AbstractDaoTest {
       val now = JavaTime.offsetDateTime
 
       DateTimeUtils.useMockDateTime(now.toInstant, () => {
-        val singleClientNoCase = service.create(AppointmentSave(now, Duration.ofMinutes(15), Some(NamedLocation("My office")), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, Set.empty).serviceValue
+        val singleClientNoCase = service.create(AppointmentSave(now, Duration.ofMinutes(15), None, Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, Set.empty).serviceValue
 
         service.findForRender(singleClientNoCase.key).serviceValue mustBe AppointmentRender(
           singleClientNoCase,
           Set(
             AppointmentClient(Client(UniversityID("0672089"), None, now), AppointmentState.Provisional, None)
           ),
+          None,
           Set.empty,
           Seq()
         )
@@ -100,6 +101,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
             AppointmentClient(Client(UniversityID("0672088"), None, now), AppointmentState.Provisional, None),
             AppointmentClient(Client(UniversityID("0672089"), None, now), AppointmentState.Provisional, None)
           ),
+          None,
           Set(c, c2),
           Seq(note2, note1)
         )
@@ -231,8 +233,16 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
       service.search(AppointmentSearchQuery(query = Some("some text")), 5).serviceValue mustBe Seq(a)
 
-      service.search(AppointmentSearchQuery(location = Some(NamedLocation("W0.01"))), 5).serviceValue mustBe Seq(a)
-      service.search(AppointmentSearchQuery(location = Some(NamedLocation("ACCR"))), 5).serviceValue mustBe Seq()
+      val building = execWithCommit(LocationDao.buildings.insert(Fixtures.locations.newBuilding()))
+      val r021 = execWithCommit(LocationDao.rooms.insert(Fixtures.locations.newRoom(building.id, name = "R0.21")))
+      val r023 = execWithCommit(LocationDao.rooms.insert(Fixtures.locations.newRoom(building.id, name = "R0.23")))
+
+      val appointmentR021 = service.create(
+        AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(15), Some(r021.id), Usercode("u1234567"), AppointmentType.FaceToFace), Set(UniversityID("0672089")), Teams.Counselling, Set.empty
+      ).serviceValue
+
+      service.search(AppointmentSearchQuery(roomID = Some(r021.id)), 5).serviceValue mustBe Seq(appointmentR021)
+      service.search(AppointmentSearchQuery(roomID = Some(r023.id)), 5).serviceValue mustBe Seq()
     }
   }
 }

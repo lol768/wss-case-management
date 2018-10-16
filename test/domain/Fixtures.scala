@@ -6,6 +6,7 @@ import java.util.UUID
 import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
 import domain.dao._
 import domain.dao.CaseDao.Case
+import domain.dao.LocationDao.{StoredBuilding, StoredRoom}
 import helpers.JavaTime
 import warwick.sso._
 
@@ -174,7 +175,7 @@ object Fixtures {
       JavaTime.offsetDateTime
         .withHour(14).withMinute(0).withSecond(0).withNano(0),
       Duration.ofMinutes(45),
-      Some(MapLocation("W0.01", "4128")),
+      None,
       Teams.MentalHealth,
       Usercode("mentalhealth-counsellor"),
       AppointmentType.FaceToFace,
@@ -189,6 +190,26 @@ object Fixtures {
       appointmentID: UUID,
       AppointmentState.Provisional,
       None,
+      JavaTime.offsetDateTime,
+      JavaTime.offsetDateTime,
+    )
+  }
+
+  object locations {
+    def newBuilding(name: String = "Ramphal", wai2GoID: Int = 12345): StoredBuilding = StoredBuilding(
+      UUID.randomUUID(),
+      name,
+      wai2GoID,
+      JavaTime.offsetDateTime,
+      JavaTime.offsetDateTime,
+    )
+
+    def newRoom(buildingID: UUID, name: String = "R0.21", wai2GoID: Option[Int] = None): StoredRoom = StoredRoom(
+      UUID.randomUUID(),
+      buildingID,
+      name,
+      wai2GoID,
+      available = true,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
     )
@@ -226,6 +247,10 @@ object Fixtures {
       Owner.owners.versionsTable.delete andThen
       ClientDao.clients.table.delete andThen
       ClientDao.clients.versionsTable.delete andThen
+      LocationDao.rooms.table.delete andThen
+      LocationDao.rooms.versionsTable.delete andThen
+      LocationDao.buildings.table.delete andThen
+      LocationDao.buildings.versionsTable.delete andThen
       sql"ALTER SEQUENCE SEQ_CASE_ID RESTART WITH 1000".asUpdate andThen
       sql"ALTER SEQUENCE SEQ_APPOINTMENT_KEY RESTART WITH 1000".asUpdate andThen
       sql"ALTER SEQUENCE SEQ_ENQUIRY_KEY RESTART WITH 1000".asUpdate
