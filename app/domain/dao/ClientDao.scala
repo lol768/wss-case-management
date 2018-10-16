@@ -122,7 +122,7 @@ class ClientDaoImpl @Inject()(
     clients.table.filter(c =>
       c.fullName.nonEmpty &&
         c.fullName.toLowerCase.like(
-          name.split(" ").map(_.trim.toLowerCase).map(n => s"$n%").mkString("")
+          name.split(" ").map(_.trim.toLowerCase).map(n => s"%$n%").mkString("")
         )
     )
 }
