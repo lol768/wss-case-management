@@ -61,7 +61,7 @@ class NavigationServiceImpl @Inject() (
       NavigationPage("Reports", controllers.reports.routes.ReportsController.home())
     ))
 
-  private def teamHome(team: Team) = NavigationPage(s"${team.name} team", controllers.admin.routes.AdminController.teamHome(team.id))
+  private def teamHome(team: Team) = NavigationPage(team.name, controllers.admin.routes.AdminController.teamHome(team.id))
 
   private def adminMenu(loginContext: LoginContext): Seq[Navigation] =
     if (loginContext.userHasRole(Admin))

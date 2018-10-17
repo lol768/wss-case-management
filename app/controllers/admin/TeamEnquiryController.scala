@@ -127,7 +127,7 @@ class TeamEnquiryController @Inject()(
           render {
             case Accepts.Json() =>
               val clientName = "Client"
-              val teamName = message.teamMember.flatMap(usercode => userLookupService.getUser(usercode).toOption.filter(_.isFound).flatMap(_.name.full)).getOrElse(s"${request.enquiry.team.name} team")
+              val teamName = message.teamMember.flatMap(usercode => userLookupService.getUser(usercode).toOption.filter(_.isFound).flatMap(_.name.full)).getOrElse(request.enquiry.team.name)
 
               Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
                 "message" -> views.html.tags.messages.message(messageData, f, clientName, teamName, f => routes.TeamEnquiryController.download(enquiryKey, f.id)).toString()
