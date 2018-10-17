@@ -8,6 +8,7 @@
 @import play.api.data.Forms._
 @import warwick.sso.{User, Usercode}
 
+@import domain.MessageSender
 @(
   clientInformation: ClientInformation,
   teamMemberInformation: Option[TeamMemberInformation],
@@ -49,7 +50,7 @@
                   <i class="fas fa-fw fa-angle-down"></i>
                   <i class="fas fa-fw fa-angle-up"></i>
                 </div>
-                @tags.icons.enquiryState(issueRender.issue.state)
+                @tags.icons.enquiryState(issueRender.issue.state, issueRender.messages.last.message, MessageSender.Client)
                 @issueRender.issue match {
                   case e: Enquiry => {
                     @e.subject

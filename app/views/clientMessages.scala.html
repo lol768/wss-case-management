@@ -4,6 +4,7 @@
 
 @import domain.dao.CaseDao.Case
 @import domain.IssueRender
+@import domain.MessageSender
 @(
   issueRender: IssueRender,
   f: Form[String],
@@ -23,7 +24,7 @@
     <div class="pull-right">
       @JavaTime.Relative(issueRender.lastUpdatedDate)
     </div>
-    @tags.icons.enquiryState(issueRender.issue.state)
+    @tags.icons.enquiryState(issueRender.issue.state, issueRender.messages.last.message, MessageSender.Client)
     @subject
   </h2>
   <div class="message-threads">

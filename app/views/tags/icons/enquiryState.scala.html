@@ -1,7 +1,9 @@
 @import domain.IssueState
-@(state: domain.IssueState)
+@import domain.MessageData
+@import domain.MessageSender
+@(state: domain.IssueState, lastMessage: MessageData, viewer: MessageSender)
 @if(state == IssueState.Closed) {
   @tags.icons.enquiryClosed()
 } else {
-  @tags.icons.enquiryOpen()
+  @tags.icons.enquiryOpen(lastMessage, viewer)
 }

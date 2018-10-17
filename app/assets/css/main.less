@@ -442,3 +442,19 @@ a[role="button"] {
     margin-left: 5px;
   }
 }
+
+i.fa-comment-edit.awaiting {
+  color: @brand-colour;
+}
+
+.heartbeat {
+  animation-name: heartbeat-animation;
+  animation: heartbeat-animation 1.5s ease infinite;
+}
+
+@keyframes heartbeat-animation{
+  0%{transform:scale(1)}
+  20%{transform:scale(1.2)}
+  40%{transform:scale(1)}
+  100%{transform:scale(1)}
+}
