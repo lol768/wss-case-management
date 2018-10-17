@@ -1,0 +1,81 @@
+@import domain.dao.CaseDao.Case
+@import domain.dao.CaseDao.CaseMessages
+@import domain.MessageRender
+@import domain.Client
+@import domain.SitsProfile
+@import helpers.JavaTime
+@import domain.IssueState
+@import org.apache.tika.mime.MediaType
+
+@(
+  c: Case,
+  messages: CaseMessages,
+  profiles: Map[Client, Option[SitsProfile]],
+  messageForm: Form[String],
+  supportedMimeTypes: Seq[MediaType]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+<div class="panel-group message-threads" id="messages-accordion" role="tablist" aria-multiselectable="true" data-count="@messages.length">
+  @profiles.keySet.toSeq.sorted.map { client =>
+    @defining(messages.byClient.getOrElse(client.universityID, Nil)) { messages: Seq[MessageRender] =>
+      <div class="thread panel panel-default">
+        <div class="panel-heading" role="tab" id="thread-heading-@client.universityID.string">
+          <h4 class="panel-title">
+          @if(profiles.size > 1){
+            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-thread-@client.universityID.string" aria-expanded="true" aria-controls="collapse-thread-@client.universityID">
+              <div class="pull-right">
+                @messages.lastOption.map { m =>
+                  @JavaTime.Relative(m.message.created)
+                }
+                <i class="fas fa-fw fa-angle-down"></i>
+                <i class="fas fa-fw fa-angle-up"></i>
+              </div>
+              @client.safeFullName
+              @if(messages.isEmpty) {
+                (No messages)
+              } else {
+                (@tags.p(messages.length, "message")())
+              }
+            </a>
+          } else {
+            <div class="pull-right">
+            @messages.lastOption.map { m =>
+              @JavaTime.Relative(m.message.created)
+            }
+            </div>
+            @if(messages.isEmpty) {
+              No messages
+            } else {
+              @tags.p(messages.length, "message")()
+            }
+          }
+
+          </h4>
+        </div>
+        <div id="collapse-thread-@client.universityID.string" class="panel-collapse @if(profiles.size > 1){ collapse }" role="tabpanel" aria-labelledby="thread-heading-@client.universityID.string">
+          @if(messages.nonEmpty){
+            <div class="panel-body">
+              @messages.map { render =>
+                @views.html.tags.messages.message(
+                  render.message,
+                  render.files,
+                  "Client",
+                  render.message.teamMember.map { member => s"${member.safeFullName}, ${render.message.team.getOrElse(c.team).name} team" }
+                      .getOrElse(s"${render.message.team.getOrElse(c.team).name} team"),
+                  f => controllers.admin.routes.CaseMessageController.download(c.key.get, f.id),
+                  // TODO last view date for cases
+                  None
+                )
+              }
+            </div>
+          }
+          <div class="panel-footer">
+          @if(c.state != IssueState.Closed) {
+            @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.key.get, client.universityID), messageForm, supportedMimeTypes)
+          }
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

@@ -88,7 +88,7 @@
                                   <span class="date pull-right">
                                     @helpers.JavaTime.Relative(note.created)
                                     @if(note.lastUpdated != note.created) {
-                                      (last updated @helpers.JavaTime.Relative(note.lastUpdated))
+                                      (last updated @helpers.JavaTime.Relative(note.lastUpdated, lowercaseToday = true))
                                     }
                                   </span>
                                 </h3>
