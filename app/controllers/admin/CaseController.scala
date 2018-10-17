@@ -76,19 +76,18 @@ object CaseController {
 
   case class CaseLinkFormData(
     linkType: CaseLinkType,
-    targetKey: IssueKey,
+    targetID: UUID,
     message: String
   )
 
-  private def isValid(key: IssueKey, caseService: CaseService)(implicit t: TimingContext): Boolean =
-    key.keyType == IssueKeyType.Case &&
-      Try(Await.result(caseService.find(key), 5.seconds))
-        .toOption.exists(_.isRight)
+  private def isValid(id: UUID, caseService: CaseService)(implicit t: TimingContext): Boolean =
+    Try(Await.result(caseService.find(id), 5.seconds))
+      .toOption.exists(_.isRight)
 
-  def caseLinkForm(sourceKey: IssueKey, caseService: CaseService)(implicit t: TimingContext): Form[CaseLinkFormData] = {
+  def caseLinkForm(sourceID: UUID, caseService: CaseService)(implicit t: TimingContext): Form[CaseLinkFormData] = {
     Form(mapping(
       "linkType" -> CaseLinkType.formField,
-      "targetKey" -> IssueKey.formField.verifying("error.linkTarget.same", _ != sourceKey).verifying("error.required", key => isValid(key, caseService)),
+      "targetID" -> uuid.verifying("error.linkTarget.same", _ != sourceID).verifying("error.required", id => isValid(id, caseService)),
       "message" -> nonEmptyText
     )(CaseLinkFormData.apply)(CaseLinkFormData.unapply))
   }
@@ -378,15 +377,15 @@ class CaseController @Inject()(
   }
 
   def linkForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
-    Ok(views.html.admin.cases.link(caseRequest.`case`, caseLinkForm(caseKey, cases)))
+    Ok(views.html.admin.cases.link(caseRequest.`case`, caseLinkForm(caseRequest.`case`.id.get, cases)))
   }
 
   def link(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    caseLinkForm(caseKey, cases).bindFromRequest().fold(
+    caseLinkForm(caseRequest.`case`.id.get, cases).bindFromRequest().fold(
       formWithErrors => Future.successful(
         Ok(views.html.admin.cases.link(caseRequest.`case`, formWithErrors))
       ),
-      data => cases.find(data.targetKey).successFlatMap { targetCase =>
+      data => cases.find(data.targetID).successFlatMap { targetCase =>
         val caseNote = CaseNoteSave(data.message, caseRequest.context.user.get.usercode)
 
         cases.addLink(data.linkType, caseRequest.`case`.id.get, targetCase.id.get, caseNote).successMap { _ =>
