@@ -33,13 +33,13 @@
   @profile.map { profile =>
     <div class="row">
       @profile.photo.map { photo =>
-        <div class="col-xs-6 col-md-4 col-lg-3">
+        <div class="col-xs-5 col-sm-3 col-md-2 col-lg-2">
           <div class="photo">
             <img src="@photo" class="img-thumbnail img-circle">
           </div>
         </div>
       }
-      <div class="col-xs-6 col-md-8 col-lg-9">
+      <div class="col-xs-7 col-sm-9 col-md-10 col-lg-10">
         @profile.userType match {
           case UserType.Student => {
             <p>
