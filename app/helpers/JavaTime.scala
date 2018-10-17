@@ -54,7 +54,6 @@ object JavaTime {
     private val dateFullFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy")
 
     private val onlyTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    private val todayTimeFormatter = DateTimeFormatter.ofPattern("'Today' HH:mm")
     private val dateTimeFullWithoutYearFormatter = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm")
     private val dateTimeFullFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm")
 
@@ -77,12 +76,15 @@ object JavaTime {
 
     }
 
-    def apply(date: OffsetDateTime, printToday: Boolean = true): String = {
+    def apply(date: OffsetDateTime, printToday: Boolean = true, lowercaseToday: Boolean = false): String = {
       val now = offsetDateTime
 
       if (date.toLocalDate.isEqual(now.toLocalDate)) {
         if (printToday) {
-          todayTimeFormatter.format(date)
+          "%s%s".format(
+            if (lowercaseToday) "today " else "Today ",
+            onlyTimeFormatter.format(date)
+          )
         } else {
           onlyTimeFormatter.format(date)
         }

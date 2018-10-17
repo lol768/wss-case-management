@@ -337,21 +337,6 @@ object CaseDao {
 
     val SubjectMaxLength = 200
 
-    /**
-      * This might not be a way we should do things, but if we did want a service to return
-      * everything we need to display
-      */
-    case class FullyJoined(
-      clientCase: Case,
-      clients: Set[Client],
-      tags: Set[CaseTag],
-      notes: Seq[CaseNote],
-      documents: Seq[EntityAndCreator[CaseDocument]],
-      outgoingCaseLinks: Seq[EntityAndCreator[CaseLink]],
-      incomingCaseLinks: Seq[EntityAndCreator[CaseLink]],
-      messages: CaseMessages
-    )
-
     // oldest first
     val dateOrdering: Ordering[Case] = Ordering.by[Case, OffsetDateTime](_.created)(JavaTime.dateTimeOrdering)
   }

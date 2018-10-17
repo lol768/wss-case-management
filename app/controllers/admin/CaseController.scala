@@ -17,7 +17,7 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Result}
 import services.tabula.ProfileService
-import services.{AppointmentService, CaseService, EnquiryService, PermissionService}
+import services._
 import warwick.core.timing.TimingContext
 import warwick.sso._
 
@@ -76,22 +76,23 @@ object CaseController {
 
   case class CaseLinkFormData(
     linkType: CaseLinkType,
-    targetKey: IssueKey,
+    targetID: UUID,
     message: String
   )
 
-  private def isValid(key: IssueKey, caseService: CaseService)(implicit t: TimingContext): Boolean =
-    key.keyType == IssueKeyType.Case &&
-      Try(Await.result(caseService.find(key), 5.seconds))
-        .toOption.exists(_.isRight)
+  private def isValid(id: UUID, caseService: CaseService)(implicit t: TimingContext): Boolean =
+    Try(Await.result(caseService.find(id), 5.seconds))
+      .toOption.exists(_.isRight)
 
-  def caseLinkForm(sourceKey: IssueKey, caseService: CaseService)(implicit t: TimingContext): Form[CaseLinkFormData] = {
+  def caseLinkForm(sourceID: UUID, caseService: CaseService)(implicit t: TimingContext): Form[CaseLinkFormData] = {
     Form(mapping(
       "linkType" -> CaseLinkType.formField,
-      "targetKey" -> IssueKey.formField.verifying("error.linkTarget.same", _ != sourceKey).verifying("error.required", key => isValid(key, caseService)),
+      "targetID" -> uuid.verifying("error.linkTarget.same", _ != sourceID).verifying("error.required", id => isValid(id, caseService)),
       "message" -> nonEmptyText
     )(CaseLinkFormData.apply)(CaseLinkFormData.unapply))
   }
+
+  val generalNoteTypes = Seq(GeneralNote, CaseClosed, CaseReopened)
 
   case class CaseNoteFormData(
     text: String,
@@ -135,6 +136,7 @@ class CaseController @Inject()(
   appointments: AppointmentService,
   userLookupService: UserLookupService,
   permissions: PermissionService,
+  clientService: ClientService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   canViewCaseActionRefiner: CanViewCaseActionRefiner,
@@ -157,29 +159,26 @@ class CaseController @Inject()(
       }.getOrElse(Future.successful(Right(None)))
 
     ServiceResults.zip(
-      cases.findFull(caseKey),
+      cases.findForView(caseKey),
+      cases.getClients(request.`case`.id.get),
+      cases.getCaseTags(request.`case`.id.get),
+      cases.getNotes(request.`case`.id.get),
       cases.getOwners(Set(request.`case`.id.get)).map(_.right.map(_.getOrElse(request.`case`.id.get, Set.empty))),
       fetchOriginalEnquiry,
-      appointments.findForCase(request.`case`.id.get),
       cases.getHistory(request.`case`.id.get)
-    ).successFlatMap { case (c, owners, originalEnquiry, a, history) =>
-      val generalNoteTypes = Seq(GeneralNote, CaseClosed, CaseReopened)
-      val (generalNotes, sectionNotes) = c.notes.partition(note => generalNoteTypes.contains(note.noteType))
+    ).successFlatMap { case (c, clients, tags, notes, owners, originalEnquiry, history) =>
+      val sectionNotes = notes.filterNot(note => generalNoteTypes.contains(note.noteType))
       val sectionNotesByType = sectionNotes.groupBy(_.noteType)
 
-      profiles.getProfiles(c.clients.map(_.universityID)).successMap { clientProfiles =>
+      profiles.getProfiles(clients.map(_.universityID)).successMap { clientProfiles =>
         Ok(views.html.admin.cases.view(
           c,
-          (c.clients.toSeq ++ a.flatMap(_.clients.map(_.client))).distinct.map(client => client -> clientProfiles.get(client.universityID)).toMap,
+          clients.toSeq.distinct.map(client => client -> clientProfiles.get(client.universityID)).toMap,
+          tags,
           owners,
-          generalNotes,
           sectionNotesByType,
           originalEnquiry,
-          a,
-          caseNoteForm,
-          messageForm,
-          history,
-          uploadedFileControllerHelper.supportedMimeTypes
+          history
         ))
       }
     }
@@ -196,6 +195,66 @@ class CaseController @Inject()(
 
   def view(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
     renderCase()
+  }
+
+  def links(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+    cases.getLinks(caseRequest.`case`.id.get).successMap { case (outgoing, incoming) =>
+      ServiceResults.sequence(outgoing.map(c => EntityAndCreator(c, permissions))).flatMap(o =>
+        ServiceResults.sequence(incoming.map(c => EntityAndCreator(c, permissions))).map(i => (o, i))
+      ).fold(
+        errors => showErrors(errors),
+        {
+          case (outgoingCaseLinks, incomingCaseLinks) =>
+            Ok(views.html.admin.cases.sections.links(
+              c = caseRequest.`case`,
+              outgoing = outgoingCaseLinks,
+              incoming = incomingCaseLinks
+            ))
+        }
+      )
+    }
+  }
+
+  def documents(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+    cases.getDocuments(caseRequest.`case`.id.get).successMap(documents =>
+      ServiceResults.sequence(documents.map(c => EntityAndCreator(c, permissions))).fold(
+        errors => showErrors(errors),
+        docs => Ok(views.html.admin.cases.sections.documents(caseRequest.`case`, docs))
+      )
+    )
+  }
+
+  def appointments(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+    appointments.findForCase(caseRequest.`case`.id.get).successMap(a =>
+      Ok(views.html.admin.cases.sections.appointments(a))
+    )
+  }
+
+  def notes(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+    cases.getNotes(caseRequest.`case`.id.get).successMap(notes =>
+      Ok(views.html.admin.cases.sections.notes(
+        caseRequest.`case`,
+        notes.filter(note => generalNoteTypes.contains(note.noteType)),
+        caseNoteFormPrefilled(caseRequest.`case`.version)
+      ))
+    )
+  }
+
+  def messages(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+    cases.getClients(caseRequest.`case`.id.get).successFlatMap(caseClients =>
+      ServiceResults.zip(
+        cases.getCaseMessages(caseRequest.`case`.id.get),
+        profiles.getProfiles(caseClients.map(_.universityID))
+      ).successMap { case (messages, p) =>
+        Ok(views.html.admin.cases.sections.messages(
+          caseRequest.`case`,
+          messages,
+          caseClients.map(c => c -> p.get(c.universityID)).toMap,
+          messageForm,
+          uploadedFileControllerHelper.supportedMimeTypes
+        ))
+      }
+    )
   }
 
   def createSelectTeam(fromEnquiry: Option[IssueKey], client: Option[UniversityID]): Action[AnyContent] = AnyTeamMemberRequiredAction { implicit request =>
@@ -378,15 +437,15 @@ class CaseController @Inject()(
   }
 
   def linkForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
-    Ok(views.html.admin.cases.link(caseRequest.`case`, caseLinkForm(caseKey, cases)))
+    Ok(views.html.admin.cases.link(caseRequest.`case`, caseLinkForm(caseRequest.`case`.id.get, cases)))
   }
 
   def link(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    caseLinkForm(caseKey, cases).bindFromRequest().fold(
+    caseLinkForm(caseRequest.`case`.id.get, cases).bindFromRequest().fold(
       formWithErrors => Future.successful(
         Ok(views.html.admin.cases.link(caseRequest.`case`, formWithErrors))
       ),
-      data => cases.find(data.targetKey).successFlatMap { targetCase =>
+      data => cases.find(data.targetID).successFlatMap { targetCase =>
         val caseNote = CaseNoteSave(data.message, caseRequest.context.user.get.usercode)
 
         cases.addLink(data.linkType, caseRequest.`case`.id.get, targetCase.id.get, caseNote).successMap { _ =>
