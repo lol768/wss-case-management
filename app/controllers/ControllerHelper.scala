@@ -8,9 +8,9 @@ import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import play.api.data.Form
 import play.api.libs.json.Json
-import play.api.mvc.{Request, RequestHeader, Result, Results}
+import play.api.mvc.{RequestHeader, Result, Results}
 import warwick.core.Logging
-import warwick.sso.AuthenticatedRequest
+import warwick.sso.{AuthenticatedRequest, User}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
@@ -18,7 +18,7 @@ import scala.language.implicitConversions
 trait ControllerHelper extends Results with Logging {
   self: BaseController =>
 
-  def currentUser()(implicit request: AuthenticatedRequest[_]) = request.context.user.get
+  def currentUser()(implicit request: AuthenticatedRequest[_]): User = request.context.user.get
 
   def showErrors(errors: Seq[_ <: ServiceError])(implicit request: RequestHeader): Result =
     render {

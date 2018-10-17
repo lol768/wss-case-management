@@ -10,9 +10,8 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData}
-import services.CaseService
+import services.{AuditService, CaseService}
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
-
 import scala.concurrent.{ExecutionContext, Future}
 
 object CaseMessageController {
@@ -28,7 +27,8 @@ class CaseMessageController @Inject() (
 ) (implicit
   executionContext: ExecutionContext,
   caseService: CaseService,
-  userLookupService: UserLookupService
+  userLookupService: UserLookupService,
+  auditService: AuditService
 ) extends BaseController {
 
   import CaseMessageController._
@@ -72,11 +72,13 @@ class CaseMessageController @Inject() (
   }
 
   def download(caseKey: IssueKey, fileId: UUID): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit request =>
-    caseService.getCaseMessages(request.`case`.id.get).successFlatMap(messages =>
+    caseService.getCaseMessages(request.`case`.id.get).successFlatMapTo(messages =>
       messages.data.flatMap(_.files).find(_.id == fileId)
-        .map(uploadedFileControllerHelper.serveFile)
-        .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
-    )
+        .map(f => auditService.audit('CaseDocumentDownload, fileId.toString, 'CaseDocument, Json.obj()) {
+          uploadedFileControllerHelper.serveFile(f).map(Right.apply)
+        })
+        .getOrElse(Future.successful(Right(NotFound(views.html.errors.notFound()))))
+    ).successMap(r => r)
   }
 
   private def messageSave(text: String, teamMember: Usercode) = MessageSave(
