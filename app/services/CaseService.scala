@@ -33,8 +33,7 @@ trait CaseService {
   def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def findAll(id: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
-  def findFull(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]]
-  def findFull(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]]
+  def findForView(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]]
   def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]]
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
@@ -79,6 +78,7 @@ trait CaseService {
 
   def addMessage(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(MessageData, Seq[UploadedFile])]]
   def hasMessagesForClient(id: UUID, client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def getCaseMessages(id: UUID)(implicit t: TimingContext): Future[ServiceResult[CaseMessages]]
 
   def reassign(c: Case, team: Team, caseType: Option[CaseType], note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
 
@@ -145,52 +145,9 @@ class CaseServiceImpl @Inject() (
   override def findAll(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
     daoRunner.run(dao.find(ids)).map(Right.apply)
 
-  private def findFullyJoined(query: Query[Cases, Case, Seq])(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]] =
-    daoRunner.run(for {
-      (clientCase, messages) <-
-        query.withMessages
-          .sortBy { case (_, mf) => mf.map(_._1.created) }
-          .result
-          .map { results => MessageData.groupOwnerAndMessage[Case](results.map { case (c, m) => (
-            c,
-            m.map { case (msg, f, member) => (msg.asMessageData(member.map(_.asMember)), f) }
-          ) }) }
-          .map { _.head }
-      clients <- dao.findClientsQuery(Set(clientCase.id.get)).result
-      tags <- dao.findTagsQuery(Set(clientCase.id.get)).result
-      notes <- getNotesDBIO(clientCase.id.get)
-      docs <- getDocumentsDBIO(clientCase.id.get)
-      (outgoingCaseLinks, incomingCaseLinks) <- getLinksDBIO(clientCase.id.get)
-    } yield {
-      val caseDocuments =  docs.map { case (d, f, n, docMember, noteMember) => d.asCaseDocument(f.asUploadedFile, n.asCaseNote(noteMember.asMember), docMember.asMember) }
-
-      ServiceResults.sequence(outgoingCaseLinks.map(c => EntityAndCreator(c, permissionsService)))
-        .flatMap(o => ServiceResults.sequence(incomingCaseLinks.map(c => EntityAndCreator(c, permissionsService)))
-          .flatMap (i => ServiceResults.sequence(caseDocuments.map(c => EntityAndCreator(c, permissionsService)))
-            .map(d => (o, i, d))
-          )
-        ).map { case (outgoing, incoming, documents) =>
-          Case.FullyJoined(
-            clientCase,
-            clients.map { case (_, c) => c.asClient }.toSet,
-            tags.map(_.caseTag).toSet,
-            notes.map { case (n, m) => n.asCaseNote(m.asMember) },
-            documents,
-            outgoing,
-            incoming,
-            CaseMessages(messages)
-          )
-        }
-    })
-
-  override def findFull(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]] =
-    auditService.audit('CaseView, id.toString, 'Case, Json.obj()) {
-      findFullyJoined(dao.findByIDQuery(id))
-    }
-
-  override def findFull(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case.FullyJoined]] =
-    auditService.audit('CaseView, (c: Case.FullyJoined) => c.clientCase.id.get.toString, 'Case, Json.obj()) {
-      findFullyJoined(dao.findByKeyQuery(caseKey))
+  override def findForView(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] =
+    auditService.audit('CaseView, (c: Case) => c.id.get.toString, 'Case, Json.obj()) {
+      find(caseKey)
     }
 
   override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]] = {
@@ -523,6 +480,21 @@ class CaseServiceImpl @Inject() (
 
   override def hasMessagesForClient(id: UUID, client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     withClientMessagesAndNotes(client, dao.findByIDQuery(id)).map(r => Right(r.head.messages.nonEmpty))
+
+  override def getCaseMessages(id: UUID)(implicit t: TimingContext): Future[ServiceResult[CaseMessages]] = {
+    daoRunner.run(for {
+      (_, messages) <- dao.findByIDQuery(id).withMessages
+        .sortBy { case (_, mf) => mf.map(_._1.created) }
+        .result
+        .map { results => MessageData.groupOwnerAndMessage[Case](results.map { case (c, m) => (
+          c,
+          m.map { case (msg, f, member) => (msg.asMessageData(member.map(_.asMember)), f) }
+        ) }) }
+        .map { _.head }
+    } yield {
+      Right(CaseMessages(messages))
+    })
+  }
 
 
   private def addMessageDBIO(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], uploader: Usercode)(implicit ac: AuditLogContext): DBIO[(Message, Seq[UploadedFile])] =

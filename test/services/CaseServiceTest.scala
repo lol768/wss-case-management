@@ -48,45 +48,6 @@ class CaseServiceTest extends AbstractDaoTest {
       service.find(case1.key.get).serviceValue.id mustBe case1.id
     }
 
-    "findFull" in withData(new CaseFixture()) { c1 =>
-      implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
-
-      val clients = Set(UniversityID("0672089"), UniversityID("0672088"))
-      val tags: Set[CaseTag] = Set(CaseTag.Antisocial, CaseTag.Bullying)
-
-      val clientCase = service.create(Fixtures.cases.newCase().copy(id = None, key = None), clients, tags).serviceValue
-
-      val c2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set.empty).serviceValue
-
-      service.setCaseTags(clientCase.id.get, tags).serviceValue
-      service.addLink(CaseLinkType.Related, c1.id.get, clientCase.id.get, CaseNoteSave("c1 is related to clientCase", Usercode("cuscav"))).serviceValue
-      service.addLink(CaseLinkType.Related, clientCase.id.get, c2.id.get, CaseNoteSave("clientCase is related to c2", Usercode("cuscav"))).serviceValue
-
-      service.addDocument(
-        clientCase.id.get,
-        CaseDocumentSave(CaseDocumentType.SpecificLearningDifficultyDocument, Usercode("cuscav")),
-        ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
-        UploadedFileSave("problem.txt", 11, "text/plain"),
-        CaseNoteSave("I hate herons", Usercode("cuscav"))
-      ).serviceValue
-
-      val fullyJoined = service.findFull(clientCase.key.get).serviceValue
-      fullyJoined.clientCase mustBe clientCase
-      fullyJoined.clients.size mustBe 2
-      clients.forall(c => fullyJoined.clients.exists(_.universityID == c)) mustBe true
-      fullyJoined.tags mustBe tags
-      fullyJoined.outgoingCaseLinks.size mustBe 1
-      fullyJoined.outgoingCaseLinks.map(_.entity).exists { l => l.linkType == CaseLinkType.Related && l.outgoing == clientCase && l.incoming == c2 } mustBe true
-      fullyJoined.incomingCaseLinks.size mustBe 1
-      fullyJoined.incomingCaseLinks.map(_.entity).exists { l => l.linkType == CaseLinkType.Related && l.outgoing == c1 && l.incoming == clientCase } mustBe true
-      fullyJoined.notes.size mustBe 3
-      fullyJoined.notes.head.text mustBe "I hate herons"
-      fullyJoined.notes(1).text mustBe "clientCase is related to c2"
-      fullyJoined.notes(2).text mustBe "c1 is related to clientCase"
-      fullyJoined.documents.size mustBe 1
-      fullyJoined.documents.map(_.entity).head.documentType mustBe CaseDocumentType.SpecificLearningDifficultyDocument
-    }
-
     "find by client" in withData(new CaseFixture()) { _ =>
       val definedAuditLogContext: AuditLogContext = AuditLogContext(Some(Usercode("cusfal")), timingData = TimingContext.none.timingData)
 
@@ -255,10 +216,10 @@ class CaseServiceTest extends AbstractDaoTest {
     "find recently viewed" in withData(new CaseFixture) { c =>
       implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
 
-      service.findFull(c.id.get).serviceValue
-      service.findFull(c.id.get).serviceValue
-      service.findFull(c.id.get).serviceValue
-      service.findFull(c.id.get).serviceValue
+      service.findForView(c.key.get).serviceValue
+      service.findForView(c.key.get).serviceValue
+      service.findForView(c.key.get).serviceValue
+      service.findForView(c.key.get).serviceValue
 
       service.findRecentlyViewed(Usercode("cuscav"), 5).serviceValue mustBe Seq(c)
     }
