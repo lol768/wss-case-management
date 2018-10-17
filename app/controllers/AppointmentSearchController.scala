@@ -25,7 +25,7 @@ object AppointmentSearchController {
     "createdBefore" -> optional(localDate),
     "startAfter" -> optional(localDate),
     "startBefore" -> optional(localDate),
-    "location" -> optional(Location.formField),
+    "roomID" -> optional(uuid),
     "team" -> optional(Teams.formField),
     "member" -> optional(nonEmptyText).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string)),
     "appointmentType" -> optional(AppointmentType.formField),

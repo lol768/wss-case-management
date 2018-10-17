@@ -1,0 +1,18 @@
+@import controllers.locations.LocationsController.RoomFormData
+@import domain.{Room, Building}
+
+@(
+  room: Room,
+  buildings: Seq[Building],
+  form: Form[RoomFormData],
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main("Edit building") {
+  @b3.vertical.formCSRF(controllers.locations.routes.LocationsController.editRoom(room.id)) { implicit ifc =>
+    @b3.validatedHidden(form, "version")
+
+    @roomFields(buildings, form)
+
+    @tags.submitOrCancel("Update", controllers.locations.routes.LocationsController.list())
+  }
+}
