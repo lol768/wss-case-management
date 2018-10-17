@@ -50,8 +50,6 @@ object AppointmentController {
       Try(Await.result(caseService.find(id), 5.seconds))
         .toOption.exists(_.isRight)
 
-    "cases" -> set(optional(uuid))
-
     Form(
       mapping(
         "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
