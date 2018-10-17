@@ -326,7 +326,7 @@ class NotificationServiceImpl @Inject()(
         recipients = clientUsers.toSeq,
         activity = buildActivity(
           clientUsers,
-          s"Reminder: You have an appointment at ${JavaTime.Relative(appointment.start)}",
+          s"Reminder: You have an appointment at ${JavaTime.Relative(appointment.start, printToday = false)}",
           url,
           "appointment-reminder-message"
         )
