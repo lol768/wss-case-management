@@ -151,12 +151,12 @@ class NotificationServiceImpl @Inject()(
       val url = controllers.routes.ClientMessagesController.messages(id).build
 
       queueEmailAndSendActivity(
-        subject = s"$clientSubjectPrefix A message from the ${team.name} team has been received",
+        subject = s"$clientSubjectPrefix A message from ${team.name} has been received",
         body = views.txt.emails.messagefromteam(user, team, url),
         recipients = Seq(user),
         activity = buildActivity(
           Set(user),
-          s"The ${team.name} team has sent a message",
+          s"${team.name} has sent a message",
           url,
           "message-from-team"
         )
