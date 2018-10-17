@@ -30,7 +30,7 @@
         <li>
           This case @description(linkType) <a href="@controllers.admin.routes.CaseController.view(target(l.entity).key.get)">@target(l.entity).key.get.string</a> @target(l.entity).subject<br />
           @l.entity.caseNote.text <br />
-          Link added @helpers.JavaTime.Relative(l.entity.updatedDate).toLowerCase by @tags.creatorAndTeam(l.creator)
+          Link added @helpers.JavaTime.Relative(l.entity.updatedDate, lowercaseToday = true) by @tags.creatorAndTeam(l.creator)
           @defining(CaseController.deleteForm(l.entity.updatedDate).fill(l.entity.updatedDate)) { form : Form[OffsetDateTime] =>
             @b3.inline.formCSRF(controllers.admin.routes.CaseController.deleteLink(c.clientCase.key.get, l.entity.id), 'class -> "inline-form") { implicit ifc =>
               @b3.validatedHidden(form, "version")
@@ -250,7 +250,7 @@
             <li>
               <a href="@controllers.admin.routes.CaseDocumentController.download(c.clientCase.key.get, doc.entity.id)">@doc.entity.file.fileName</a>,
               @doc.entity.documentType.description,
-              added @helpers.JavaTime.Relative(doc.entity.created) by @tags.creatorAndTeam(doc.creator)
+              added @helpers.JavaTime.Relative(doc.entity.created, lowercaseToday = true) by @tags.creatorAndTeam(doc.creator)
               @defining(CaseDocumentController.deleteForm(doc.entity.lastUpdated).fill(doc.entity.lastUpdated)) { form: Form[OffsetDateTime] =>
                 @b3.inline.formCSRF(controllers.admin.routes.CaseDocumentController.delete(c.clientCase.key.get, doc.entity.id), 'class -> "inline-form") { implicit ifc =>
                   @b3.validatedHidden(form, "version")
