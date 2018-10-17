@@ -258,6 +258,7 @@ FC.views.table = {
 export default function AppointmentCalendar(container) {
   const $calendar = $(container);
   $calendar.fullCalendar({
+    schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
     header: {
       left: 'title',
       center: 'agendaFourWeek,agendaWeek,agendaDay,table',

@@ -29,7 +29,7 @@ POST        /service/enquirysearch                  @controllers.EnquirySearchCo
 POST        /service/enquirysearch/:key             @controllers.EnquirySearchController.lookup(key: domain.IssueKey)
 
 GET         /                                       @controllers.IndexController.home
-GET         /my-appointments                         @controllers.appointments.AppointmentController.redirectToMyAppointments
+GET         /my-appointments                        @controllers.appointments.AppointmentController.redirectToMyAppointments
 GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries
 GET         /closed-cases                           @controllers.IndexController.closedCases
 GET         /at-risk-clients                        @controllers.IndexController.atRiskClients
@@ -117,6 +117,8 @@ GET         /team/case/:caseKey/attachments/:fileId @controllers.admin.CaseMessa
 GET         /team/appointment/create                @controllers.admin.AppointmentController.createSelectTeam(forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None, start: Option[java.time.OffsetDateTime] ?= None, duration: Option[java.time.Duration] ?= None)
 GET         /team/appointment/create/:teamId        @controllers.admin.AppointmentController.createForm(teamId: String, forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None, start: Option[java.time.OffsetDateTime] ?= None, duration: Option[java.time.Duration] ?= None)
 POST        /team/appointment/create/:teamId        @controllers.admin.AppointmentController.create(teamId: String)
+POST        /team/appointment/freebusy              @controllers.admin.AppointmentController.freeBusy(start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
+POST        /team/appointment/freebusy/resources    @controllers.admin.AppointmentController.freeBusyResources()
 GET         /team/appointment/:key                  @controllers.admin.AppointmentController.view(key: domain.IssueKey)
 GET         /team/appointment/:key/edit             @controllers.admin.AppointmentController.editForm(key: domain.IssueKey)
 POST        /team/appointment/:key                  @controllers.admin.AppointmentController.edit(key: domain.IssueKey)

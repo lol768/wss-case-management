@@ -3,6 +3,8 @@
 @import (reference) "id7/less/variables.less";
 @import (reference) "id7/less/mixins.less";
 
+@import "eonasdan-bootstrap-datetimepicker/src/less/_bootstrap-datetimepicker.less";
+
 @id7-image-root-dir: './lib/id7/images';
 @icon-font-path: './lib/id7/fonts';
 @fa-font-path: './lib/id7/fonts';
@@ -457,4 +459,51 @@ a[role="button"] {
       max-height: 450px;
     }
   }
+}
+
+.datetimepicker-inline {
+  .bootstrap-datetimepicker-widget {
+    .link-colour(inherit);
+
+    border: 1px solid @input-border;
+    padding: @padding-base-vertical @padding-base-horizontal;
+
+    .table-condensed:not(.table) {
+      .table;
+      .table-condensed;
+      margin-bottom: 0;
+    }
+
+    .timepicker button {
+      display: block;
+      margin: 0 auto;
+    }
+
+    @media (min-width: @screen-md-min) {
+      html.flexbox & {
+        > .row {
+          display: flex;
+
+          > .col-md-6 {
+            /* Let flexbox take care of it */
+            float: none;
+            width: auto;
+            flex: 1 0 auto;
+          }
+        }
+
+        .timepicker {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+        }
+      }
+    }
+  }
+}
+
+#appointment-freebusy-modal .modal-body > p {
+  margin: (@line-height-computed / 2) 0 0 0;
+  text-align: center;
 }
