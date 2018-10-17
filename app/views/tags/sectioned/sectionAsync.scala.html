@@ -1,0 +1,32 @@
+@(
+  classPrefix: String,
+  label: String,
+  isCollapsible: Boolean,
+  url: Call,
+  isOpen: Boolean = false,
+  showCount: Boolean = false
+)
+
+@fullLabel = {
+  @if(showCount) {
+    @label <span class="count"></span>
+  } else {
+    @label
+  }
+}
+
+@if(isCollapsible) {
+  <details class="@classPrefix-details--section async row form-horizontal" @if(isOpen) {open} data-href="@url.url">
+    <summary class="control-label">@fullLabel <i class="closed fas fa-plus-circle"></i> <i class="open fas fa-minus-circle"></i></summary>
+    <div class="content form-control-static">
+      <i class="fas fa-spinner fa-pulse"></i> Loading&hellip;
+    </div>
+  </details>
+} else {
+  <div class="@classPrefix-details--section async row form-horizontal" data-href="@url">
+    <div class="control-label">@fullLabel</div>
+    <div class="content form-control-static">
+      <i class="fas fa-spinner fa-pulse"></i> Loading&hellip;
+    </div>
+  </div>
+}

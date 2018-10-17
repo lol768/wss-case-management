@@ -70,7 +70,7 @@
                   message = render.message,
                   files = render.files,
                   clientName = "You",
-                  teamName = s"${render.message.team.getOrElse(issueRender.issue.team).name} team",
+                  teamName = render.message.team.getOrElse(issueRender.issue.team).name,
                   attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id.get, f.id))
               }
             </div>
@@ -215,7 +215,7 @@
   }
 } else {
   @teamMemberInformation.map { info =>
-    @main(s"${context.user.flatMap(_.name.full).get}${if(info.teams.size == 1) s", ${info.teams.head.name} team" else ""}") {
+    @main(s"${context.user.flatMap(_.name.full).get}${if(info.teams.size == 1) s", ${info.teams.head.name}" else ""}") {
       <h4>Enquiries, cases and appointments assigned to me</h4>
 
       <ul class="nav nav-tabs" role="tablist">

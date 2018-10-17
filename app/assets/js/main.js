@@ -197,4 +197,21 @@ $(() => {
       e.stopPropagation();
     });
   });
+
+  $('details.async[class*="details--section"], div.async[class*="details--section"]').each((i, target) => {
+    const $target = $(target);
+    $target.find('div.content').load($target.data('href'), (text, status, xhr) => {
+      if (status === 'error') {
+        $target.find('div.content').text(`Unable to load content: ${xhr.statusText || xhr.status || 'error'}`);
+      } else {
+        const $count = $target.find('.control-label .count');
+        if ($count.length > 0) {
+          const count = $target.find('div.content [data-count]').data('count');
+          if (count !== undefined) {
+            $count.text(`(${count})`);
+          }
+        }
+      }
+    });
+  });
 });
