@@ -16,6 +16,8 @@ object JavaTime {
   val iSO8601DateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").withZone(timeZone)
   val dateFullNoDayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
 
+  final val MinOffsetDateTime: OffsetDateTime = LocalDateTime.MIN.atOffset(ZoneOffset.UTC)
+
   implicit def dateTimeOrdering: Ordering[OffsetDateTime] = Ordering.fromLessThan(_.isBefore(_))
   implicit def localDateOrdering: Ordering[LocalDate] = Ordering.fromLessThan(_.isBefore(_))
 

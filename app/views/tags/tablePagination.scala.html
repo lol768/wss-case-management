@@ -1,0 +1,5 @@
+@(pagination: Pagination)
+
+@if(pagination.hasNext) {
+  <tr class="pagination-row"><td colspan="3"><a class="pagination-link" href="@{pagination.route}?@{pagination.paginationParam}=@{pagination.currentPage+1}">More &hellip;</a></td></tr>
+}

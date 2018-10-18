@@ -1,6 +1,6 @@
 package domain.dao
 
-import java.time.{LocalDate, OffsetDateTime}
+import java.time._
 import java.util.UUID
 
 import akka.Done
@@ -19,6 +19,7 @@ import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
 import QueryHelpers._
+
 import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
 
@@ -453,7 +454,21 @@ object CaseDao {
           .take(1)
           .map(_.id)
       }
-      .map { case ((c, m), n) => (c, m.map(_.created), n.map(_.created)) }
+      .map { case ((c, m), n) =>
+
+        val MinDate = OffsetDateTime.from(Instant.EPOCH.atOffset(ZoneOffset.UTC))
+
+        val caseUpdated = c.version
+        // working out the most recent date is made easier if we deal with an arbitrary min date rather than handling the options
+        val latestMessage = m.map(_.created).getOrElse(MinDate)
+        val latestNote = n.map(_.created).getOrElse(MinDate)
+
+        val mostRecentUpdate = slick.lifted.Case.If((caseUpdated > latestMessage) && (caseUpdated > latestNote)).Then(caseUpdated)
+          .If((latestMessage > caseUpdated) && (latestMessage > latestNote)).Then(latestMessage)
+          .Else(latestNote)
+
+        (c, mostRecentUpdate)
+      }
   }
 
   case class StoredCaseTag(

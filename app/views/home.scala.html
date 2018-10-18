@@ -246,10 +246,10 @@
 
       <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="enquiries">
-          @views.html.admin.enquiriesTab(info.enquiriesRequiringAction, info.enquiriesAwaitingClient, info.closedEnquiries, routes.IndexController.closedEnquiries, "member", context.user.get.usercode.string, " assigned to me")
+          @views.html.admin.enquiriesTab(info.enquiriesRequiringAction, info.enquiriesAwaitingClient, info.closedEnquiries, routes.IndexController.closedEnquiries(), "member", context.user.get.usercode.string, " assigned to me")
         </div>
         <div role="tabpanel" class="tab-pane" id="cases">
-          @views.html.admin.casesTab(info.openCases, info.closedCases, info.caseClients, controllers.admin.routes.CaseController.createSelectTeam(), routes.IndexController.closedCases, "member", context.user.get.usercode.string, " assigned to me")
+          @views.html.admin.casesTab(info.openCases, info.closedCases, info.caseClients, controllers.admin.routes.CaseController.createSelectTeam(), routes.IndexController.closedCases(), "member", context.user.get.usercode.string, " assigned to me")
         </div>
         <div role="tabpanel" class="tab-pane" id="clients">
           @views.html.admin.clientsTab(routes.IndexController.atRiskClients)

@@ -17,6 +17,7 @@ import AppointmentSearch from './appointment-search';
 import AppointmentCalendar from './appointment-calendar';
 import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
 import { DateTimePicker, InlineDateTimePicker } from './date-time-picker';
+import PaginatingTable from './paginating-table';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -26,6 +27,13 @@ function closePopover($popover) {
 }
 
 $(() => {
+  // most of the code in this document ready block is a candidate for inclusion in aysncBindings
+  function aysncBindings(element) {
+    $('table.table-paginated', element).each((i, container) => PaginatingTable(container));
+  }
+
+  aysncBindings($('body'));
+
   $('[data-toggle="popover"]').popover();
 
   $('i.icon-tooltip, .btn-tooltip').tooltip({
@@ -168,7 +176,14 @@ $(() => {
     const $details = $(this);
     if (this.open && !$details.data('loading')) {
       $details.data('loading', true);
-      $details.find($details.data('target')).load($details.data('href'));
+      const $target = $details.find($details.data('target'));
+      $target.load($details.data('href'), (text, status, xhr) => {
+        if (status === 'error') {
+          $target.text(`Unable to load content: ${xhr.statusText || xhr.status || 'error'}`);
+        } else {
+          aysncBindings($target);
+        }
+      });
     }
   });
 
@@ -226,6 +241,7 @@ $(() => {
             $count.text(`(${count})`);
           }
         }
+        aysncBindings($target);
       }
     });
   });

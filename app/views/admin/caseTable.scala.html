@@ -10,6 +10,7 @@
   title: Option[String],
   cases: Seq[(Case, OffsetDateTime)],
   clients: Map[UUID, Set[Client]],
+  pagination: Option[Pagination] = None,
   emptyMessage: Option[String] = None
 )(implicit context: RequestContext)
 
@@ -32,21 +33,29 @@
 }
 
 @if(cases.nonEmpty) {
-  <table class="table table-default">
-    @title.map { t => <caption>@t</caption> }
-    <thead>
-      <tr>
-        <th class="col-sm-3">Clients</th>
-        <th class="col-sm-6">Subject</th>
-        <th class="col-sm-3">Last updated</th>
-      </tr>
-    </thead>
-    <tbody>
-      @cases.sortBy(_._2).reverse.map { case (clientCase, lastUpdated) =>
-        @caseRow(clientCase, lastUpdated)
-      }
-    </tbody>
-  </table>
+  @if(pagination.isEmpty || pagination.exists(_.isFirst)) {
+    <table class="table table-default @if(pagination.isDefined){table-paginated}">
+      @title.map { t => <caption>@t</caption> }
+      <thead>
+        <tr>
+          <th class="col-sm-3">Clients</th>
+          <th class="col-sm-6">Subject</th>
+          <th class="col-sm-3">Last updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        @cases.map { case (clientCase, lastUpdated) =>
+          @caseRow(clientCase, lastUpdated)
+        }
+        @pagination.map(p => tags.tablePagination(p))
+      </tbody>
+    </table>
+  } else {
+    @cases.map { case (clientCase, lastUpdated) =>
+      @caseRow(clientCase, lastUpdated)
+    }
+    @pagination.map(p => tags.tablePagination(p))
+  }
 } else {
   @emptyMessage.map { m => <p>@m</p> }
 }

@@ -21,6 +21,9 @@ import ServiceResults.Implicits._
 import domain.dao.ClientDao.StoredClient
 import domain.dao.MemberDao.StoredMember
 import QueryHelpers._
+import controllers.Page
+import controllers.Pagination._
+import slick.lifted.Query
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -69,9 +72,9 @@ trait EnquiryService {
   def findEnquiriesAwaitingClient(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
   def findEnquiriesAwaitingClient(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
 
-  def findClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+  def findClosedEnquiries(team: Team, page: Option[Page])(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
   def countClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
-  def findClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
+  def findClosedEnquiries(owner: Usercode, page: Option[Page])(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]]
   def countClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
   def countEnquiriesOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
@@ -282,16 +285,16 @@ class EnquiryServiceImpl @Inject() (
   override def findEnquiriesAwaitingClient(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
     findEnquiriesWithLastSender(enquiryDao.findOpenQuery(owner), MessageSender.Team)
 
-  override def findClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
-    findEnquiriesWithLatestMessage(enquiryDao.findClosedQuery(team))
+  override def findClosedEnquiries(team: Team, page: Option[Page])(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
+    findEnquiriesWithLatestMessage(enquiryDao.findClosedQuery(team), page)
 
   override def countClosedEnquiries(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
       enquiryDao.findClosedQuery(team).length.result
     ).map(Right.apply)
 
-  override def findClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
-    findEnquiriesWithLatestMessage(enquiryDao.findClosedQuery(owner))
+  override def findClosedEnquiries(owner: Usercode, page: Option[Page])(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] =
+    findEnquiriesWithLatestMessage(enquiryDao.findClosedQuery(owner), page)
 
   override def countClosedEnquiries(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
@@ -321,7 +324,8 @@ class EnquiryServiceImpl @Inject() (
     }
   }
 
-  private def findEnquiriesWithLatestMessage(daoQuery: Query[Enquiries, StoredEnquiry, Seq])(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
+  private def findEnquiriesWithLatestMessage(daoQuery: Query[Enquiries, StoredEnquiry, Seq], page: Option[Page])(implicit t: TimingContext): Future[ServiceResult[Seq[(Enquiry, MessageData)]]] = {
+
     val query = daoQuery
       .withClient
       .join(Message.messages.table)
@@ -332,13 +336,10 @@ class EnquiryServiceImpl @Inject() (
       .joinLeft(MemberDao.members.table)
       .on { case ((_, _, m), member) => m.teamMember.map(_ === member.usercode) }
       .map { case ((enquiry, client, message), member) => (enquiry, client, message, member)}
+      .sortBy { case (_, _, latestMessage, _) => latestMessage.created.desc }
 
-    daoRunner.run(query.result).map { pairs =>
-      implicit def dateOrdering: Ordering[OffsetDateTime] = JavaTime.dateTimeOrdering.reverse
-      Right(
-        pairs.map { case (enquiry, client, latestMessage, member) => (enquiry.asEnquiry(client.asClient), latestMessage.asMessageData(member.map(_.asMember))) }
-          .sortBy{ case (enquiry, latestMessage) => Seq(enquiry.lastUpdated, latestMessage.created).min }
-      )
+    daoRunner.run(page.map(query.paginate).getOrElse(query).result).map { tuples =>
+      Right(tuples.map { case (enquiry, client, latestMessage, member) => (enquiry.asEnquiry(client.asClient), latestMessage.asMessageData(member.map(_.asMember))) })
     }
   }
 
