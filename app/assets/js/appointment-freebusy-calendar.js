@@ -6,6 +6,7 @@ import log from 'loglevel';
 import moment from 'moment-timezone';
 import { addQsToUrl, postJsonWithCredentials } from './serverpipe';
 import { formatDateMoment, formatTimeMoment } from './dateFormats';
+import CommonFullCalendarOptions from './common-fullcalendar-options';
 
 export default function AppointmentFreeBusyForm(form) {
   const $form = $(form);
@@ -14,6 +15,15 @@ export default function AppointmentFreeBusyForm(form) {
     .filter((i, el) => !!el.value)
     .map((i, el) => el.value)
     .get();
+
+  $form.on('input change', () => {
+    const clients = getFormValues('clients[]');
+    const teamMembers = getFormValues('appointment.teamMember');
+    const rooms = getFormValues('appointment.roomID');
+
+    const $button = $form.find('.timepicker button');
+    $button.prop('disabled', ![...clients, ...teamMembers, ...rooms].length);
+  });
 
   $form.on('init.datetimepicker', (ev) => {
     const $div = $(ev.target);
@@ -28,7 +38,6 @@ export default function AppointmentFreeBusyForm(form) {
           e.preventDefault();
           e.stopPropagation();
 
-          // Get clients
           const clients = getFormValues('clients[]');
           const teamMembers = getFormValues('appointment.teamMember');
           const rooms = getFormValues('appointment.roomID');
@@ -42,12 +51,14 @@ export default function AppointmentFreeBusyForm(form) {
     $('#appointment-freebusy-modal')
       .on('shown.bs.modal', (e) => {
         const $modal = $(e.target);
-        const currentHint = $modal.find('.modal-body .current');
+        const currentHint = $modal.find('.current');
 
         const updateSelected = (start, durationMinutes) => {
-          currentHint.text(`${formatTimeMoment(start)} - ${formatTimeMoment(start.add(durationMinutes, 'm'))} (${durationMinutes} minutes), ${formatDateMoment(start)}`);
+          currentHint.text(`Selected: ${formatTimeMoment(start)} - ${formatTimeMoment(start.add(durationMinutes, 'm'))} (${durationMinutes} minutes), ${formatDateMoment(start)}`);
         };
-        updateSelected(dateTimePicker.date(), ($('#appointment_duration').val() || 0) / 60);
+        if (dateTimePicker.date()) {
+          updateSelected(dateTimePicker.date(), ($('#appointment_duration').val() || 0) / 60);
+        }
 
         // Get clients
         const clients = getFormValues('clients[]');
@@ -55,20 +66,13 @@ export default function AppointmentFreeBusyForm(form) {
         const roomIDs = getFormValues('appointment.roomID');
 
         $modal.find('.appointment-freebusy-calendar').fullCalendar({
-          schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
-          themeSystem: 'bootstrap3',
-          bootstrapGlyphicons: {
-            close: ' fal fa-times',
-            prev: ' fal fa-chevron-left',
-            next: ' fal fa-chevron-right',
-            prevYear: ' fal fa-backward',
-            nextYear: ' fal fa-forward',
-          },
+          ...CommonFullCalendarOptions,
           header: {
             left: 'prev,next today title',
             center: '',
             right: '',
           },
+          height: 'parent',
           defaultView: 'agendaDay',
           defaultDate: dateTimePicker.date(),
           groupByResource: true,
@@ -76,18 +80,7 @@ export default function AppointmentFreeBusyForm(form) {
             titleFormat: 'dddd, MMM D, YYYY',
             columnFormat: 'dddd D/MM',
           },
-          firstDay: 1,
-          allDaySlot: false,
-          slotEventOverlap: true,
-          slotLabelFormat: 'HH:mm',
-          slotDuration: '00:15:00',
-          slotLabelInterval: '01:00:00',
-          timeFormat: 'HH:mm',
-          minTime: '08:00:00',
-          maxTime: '19:00:00',
-          weekends: false,
           nowIndicator: true,
-          timezone: 'Europe/London',
           events: (start, end, timezone, callback) => {
             postJsonWithCredentials(
               addQsToUrl($form.data('freebusy'), {

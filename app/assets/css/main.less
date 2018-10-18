@@ -503,7 +503,32 @@ a[role="button"] {
   }
 }
 
-#appointment-freebusy-modal .modal-body > p {
-  margin: (@line-height-computed / 2) 0 0 0;
-  text-align: center;
+#appointment-freebusy-modal {
+  .modal-body {
+    @base-other-elements-height: (@modal-inner-padding * 4) + (@line-height-computed / 2);
+
+    // 20px = .modal-dialog margin * 2 (not a variable)
+    @other-elements-height: 20px + @base-other-elements-height;
+    height: calc(100vh - @other-elements-height);
+    .appointment-freebusy-calendar {
+      // 25px = height of a <p> (can probably be replaced with variables?)
+      height: calc(100vh - @other-elements-height - 25px);
+    }
+
+    @media (min-width: @screen-sm-min) {
+      // 60px = .modal-dialog margin * 2 (not a variable)
+      @other-elements-height: 60px + @base-other-elements-height;
+      height: calc(100vh - @other-elements-height);
+
+      .appointment-freebusy-calendar {
+        // 25px = height of a <p> (can probably be replaced with variables?)
+        height: calc(100vh - @other-elements-height - 25px);
+      }
+    }
+  }
+
+  .modal-footer > p.current {
+    margin: 0;
+    font-weight: bold;
+  }
 }
