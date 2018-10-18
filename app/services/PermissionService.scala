@@ -41,6 +41,7 @@ trait PermissionService {
   def canViewAppointment(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canEditAppointment(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canClientManageAppointment(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def canEditAppointmentNote(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
   def webgroupFor(team: Team): GroupName
 }
@@ -240,6 +241,14 @@ class PermissionServiceImpl @Inject() (
           appointmentService.find(id).map(_.flatMap(a => Right(a.teamMember.usercode == user)))
         }
     )
+
+  override def canEditAppointmentNote(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] = {
+    appointmentService.getNote(id).successFlatMapTo(noteAndAppointment => {
+      canEditAppointment(user, noteAndAppointment.appointment.id).successMapTo(canEditNote => {
+        canEditNote && noteAndAppointment.note.teamMember.usercode == user
+      })
+    })
+  }
 
   override def webgroupFor(team: Team): GroupName =
     GroupName(s"$webgroupPrefix${team.id}")

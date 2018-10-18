@@ -417,61 +417,47 @@ class AppointmentController @Inject()(
     )
   }
 
-  def editNoteForm(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
-    withAppointmentNote(id) { note =>
-      Future.successful(
+  def editNoteForm(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentNoteAction(id) { implicit request =>
+    Ok(
+      views.html.admin.appointments.editNote(
+        appointmentKey,
+        request.note,
+        appointmentNoteForm(request.note.lastUpdated).fill(AppointmentNoteFormData(request.note.text, request.note.lastUpdated))
+      )
+    )
+  }
+
+  def editNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentNoteAction(id).async { implicit request =>
+    appointmentNoteForm(request.note.lastUpdated).bindFromRequest().fold(
+      formWithErrors => Future.successful(
         Ok(
           views.html.admin.appointments.editNote(
             appointmentKey,
-            note,
-            appointmentNoteForm(note.lastUpdated).fill(AppointmentNoteFormData(note.text, note.lastUpdated))
+            request.note,
+            formWithErrors.bindVersion(request.note.lastUpdated)
           )
         )
-      )
-    }
+      ),
+      data =>
+        appointments.updateNote(request.appointment.id, request.note.id, AppointmentNoteSave(data.text, currentUser.usercode), data.version).successMap { _ =>
+          Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
+            .flashing("success" -> Messages("flash.appointment.noteUpdated"))
+        }
+    )
   }
 
-  def editNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
-    withAppointmentNote(id) { note =>
-      appointmentNoteForm(note.lastUpdated).bindFromRequest().fold(
-        formWithErrors => Future.successful(
-          Ok(
-            views.html.admin.appointments.editNote(
-              appointmentKey,
-              note,
-              formWithErrors.bindVersion(note.lastUpdated)
-            )
-          )
-        ),
-        data =>
-          appointments.updateNote(request.appointment.id, note.id, AppointmentNoteSave(data.text, currentUser.usercode), data.version).successMap { _ =>
-            Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
-              .flashing("success" -> Messages("flash.appointment.noteUpdated"))
-          }
-      )
-    }
+  def deleteNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentNoteAction(id).async { implicit request =>
+    deleteForm(request.note.lastUpdated).bindFromRequest().fold(
+      formWithErrors => Future.successful(
+        // Nowhere to show a validation error so just fall back to an error page
+        showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
+      ),
+      version =>
+        appointments.deleteNote(request.appointment.id, request.note.id, version).successMap { _ =>
+          Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
+            .flashing("success" -> Messages("flash.appointment.noteDeleted"))
+        }
+    )
   }
-
-  def deleteNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
-    withAppointmentNote(id) { note =>
-      deleteForm(note.lastUpdated).bindFromRequest().fold(
-        formWithErrors => Future.successful(
-          // Nowhere to show a validation error so just fall back to an error page
-          showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
-        ),
-        version =>
-          appointments.deleteNote(request.appointment.id, note.id, version).successMap { _ =>
-            Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
-              .flashing("success" -> Messages("flash.appointment.noteDeleted"))
-          }
-      )
-    }
-  }
-
-  private def withAppointmentNote(id: UUID)(f: AppointmentNote => Future[Result])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
-    appointments.getNotes(request.appointment.id).successFlatMap { notes =>
-      notes.find(_.id == id).map(f)
-        .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
-    }
 
 }

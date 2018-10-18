@@ -8,7 +8,7 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.AppointmentDao.{AppointmentCase, AppointmentSearchQuery, Appointments, StoredAppointment, StoredAppointmentClient, StoredAppointmentNote}
+import domain.dao.AppointmentDao.{AppointmentCase, AppointmentSearchQuery, Appointments, NoteAndAppointment, StoredAppointment, StoredAppointmentClient, StoredAppointmentNote}
 import domain.dao.CaseDao.Case
 import domain.dao.{AppointmentDao, DaoRunner}
 import domain.dao.ClientDao.StoredClient
@@ -73,6 +73,7 @@ trait AppointmentService {
 
   def addNote(appointmentID: UUID, note: AppointmentNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]]
   def getNotes(appointmentID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentNote]]]
+  def getNote(noteID: UUID)(implicit t: TimingContext): Future[ServiceResult[NoteAndAppointment]]
   def updateNote(appointmentID: UUID, noteID: UUID, note: AppointmentNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]]
   def deleteNote(appointmentID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
@@ -454,6 +455,9 @@ class AppointmentServiceImpl @Inject()(
     daoRunner.run(
       dao.findNotesQuery(appointmentID).sortBy(_.created.desc).withMember.result
     ).map(notes => Right(notes.map { case (n, m) => n.asAppointmentNote(m.asMember) } ))
+
+  override def getNote(id: UUID)(implicit t: TimingContext): Future[ServiceResult[NoteAndAppointment]] =
+    daoRunner.run(dao.findNote(id)).map(Right.apply)
 
   override def updateNote(appointmentID: UUID, noteID: UUID, note: AppointmentNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]] =
     auditService.audit('AppointmentNoteUpdate, appointmentID.toString, 'Appointment, Json.obj("noteID" -> noteID.toString)) {
