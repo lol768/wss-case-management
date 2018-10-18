@@ -6,6 +6,7 @@ import moment from 'moment-timezone';
 import 'fullcalendar';
 import { addQsToUrl, fetchWithCredentials } from './serverpipe';
 import { formatDateMoment, formatTimeMoment } from './dateFormats';
+import CommonFullCalendarOptions from './common-fullcalendar-options';
 
 const FC = $.fullCalendar; // a reference to FullCalendar's root namespace
 const {
@@ -258,34 +259,17 @@ FC.views.table = {
 export default function AppointmentCalendar(container) {
   const $calendar = $(container);
   $calendar.fullCalendar({
+    ...CommonFullCalendarOptions,
     header: {
       left: 'title',
       center: 'agendaFourWeek,agendaWeek,agendaDay,table',
       right: 'prev,next',
     },
-    themeSystem: 'bootstrap3',
-    bootstrapGlyphicons: {
-      close: ' fal fa-times',
-      prev: ' fal fa-chevron-left',
-      next: ' fal fa-chevron-right',
-      prevYear: ' fal fa-backward',
-      nextYear: ' fal fa-forward',
-    },
-    firstDay: 1,
     height: 'auto',
     contentHeight: 'auto',
     defaultView: 'agendaWeek',
     allDaySlot: false,
-    slotEventOverlap: true,
-    slotLabelFormat: 'HH:mm',
-    slotDuration: '00:15:00',
-    slotLabelInterval: '01:00:00',
-    timeFormat: 'HH:mm',
-    minTime: '08:00:00',
-    maxTime: '19:00:00',
-    weekends: false,
     nowIndicator: true,
-    timezone: 'Europe/London',
     views: {
       agendaWeek: {
         columnFormat: 'ddd D/MM',
@@ -337,6 +321,7 @@ export default function AppointmentCalendar(container) {
           }
         });
     },
+    selectHelper: true,
     select: (start, end) => {
       // Start creating an appointment at the defined start/end time
       window.location = addQsToUrl($calendar.data('create'), {

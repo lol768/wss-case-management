@@ -1,6 +1,7 @@
 package services
 
 import java.time.{LocalDate, OffsetDateTime}
+import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import enumeratum.{EnumEntry, PlayEnum}
@@ -11,7 +12,7 @@ import services.FreeBusyService.FreeBusyPeriod
 import services.office365.Office365FreeBusyService
 import services.tabula.TabulaFreeBusyService
 import warwick.core.timing.TimingContext
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, Usercode}
 
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
@@ -58,27 +59,44 @@ object FreeBusyService {
 @ImplementedBy(classOf[FreeBusyServiceImpl])
 trait FreeBusyService {
   def findFreeBusyPeriods(universityID: UniversityID, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyPeriod]]]]
+  def findFreeBusyPeriods(usercode: Usercode, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyPeriod]]]]
+  def findFreeBusyPeriods(roomID: UUID, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyPeriod]]]]
 }
 
 @Singleton
 class FreeBusyServiceImpl @Inject()(
   tabula: TabulaFreeBusyService,
   office365: Office365FreeBusyService,
+  appointments: AppointmentFreeBusyService,
 )(implicit ec: ExecutionContext) extends FreeBusyService {
+
+  private def combineFreeBusyPeriods(c1: CacheElement[ServiceResult[Seq[FreeBusyPeriod]]], c2: CacheElement[ServiceResult[Seq[FreeBusyPeriod]]], c3: CacheElement[ServiceResult[Seq[FreeBusyPeriod]]]): CacheElement[ServiceResult[Seq[FreeBusyPeriod]]] =
+    CacheElement(
+      value = (c1.value, c2.value, c3.value) match {
+        case (Right(r1), Right(r2), Right(r3)) => Right(FreeBusyPeriod.combine(r1 ++ r2 ++ r3))
+        case (s1, s2, s3) => Left(List(s1, s2, s3).collect { case Left(x) => x }.flatten)
+      },
+      created = Math.max(c1.created, Math.max(c2.created, c3.created)),
+      softExpiry = Math.min(c1.softExpiry, Math.max(c2.softExpiry, c3.softExpiry)),
+      mediumExpiry = Math.min(c1.mediumExpiry, Math.max(c2.mediumExpiry, c3.mediumExpiry))
+    )
 
   override def findFreeBusyPeriods(universityID: UniversityID, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyPeriod]]]] =
     tabula.findFreeBusyPeriods(universityID, start, end)
       .zip(office365.findFreeBusyPeriods(universityID, start, end))
-      .map { case (tab, o365) =>
-        CacheElement(
-          value = (tab.value, o365.value) match {
-            case (Right(r1), Right(r2)) => Right(FreeBusyPeriod.combine(r1 ++ r2))
-            case (s1, s2) => Left(List(s1, s2).collect { case Left(x) => x }.flatten)
-          },
-          created = Math.max(tab.created, o365.created),
-          softExpiry = Math.min(tab.softExpiry, o365.softExpiry),
-          mediumExpiry = Math.min(tab.mediumExpiry, o365.mediumExpiry)
-        )
-      }
+      .zip(appointments.findFreeBusyPeriods(universityID, start, end))
+      .map { case ((tab, o365), apps) => combineFreeBusyPeriods(tab, o365, apps) }
+
+  override def findFreeBusyPeriods(usercode: Usercode, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyPeriod]]]] =
+    tabula.findFreeBusyPeriods(usercode, start, end)
+      .zip(office365.findFreeBusyPeriods(usercode, start, end))
+      .zip(appointments.findFreeBusyPeriods(usercode, start, end))
+      .map { case ((tab, o365), apps) => combineFreeBusyPeriods(tab, o365, apps) }
+
+  override def findFreeBusyPeriods(roomID: UUID, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyPeriod]]]] =
+    tabula.findFreeBusyPeriods(roomID, start, end)
+      .zip(office365.findFreeBusyPeriods(roomID, start, end))
+      .zip(appointments.findFreeBusyPeriods(roomID, start, end))
+      .map { case ((tab, o365), apps) => combineFreeBusyPeriods(tab, o365, apps) }
 
 }

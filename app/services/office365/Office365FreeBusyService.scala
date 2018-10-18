@@ -1,6 +1,7 @@
 package services.office365
 
 import java.time.LocalDate
+import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import helpers.JavaTime
@@ -16,7 +17,7 @@ import system.TimingCategories
 import warwick.core.Logging
 import warwick.core.timing.{TimingContext, TimingService}
 import warwick.office365.O365Service
-import warwick.sso.{UniversityID, UserLookupService}
+import warwick.sso.{UniversityID, UserLookupService, Usercode}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -46,34 +47,50 @@ class Office365FreeBusyServiceImpl @Inject()(
 
   private lazy val wrappedCache = VariableTtlCacheHelper.async[ServiceResult[Seq[FreeBusyPeriod]]](cache, logger, ttlStrategy, timing)
 
-  override def findFreeBusyPeriods(universityID: UniversityID, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyService.FreeBusyPeriod]]]] = time(TimingCategory) {
-    wrappedCache.getOrElseUpdateElement(s"office365freebusy:${universityID.string}:${start.toString}-${end.toString}", CacheOptions.default) {
-      userLookupService.getUsers(Seq(universityID)).toOption.flatMap(_.get(universityID)).map { user =>
-        val queryParams: Seq[(String, String)] = Seq(
-          "startDateTime" -> start.atStartOfDay(JavaTime.timeZone).format(JavaTime.iSO8601DateFormat),
-          "endDateTime" -> end.plusDays(1).atStartOfDay(JavaTime.timeZone).format(JavaTime.iSO8601DateFormat),
-          "$select" -> "Start,End,IsAllDay,ShowAs",
-          "$top" -> "100"
-        )
+  override def findFreeBusyPeriods(universityID: UniversityID, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyService.FreeBusyPeriod]]]] =
+    userLookupService.getUsers(Seq(universityID)).toOption.flatMap(_.get(universityID))
+      .map { user =>
+        findFreeBusyPeriods(user.usercode, start, end)
+      }
+      .getOrElse(Future.successful {
+        val now = JavaTime.instant
+        // Soft fail
+        CacheElement(Right(Nil), now.getEpochSecond, now.getEpochSecond, now.getEpochSecond)
+      })
 
-        office365.getO365(user.usercode.string, "CalendarView", queryParams)
-          .map {
-            case None => Right(Nil)
-            case Some(json) =>
-              Office365ResponseParsers.validateAPIResponse(json, Office365ResponseParsers.calendarEventsReads).fold(
-                errors => handleValidationError(json, errors),
-                events => Right(events.map { event =>
-                  FreeBusyPeriod(
-                    start = event.start.toOffsetDateTime,
-                    end = event.end.toOffsetDateTime,
-                    status = event.freeBusyStatus
-                  )
-                })
-              )
-          }
-      }.getOrElse(Future.successful(Left(List(Office365FreeBusyServiceError(s"Couldn't find an ITS usercode for university ID ${universityID.string}")))))
+  override def findFreeBusyPeriods(usercode: Usercode, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyService.FreeBusyPeriod]]]] = time(TimingCategory) {
+    wrappedCache.getOrElseUpdateElement(s"office365freebusy:${usercode.string}:${start.toString}-${end.toString}", CacheOptions.default) {
+      val queryParams: Seq[(String, String)] = Seq(
+        "startDateTime" -> start.atStartOfDay(JavaTime.timeZone).format(JavaTime.iSO8601DateFormat),
+        "endDateTime" -> end.plusDays(1).atStartOfDay(JavaTime.timeZone).format(JavaTime.iSO8601DateFormat),
+        "$select" -> "Start,End,IsAllDay,ShowAs",
+        "$top" -> "100"
+      )
+
+      office365.getO365(usercode.string, "CalendarView", queryParams)
+        .map {
+          case None => Right(Nil)
+          case Some(json) =>
+            Office365ResponseParsers.validateAPIResponse(json, Office365ResponseParsers.calendarEventsReads).fold(
+              errors => handleValidationError(json, errors),
+              events => Right(events.map { event =>
+                FreeBusyPeriod(
+                  start = event.start.toOffsetDateTime,
+                  end = event.end.toOffsetDateTime,
+                  status = event.freeBusyStatus
+                )
+              })
+            )
+        }
     }
   }
+
+  // TODO Can we actually return free-busy from O365 for rooms?
+  override def findFreeBusyPeriods(roomID: UUID, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyPeriod]]]] =
+    Future.successful {
+      val now = JavaTime.instant
+      CacheElement(Right(Nil), now.getEpochSecond, now.getEpochSecond, now.getEpochSecond)
+    }
 
   private def handleValidationError(json: JsValue, errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[Seq[FreeBusyPeriod]] = {
     val serviceErrors = errors.map { case (path, validationErrors) =>

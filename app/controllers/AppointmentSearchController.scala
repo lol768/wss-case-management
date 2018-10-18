@@ -14,7 +14,7 @@ import play.api.data.Forms._
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
 import services.{AppointmentService, PermissionService}
-import warwick.sso.{AuthenticatedRequest, Usercode}
+import warwick.sso.{AuthenticatedRequest, UniversityID, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -23,11 +23,12 @@ object AppointmentSearchController {
     "query" -> optional(text),
     "createdAfter" -> optional(localDate),
     "createdBefore" -> optional(localDate),
+    "client" -> optional(nonEmptyText.transform[UniversityID](UniversityID.apply, _.string)),
     "startAfter" -> optional(localDate),
     "startBefore" -> optional(localDate),
     "roomID" -> optional(uuid),
     "team" -> optional(Teams.formField),
-    "member" -> optional(nonEmptyText).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string)),
+    "member" -> optional(nonEmptyText.transform[Usercode](Usercode.apply, _.string)),
     "appointmentType" -> optional(AppointmentType.formField),
     "states" -> set(AppointmentState.formField),
   )(AppointmentSearchQuery.apply)(AppointmentSearchQuery.unapply))

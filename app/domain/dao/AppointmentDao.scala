@@ -20,6 +20,8 @@ import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
 import QueryHelpers._
+import domain.dao.ClientDao.StoredClient.Clients
+
 import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
 
@@ -132,13 +134,14 @@ class AppointmentDaoImpl @Inject()(
       .filter(_.isCancelled)
 
   override def searchQuery(q: AppointmentSearchQuery): Query[Appointments, StoredAppointment, Seq] = {
-    def queries(a: Appointments, n: Rep[Option[AppointmentNotes]]): Seq[Rep[Option[Boolean]]] =
+    def queries(a: Appointments, c: Clients, n: Rep[Option[AppointmentNotes]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
           n.map(_.searchableText) @@ plainToTsQuery(queryStr.bind, Some("english"))
         },
         q.createdAfter.map { d => a.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => a.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
+        q.client.map { client => c.universityID.? === client },
         q.startAfter.map { d => a.start.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.startBefore.map { d => a.start.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.team.map { team => a.team.? === team },
@@ -149,10 +152,10 @@ class AppointmentDaoImpl @Inject()(
       ).flatten
 
     appointments.table
-      .withNotes
-      .filter { case (a, n) => queries(a, n).reduce(_ && _) }
+      .withClientsAndMemberAndNotes
+      .filter { case (a, _, c, _, n) => queries(a, c, n).reduce(_ && _) }
       .distinct
-      .map { case (a, _) => a }
+      .map { case (a, _, _, _, _) => a }
   }
 
   override def casesForAppointmentQuery(appointmentId: UUID): Query[AppointmentCases, AppointmentCase, Seq] = {
@@ -361,6 +364,11 @@ object AppointmentDao {
       .join(MemberDao.members.table)
       .on { case ((a, _, _), m) => a.teamMember === m.usercode }
       .flattenJoin
+    def withClientsAndMemberAndNotes = q
+      .withClientsAndMember
+      .joinLeft(appointmentNotes.table)
+      .on(_._1.id === _.appointmentId)
+      .flattenJoin
   }
 
   case class StoredAppointmentClient(
@@ -543,6 +551,7 @@ object AppointmentDao {
     query: Option[String] = None,
     createdAfter: Option[LocalDate] = None,
     createdBefore: Option[LocalDate] = None,
+    client: Option[UniversityID] = None,
     startAfter: Option[LocalDate] = None,
     startBefore: Option[LocalDate] = None,
     roomID: Option[UUID] = None,
@@ -556,6 +565,7 @@ object AppointmentDao {
       query.exists(_.hasText) ||
       createdAfter.nonEmpty ||
       createdBefore.nonEmpty ||
+      client.nonEmpty ||
       startAfter.nonEmpty ||
       startBefore.nonEmpty ||
       team.nonEmpty ||
