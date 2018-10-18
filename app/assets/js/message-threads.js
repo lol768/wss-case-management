@@ -3,6 +3,23 @@ import _ from 'lodash-es';
 import log from 'loglevel';
 import { postJsonWithCredentials, postMultipartFormWithCredentials } from './serverpipe';
 
+function updateAwaitingIcon($form) {
+  // Look for icon in panel group
+  let $awaitingIcon = $form.closest('.panel').find('.panel-heading .panel-title i.awaiting');
+  if ($awaitingIcon.length === 0) {
+    // Look for icon in single enquiry view
+    $awaitingIcon = $form.closest('.id7-main-content-area').find('h1 i.awaiting');
+  }
+  if ($awaitingIcon.length > 0) {
+    // Get associated icon
+    const $hiddenIcon = $awaitingIcon.next('i.hidden');
+    if ($hiddenIcon.length > 0) {
+      $awaitingIcon.addClass('hidden');
+      $hiddenIcon.removeClass('hidden');
+    }
+  }
+}
+
 export default function MessageThreads(container) {
   const $container = $(container);
 
@@ -61,6 +78,7 @@ export default function MessageThreads(container) {
           $('.collapse.in .panel-body').scrollTop(Number.MAX_SAFE_INTEGER);
           $form.trigger('reset');
           $form.find('textarea').prop('rows', 1);
+          updateAwaitingIcon($form);
         } else {
           log.error(response);
           if (response.errors && response.errors.length) {

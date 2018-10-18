@@ -23,7 +23,7 @@
 
 @main(
   title = s"${enquiry.key.string} ${enquiry.subject}",
-  icon = tags.icons.enquiryState(enquiry.state)
+  icon = tags.icons.enquiryState(enquiry.state, messages.last.message, MessageSender.Team)
 ) {
   <div class="enquiry-details">
     <div class="enquiry-details--header">
