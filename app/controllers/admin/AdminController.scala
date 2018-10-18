@@ -29,8 +29,6 @@ class AdminController @Inject()(
 
   import canViewTeamActionRefiner._
 
-  final val EnquiriesPerPage = 10
-
   def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     findEnquiriesAndCasesAndAppointments { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments, caseClients) => {
       Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments, caseClients))
