@@ -7,9 +7,8 @@ import warwick.core.timing._
 import system.{CSRFPageHelper, CSRFPageHelperFactory}
 import warwick.sso.{AuthenticatedRequest, LoginContext, SSOClient, User}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Try
 
 case class RequestContext(
@@ -35,6 +34,8 @@ object RequestContext {
     RequestContext(sso, request, request.context.user, request.context.actualUser, navigation, csrfHelperFactory, configuration)
 
   def authenticated(sso: SSOClient, request: RequestHeader, navigation: LoginContext => Seq[Navigation], csrfHelperFactory: CSRFPageHelperFactory, configuration: Configuration): RequestContext = {
+    import ExecutionContext.Implicits.global
+
     val eventualRequestContext = sso.withUser(request) { loginContext =>
       Future.successful(Right(RequestContext(sso, request, loginContext.user, loginContext.actualUser, navigation(loginContext), csrfHelperFactory, configuration)))
     }.map(_.right.get)

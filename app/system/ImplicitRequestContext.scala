@@ -33,7 +33,8 @@ trait ImplicitRequestContext extends LowPriorityRequestContextImplicits {
         RequestContext.authenticated(ssoClient, request, loginContext => navigationService.getNavigation(loginContext), csrfPageHelperFactory, configuration)
     }
 
-  implicit val requestContextBuilder: RequestHeader => RequestContext = { request => requestContext(request) }
+  implicit val requestContextBuilder: RequestHeader => RequestContext =
+    request => requestContext(request)
 
 }
 

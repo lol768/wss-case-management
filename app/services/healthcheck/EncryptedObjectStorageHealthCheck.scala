@@ -1,14 +1,20 @@
 package services.healthcheck
 
 import java.nio.charset.StandardCharsets
+import java.time.LocalDateTime.now
 
+import akka.actor.ActorSystem
 import com.google.common.io.CharSource
-import helpers.JavaTime
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.{JsObject, Json}
 import services.healthcheck.EncryptedObjectStorageHealthCheck._
+import uk.ac.warwick.util.service.ServiceHealthcheck.Status
+import uk.ac.warwick.util.service.ServiceHealthcheck.Status._
+import uk.ac.warwick.util.service.{ServiceHealthcheck, ServiceHealthcheckProvider}
+import warwick.core.Logging
 import warwick.objectstore.{EncryptedObjectStorageService, ObjectStorageService}
 
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 import scala.io.Source
 import scala.util.Try
 
@@ -19,11 +25,13 @@ object EncryptedObjectStorageHealthCheck {
 
 @Singleton
 class EncryptedObjectStorageHealthCheck @Inject()(
-  objectStorageService: ObjectStorageService
-) extends HealthCheck {
+  objectStorageService: ObjectStorageService,
+  system: ActorSystem,
+) extends ServiceHealthcheckProvider(new ServiceHealthcheck("encrypted-storage", Status.Unknown, now)) with Logging {
 
-  override val name = "encrypted-storage"
-  override def toJson: JsObject = {
+  private val name: String = "encrypted-storage"
+
+  override def run(): Unit = update({
     Try {
       val startTime = System.currentTimeMillis()
 
@@ -41,52 +49,61 @@ class EncryptedObjectStorageHealthCheck @Inject()(
         .map { blob =>
           // Do we have an IV stored in the user metadata?
           if (!blob.getMetadata.getUserMetadata.containsKey(EncryptedObjectStorageService.metadataIVKey)) {
-            Json.obj(
-              "name" -> name,
-              "status" -> HealthCheckStatus.Critical.string,
-              "message" -> s"Couldn't find ${EncryptedObjectStorageService.metadataIVKey} in the metadata for object $objectKey - object not encrypted?",
-              "testedAt" -> JavaTime.offsetDateTime
+            new ServiceHealthcheck(
+              name,
+              Error,
+              now,
+              s"Couldn't find ${EncryptedObjectStorageService.metadataIVKey} in the metadata for object $objectKey - object not encrypted?"
             )
           } else {
             // Check the decrypted contents match the original
             val actualContents = Source.fromInputStream(blob.getPayload.openStream()).mkString
             if (actualContents != contents) {
-              Json.obj(
-                "name" -> name,
-                "status" -> HealthCheckStatus.Critical.string,
-                "message" -> s"Encrypted contents $actualContents didn't match expected $contents",
-                "testedAt" -> JavaTime.offsetDateTime
+              new ServiceHealthcheck(
+                name,
+                Error,
+                now,
+                s"Encrypted contents $actualContents didn't match expected $contents"
               )
             } else {
               val endTime = System.currentTimeMillis()
               val timeTakenMs = endTime - startTime
 
-              Json.obj(
-                "name" -> name,
-                "status" -> HealthCheckStatus.Okay.string,
-                "message" -> s"Fetched and decrypted $objectKey in ${timeTakenMs}ms",
-                "perfData" -> Seq(PerfData("time_taken_ms", timeTakenMs)).map(_.formatted),
-                "testedAt" -> JavaTime.offsetDateTime
+              new ServiceHealthcheck(
+                name,
+                Okay,
+                now,
+                s"Fetched and decrypted $objectKey in ${timeTakenMs}ms",
+                Seq[ServiceHealthcheck.PerformanceData[_]](new ServiceHealthcheck.PerformanceData("time_taken_ms", timeTakenMs)).asJava
               )
             }
           }
         }
         .getOrElse {
-          Json.obj(
-            "name" -> name,
-            "status" -> HealthCheckStatus.Critical.string,
-            "message" -> s"Couldn't find object with key $objectKey in the object store",
-            "testedAt" -> JavaTime.offsetDateTime
+          new ServiceHealthcheck(
+            name,
+            Error,
+            now,
+            s"Couldn't find object with key $objectKey in the object store"
           )
         }
     }.recover { case t =>
-      Json.obj(
-        "name" -> name,
-        "status" -> HealthCheckStatus.Unknown.string,
-        "message" -> s"Error performing health check: ${t.getMessage}",
-        "testedAt" -> JavaTime.offsetDateTime
+      new ServiceHealthcheck(
+        name,
+        Unknown,
+        now,
+        s"Error performing health check: ${t.getMessage}"
       )
     }.get
+  })
+
+  import system.dispatcher
+  system.scheduler.schedule(0.seconds, interval = 1.minute) {
+    try run()
+    catch {
+      case e: Throwable =>
+        logger.error("Error in health check", e)
+    }
   }
 
 }

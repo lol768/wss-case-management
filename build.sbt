@@ -69,11 +69,14 @@ val appDeps = Seq(
   "uk.ac.warwick.sso" %% "sso-client-play" % ssoClientVersion,
 
   "uk.ac.warwick.play-utils" %% "accesslog" % playUtilsVersion,
+  "uk.ac.warwick.play-utils" %% "healthcheck" % playUtilsVersion,
   "uk.ac.warwick.play-utils" %% "objectstore" % playUtilsVersion,
   "uk.ac.warwick.play-utils" %% "office365" % playUtilsVersion,
   "uk.ac.warwick.play-utils" %% "slick" % playUtilsVersion,
 
+  "uk.ac.warwick.util" % "warwickutils-core" % warwickUtilsVersion,
   "uk.ac.warwick.util" % "warwickutils-mywarwick" % warwickUtilsVersion exclude("uk.ac.warwick.sso", "sso-client"),
+  "uk.ac.warwick.util" % "warwickutils-service" % warwickUtilsVersion,
 
   "com.github.mumoshu" %% "play2-memcached-play26" % "0.9.3-warwick",
 

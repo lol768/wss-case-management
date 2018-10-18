@@ -6,7 +6,7 @@ import domain.SitsProfile
 import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
 import helpers.StringUtils._
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json.{Json, Writes}
@@ -121,7 +121,7 @@ class FlexiPickerController @Inject()(
   groupService: GroupService,
   profileService: ProfileService,
   permissions: PermissionService,
-)(implicit executionContext: ExecutionContext) extends BaseController {
+)(implicit @Named("userLookup") executionContext: ExecutionContext) extends BaseController {
 
   import anyTeamActionRefiner._
 
