@@ -16,6 +16,7 @@ import warwick.core.timing.TimingService
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.Usercode
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 class UploadedFileServiceTest extends AbstractDaoTest {
@@ -41,7 +42,8 @@ class UploadedFileServiceTest extends AbstractDaoTest {
         objectStorageService,
         get[DaoRunner],
         get[UploadedFileDao],
-        get[TimingService]
+        get[TimingService],
+        get[ExecutionContext]
       )
 
       (uploadedFileService, objectStorageService)
