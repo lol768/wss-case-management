@@ -1,0 +1,13 @@
+@import controllers.locations.LocationsController.BuildingFormData
+
+@(
+  form: Form[BuildingFormData],
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main("Create building") {
+  @b3.vertical.formCSRF(controllers.locations.routes.LocationsController.createBuilding()) { implicit ifc =>
+    @buildingFields(form)
+
+    @tags.submitOrCancel("Create", controllers.locations.routes.LocationsController.list())
+  }
+}

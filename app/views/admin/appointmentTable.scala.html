@@ -1,17 +1,14 @@
-@import java.util.UUID
-
 @import domain.dao.CaseDao.Case
-@import domain.{Appointment, AppointmentClient, AppointmentRender, SitsProfile}
-@import warwick.sso.{UniversityID, User, Usercode}
+@import domain.{Appointment, AppointmentClient, AppointmentRender, Room}
+@import warwick.sso.{User, Usercode}
 
-@import domain.AppointmentState
 @(
   title: Option[String],
   appointments: Seq[AppointmentRender],
   emptyMessage: Option[String] = None,
 )(implicit context: RequestContext)
 
-@appointmentRow(appointment: Appointment, clients: Set[AppointmentClient], clientCases: Set[Case]) = {
+@appointmentRow(appointment: Appointment, clients: Set[AppointmentClient], room: Option[Room], clientCases: Set[Case]) = {
   <tr>
     <td>
       <ul class="list-unstyled">
@@ -32,7 +29,7 @@
     </td>
     <td>@appointment.teamMember.safeFullName</td>
     <td>
-      @appointment.location.map(_.name)
+      @room.map(_.name)
       (@appointment.appointmentType.description)
     </td>
   </tr>
@@ -52,7 +49,7 @@
     </thead>
     <tbody>
       @appointments.map { a =>
-        @appointmentRow(a.appointment, a.clients, a.clientCases)
+        @appointmentRow(a.appointment, a.clients, a.room, a.clientCases)
       }
     </tbody>
   </table>

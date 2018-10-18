@@ -1,11 +1,12 @@
 @import controllers.admin.AppointmentController.AppointmentFormData
 @import domain.dao.CaseDao.Case
-@import domain.{Appointment, AppointmentType}
+@import domain.{Appointment, AppointmentType, Room}
 @import views.html.b3.B3FieldConstructor
 
 @(
   form: Form[AppointmentFormData],
   relatedCases: Set[Case],
+  availableRooms: Seq[Room],
 )(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
 
 @b3.free('_label -> "Cases", '_class -> form.error("cases").map(_ => "has-error")) {
@@ -35,7 +36,6 @@
   '_label -> "Start date/time"
 )
 
-@* TODO probably just make this a drop-down with common options *@
 @b3.select(form("appointment.duration"),
   options = Appointment.DurationOptions.map { case (s, d) => d.getSeconds.toString -> s },
   '_label -> "Duration",
@@ -43,9 +43,10 @@
   'required -> true
 )
 
-@* TODO location picker *@
-@b3.text(form("appointment.location"),
-  '_label -> "Location"
+@b3.select(form("appointment.roomID"),
+  options = availableRooms.map { r => r.id.toString -> s"${r.name}, ${r.building.name}" },
+  '_label -> "Location",
+  '_default -> ""
 )
 
 @b3.free('_label -> "Team member", '_class -> form.error("appointment.teamMember").map(_ => "has-error")) {

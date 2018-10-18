@@ -1,0 +1,7 @@
+@import domain.Room
+
+@(room: Room)
+
+<a href="https://campus.warwick.ac.uk?slid=@room.wai2GoID" class="map-link" data-lid="@room.wai2GoID">
+  @tags.icons.mapLink()@room.name, @room.building.name
+</a>

@@ -136,6 +136,15 @@ DELETE      /team/appointment/:key/note/:id         @controllers.admin.Appointme
 
 GET         /admin                                  @controllers.IndexController.redirectToPath(path = "/admin/reports")
 GET         /admin/reports                          @controllers.reports.ReportsController.home
+GET         /admin/locations                        @controllers.locations.LocationsController.list
+GET         /admin/locations/building/create        @controllers.locations.LocationsController.createBuildingForm
+POST        /admin/locations/building/create        @controllers.locations.LocationsController.createBuilding
+GET         /admin/locations/building/:id           @controllers.locations.LocationsController.editBuildingForm(id: java.util.UUID)
+POST        /admin/locations/building/:id           @controllers.locations.LocationsController.editBuilding(id: java.util.UUID)
+GET         /admin/locations/room/create            @controllers.locations.LocationsController.createRoomForm
+POST        /admin/locations/room/create            @controllers.locations.LocationsController.createRoom
+GET         /admin/locations/room/:id               @controllers.locations.LocationsController.editRoomForm(id: java.util.UUID)
+POST        /admin/locations/room/:id               @controllers.locations.LocationsController.editRoom(id: java.util.UUID)
 
 ## Sysadmins ##
 

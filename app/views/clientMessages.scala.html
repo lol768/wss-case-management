@@ -35,7 +35,7 @@
             message = message.message,
             files = message.files,
             clientName = "You",
-            teamName = s"${message.message.team.getOrElse(issueRender.issue.team).name} team",
+            teamName = message.message.team.getOrElse(issueRender.issue.team).name,
             attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id.get, f.id))
         }
       </div>

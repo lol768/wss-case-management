@@ -9,7 +9,7 @@ sealed abstract class Team(val id: String, val name: String)
 object Teams {
   case object Counselling extends Team("counselling", "Counselling Service")
   case object Disability extends Team("disability", "Disability Services")
-  case object MentalHealth extends Team("mentalhealth", "Mental Health")
+  case object MentalHealth extends Team("mentalhealth", "Mental Health Team")
   case object WellbeingSupport extends Team("wellbeing", "Wellbeing Support")
 
   val all: Seq[Team] = Seq(Counselling, Disability, MentalHealth, WellbeingSupport)
