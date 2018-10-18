@@ -16,19 +16,19 @@ import warwick.core.timing.{TimingContext, TimingService}
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 
-@ImplementedBy(classOf[MemberSearchServiceImpl])
-trait MemberSearchService {
-  def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Seq[TabulaResponseParsers.MemberSearchResult]]]
+@ImplementedBy(classOf[TabulaMemberSearchServiceImpl])
+trait TabulaMemberSearchService {
+  def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Seq[TabulaResponseParsers.TabulaMemberSearchResult]]]
 }
 
 @Singleton
-class MemberSearchServiceImpl @Inject()(
+class TabulaMemberSearchServiceImpl @Inject()(
   ws: WSClient,
   trustedApplicationsManager: TrustedApplicationsManager,
   photoService: PhotoService,
   configuration: Configuration,
   timing: TimingService
-)(implicit ec: ExecutionContext) extends MemberSearchService with Logging {
+)(implicit ec: ExecutionContext) extends TabulaMemberSearchService with Logging {
   import timing._
 
   private val TimingCategory = TimingCategories.Tabula
@@ -36,7 +36,7 @@ class MemberSearchServiceImpl @Inject()(
   private val tabulaUsercode = configuration.get[String]("wellbeing.tabula.user")
   private val tabulaQueryUrl = configuration.get[String]("wellbeing.tabula.query")
 
-  override def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Seq[TabulaResponseParsers.MemberSearchResult]]] = time(TimingCategory) {
+  override def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Seq[TabulaResponseParsers.TabulaMemberSearchResult]]] = time(TimingCategory) {
     val request = ws.url(tabulaQueryUrl).withQueryStringParameters(("query", query))
 
     val trustedHeaders = TrustedApplicationUtils.getRequestHeaders(
@@ -64,7 +64,7 @@ class MemberSearchServiceImpl @Inject()(
     })
   }
 
-  private def handleValidationError(json: JsValue, errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[Seq[TabulaResponseParsers.MemberSearchResult]] = {
+  private def handleValidationError(json: JsValue, errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[Seq[TabulaResponseParsers.TabulaMemberSearchResult]] = {
     val serviceErrors = errors.map { case (path, validationErrors) =>
       ServiceError(s"$path: ${validationErrors.map(_.message).mkString(", ")}")
     }
