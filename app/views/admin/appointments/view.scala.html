@@ -12,7 +12,7 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
-  title = s"${a.appointment.key.string} ${a.appointment.subject(Some(a.clients))}",
+  title = s"${a.appointment.key.string} ${a.appointment.subject(Some(a.clients), Some(a.teamMembers))}",
   icon = tags.icons.appointmentState(a.appointment.state)
 ) {
   <div class="appointment-details">
@@ -41,8 +41,12 @@
           }
         }
 
-        @tags.sectioned.detail("Team member") {
-          @a.appointment.teamMember.safeFullName
+        @tags.sectioned.detail(s"Team member${if (a.teamMembers.size != 1) "s" else ""}") {
+          <ul class="list-unstyled">
+            @a.teamMembers.toSeq.sortBy(_.member).map { teamMember =>
+              <li>@teamMember.member.safeFullName</li>
+            }
+          </ul>
         }
 
         @tags.sectioned.detail("Team") {
@@ -56,9 +60,9 @@
         @if(a.clientCases.nonEmpty) {
           @tags.sectioned.detail("Cases") {
             <ul class="list-unstyled">
-            @a.clientCases.map { clientCase =>
-              <li><a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">@clientCase.key.get.string @clientCase.subject</a></li>
-            }
+              @a.clientCases.map { clientCase =>
+                <li><a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">@clientCase.key.get.string @clientCase.subject</a></li>
+              }
             </ul>
           }
         }

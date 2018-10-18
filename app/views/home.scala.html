@@ -102,10 +102,13 @@
         <tr>
           <td>
             @tags.icons.appointmentState(a.appointment.state)
-            @a.appointment.subject(None)
+            @a.appointment.subject(None, None)
           </td>
           <td>@JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))</td>
-          <td>@a.appointment.teamMember.safeFullName, @a.appointment.team.name team</td>
+          <td>
+            @a.teamMembers.toSeq.sortBy(_.member).map(_.member.safeFullName).mkString(", ")
+            (@a.appointment.team.name team)
+          </td>
           <td>
             @a.room.map { r => @tags.mapLink(r) }
             (@a.appointment.appointmentType.description)

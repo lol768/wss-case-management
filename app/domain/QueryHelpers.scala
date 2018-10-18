@@ -31,6 +31,18 @@ object QueryHelpers {
     def flattenJoin = q.map { case ((t1, t2, t3), t4) => (t1, t2, t3, t4) }
   }
 
+  implicit class QueryHelpers5[
+    T1, T2, T3, T4, T5,
+    Tbl1 <: Table[T1], Tbl2 <: Table[T2], Tbl3 <: Table[T3], Tbl4 <: Table[T4], Tbl5 <: Table[T5],
+    S[_]
+  ](val q: Query[
+    ((Tbl1, Tbl2, Tbl3, Tbl4), Tbl5),
+    ((T1, T2, T3, T4), T5),
+    S
+    ]) extends AnyVal {
+    def flattenJoin = q.map { case ((t1, t2, t3, t4), t5) => (t1, t2, t3, t4, t5) }
+  }
+
   implicit class QueryHelpers5Nested[
     T1, T2, T3, T4, T5,
     Tbl1 <: Table[T1], Tbl2 <: Table[T2], Tbl3 <: Table[T3], Tbl4 <: Table[T4], Tbl5 <: Table[T5],
@@ -53,6 +65,18 @@ object QueryHelpers {
     S
     ]) extends AnyVal {
     def flattenJoin = q.map { case ((t1, t2, t3, t4), t5) => (t1, t2, t3, t4, t5) }
+  }
+
+  implicit class QueryHelpers6Option[
+    T1, T2, T3, T4, T5, T6,
+    Tbl1 <: Table[T1], Tbl2 <: Table[T2], Tbl3 <: Table[T3], Tbl4 <: Table[T4], Tbl5 <: Table[T5], Tbl6 <: Table[T6],
+    S[_]
+  ](val q: Query[
+    ((Tbl1, Tbl2, Tbl3, Tbl4, Tbl5), Rep[Option[Tbl6]]),
+    ((T1, T2, T3, T4, T5), Option[T6]),
+    S
+    ]) extends AnyVal {
+    def flattenJoin = q.map { case ((t1, t2, t3, t4, t5), t6) => (t1, t2, t3, t4, t5, t6) }
   }
 
 }

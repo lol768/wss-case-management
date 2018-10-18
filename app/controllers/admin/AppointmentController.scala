@@ -30,6 +30,7 @@ import scala.util.Try
 object AppointmentController {
   case class AppointmentFormData(
     clients: Set[UniversityID],
+    teamMembers: Set[Usercode],
     cases: Set[Option[UUID]],
     appointment: AppointmentSave,
     version: Option[OffsetDateTime]
@@ -59,12 +60,12 @@ object AppointmentController {
     Form(
       mapping(
         "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
+        "teamMembers" -> set(text.transform[Usercode](Usercode.apply, _.string).verifying("error.appointment.teamMember.invalid", u => u.string.isEmpty || isValidTeamMember(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
         "cases" -> set(optional(uuid.verifying("error.required", id => isValidCase(id)))),
         "appointment" -> mapping(
           "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", _.isAfter(JavaTime.offsetDateTime)),
           "duration" -> number(min = 60, max = 120 * 60).transform[Duration](n => Duration.ofSeconds(n.toLong), _.getSeconds.toInt),
           "roomID" -> optional(uuid.verifying("error.required", id => isValidRoom(id))),
-          "teamMember" -> nonEmptyText.transform[Usercode](Usercode.apply, _.string).verifying("error.appointment.teamMember.invalid", u => isValidTeamMember(u)),
           "appointmentType" -> AppointmentType.formField
         )(AppointmentSave.apply)(AppointmentSave.unapply),
         "version" -> optional(JavaTime.offsetDateTimeFormField).verifying("error.optimisticLocking", _ == existingVersion)
@@ -249,9 +250,10 @@ class AppointmentController @Inject()(
         },
       data => {
         val clients = data.clients.filter(_.string.nonEmpty)
+        val teamMembers = data.teamMembers.filter(_.string.nonEmpty)
         val cases = data.cases.flatten.filter(_.toString.nonEmpty)
 
-        appointments.create(data.appointment, clients, teamRequest.team, cases).successMap { appointment =>
+        appointments.create(data.appointment, clients, teamMembers, teamRequest.team, cases).successMap { appointment =>
           Redirect(controllers.admin.routes.AppointmentController.view(appointment.key))
             .flashing("success" -> Messages("flash.appointment.created", appointment.key.string))
         }
@@ -267,12 +269,12 @@ class AppointmentController @Inject()(
           form(a.appointment.team, profiles, cases, permissions, locations, Some(a.appointment.lastUpdated))
             .fill(AppointmentFormData(
               a.clients.map(_.client.universityID),
+              a.teamMembers.map(_.member.usercode),
               a.clientCases.flatMap(c => Some(c.id)),
               AppointmentSave(
                 a.appointment.start,
                 a.appointment.duration,
                 a.room.map(_.id),
-                a.appointment.teamMember.usercode,
                 a.appointment.appointmentType
               ),
               Some(a.appointment.lastUpdated)
@@ -299,9 +301,10 @@ class AppointmentController @Inject()(
         ),
         data => {
           val clients = data.clients.filter(_.string.nonEmpty)
+          val teamMembers = data.teamMembers.filter(_.string.nonEmpty)
           val cases = data.cases.flatten
 
-          appointments.update(a.appointment.id, data.appointment, cases, clients, data.version.get).successMap { updated =>
+          appointments.update(a.appointment.id, data.appointment, cases, clients, teamMembers, data.version.get).successMap { updated =>
             Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
               .flashing("success" -> Messages("flash.appointment.updated"))
           }
