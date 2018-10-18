@@ -456,10 +456,10 @@ object CaseDao {
       }
       .map { case ((c, m), n) =>
 
+        // working out the most recent date is made easier if we deal with an arbitrary min date rather than handling the options
         val MinDate = OffsetDateTime.from(Instant.EPOCH.atOffset(ZoneOffset.UTC))
 
         val caseUpdated = c.version
-        // working out the most recent date is made easier if we deal with an arbitrary min date rather than handling the options
         val latestMessage = m.map(_.created).getOrElse(MinDate)
         val latestNote = n.map(_.created).getOrElse(MinDate)
 
