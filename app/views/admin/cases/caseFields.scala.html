@@ -31,9 +31,8 @@
 }
 
 @b3.select(form("cause"),
-  options = CaseCause.values.map { c => c.entryName -> c.description },
-  '_label -> "Cause",
-  '_default -> ""
+  options = ("", "") +: CaseCause.values.map { c => c.entryName -> c.description },
+  '_label -> "Cause"
 )
 
 @b3.free('_label -> "Incident") {

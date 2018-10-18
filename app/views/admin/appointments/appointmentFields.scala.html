@@ -45,9 +45,8 @@
   </div>
   <div class="col-sm-6">
     @b3.select(form("appointment.roomID"),
-      options = availableRooms.map { r => r.id.toString -> s"${r.name}, ${r.building.name}" },
-      '_label -> "Room",
-      '_default -> ""
+      options = ("", "") +: availableRooms.map { r => r.id.toString -> s"${r.name}, ${r.building.name}" },
+      '_label -> "Room"
     )
   </div>
 </div>
