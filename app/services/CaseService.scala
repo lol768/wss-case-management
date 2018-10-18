@@ -167,8 +167,7 @@ class CaseServiceImpl @Inject() (
       withMessages <- query.withMessages
         .map { case (c, mf) => (c,
           mf.filter { case (m, _, _) => m.client === universityID }
-        )
-        }
+        ) }
         .result
       notes <- dao.findNotesQuery(withMessages.map { case (c, _) => c.id.get }.toSet).withMember.result
     } yield (withMessages, notes)).map { case (withMessages, notes) =>
