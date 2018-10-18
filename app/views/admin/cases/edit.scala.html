@@ -10,7 +10,7 @@
   @b3.vertical.formCSRF(controllers.admin.routes.CaseController.edit(clientCase.key.get)) { implicit ifc =>
     @b3.validatedHidden(form, "version")
 
-    @caseFields(clientCase.team, form)
+    @views.html.admin.cases.caseFields(clientCase.team, form)
 
     @tags.submitOrCancel("Update", controllers.admin.routes.CaseController.view(clientCase.key.get))
   }
