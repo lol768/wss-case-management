@@ -14,6 +14,8 @@ import CaseSearch from './case-search';
 import EnquirySearch from './enquiry-search';
 import AppointmentSearch from './appointment-search';
 import AppointmentCalendar from './appointment-calendar';
+import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
+import { DateTimePicker, InlineDateTimePicker } from './date-time-picker';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -69,6 +71,18 @@ $(() => {
 
   $('.appointment-calendar').each((i, container) => {
     AppointmentCalendar(container);
+  });
+
+  $('.appointment-freebusy-form').each((i, container) => {
+    AppointmentFreeBusyForm(container);
+  });
+
+  $('.datetimepicker').each((i, container) => {
+    DateTimePicker(container);
+  });
+
+  $('.datetimepicker-inline').each((i, container) => {
+    InlineDateTimePicker(container);
   });
 
   $('html')

@@ -10,7 +10,12 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Create a ${team.name} appointment") {
-  @b3.vertical.formCSRF(controllers.admin.routes.AppointmentController.create(team.id)) { implicit ifc =>
+  @views.b3.wellbeing.vertical.formCSRF(
+    action = controllers.admin.routes.AppointmentController.create(team.id),
+    'class -> "appointment-freebusy-form",
+    Symbol("data-freebusy") -> controllers.admin.routes.AppointmentController.freeBusy().url,
+    Symbol("data-freebusyresources") -> controllers.admin.routes.AppointmentController.freeBusyResources().url
+  ) { implicit ifc =>
     @appointmentFields(form, relatedCases, availableRooms)
 
     @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id).withFragment("appointments"))

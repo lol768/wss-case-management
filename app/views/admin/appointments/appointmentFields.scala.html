@@ -9,53 +9,91 @@
   availableRooms: Seq[Room],
 )(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
 
-@b3.free('_label -> "Cases", '_class -> form.error("cases").map(_ => "has-error")) {
-  <div class="case-picker-collection" data-automatic="true" data-containers="case-picker-container">
-    @defining(form.data.filter { case (k, v) => k.startsWith("cases[") && v.nonEmpty }.values.toSeq) { values: Seq[String] =>
-      @if(values.nonEmpty){
-        @for(value <- values) {
-          <div class="case-picker-container">
-            <input type="text" class="case-picker form-control" name="cases[]" value="@value" placeholder="Search for a case" autocomplete="off" />
-          </div>
-        }
-      }
-      <div class="case-picker-container">
-        <input type="text" class="case-picker form-control" name="cases[]" placeholder="Search for a case" autocomplete="off" />
-      </div>
+<div class="row">
+  <div class="col-sm-6">
+    @b3.free('_label -> "Clients", '_class -> form.error("clients").map(_ => "has-error")) {
+      @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Add a client", multiple = true, universityId = true)
+      @b3.errors(form("clients"))
     }
   </div>
-  @b3.errors(form("cases"))
-}
+  <div class="col-sm-6">
+    @b3.free('_label -> "Cases", '_class -> form.error("cases").map(_ => "has-error")) {
+      <div class="case-picker-collection" data-automatic="true" data-containers="case-picker-container">
+        @defining(form.data.filter { case (k, v) => k.startsWith("cases[") && v.nonEmpty }.values.toSeq) { values: Seq[String] =>
+          @if(values.nonEmpty){
+            @for(value <- values) {
+              <div class="case-picker-container">
+                <input type="text" class="case-picker form-control" name="cases[]" value="@value" placeholder="Add a case" autocomplete="off" />
+              </div>
+            }
+          }
+          <div class="case-picker-container">
+            <input type="text" class="case-picker form-control" name="cases[]" placeholder="Add a case" autocomplete="off" />
+          </div>
+        }
+      </div>
+      @b3.errors(form("cases"))
+    }
+  </div>
+</div>
 
-@b3.free('_label -> "Clients", '_class -> form.error("clients").map(_ => "has-error")) {
-  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for users", multiple = true, universityId = true)
-  @b3.errors(form("clients"))
-}
+<div class="row">
+  <div class="col-sm-6">
+    @b3.free('_label -> "Team member", '_class -> form.error("appointment.teamMember").map(_ => "has-error")) {
+      @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("appointment.teamMember") && v.nonEmpty }.values.toSeq, name = "appointment.teamMember", placeholder = "Search for a team member", multiple = false, team = "any")
+    }
+  </div>
+  <div class="col-sm-6">
+    @b3.select(form("appointment.roomID"),
+      options = availableRooms.map { r => r.id.toString -> s"${r.name}, ${r.building.name}" },
+      '_label -> "Room",
+      '_default -> ""
+    )
+  </div>
+</div>
 
-@b3.datetimeLocal(form("appointment.start"),
-  '_label -> "Start date/time"
-)
+<div class="row">
+  <div class="col-sm-6">
+    @b3.select(form("appointment.appointmentType"),
+      options = AppointmentType.values.map { t => t.entryName -> t.description },
+      '_label -> "Appointment type",
+      '_default -> "",
+      'required -> true
+    )
+  </div>
+  <div class="col-sm-6">
+    @* TODO CASE-258 Appointment purpose *@
+  </div>
+</div>
 
-@b3.select(form("appointment.duration"),
-  options = Appointment.DurationOptions.map { case (s, d) => d.getSeconds.toString -> s },
-  '_label -> "Duration",
-  '_default -> "",
-  'required -> true
-)
+<div class="row">
+  <div class="col-sm-6">
+    @b3.inlineDatetimePicker(form("appointment.start"),
+      '_label -> "Date & time",
+      '_class -> "free-busy",
+      Symbol("data-stepping") -> 5,
+    )
 
-@b3.select(form("appointment.roomID"),
-  options = availableRooms.map { r => r.id.toString -> s"${r.name}, ${r.building.name}" },
-  '_label -> "Location",
-  '_default -> ""
-)
-
-@b3.free('_label -> "Team member", '_class -> form.error("appointment.teamMember").map(_ => "has-error")) {
-  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("appointment.teamMember") && v.nonEmpty }.values.toSeq, name = "appointment.teamMember", placeholder = "Search for a team member", multiple = false, team = "any")
-}
-
-@b3.select(form("appointment.appointmentType"),
-  options = AppointmentType.values.map { t => t.entryName -> t.description },
-  '_label -> "Appointment type",
-  '_default -> "",
-  'required -> true
-)
+    <div class="modal fade" id="appointment-freebusy-modal" tabindex="-1" role="dialog" aria-labelledby="appointment-freebusy-modal-label">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-body">
+            <div class="appointment-freebusy-calendar no-wide-tables"></div>
+          </div>
+          <div class="modal-footer">
+            <p class="pull-left current"></p>
+            <button type="button" class="btn btn-primary" data-dismiss="modal">Select this slot</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6">
+    @b3.select(form("appointment.duration"),
+      options = Appointment.DurationOptions.map { case (s, d) => d.getSeconds.toString -> s },
+      '_label -> "Duration",
+      '_default -> "",
+      'required -> true
+    )
+  </div>
+</div>
