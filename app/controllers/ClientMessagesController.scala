@@ -78,7 +78,7 @@ class ClientMessagesController @Inject()(
           render {
             case Accepts.Json() =>
               val clientName = "You"
-              val teamName = s"${messageData.team.getOrElse(request.issue.team).name} team"
+              val teamName = messageData.team.getOrElse(request.issue.team).name
 
               Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
                 "message" -> views.html.tags.messages.message(messageData, f, clientName, teamName, f => routes.ClientMessagesController.download(id, f.id)).toString()

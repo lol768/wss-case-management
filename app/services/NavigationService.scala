@@ -58,10 +58,11 @@ class NavigationServiceImpl @Inject() (
 
   private lazy val admin =
     NavigationDropdown("Admin", Call("GET", "/admin"), Seq(
-      NavigationPage("Reports", controllers.reports.routes.ReportsController.home())
+      NavigationPage("Reports", controllers.reports.routes.ReportsController.home()),
+      NavigationPage("Locations", controllers.locations.routes.LocationsController.list())
     ))
 
-  private def teamHome(team: Team) = NavigationPage(s"${team.name} team", controllers.admin.routes.AdminController.teamHome(team.id))
+  private def teamHome(team: Team) = NavigationPage(team.name, controllers.admin.routes.AdminController.teamHome(team.id))
 
   private def adminMenu(loginContext: LoginContext): Seq[Navigation] =
     if (loginContext.userHasRole(Admin))

@@ -15,7 +15,7 @@
   caseClients: Map[UUID, Set[Client]],
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
-@main(s"${team.name} team") {
+@main(team.name) {
   <ul class="nav nav-tabs" role="tablist">
     <li role="presentation" class="active">
       <a href="#enquiries" aria-controls="enquiries" role="tab" data-toggle="tab">@tags.icons.enquiries() Enquiries</a>

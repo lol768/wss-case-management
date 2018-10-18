@@ -1,13 +1,13 @@
 package domain
 
+import java.time.Duration
+
 import domain.ExtendedPostgresProfile.api._
 import enumeratum.SlickEnumSupport
 import play.api.libs.json.{JsValue, Json}
 import slick.jdbc.{JdbcProfile, JdbcType}
 import warwick.slick.jdbctypes.JdbcDateTypesUtc
 import warwick.sso.{GroupName, UniversityID, Usercode}
-
-import java.time.Duration
 
 object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
   override val profile: JdbcProfile = ExtendedPostgresProfile
@@ -36,11 +36,6 @@ object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
   implicit val issueKeyMapper: JdbcType[IssueKey] = MappedColumnType.base[IssueKey, String](
     k => k.string,
     s => IssueKey(s)
-  )
-
-  implicit val locationMapper: JdbcType[Location] = MappedColumnType.base[Location, String](
-    Location.toFormattedString,
-    Location.fromFormattedString
   )
 
   implicit val jsonTypeMapper: JdbcType[JsValue] = MappedColumnType.base[JsValue, String](Json.stringify, Json.parse)

@@ -60,8 +60,8 @@
                   render.message,
                   render.files,
                   "Client",
-                  render.message.teamMember.map { member => s"${member.safeFullName}, ${render.message.team.getOrElse(c.team).name} team" }
-                      .getOrElse(s"${render.message.team.getOrElse(c.team).name} team"),
+                  render.message.teamMember.map { member => s"${member.safeFullName}, ${render.message.team.getOrElse(c.team).name}" }
+                      .getOrElse(render.message.team.getOrElse(c.team).name),
                   f => controllers.admin.routes.CaseMessageController.download(c.key.get, f.id),
                   // TODO last view date for cases
                   None

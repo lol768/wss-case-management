@@ -97,7 +97,7 @@ class AppointmentServiceImpl @Inject()(
       key,
       save.start,
       save.duration,
-      save.location,
+      save.roomID,
       team,
       save.teamMember,
       save.appointmentType,
@@ -195,7 +195,7 @@ class AppointmentServiceImpl @Inject()(
               existing.key,
               changes.start,
               changes.duration,
-              changes.location,
+              changes.roomID,
               existing.team,
               changes.teamMember,
               changes.appointmentType,
@@ -274,9 +274,10 @@ class AppointmentServiceImpl @Inject()(
     daoRunner.run(
       for {
         withClientsAndMember <- query.withClientsAndMember.result
+        withRoom <- query.withRoom.result
         withCase <- query.withCases.result
         notes <- dao.findNotesQuery(withClientsAndMember.map { case (e, _, _, _) => e.id }.toSet).withMember.result
-      } yield Right(groupTuples(withClientsAndMember, withCase, notes))
+      } yield Right(groupTuples(withClientsAndMember, withRoom, withCase, notes))
     )
 
   override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
@@ -519,20 +520,25 @@ class AppointmentServiceImpl @Inject()(
 }
 
 object AppointmentService {
-  def groupTuples(withClientsAndMember: Seq[(StoredAppointment, StoredAppointmentClient, StoredClient, StoredMember)], withCase: Seq[(StoredAppointment, Case)], notes: Seq[(StoredAppointmentNote, StoredMember)]): Seq[AppointmentRender] = {
+  def groupTuples(
+    withClientsAndMember: Seq[(StoredAppointment, StoredAppointmentClient, StoredClient, StoredMember)],
+    withRoom: Seq[(StoredAppointment, Room)],
+    withCase: Seq[(StoredAppointment, Case)],
+    notes: Seq[(StoredAppointmentNote, StoredMember)]
+  ): Seq[AppointmentRender] = {
     val appointmentsAndClients = OneToMany.join(withClientsAndMember.map {
       case (a, ac, c, m) => (a.asAppointment(m.asMember), ac.asAppointmentClient(c.asClient))
     })(Ordering.by[AppointmentClient, String](_.client.universityID.string))
-
+    val roomByAppointment = withRoom.map { case (a, r) => a.id -> r }.toMap
     val appointmentAndCases = OneToMany.join(withCase.map { case (a, c) => (a.id, c) })(Case.dateOrdering).toMap
-
     val notesByAppointment = notes.groupBy { case (n, _) => n.appointmentId }
-      .mapValues(_.map { case (n, m) => n.asAppointmentNote(m.asMember) }.sorted(AppointmentNote.dateOrdering)
-      ).withDefaultValue(Seq())
+      .mapValues(_.map { case (n, m) => n.asAppointmentNote(m.asMember) }.sorted(AppointmentNote.dateOrdering))
+      .withDefaultValue(Seq())
 
     appointmentsAndClients.map { case (appointment, clients) => AppointmentRender(
       appointment = appointment,
       clients = clients.toSet,
+      room = roomByAppointment.get(appointment.id),
       appointmentAndCases.getOrElse(appointment.id, Seq()).toSet,
       notesByAppointment(appointment.id)
     ) }

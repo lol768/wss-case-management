@@ -350,9 +350,8 @@
       <div class="row">
         <div class="col-sm-3">
           @b3.select(form("risk-status"),
-            options = ClientRiskStatus.values.map { s => s.entryName -> s.entryName },
-            '_label -> "Risk status",
-            '_default -> ""
+            options = ("", "") +: ClientRiskStatus.values.map { s => s.entryName -> s.entryName },
+            '_label -> "Risk status"
           )
         </div>
         <div class="col-sm-3 col-sm-offset-3">

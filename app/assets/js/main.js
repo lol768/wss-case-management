@@ -5,6 +5,7 @@ import 'core-js/modules/es6.object.assign';
 import './jquery.are-you-sure';
 import FieldHistory from './field-history';
 import './flexi-picker';
+import './member-picker';
 import ClientSearch from './client-search';
 import UserListPopovers from './user-list-popovers';
 import MessageThreads from './message-threads';
@@ -14,6 +15,8 @@ import CaseSearch from './case-search';
 import EnquirySearch from './enquiry-search';
 import AppointmentSearch from './appointment-search';
 import AppointmentCalendar from './appointment-calendar';
+import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
+import { DateTimePicker, InlineDateTimePicker } from './date-time-picker';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -54,7 +57,6 @@ $(() => {
     });
   });
 
-
   $('.case-search').each((i, container) => {
     CaseSearch(container);
   });
@@ -71,6 +73,18 @@ $(() => {
     AppointmentCalendar(container);
   });
 
+  $('.appointment-freebusy-form').each((i, container) => {
+    AppointmentFreeBusyForm(container);
+  });
+
+  $('.datetimepicker').each((i, container) => {
+    DateTimePicker(container);
+  });
+
+  $('.datetimepicker-inline').each((i, container) => {
+    InlineDateTimePicker(container);
+  });
+
   $('html')
     .on('shown.bs.popover', (e) => {
       const $po = $(e.target).popover().data('bs.popover').tip();
@@ -85,7 +99,8 @@ $(() => {
       } else if ($target.closest('.close').length > 0) {
         closePopover($target.closest('.popover'));
       }
-    }).on('keyup.popoverDismiss', (e) => {
+    })
+    .on('keyup.popoverDismiss', (e) => {
       const key = e.which || e.keyCode;
       if (key === 27) {
         $('.popover').each((i, popover) => closePopover($(popover)));
@@ -179,6 +194,23 @@ $(() => {
     const $input = $(this);
     const $form = $input.closest('form');
     $form.submit();
+  });
+
+  $('.map-link').each((i, link) => {
+    const $link = $(link);
+    const mapUrl = `https://campus.warwick.ac.uk/?lite=1&slid=${encodeURIComponent($link.data('lid'))}`;
+    $link.popover({
+      trigger: 'click',
+      container: 'body',
+      template: '<div class="popover wide"><div class="arrow"></div><div class="popover-inner"><div class="popover-content"><p></p></div></div></div>',
+      html: true,
+      content: `<iframe width="300" height="400" frameborder="0" src="${mapUrl}"></iframe>`,
+      placement: 'auto bottom',
+    });
+    $link.on('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
   });
 
   $('details.async[class*="details--section"], div.async[class*="details--section"]').each((i, target) => {

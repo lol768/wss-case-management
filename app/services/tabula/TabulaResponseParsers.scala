@@ -264,7 +264,7 @@ object TabulaResponseParsers {
       )
   }
 
-  case class MemberSearchResult(
+  case class TabulaMemberSearchResult(
     universityID: UniversityID,
     usercode: Usercode,
     firstName: String,
@@ -274,9 +274,9 @@ object TabulaResponseParsers {
     department: SitsDepartment,
     userType: String,
     photo: Option[String]
-  ) extends Ordered[MemberSearchResult] {
+  ) extends Ordered[TabulaMemberSearchResult] {
     // Sort applicants to the bottom, and new applicants before others
-    override def compare(that: MemberSearchResult): Int = {
+    override def compare(that: TabulaMemberSearchResult): Int = {
       if (this.userType != that.userType) {
         if (this.userType == "Applicant") {
           1
@@ -295,7 +295,7 @@ object TabulaResponseParsers {
     }
   }
 
-  val memberSearchResultReads: Reads[MemberSearchResult] = (
+  val memberSearchResultReads: Reads[TabulaMemberSearchResult] = (
     (__ \ "universityId").read[String].map[UniversityID](UniversityID.apply) and
     (__ \ "userId").read[String].map[Usercode](Usercode.apply) and
     (__ \ "firstName").read[String] and
@@ -305,9 +305,9 @@ object TabulaResponseParsers {
     (__ \ "department").read[SitsDepartment](departmentReads) and
     (__ \ "userType").read[String] and
     Reads.pure(None)
-    )(MemberSearchResult.apply _)
+    )(TabulaMemberSearchResult.apply _)
 
-  val memberSearchResultsReads: Reads[Seq[MemberSearchResult]] = (__ \ "results").read[Seq[MemberSearchResult]](Reads.seq(memberSearchResultReads))
+  val memberSearchResultsReads: Reads[Seq[TabulaMemberSearchResult]] = (__ \ "results").read[Seq[TabulaMemberSearchResult]](Reads.seq(memberSearchResultReads))
 
   case class TimetableEvent(
     start: LocalDateTime,

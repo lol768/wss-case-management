@@ -2,6 +2,7 @@ package services.tabula
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import helpers.ServiceResults.{ServiceError, ServiceResult}
@@ -19,7 +20,7 @@ import system.TimingCategories
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
 import warwick.core.Logging
 import warwick.core.timing.{TimingContext, TimingService}
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, UserLookupService, Usercode}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -40,6 +41,7 @@ class TabulaFreeBusyServiceImpl @Inject()(
   trustedApplicationsManager: TrustedApplicationsManager,
   cache: AsyncCacheApi,
   configuration: Configuration,
+  userLookupService: UserLookupService,
   timing: TimingService,
 )(implicit ec: ExecutionContext) extends TabulaFreeBusyService with Logging {
   import timing._
@@ -94,6 +96,25 @@ class TabulaFreeBusyServiceImpl @Inject()(
       })
     }
   }
+
+  override def findFreeBusyPeriods(usercode: Usercode, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyPeriod]]]] =
+    userLookupService.getUser(usercode).toOption.flatMap(_.universityId)
+      .map(findFreeBusyPeriods(_, start, end))
+      .getOrElse(Future.successful {
+        val now = JavaTime.instant
+        // Soft fail
+        CacheElement(Right(Nil), now.getEpochSecond, now.getEpochSecond, now.getEpochSecond)
+      })
+
+  override def findFreeBusyPeriods(roomID: UUID, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyPeriod]]]] =
+    Future.successful {
+      val value = Right(Nil)
+      val ttl = ttlStrategy(value)
+      val now = JavaTime.instant
+      val softExpiry = now.plusSeconds(ttl.soft.toSeconds).getEpochSecond
+      val mediumExpiry = now.plusSeconds(ttl.medium.toSeconds).getEpochSecond
+      CacheElement(value, now.getEpochSecond, softExpiry, mediumExpiry)
+    }
 
   private def handleValidationError(json: JsValue, errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[Seq[FreeBusyPeriod]] = {
     val serviceErrors = errors.map { case (path, validationErrors) =>

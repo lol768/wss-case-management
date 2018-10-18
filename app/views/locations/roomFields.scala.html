@@ -1,0 +1,27 @@
+@import controllers.locations.LocationsController.RoomFormData
+@import domain.Building
+@import views.html.b3.B3FieldConstructor
+
+@(
+  buildings: Seq[Building],
+  form: Form[RoomFormData],
+)(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
+
+@b3.select(form("room.building"),
+  options = buildings.map { b => b.id.toString -> b.name },
+  '_label -> "Building",
+  '_default -> "",
+  'required -> true
+)
+
+@b3.text(form("room.name"),
+  '_label -> "Name"
+)
+
+@b3.text(form("room.wai2GoID"),
+  '_label -> "Campus map"
+)
+
+@b3.checkbox(form("room.available"),
+  '_text -> "Room available for scheduling appointments"
+)
