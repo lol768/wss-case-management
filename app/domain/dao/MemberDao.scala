@@ -27,6 +27,7 @@ trait MemberDao {
   def get(usercode: Usercode): DBIO[Option[StoredMember]]
   def get(usercodes: Set[Usercode]): DBIO[Seq[StoredMember]]
   def getOlderThan(duration: FiniteDuration): Query[Members, StoredMember, Seq]
+  def findByNameQuery(name: String): Query[Members, StoredMember, Seq]
 }
 
 object MemberDao {
@@ -116,4 +117,12 @@ class MemberDaoImpl @Inject()(
 
   override def getOlderThan(duration: FiniteDuration): Query[Members, StoredMember, Seq] =
     members.table.filter(_.version < JavaTime.offsetDateTime.minus(duration.toDays, ChronoUnit.DAYS))
+
+  override def findByNameQuery(name: String): Query[Members, StoredMember, Seq] =
+    members.table.filter(m =>
+      m.fullName.nonEmpty &&
+        m.fullName.toLowerCase.like(
+          name.split(" ").map(_.trim.toLowerCase).map(n => s"%$n%").mkString("")
+        )
+    )
 }
