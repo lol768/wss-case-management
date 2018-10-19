@@ -22,7 +22,7 @@
         <div class="panel-heading" role="tab" id="thread-heading-@client.universityID.string">
           <h4 class="panel-title">
           @if(profiles.size > 1){
-            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-thread-@client.universityID.string" aria-expanded="true" aria-controls="collapse-thread-@client.universityID">
+            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-thread-@client.universityID.string" aria-expanded="true" aria-controls="collapse-thread-@client.universityID.string">
               <div class="pull-right">
                 @messages.lastOption.map { m =>
                   @JavaTime.Relative(m.message.created)
@@ -71,7 +71,7 @@
           }
           <div class="panel-footer">
           @if(c.state != IssueState.Closed) {
-            @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.key.get, client.universityID), messageForm, supportedMimeTypes)
+            @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.key.get, client.universityID), messageForm, supportedMimeTypes, c.id.get, client.universityID)
           }
           </div>
         </div>

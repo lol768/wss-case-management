@@ -17,7 +17,7 @@
           <div class="clearfix" @if(owners.last == owner){ data-field-history-field="owners" }>
             <input type="hidden" name="owners[]" value="@owner.usercode.string">
             @owner.safeFullName
-            <a role="button" href="@submit" data-toggle="confirm-submit remove-submit" data-target="div" data-message="Are you sure you want to remove this owner?">@*
+            <a role="button" href="@submit" data-toggle="confirm-submit remove-submit" data-target="div" data-message="Are you sure you want to remove this owner?" aria-label="Remove owner">@*
               *@<i class="fas fa-times-circle"></i>@*
             *@</a>
           </div>

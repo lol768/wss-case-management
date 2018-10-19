@@ -206,7 +206,7 @@
         </div>
         @if(enquiry.state != IssueState.Closed) {
           <div class="panel-footer">
-            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key), messageForm, supportedMimeTypes)
+            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key), messageForm, supportedMimeTypes, enquiry.id.get, enquiry.client.universityID)
           </div>
         }
       </div>

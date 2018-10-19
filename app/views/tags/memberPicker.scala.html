@@ -13,7 +13,7 @@
 @for(value <- values) {
   <div class="member-picker-container">
     <input type="text" class="member-picker form-control" name="@name" placeholder="@placeholder"
-    value="@value" autocomplete="off"
+    value="@value" autocomplete="off" aria-label="@placeholder"
     />
   </div>
 }
@@ -21,7 +21,7 @@
 @if(values.isEmpty || (multiple && autoMultiple)) {
   <div class="member-picker-container">
     <input type="text" class="member-picker form-control" name="@name" placeholder="@placeholder"
-    autocomplete="off"
+    autocomplete="off" aria-label="@placeholder"
     />
   </div>
 }

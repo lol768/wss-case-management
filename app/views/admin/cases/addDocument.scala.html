@@ -25,7 +25,7 @@
     @b3.free('_label -> "File", '_class -> form.error("file").map(_ => "has-error")) {
       <div class="row">
         <div class="col-md-6">
-          <input type="file" id="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" class="form-control">
+          <input type="file" id="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" class="form-control" aria-label="Attach a file">
           @b3.errors(form("file"))
         </div>
       </div>
