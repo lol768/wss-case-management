@@ -89,7 +89,7 @@ object AppointmentRender {
     "team" -> Json.toJsFieldJsValueWrapper(o.appointment.team)(Teams.writer),
     "teamMember" -> Json.obj(
       "usercode" -> o.appointment.teamMember.usercode.string,
-      "fullName" -> o.appointment.teamMember.fullName,
+      "fullName" -> o.appointment.teamMember.safeFullName,
     ),
     "appointmentType" -> Json.obj(
       "id" -> o.appointment.appointmentType,
@@ -108,7 +108,7 @@ object AppointmentRender {
       Json.obj(
         "client" -> Json.obj(
           "universityID" -> client.client.universityID.string,
-          "fullName" -> client.client.fullName,
+          "fullName" -> client.client.safeFullName,
         ),
         "state" -> client.state,
         "cancellationReason" -> client.cancellationReason,

@@ -91,7 +91,7 @@
     </div>
   </div>
   <div class="col-sm-6">
-    @b3.select(form("appointment.duration"),
+    @b3.radio(form("appointment.duration"),
       options = Appointment.DurationOptions.map { case (s, d) => d.getSeconds.toString -> s },
       '_label -> "Duration",
       '_default -> "",
