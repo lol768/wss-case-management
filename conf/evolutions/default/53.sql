@@ -1,6 +1,6 @@
 # --- !Ups
-alter table appointment add column appointment_purpose varchar(20);
-alter table appointment_version add column appointment_purpose varchar(20);
+alter table appointment add column appointment_purpose varchar(100);
+alter table appointment_version add column appointment_purpose varchar(100);
 
 update appointment set appointment_type = 'Online' where appointment_type = 'Email';
 update appointment set appointment_purpose = appointment_type, appointment_type = 'FaceToFace' where appointment_type not in ('FaceToFace', 'Skype', 'Telephone', 'Online');
