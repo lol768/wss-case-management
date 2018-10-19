@@ -193,7 +193,7 @@ class TableEventRenderer extends EventRenderer {
       clients,
       key,
       appointmentType,
-      teamMember,
+      teamMembers,
       location,
       state,
     } = eventDef.miscProps;
@@ -214,7 +214,7 @@ class TableEventRenderer extends EventRenderer {
         <td class="fa-table-item--details col-sm-4">
           <span class="fc-table-item--details--type">${htmlEscape(appointmentType.description)}</span>
           <br />
-          <span class="fc-table-item--details--team-member">with ${htmlEscape(teamMember.fullName)}</span>
+          <span class="fc-table-item--details--team-member">with ${htmlEscape(_.map(teamMembers, teamMember => teamMember.fullName).join(', '))}</span>
         </td>
         <td class="fa-table-item--location col-sm-2">
           ${location ? htmlEscape(location.name) : ''}
@@ -307,7 +307,10 @@ export default function AppointmentCalendar(container) {
 
               // FullCalendar props
               id: event.id,
-              resourceIds: [event.teamMember.usercode, (event.location || {}).name],
+              resourceIds: [
+                ..._.map(event.teamMembers, teamMember => teamMember.usercode),
+                (event.location || {}).id,
+              ],
               title: event.subject,
               allDay: false,
               start: event.start,

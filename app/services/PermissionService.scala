@@ -238,7 +238,7 @@ class PermissionServiceImpl @Inject() (
         if (!isInAnyTeam) {
           Future.successful(Right(false))
         } else {
-          appointmentService.find(id).map(_.flatMap(a => Right(a.teamMember.usercode == user)))
+          appointmentService.getTeamMembers(id).map(_.map(_.map(_.member.usercode).contains(user)))
         }
     )
 

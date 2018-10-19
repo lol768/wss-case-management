@@ -177,7 +177,6 @@ object Fixtures {
       Duration.ofMinutes(45),
       None,
       Teams.MentalHealth,
-      Usercode("mentalhealth-counsellor"),
       AppointmentType.FaceToFace,
       AppointmentState.Provisional,
       None,
