@@ -226,14 +226,11 @@ class AppointmentDaoImpl @Inject()(
   override def findNote(id: UUID): DBIO[NoteAndAppointment] =
     appointmentNotes.table.filter(_.id === id)
       .withMember
-      .join(
-        appointments.table
-          .withMember
-      )
-      .on { case ((n, _), (a, _)) => n.appointmentId === a.id }
+      .join(appointments.table)
+      .on { case ((n, _), a) => n.appointmentId === a.id }
       .flattenJoin
       .result.head
-      .map { case (n, nMember, a, aMember) => NoteAndAppointment(n.asAppointmentNote(nMember.asMember), a.asAppointment(aMember.asMember))}
+      .map { case (n, nMember, a) => NoteAndAppointment(n.asAppointmentNote(nMember.asMember), a.asAppointment)}
 
 }
 

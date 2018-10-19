@@ -3,7 +3,7 @@ package domain
 import java.time.{Duration, LocalDate}
 import java.util.UUID
 
-import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
+import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient, StoredAppointmentTeamMember}
 import domain.dao._
 import domain.dao.CaseDao.Case
 import domain.dao.LocationDao.{StoredBuilding, StoredRoom}
@@ -177,7 +177,6 @@ object Fixtures {
       Duration.ofMinutes(45),
       None,
       Teams.MentalHealth,
-      Usercode("mentalhealth-counsellor"),
       AppointmentType.FaceToFace,
       AppointmentState.Provisional,
       None,
@@ -190,6 +189,13 @@ object Fixtures {
       appointmentID: UUID,
       AppointmentState.Provisional,
       None,
+      JavaTime.offsetDateTime,
+      JavaTime.offsetDateTime,
+    )
+
+    def newStoredTeamMember(appointmentID: UUID): StoredAppointmentTeamMember = StoredAppointmentTeamMember(
+      Usercode("mentalhealth-counsellor"),
+      appointmentID: UUID,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
     )
@@ -235,6 +241,8 @@ object Fixtures {
       AppointmentDao.appointmentNotes.versionsTable.delete andThen
       AppointmentDao.appointmentClients.table.delete andThen
       AppointmentDao.appointmentClients.versionsTable.delete andThen
+      AppointmentDao.appointmentTeamMembers.table.delete andThen
+      AppointmentDao.appointmentTeamMembers.versionsTable.delete andThen
       AppointmentDao.appointments.table.delete andThen
       AppointmentDao.appointments.versionsTable.delete andThen
       CaseDao.cases.table.delete andThen
