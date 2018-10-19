@@ -24,14 +24,13 @@ class AppointmentServiceTest extends AbstractDaoTest {
     override def setup(): Appointment = {
       val now = JavaTime.offsetDateTime
       val stored = Fixtures.appointments.newStoredAppointment()
-      val storedAppointmentTeamMember = Fixtures.appointments.newStoredTeamMember(stored.id)
       val storedAppointmentClient = Fixtures.appointments.newStoredClient(stored.id)
       execWithCommit(
         (AppointmentDao.appointments.table += stored) andThen
         (ClientDao.clients.table += StoredClient(storedAppointmentClient.universityID, None, now)) andThen
         (AppointmentDao.appointmentClients.table += storedAppointmentClient) andThen
-        (MemberDao.members.table += StoredMember(storedAppointmentTeamMember.usercode, None, now)) andThen
-        (AppointmentDao.appointmentTeamMembers.table += storedAppointmentTeamMember)
+        (MemberDao.members.table += StoredMember(Usercode("mentalhealth-counsellor"), None, now)) andThen
+        (Owner.owners.table += Owner(stored.id, Owner.EntityType.Appointment, Usercode("mentalhealth-counsellor"), JavaTime.offsetDateTime))
       )
       stored.asAppointment
     }

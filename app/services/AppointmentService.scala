@@ -8,7 +8,7 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.AppointmentDao.{AppointmentCase, AppointmentSearchQuery, Appointments, NoteAndAppointment, StoredAppointment, StoredAppointmentClient, StoredAppointmentNote, StoredAppointmentTeamMember}
+import domain.dao.AppointmentDao.{AppointmentCase, AppointmentSearchQuery, Appointments, NoteAndAppointment, StoredAppointment, StoredAppointmentClient, StoredAppointmentNote}
 import domain.dao.CaseDao.Case
 import domain.dao.ClientDao.StoredClient
 import domain.dao.MemberDao.StoredMember
@@ -87,6 +87,7 @@ class AppointmentServiceImpl @Inject()(
   notificationService: NotificationService,
   clientService: ClientService,
   memberService: MemberService,
+  ownerService: OwnerService,
   daoRunner: DaoRunner,
   dao: AppointmentDao,
   scheduler: Scheduler,
@@ -137,22 +138,16 @@ class AppointmentServiceImpl @Inject()(
               JavaTime.offsetDateTime
             )
           })
-          _ <- dao.insertTeamMembers(teamMembers.map { usercode =>
-            StoredAppointmentTeamMember(
-              usercode,
-              inserted.id,
-              JavaTime.offsetDateTime,
-              JavaTime.offsetDateTime
-            )
-          })
         } yield inserted).flatMap { a =>
-          notificationService.newAppointment(clients).map(sr =>
-            ServiceResults.logErrors(sr, logger, ())
-          ).map(_ => {
-            val appointment = a.asAppointment
-            scheduleClientReminder(appointment)
-            Right(appointment)
-          })
+          ownerService.setAppointmentOwners(a.id, teamMembers).successFlatMapTo { _ =>
+            notificationService.newAppointment(clients).map(sr =>
+              ServiceResults.logErrors(sr, logger, ())
+            ).map(_ => {
+              val appointment = a.asAppointment
+              scheduleClientReminder(appointment)
+              Right(appointment)
+            })
+          }
         }
       }
     }
@@ -199,19 +194,6 @@ class AppointmentServiceImpl @Inject()(
             dao.insertClients,
             dao.deleteClients
           )
-          _ <- updateDifferencesDBIO[StoredAppointmentTeamMember, Usercode](
-            teamMembers,
-            dao.findTeamMembersQuery(Set(id)),
-            _.usercode,
-            usercode => StoredAppointmentTeamMember(
-              usercode,
-              id,
-              JavaTime.offsetDateTime,
-              JavaTime.offsetDateTime
-            ),
-            dao.insertTeamMembers,
-            dao.deleteTeamMembers
-          )
           updated <- dao.update(
             // We re-construct the whole StoredAppointment here so that missing a value will throw a compile error
             StoredAppointment(
@@ -233,36 +215,38 @@ class AppointmentServiceImpl @Inject()(
             version
           )
         } yield (updated, clientsResult)).flatMap { case (a, clientsResult) =>
-          val notifyAddedClients: Future[ServiceResult[Option[Activity]]] =
-            if (clientsResult.added.nonEmpty)
-              notificationService.newAppointment(clientsResult.added.map(_.universityID).toSet).map(sr =>
-                ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
-              )
-            else Future.successful(Right(None))
+          ownerService.setAppointmentOwners(a.id, teamMembers).successFlatMapTo { _ =>
+            val notifyAddedClients: Future[ServiceResult[Option[Activity]]] =
+              if (clientsResult.added.nonEmpty)
+                notificationService.newAppointment(clientsResult.added.map(_.universityID).toSet).map(sr =>
+                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
+                )
+              else Future.successful(Right(None))
 
-          val notifyRemovedClients: Future[ServiceResult[Option[Activity]]] =
-            if (clientsResult.removed.nonEmpty)
-              notificationService.cancelledAppointment(clientsResult.removed.map(_.universityID).toSet).map(sr =>
-                ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
-              )
-            else Future.successful(Right(None))
+            val notifyRemovedClients: Future[ServiceResult[Option[Activity]]] =
+              if (clientsResult.removed.nonEmpty)
+                notificationService.cancelledAppointment(clientsResult.removed.map(_.universityID).toSet).map(sr =>
+                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
+                )
+              else Future.successful(Right(None))
 
-          val notifyExistingClients: Future[ServiceResult[Option[Activity]]] =
-            if (clientsResult.unchanged.nonEmpty)
-              notificationService.changedAppointment(clientsResult.unchanged.map(_.universityID).toSet).map(sr =>
-                ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
-              )
-            else Future.successful(Right(None))
+            val notifyExistingClients: Future[ServiceResult[Option[Activity]]] =
+              if (clientsResult.unchanged.nonEmpty)
+                notificationService.changedAppointment(clientsResult.unchanged.map(_.universityID).toSet).map(sr =>
+                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
+                )
+              else Future.successful(Right(None))
 
-          ServiceResults.zip(
-            notifyAddedClients,
-            notifyRemovedClients,
-            notifyExistingClients
-          ).map(_ => {
-            val appointment = a.asAppointment
-            scheduleClientReminder(appointment)
-            Right(appointment)
-          })
+            ServiceResults.zip(
+              notifyAddedClients,
+              notifyRemovedClients,
+              notifyExistingClients
+            ).map(_ => {
+              val appointment = a.asAppointment
+              scheduleClientReminder(appointment)
+              Right(appointment)
+            })
+          }
         }
       }
     }
@@ -300,12 +284,15 @@ class AppointmentServiceImpl @Inject()(
     daoRunner.run(
       for {
         withClients <- query.withClients.result
-        withTeamMembers <- query.withTeamMembers.result
         withRoom <- query.withRoom.result
         withCase <- query.withCases.result
         notes <- dao.findNotesQuery(withClients.map { case (a, _, _) => a.id }.toSet).withMember.result
-      } yield Right(groupTuples(withClients, withTeamMembers, withRoom, withCase, notes))
-    )
+      } yield (withClients, withRoom, withCase, notes)
+    ).flatMap { case (withClients, withRoom, withCase, notes) =>
+      ownerService.getAppointmentOwners(withClients.map { case (a, _, _) => a.id }.toSet).successMapTo { teamMembers =>
+        groupTuples(withClients, withRoom, withCase, teamMembers, notes)
+      }
+    }
 
   override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(dao.findByClientQuery(universityID))
@@ -331,7 +318,7 @@ class AppointmentServiceImpl @Inject()(
   override def findDeclinedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(
       dao.findDeclinedQuery.withTeamMembers
-        .filter { case (_, atm, _) => atm.usercode === teamMember }
+        .filter { case (_, o, _) => o.userId === teamMember }
         .map { case (a, _, _) => a }
     )
 
@@ -341,7 +328,7 @@ class AppointmentServiceImpl @Inject()(
   override def findProvisionalAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(
       dao.findProvisionalQuery.withTeamMembers
-        .filter { case (_, atm, _) => atm.usercode === teamMember }
+        .filter { case (_, o, _) => o.userId === teamMember }
         .map { case (a, _, _) => a }
     )
 
@@ -351,7 +338,7 @@ class AppointmentServiceImpl @Inject()(
   override def findAppointmentsNeedingOutcome(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(
       dao.findNeedingOutcomeQuery.withTeamMembers
-        .filter { case (_, atm, _) => atm.usercode === teamMember }
+        .filter { case (_, o, _) => o.userId === teamMember }
         .map { case (a, _, _) => a }
     )
 
@@ -365,14 +352,14 @@ class AppointmentServiceImpl @Inject()(
   override def findAcceptedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(
       dao.findAcceptedQuery.withTeamMembers
-        .filter { case (_, atm, _) => atm.usercode === teamMember }
+        .filter { case (_, o, _) => o.userId === teamMember }
         .map { case (a, _, _) => a }
     )
 
   override def countAcceptedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
       dao.findAcceptedQuery.withTeamMembers
-        .filter { case (_, atm, _) => atm.usercode === teamMember }
+        .filter { case (_, o, _) => o.userId === teamMember }
         .length.result
     ).map(Right.apply)
 
@@ -386,14 +373,14 @@ class AppointmentServiceImpl @Inject()(
   override def findAttendedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(
       dao.findAttendedQuery.withTeamMembers
-        .filter { case (_, atm, _) => atm.usercode === teamMember }
+        .filter { case (_, o, _) => o.userId === teamMember }
         .map { case (a, _, _) => a }
     )
 
   override def countAttendedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
       dao.findAttendedQuery.withTeamMembers
-        .filter { case (_, atm, _) => atm.usercode === teamMember }
+        .filter { case (_, o, _) => o.userId === teamMember }
         .length.result
     ).map(Right.apply)
 
@@ -407,14 +394,14 @@ class AppointmentServiceImpl @Inject()(
   override def findCancelledAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(
       dao.findCancelledQuery.withTeamMembers
-        .filter { case (_, atm, _) => atm.usercode === teamMember }
+        .filter { case (_, o, _) => o.userId === teamMember }
         .map { case (a, _, _) => a }
     )
 
   override def countCancelledAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
       dao.findCancelledQuery.withTeamMembers
-        .filter { case (_, atm, _) => atm.usercode === teamMember }
+        .filter { case (_, o, _) => o.userId === teamMember }
         .length.result
     ).map(Right.apply)
 
@@ -429,22 +416,13 @@ class AppointmentServiceImpl @Inject()(
         .result
     ).map(_.map { case (ac, c) => ac.asAppointmentClient(c.asClient) }).map(r => Right(r.toSet))
 
-  private def getTeamMembersQuery(id: UUID) =
-    dao.findTeamMembersQuery(Set(id))
-      .filter(_.appointmentID === id)
-
   override def getTeamMembers(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[AppointmentTeamMember]]] =
-    daoRunner.run(
-      getTeamMembersQuery(id)
-        .withMembers
-        .result
-    ).map(_.map { case (atm, m) => atm.asAppointmentTeamMember(m.asMember) }).map(r => Right(r.toSet))
+    ownerService.getAppointmentOwners(Set(id)).successMapTo(_.getOrElse(id, Set()).map(AppointmentTeamMember.apply))
 
   override def clientAccept(appointmentID: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
     auditService.audit('AppointmentAccept, appointmentID.toString, 'Appointment, Json.obj("universityID" -> universityID.string)) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
-        teamMembers <- getTeamMembersQuery(appointmentID).map(_.usercode).result
         client <-
           getClientsQuery(appointmentID)
             .filter { c => c.universityID === universityID && c.isProvisional }
@@ -461,11 +439,13 @@ class AppointmentServiceImpl @Inject()(
             dao.update(appointment.copy(state = AppointmentState.Accepted), appointment.version)
           else
             DBIO.successful(appointment)
-      } yield (updatedAppointment, teamMembers)).flatMap { case (a, teamMembers) =>
-        val appointment = a.asAppointment
-        notificationService.appointmentConfirmation(appointment, teamMembers.toSet, AppointmentState.Accepted).map(sr =>
-          ServiceResults.logErrors(sr, logger, ())
-        ).map(_ => Right(appointment))
+      } yield updatedAppointment).flatMap { a =>
+        getTeamMembers(a.id).successFlatMapTo { teamMembers =>
+          val appointment = a.asAppointment
+          notificationService.appointmentConfirmation(appointment, teamMembers.map(_.member.usercode), AppointmentState.Accepted).map(sr =>
+            ServiceResults.logErrors(sr, logger, ())
+          ).map(_ => Right(appointment))
+        }
       }
     }
 
@@ -473,7 +453,6 @@ class AppointmentServiceImpl @Inject()(
     auditService.audit('AppointmentDecline, appointmentID.toString, 'Appointment, Json.obj("universityID" -> universityID.string, "reason" -> reason.entryName)) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
-        teamMembers <- getTeamMembersQuery(appointmentID).map(_.usercode).result
         clients <- getClientsQuery(appointmentID).result
         _ <- dao.updateClient(
           clients.find(_.universityID == universityID).get.copy(
@@ -487,11 +466,13 @@ class AppointmentServiceImpl @Inject()(
             dao.update(appointment.copy(state = AppointmentState.Provisional), appointment.version)
           else
             DBIO.successful(appointment)
-      } yield (updatedAppointment, teamMembers)).flatMap { case (a, teamMembers) =>
-        val appointment = a.asAppointment
-        notificationService.appointmentConfirmation(appointment, teamMembers.toSet, AppointmentState.Cancelled).map(sr =>
-          ServiceResults.logErrors(sr, logger, ())
-        ).map(_ => Right(appointment))
+      } yield updatedAppointment).flatMap { a =>
+        getTeamMembers(a.id).successFlatMapTo { teamMembers =>
+          val appointment = a.asAppointment
+          notificationService.appointmentConfirmation(appointment, teamMembers.map(_.member.usercode), AppointmentState.Cancelled).map(sr =>
+            ServiceResults.logErrors(sr, logger, ())
+          ).map(_ => Right(appointment))
+        }
       }
     }
 
@@ -595,17 +576,14 @@ class AppointmentServiceImpl @Inject()(
 object AppointmentService {
   def groupTuples(
     withClients: Seq[(StoredAppointment, StoredAppointmentClient, StoredClient)],
-    withTeamMembers: Seq[(StoredAppointment, StoredAppointmentTeamMember, StoredMember)],
     withRoom: Seq[(StoredAppointment, Room)],
     withCase: Seq[(StoredAppointment, Case)],
+    teamMembers: Map[UUID, Set[Member]],
     notes: Seq[(StoredAppointmentNote, StoredMember)]
   ): Seq[AppointmentRender] = {
     val appointmentsAndClients = OneToMany.join(withClients.map {
       case (a, ac, c) => (a.asAppointment, ac.asAppointmentClient(c.asClient))
     })(Ordering.by[AppointmentClient, String](_.client.universityID.string))
-    val teamMembersByAppointment = OneToMany.join(withTeamMembers.map {
-      case (a, atm, m) => a.id -> atm.asAppointmentTeamMember(m.asMember)
-    })(Ordering.by[AppointmentTeamMember, String](_.member.usercode.string)).toMap
     val roomByAppointment = withRoom.map { case (a, r) => a.id -> r }.toMap
     val appointmentAndCases = OneToMany.join(withCase.map { case (a, c) => (a.id, c) })(Case.dateOrdering).toMap
     val notesByAppointment = notes.groupBy { case (n, _) => n.appointmentId }
@@ -615,7 +593,7 @@ object AppointmentService {
     appointmentsAndClients.map { case (appointment, clients) => AppointmentRender(
       appointment = appointment,
       clients = clients.toSet,
-      teamMembers = teamMembersByAppointment.getOrElse(appointment.id, Nil).toSet,
+      teamMembers = teamMembers.getOrElse(appointment.id, Set()).map(AppointmentTeamMember.apply),
       room = roomByAppointment.get(appointment.id),
       appointmentAndCases.getOrElse(appointment.id, Seq()).toSet,
       notesByAppointment(appointment.id)
