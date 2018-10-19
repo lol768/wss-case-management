@@ -15,12 +15,6 @@ class OwnerServiceTest extends AbstractDaoTest {
 
   override implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
 
-  override def fakeApplicationBuilder: GuiceApplicationBuilder =
-    super.fakeApplicationBuilder
-      .overrides(
-        bind[NotificationService].to[NullNotificationService]
-      )
-
   private val enquiryService = get[EnquiryService]
   private val ownerService = get[OwnerService]
 
