@@ -39,8 +39,9 @@
 
 <div class="row">
   <div class="col-sm-6">
-    @b3.free('_label -> "Team member", '_class -> form.error("appointment.teamMember").map(_ => "has-error")) {
-      @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("appointment.teamMember") && v.nonEmpty }.values.toSeq, name = "appointment.teamMember", placeholder = "Search for a team member", multiple = false, team = "any")
+    @b3.free('_label -> "Team members", '_class -> form.error("teamMembers").map(_ => "has-error")) {
+      @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("teamMembers[") && v.nonEmpty }.values.toSeq, name = "teamMembers[]", placeholder = "Add a team member", multiple = true, team = "any")
+      @b3.errors(form("teamMembers"))
     }
   </div>
   <div class="col-sm-6">
