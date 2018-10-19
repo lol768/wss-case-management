@@ -5,7 +5,7 @@ import java.time.temporal.ChronoUnit
 import java.util.{Date, UUID}
 
 import akka.Done
-import domain.{AppointmentState, AppointmentTypeCategory}
+import domain.{AppointmentState, AppointmentType}
 import helpers.JavaTime
 import javax.inject.Inject
 import org.quartz._
@@ -55,7 +55,7 @@ class SendAppointmentClientReminderJob @Inject()(
             logger.info(s"Appointment $id is not happening tomorrow (${appointment.start}) - ignoring")
             Future.successful(Done)
 
-          case Right(appointment) if appointment.appointmentType.category != AppointmentTypeCategory.FaceToFace =>
+          case Right(appointment) if appointment.appointmentType != AppointmentType.FaceToFace =>
             logger.info(s"Appointment $id is not a face-to-face appointment (${appointment.appointmentType}) - ignoring")
             Future.successful(Done)
 

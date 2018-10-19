@@ -78,7 +78,8 @@ object AppointmentController {
           "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", _.isAfter(JavaTime.offsetDateTime)),
           "duration" -> number(min = 60, max = 120 * 60).transform[Duration](n => Duration.ofSeconds(n.toLong), _.getSeconds.toInt),
           "roomID" -> optional(uuid.verifying("error.required", id => isValidRoom(id))),
-          "appointmentType" -> AppointmentType.formField
+          "appointmentType" -> AppointmentType.formField,
+          "purpose" -> AppointmentPurpose.formField,
         )(AppointmentSave.apply)(AppointmentSave.unapply),
         "version" -> optional(JavaTime.offsetDateTimeFormField).verifying("error.optimisticLocking", _ == existingVersion)
       )(AppointmentFormData.apply)(AppointmentFormData.unapply)
@@ -285,7 +286,8 @@ class AppointmentController @Inject()(
                 a.appointment.start,
                 a.appointment.duration,
                 a.room.map(_.id),
-                a.appointment.appointmentType
+                a.appointment.appointmentType,
+                a.appointment.purpose,
               ),
               Some(a.appointment.lastUpdated)
             )),

@@ -57,6 +57,10 @@
           @a.appointment.appointmentType.description
         }
 
+        @tags.sectioned.detail("Purpose") {
+          @a.appointment.purpose.description
+        }
+
         @if(a.clientCases.nonEmpty) {
           @tags.sectioned.detail("Cases") {
             <ul class="list-unstyled">

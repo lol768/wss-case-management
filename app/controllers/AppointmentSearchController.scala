@@ -30,6 +30,7 @@ object AppointmentSearchController {
     "team" -> optional(Teams.formField),
     "member" -> optional(nonEmptyText).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string)),
     "appointmentType" -> optional(AppointmentType.formField),
+    "purpose" -> optional(AppointmentPurpose.formField),
     "states" -> set(AppointmentState.formField),
   )(AppointmentSearchQuery.apply)(AppointmentSearchQuery.unapply))
 }
@@ -122,6 +123,7 @@ class AppointmentSearchController @Inject()(
     "subject" -> a.subject(Some(clients), Some(teamMembers)),
     "team" -> a.team.name,
     "appointmentType" -> a.appointmentType.description,
+    "purpose" -> a.purpose.description,
     "created" -> a.created.format(JavaTime.iSO8601DateFormat),
     "start" -> a.start.format(JavaTime.iSO8601DateFormat),
     "state" -> a.state.entryName,

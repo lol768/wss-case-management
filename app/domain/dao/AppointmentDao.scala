@@ -151,6 +151,7 @@ class AppointmentDaoImpl @Inject()(
         q.teamMember.map { member => tm.userId.? === member },
         q.roomID.map { roomID => a.roomID === roomID },
         q.appointmentType.map { appointmentType => a.appointmentType.? === appointmentType },
+        q.purpose.map { purpose => a.purpose.? === purpose },
         q.states.headOption.map { _ => a.state.inSet(q.states).? }
       ).flatten
 
@@ -231,6 +232,7 @@ object AppointmentDao {
     roomID: Option[UUID],
     team: Team,
     appointmentType: AppointmentType,
+    purpose: AppointmentPurpose,
     state: AppointmentState,
     cancellationReason: Option[AppointmentCancellationReason],
     created: OffsetDateTime,
@@ -243,6 +245,7 @@ object AppointmentDao {
       duration,
       team,
       appointmentType,
+      purpose,
       state,
       cancellationReason,
       created,
@@ -260,6 +263,7 @@ object AppointmentDao {
         roomID,
         team,
         appointmentType,
+        purpose,
         state,
         cancellationReason,
         created,
@@ -278,6 +282,7 @@ object AppointmentDao {
     roomID: Option[UUID],
     team: Team,
     appointmentType: AppointmentType,
+    purpose: AppointmentPurpose,
     state: AppointmentState,
     cancellationReason: Option[AppointmentCancellationReason],
     created: OffsetDateTime,
@@ -296,6 +301,7 @@ object AppointmentDao {
     def roomID = column[Option[UUID]]("room_id")
     def team = column[Team]("team_id")
     def appointmentType = column[AppointmentType]("appointment_type")
+    def purpose = column[AppointmentPurpose]("appointment_purpose")
     def state = column[AppointmentState]("state")
     def cancellationReason = column[Option[AppointmentCancellationReason]]("cancellation_reason")
     def created = column[OffsetDateTime]("created_utc")
@@ -309,9 +315,9 @@ object AppointmentDao {
     def id = column[UUID]("id", O.PrimaryKey)
 
     override def * : ProvenShape[StoredAppointment] =
-      (id, key, start, duration, roomID, team, appointmentType, state, cancellationReason, created, version).mapTo[StoredAppointment]
+      (id, key, start, duration, roomID, team, appointmentType, purpose, state, cancellationReason, created, version).mapTo[StoredAppointment]
     def appointment =
-      (id, key, start, duration, team, appointmentType, state, cancellationReason, created, version).mapTo[Appointment]
+      (id, key, start, duration, team, appointmentType, purpose, state, cancellationReason, created, version).mapTo[Appointment]
 
     def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
     def isAccepted: Rep[Boolean] = state === (AppointmentState.Accepted: AppointmentState)
@@ -337,7 +343,7 @@ object AppointmentDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredAppointmentVersion] =
-      (id, key, start, duration, roomID, team, appointmentType, state, cancellationReason, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
+      (id, key, start, duration, roomID, team, appointmentType, purpose, state, cancellationReason, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
     def pk = primaryKey("pk_appointment_version", (id, timestamp))
     def idx = index("idx_appointment_version", (id, version))
   }
@@ -577,6 +583,7 @@ object AppointmentDao {
     team: Option[Team] = None,
     teamMember: Option[Usercode] = None,
     appointmentType: Option[AppointmentType] = None,
+    purpose: Option[AppointmentPurpose] = None,
     states: Set[AppointmentState] = Set()
   ) {
     def isEmpty: Boolean = !nonEmpty
@@ -591,6 +598,7 @@ object AppointmentDao {
       teamMember.nonEmpty ||
       roomID.nonEmpty ||
       appointmentType.nonEmpty ||
+      purpose.nonEmpty ||
       states.nonEmpty
   }
 

@@ -102,6 +102,7 @@ class AppointmentServiceImpl @Inject()(
       save.roomID,
       team,
       save.appointmentType,
+      save.purpose,
       AppointmentState.Provisional,
       None,
       JavaTime.offsetDateTime,
@@ -204,6 +205,7 @@ class AppointmentServiceImpl @Inject()(
               changes.roomID,
               existing.team,
               changes.appointmentType,
+              changes.purpose,
               newState(existing, clientsResult),
               if (newState(existing, clientsResult) == AppointmentState.Provisional)
                 None

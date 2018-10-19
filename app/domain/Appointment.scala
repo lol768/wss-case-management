@@ -19,6 +19,7 @@ case class Appointment(
   duration: Duration,
   team: Team,
   appointmentType: AppointmentType,
+  purpose: AppointmentPurpose,
   state: AppointmentState,
   cancellationReason: Option[AppointmentCancellationReason],
   created: OffsetDateTime,
@@ -63,7 +64,8 @@ case class AppointmentSave(
   start: OffsetDateTime,
   duration: Duration,
   roomID: Option[UUID],
-  appointmentType: AppointmentType
+  appointmentType: AppointmentType,
+  purpose: AppointmentPurpose,
 )
 
 case class AppointmentRender(
@@ -96,6 +98,10 @@ object AppointmentRender {
     "appointmentType" -> Json.obj(
       "id" -> o.appointment.appointmentType,
       "description" -> o.appointment.appointmentType.description,
+    ),
+    "purpose" -> Json.obj(
+      "id" -> o.appointment.purpose,
+      "description" -> o.appointment.purpose.description,
     ),
     "state" -> o.appointment.state,
     "cancellationReason" -> o.appointment.cancellationReason,
@@ -130,15 +136,6 @@ case class AppointmentClient(
 case class AppointmentTeamMember(
   member: Member
 )
-
-sealed abstract class AppointmentTypeCategory(val description: String) extends EnumEntry
-object AppointmentTypeCategory extends PlayEnum[AppointmentTypeCategory] {
-  case object FaceToFace extends AppointmentTypeCategory("Face to face")
-  case object Online extends AppointmentTypeCategory("Telephone / Skype")
-  case object Email extends AppointmentTypeCategory("Email")
-
-  override def values: immutable.IndexedSeq[AppointmentTypeCategory] = findValues
-}
 
 sealed abstract class AppointmentType(val description: String) extends EnumEntry
 object AppointmentType extends PlayEnum[AppointmentType] {

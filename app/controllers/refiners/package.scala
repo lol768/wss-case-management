@@ -100,7 +100,7 @@ package object refiners {
         appointmentService.find(appointmentKey).map {
           case Right(appointment) =>
             Right(new AppointmentSpecificRequest[A](appointment, request))
-          case _ =>
+          case e =>
             Left(Results.NotFound(views.html.errors.notFound()))
         }
       }
