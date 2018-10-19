@@ -18,7 +18,7 @@ export default function AppointmentFreeBusyForm(form) {
 
   $form.on('input change', () => {
     const clients = getFormValues('clients[]');
-    const teamMembers = getFormValues('appointment.teamMember');
+    const teamMembers = getFormValues('teamMembers[]');
     const rooms = getFormValues('appointment.roomID');
 
     const $button = $form.find('.timepicker button');
@@ -39,7 +39,7 @@ export default function AppointmentFreeBusyForm(form) {
           e.stopPropagation();
 
           const clients = getFormValues('clients[]');
-          const teamMembers = getFormValues('appointment.teamMember');
+          const teamMembers = getFormValues('teamMembers[]');
           const rooms = getFormValues('appointment.roomID');
 
           if ([...clients, ...teamMembers, ...rooms].length) {
@@ -62,7 +62,7 @@ export default function AppointmentFreeBusyForm(form) {
 
         // Get clients
         const clients = getFormValues('clients[]');
-        const teamMembers = getFormValues('appointment.teamMember');
+        const teamMembers = getFormValues('teamMembers[]');
         const roomIDs = getFormValues('appointment.roomID');
 
         $modal.find('.appointment-freebusy-calendar').fullCalendar({

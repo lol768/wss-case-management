@@ -40,6 +40,7 @@ object Room {
   val NameMaxLength = 200
 
   val writer: Writes[Room] = o => Json.obj(
+    "id" -> o.id.toString,
     "name" -> o.name,
     "building" -> o.building.name,
     "locationId" -> o.wai2GoID,

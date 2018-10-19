@@ -49,7 +49,7 @@ trait NotificationService {
   def newAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
-  def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def appointmentConfirmation(appointment: Appointment, teamMembers: Set[Usercode], clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def appointmentReminder(appointment: Appointment, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
 }
 
@@ -66,7 +66,6 @@ class NotificationServiceImpl @Inject()(
 
   private implicit lazy val domain: NotificationService.Domain = config.get[String]("domain")
   private lazy val initialTeam = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
-
 
   override def newRegistration(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withInitialTeamUsers { users =>
@@ -298,16 +297,16 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  override def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
-    withUser(appointment.teamMember.usercode) { teamMember =>
+  override def appointmentConfirmation(appointment: Appointment, teamMembers: Set[Usercode], clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUsers(teamMembers) { teamMembers =>
       val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
 
       queueEmailAndSendActivity(
         subject = s"$teamSubjectPrefix Appointment ${clientState.clientDescription}",
         body = views.txt.emails.appointmentResponse(url, clientState.clientDescription.toLowerCase),
-        recipients = Seq(teamMember),
+        recipients = teamMembers.toSeq,
         activity = buildActivity(
-          Set(teamMember),
+          teamMembers,
           s"Appointment ${clientState.clientDescription}",
           url,
           "appointment-confirmation-message"

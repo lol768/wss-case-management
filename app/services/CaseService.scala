@@ -143,7 +143,8 @@ class CaseServiceImpl @Inject() (
     }
 
   override def findAll(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
-    daoRunner.run(dao.find(ids)).map(Right.apply)
+    if (ids.isEmpty) Future.successful(Right(Nil))
+    else daoRunner.run(dao.find(ids)).map(Right.apply)
 
   override def findForView(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] =
     auditService.audit('CaseView, (c: Case) => c.id.get.toString, 'Case, Json.obj()) {

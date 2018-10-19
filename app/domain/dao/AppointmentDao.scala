@@ -7,11 +7,13 @@ import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
+import domain.Owner.Owners
 import domain.QueryHelpers._
 import domain._
 import domain.dao.AppointmentDao.AppointmentCase.AppointmentCases
 import domain.dao.AppointmentDao._
 import domain.dao.CaseDao.cases
+import domain.dao.ClientDao.StoredClient.Clients
 import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
@@ -20,8 +22,6 @@ import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.{UniversityID, Usercode}
-import QueryHelpers._
-import domain.dao.ClientDao.StoredClient.Clients
 
 import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
@@ -137,7 +137,7 @@ class AppointmentDaoImpl @Inject()(
       .filter(_.isCancelled)
 
   override def searchQuery(q: AppointmentSearchQuery): Query[Appointments, StoredAppointment, Seq] = {
-    def queries(a: Appointments, c: Clients, n: Rep[Option[AppointmentNotes]]): Seq[Rep[Option[Boolean]]] =
+    def queries(a: Appointments, c: Clients, tm: Owners, n: Rep[Option[AppointmentNotes]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
           n.map(_.searchableText) @@ plainToTsQuery(queryStr.bind, Some("english"))
@@ -148,17 +148,17 @@ class AppointmentDaoImpl @Inject()(
         q.startAfter.map { d => a.start.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.startBefore.map { d => a.start.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.team.map { team => a.team.? === team },
-        q.teamMember.map { member => a.teamMember.? === member },
+        q.teamMember.map { member => tm.userId.? === member },
         q.roomID.map { roomID => a.roomID === roomID },
         q.appointmentType.map { appointmentType => a.appointmentType.? === appointmentType },
         q.states.headOption.map { _ => a.state.inSet(q.states).? }
       ).flatten
 
     appointments.table
-      .withClientsAndMemberAndNotes
-      .filter { case (a, _, c, _, n) => queries(a, c, n).reduce(_ && _) }
+      .withClientsAndTeamMembersAndNotes
+      .filter { case (a, _, c, tm, _, n) => queries(a, c, tm, n).reduce(_ && _) }
       .distinct
-      .map { case (a, _, _, _, _) => a }
+      .map { case (a, _, _, _, _, _) => a }
   }
 
   override def casesForAppointmentQuery(appointmentId: UUID): Query[AppointmentCases, AppointmentCase, Seq] = {
@@ -205,14 +205,11 @@ class AppointmentDaoImpl @Inject()(
   override def findNote(id: UUID): DBIO[NoteAndAppointment] =
     appointmentNotes.table.filter(_.id === id)
       .withMember
-      .join(
-        appointments.table
-          .withMember
-      )
-      .on { case ((n, _), (a, _)) => n.appointmentId === a.id }
+      .join(appointments.table)
+      .on { case ((n, _), a) => n.appointmentId === a.id }
       .flattenJoin
       .result.head
-      .map { case (n, nMember, a, aMember) => NoteAndAppointment(n.asAppointmentNote(nMember.asMember), a.asAppointment(aMember.asMember))}
+      .map { case (n, nMember, a) => NoteAndAppointment(n.asAppointmentNote(nMember.asMember), a.asAppointment)}
 
 }
 
@@ -233,20 +230,18 @@ object AppointmentDao {
     duration: Duration,
     roomID: Option[UUID],
     team: Team,
-    teamMember: Usercode,
     appointmentType: AppointmentType,
     state: AppointmentState,
     cancellationReason: Option[AppointmentCancellationReason],
     created: OffsetDateTime,
     version: OffsetDateTime,
   ) extends Versioned[StoredAppointment] {
-    def asAppointment(member: Member) = Appointment(
+    def asAppointment = Appointment(
       id,
       key,
       start,
       duration,
       team,
-      member,
       appointmentType,
       state,
       cancellationReason,
@@ -264,7 +259,6 @@ object AppointmentDao {
         duration,
         roomID,
         team,
-        teamMember,
         appointmentType,
         state,
         cancellationReason,
@@ -283,7 +277,6 @@ object AppointmentDao {
     duration: Duration,
     roomID: Option[UUID],
     team: Team,
-    teamMember: Usercode,
     appointmentType: AppointmentType,
     state: AppointmentState,
     cancellationReason: Option[AppointmentCancellationReason],
@@ -302,7 +295,6 @@ object AppointmentDao {
     def duration = column[Duration]("duration_secs")
     def roomID = column[Option[UUID]]("room_id")
     def team = column[Team]("team_id")
-    def teamMember = column[Usercode]("team_member")
     def appointmentType = column[AppointmentType]("appointment_type")
     def state = column[AppointmentState]("state")
     def cancellationReason = column[Option[AppointmentCancellationReason]]("cancellation_reason")
@@ -317,7 +309,9 @@ object AppointmentDao {
     def id = column[UUID]("id", O.PrimaryKey)
 
     override def * : ProvenShape[StoredAppointment] =
-      (id, key, start, duration, roomID, team, teamMember, appointmentType, state, cancellationReason, created, version).mapTo[StoredAppointment]
+      (id, key, start, duration, roomID, team, appointmentType, state, cancellationReason, created, version).mapTo[StoredAppointment]
+    def appointment =
+      (id, key, start, duration, team, appointmentType, state, cancellationReason, created, version).mapTo[Appointment]
 
     def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
     def isAccepted: Rep[Boolean] = state === (AppointmentState.Accepted: AppointmentState)
@@ -328,7 +322,6 @@ object AppointmentDao {
 
     def keyIndex = index("idx_appointment_key", key, unique = true)
     def teamIndex = index("idx_appointment_team", (start, team))
-    def teamMemberIndex = index("idx_appointment_team_member", (start, teamMember))
     def stateIndex = index("idx_appointment_state", state)
 
     def roomFK = foreignKey("fk_appointment_room", roomID, LocationDao.rooms.table)(_.id.?)
@@ -344,7 +337,7 @@ object AppointmentDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredAppointmentVersion] =
-      (id, key, start, duration, roomID, team, teamMember, appointmentType, state, cancellationReason, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
+      (id, key, start, duration, roomID, team, appointmentType, state, cancellationReason, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
     def pk = primaryKey("pk_appointment_version", (id, timestamp))
     def idx = index("idx_appointment_version", (id, version))
   }
@@ -371,16 +364,22 @@ object AppointmentDao {
       .join(LocationDao.buildings.table)
       .on(_._2.buildingID === _.id)
       .map { case ((a, r), b) => (a, (r.id, b.building, r.name, r.wai2GoID.getOrElse(b.wai2GoID), r.available, r.created, r.version).mapTo[Room]) }
-    def withMember = q
+    def withTeamMembers = q
+      .join(Owner.owners.table)
+      .on { case (a, o) => a.id === o.entityId && o.entityType === (Owner.EntityType.Appointment: Owner.EntityType) }
       .join(MemberDao.members.table)
-      .on { case (a, m) => a.teamMember === m.usercode }
-    def withClientsAndMember = q
-      .withClients
-      .join(MemberDao.members.table)
-      .on { case ((a, _, _), m) => a.teamMember === m.usercode }
+      .on { case ((_, o), m) => o.userId === m.usercode }
       .flattenJoin
-    def withClientsAndMemberAndNotes = q
-      .withClientsAndMember
+    def withClientsAndTeamMembers = q
+      .withClients
+      .join(Owner.owners.table)
+      .on { case ((a, _, _), o) => a.id === o.entityId && o.entityType === (Owner.EntityType.Appointment: Owner.EntityType) }
+      .flattenJoin
+      .join(MemberDao.members.table)
+      .on { case ((_, _, _, o), m) => o.userId === m.usercode }
+      .flattenJoin
+    def withClientsAndTeamMembersAndNotes = q
+      .withClientsAndTeamMembers
       .joinLeft(appointmentNotes.table)
       .on(_._1.id === _.appointmentId)
       .flattenJoin
@@ -618,7 +617,6 @@ object AppointmentDao {
   }
 
   object AppointmentCase extends Versioning {
-
     def tupled = (AppointmentCase.apply _).tupled
 
     sealed trait AppointmentCaseProperties {

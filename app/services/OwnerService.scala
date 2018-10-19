@@ -24,6 +24,8 @@ trait OwnerService {
   def getCaseOwnerHistory(caseId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[OwnerVersion]]]
   def getEnquiryOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
   def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]]
+  def getAppointmentOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
+  def setAppointmentOwners(appointmentId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]]
 }
 
 @Singleton
@@ -40,6 +42,10 @@ class OwnerServiceImpl @Inject()(
 
   override def getEnquiryOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]] = {
     getOwners(ownerDao.findEnquiryOwnersQuery(ids).withMember)
+  }
+
+  override def getAppointmentOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]] = {
+    getOwners(ownerDao.findAppointmentOwnersQuery(ids).withMember)
   }
 
   private def getOwners(daoQuery: Query[(Owner.Owners, Members), (Owner, StoredMember), Seq])(implicit t: TimingContext) = {
@@ -75,6 +81,22 @@ class OwnerServiceImpl @Inject()(
         enquiryId,
         u => EnquiryOwner(
           enquiryId = enquiryId,
+          userId = u,
+          version = now,
+        )
+      )
+    }
+  }
+
+  override def setAppointmentOwners(appointmentID: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]] = {
+    auditService.audit('AppointmentSetOwners, appointmentID.toString, 'Appointment, Json.arr(owners.map(o => JsString(o.string)))) {
+      val now = JavaTime.offsetDateTime
+      setOwners(
+        owners,
+        ownerDao.findAppointmentOwnersQuery(Set(appointmentID)),
+        appointmentID,
+        u => AppointmentOwner(
+          appointmentID = appointmentID,
           userId = u,
           version = now,
         )

@@ -1,5 +1,5 @@
 @import domain.dao.CaseDao.Case
-@import domain.{Appointment, AppointmentClient, AppointmentRender, Room}
+@import domain.{Appointment, AppointmentClient, AppointmentRender, AppointmentTeamMember, Room}
 @import warwick.sso.{User, Usercode}
 
 @(
@@ -8,7 +8,7 @@
   emptyMessage: Option[String] = None,
 )(implicit context: RequestContext)
 
-@appointmentRow(appointment: Appointment, clients: Set[AppointmentClient], room: Option[Room], clientCases: Set[Case]) = {
+@appointmentRow(appointment: Appointment, clients: Set[AppointmentClient], teamMembers: Set[AppointmentTeamMember], room: Option[Room], clientCases: Set[Case]) = {
   <tr>
     <td>
       <ul class="list-unstyled">
@@ -22,12 +22,18 @@
     </td>
     <td>
       @tags.icons.appointmentState(appointment.state)
-      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string @appointment.subject(Some(clients))</a>
+      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string @appointment.subject(Some(clients), Some(teamMembers))</a>
     </td>
     <td>
       @helpers.JavaTime.Relative(appointment.start) &ndash; @appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
     </td>
-    <td>@appointment.teamMember.safeFullName</td>
+    <td>
+      <ul class="list-unstyled">
+        @teamMembers.toSeq.sortBy(_.member).map { teamMember =>
+          <li>@teamMember.member.safeFullName</li>
+        }
+      </ul>
+    </td>
     <td>
       @room.map(_.name)
       (@appointment.appointmentType.description)
@@ -49,7 +55,7 @@
     </thead>
     <tbody>
       @appointments.map { a =>
-        @appointmentRow(a.appointment, a.clients, a.room, a.clientCases)
+        @appointmentRow(a.appointment, a.clients, a.teamMembers, a.room, a.clientCases)
       }
     </tbody>
   </table>
