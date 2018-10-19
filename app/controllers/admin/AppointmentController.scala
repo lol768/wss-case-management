@@ -183,7 +183,7 @@ class AppointmentController @Inject()(
     renderAppointment(
       appointmentKey,
       appointmentNoteFormPrefilled(request.appointment.lastUpdated),
-      cancelForm(request.appointment.lastUpdated).bindVersion(request.appointment.lastUpdated).discardingErrors
+      cancelForm(request.appointment.lastUpdated).withVersion(request.appointment.lastUpdated).discardingErrors
     )
   }
 
@@ -300,7 +300,7 @@ class AppointmentController @Inject()(
           Ok(
             views.html.admin.appointments.edit(
               a.appointment,
-              formWithErrors.bindVersion(a.appointment.lastUpdated),
+              formWithErrors.withVersion(a.appointment.lastUpdated),
               a.clientCases,
               availableRooms
             )
@@ -399,7 +399,7 @@ class AppointmentController @Inject()(
       formWithErrors => renderAppointment(
         appointmentKey,
         appointmentNoteFormPrefilled(appointment.lastUpdated),
-        formWithErrors.bindVersion(appointment.lastUpdated)
+        formWithErrors.withVersion(appointment.lastUpdated)
       ),
       data => appointments.cancel(appointment.id, data.cancellationReason, data.version).successMap { updated =>
         Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
@@ -414,8 +414,8 @@ class AppointmentController @Inject()(
     appointmentNoteForm(appointment.lastUpdated).bindFromRequest().fold(
       formWithErrors => renderAppointment(
         appointmentKey,
-        formWithErrors.bindVersion(appointment.lastUpdated),
-        cancelForm(appointment.lastUpdated).bindVersion(appointment.lastUpdated).discardingErrors
+        formWithErrors.withVersion(appointment.lastUpdated),
+        cancelForm(appointment.lastUpdated).withVersion(appointment.lastUpdated).discardingErrors
       ),
       data =>
         // We don't do anything with data.version here, it's validated but we don't lock the appointment when adding a note
@@ -443,7 +443,7 @@ class AppointmentController @Inject()(
           views.html.admin.appointments.editNote(
             appointmentKey,
             request.note,
-            formWithErrors.bindVersion(request.note.lastUpdated)
+            formWithErrors.withVersion(request.note.lastUpdated)
           )
         )
       ),
