@@ -27,7 +27,7 @@ class HomeSpec extends BaseSpec {
       val home = req("/").forUser(users.ss1).get()
       val html = contentAsHtml(home)
       html.navigationPages.primary mustBe Seq(
-        ("Me", Uri.parse("/")),
+        ("Home", Uri.parse("/")),
         (Teams.WellbeingSupport.name, Uri.parse(s"/team/${Teams.WellbeingSupport.id}"))
       )
     }
