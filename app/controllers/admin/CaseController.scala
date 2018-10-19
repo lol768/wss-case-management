@@ -411,7 +411,7 @@ class CaseController @Inject()(
           Ok(
             views.html.admin.cases.edit(
               clientCase,
-              formWithErrors.bindVersion(clientCase.version)
+              formWithErrors.withVersion(clientCase.version)
             )
           )
         ),
@@ -489,7 +489,7 @@ class CaseController @Inject()(
 
   def addNote(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
-      formWithErrors => renderCase(caseKey, formWithErrors.bindVersion(caseRequest.`case`.version), messageForm),
+      formWithErrors => renderCase(caseKey, formWithErrors.withVersion(caseRequest.`case`.version), messageForm),
       data =>
         // We don't do anything with data.version here, it's validated but we don't lock the case when adding a general note
         cases.addGeneralNote(caseRequest.`case`.id.get, CaseNoteSave(data.text, caseRequest.context.user.get.usercode)).successMap { _ =>
@@ -521,7 +521,7 @@ class CaseController @Inject()(
 
   def reopen(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
-      formWithErrors => renderCase(caseKey, formWithErrors.bindVersion(caseRequest.`case`.version), messageForm),
+      formWithErrors => renderCase(caseKey, formWithErrors.withVersion(caseRequest.`case`.version), messageForm),
       data => {
         val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
 
@@ -553,7 +553,7 @@ class CaseController @Inject()(
           views.html.admin.cases.editNote(
             caseKey,
             noteRequest.note,
-            formWithErrors.bindVersion(noteRequest.note.lastUpdated)
+            formWithErrors.withVersion(noteRequest.note.lastUpdated)
           )
         )
       ),

@@ -45,7 +45,7 @@ trait ControllerHelper extends Results with Logging {
     new FutureServiceResultOps[A](future)
 
   implicit class EnhancedForm[A](val form: Form[A]) {
-    def bindVersion(version: OffsetDateTime, key: String = "version"): Form[A] =
-      form.bind(form.data ++ JavaTime.OffsetDateTimeFormatter.unbind(key, version))
+    def withVersion(version: OffsetDateTime, key: String = "version"): Form[A] =
+      form.copy(data = form.data ++ JavaTime.OffsetDateTimeFormatter.unbind(key, version))
   }
 }
