@@ -2,14 +2,14 @@ package services
 
 import com.google.inject.ImplementedBy
 import domain.ExtendedPostgresProfile.api._
-import domain.Member
 import domain.dao.MemberDao.StoredMember
 import domain.dao.{DaoRunner, MemberDao}
+import domain.{Member, Teams}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import slick.dbio.DBIOAction
-import warwick.sso.{UserLookupService, Usercode}
-
+import warwick.sso.{GroupService, UserLookupService, Usercode}
+import helpers.ServiceResults.Implicits._
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -24,10 +24,13 @@ trait MemberService {
   def getOrAddMembers(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
   def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
   def updateMembers(details: Map[Usercode, Option[String]])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
+  def search(query: String)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
 }
 
 class MemberServiceImpl @Inject()(
   userLookupService: UserLookupService,
+  permissionService: PermissionService,
+  groupService: GroupService,
   daoRunner: DaoRunner,
   dao: MemberDao,
 )(implicit ec: ExecutionContext) extends MemberService {
@@ -71,5 +74,24 @@ class MemberServiceImpl @Inject()(
         existing.map(member => dao.update(member.copy(fullName = details(member.usercode)), member.version))
       )
     } yield Right(updated.map(_.asMember)))
+
+  override def search(query: String)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]] = {
+    val usercodeResult = userLookupService.getUser(Usercode(query)).toOption
+    usercodeResult.map(user => getOrAddMember(user.usercode).map(_.map(m => Seq(m)))).getOrElse {
+      // Populate Member table
+      getOrAddAllMembers.successFlatMapTo(_ =>
+        // Then search them
+        daoRunner.run(dao.findByNameQuery(query).result).map(r => Right(r.map(_.asMember)))
+      )
+    }
+  }
+
+  private def getOrAddAllMembers(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]] = {
+    val allTeamMembers = Teams.all.map(permissionService.webgroupFor)
+      .flatMap(groupService.getWebGroup(_).toOption).flatten
+      .flatMap(g => g.owners ++ g.members).toSet
+
+    getOrAddMembers(allTeamMembers)
+  }
 
 }

@@ -36,11 +36,20 @@ object AppointmentController {
     version: Option[OffsetDateTime]
   )
 
-  def form(team: Team, profileService: ProfileService, caseService: CaseService, permissionService: PermissionService, locationService: LocationService, existingVersion: Option[OffsetDateTime] = None)(implicit t: TimingContext, executionContext: ExecutionContext): Form[AppointmentFormData] = {
+  def form(
+    team: Team,
+    profileService: ProfileService,
+    caseService: CaseService,
+    permissionService: PermissionService,
+    locationService: LocationService,
+    existingClients: Set[Client],
+    existingVersion: Option[OffsetDateTime] = None
+  )(implicit t: TimingContext, executionContext: ExecutionContext): Form[AppointmentFormData] = {
     // TODO If we're linked to a case, is it valid to have an appointment with someone who isn't a client on the case?
-    def isValid(u: UniversityID): Boolean =
-      Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
-        .toOption.exists(_.isRight)
+    def isValid(u: UniversityID, existing: Set[Client]): Boolean =
+      existing.exists(_.universityID == u) ||
+        Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
+          .toOption.exists(_.exists(_.nonEmpty))
 
     def isValidTeamMember(usercode: Usercode): Boolean =
       Try(Await.result(permissionService.inAnyTeam(usercode), 5.seconds))
@@ -59,7 +68,7 @@ object AppointmentController {
 
     Form(
       mapping(
-        "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
+        "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u, existingClients))).verifying("error.required", _.exists(_.string.nonEmpty)),
         "teamMembers" -> set(
           optional(text).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string))
             .verifying("error.appointment.teamMember.invalid", u => u.isEmpty || u.exists { usercode => isValidTeamMember(usercode) })
@@ -192,7 +201,7 @@ class AppointmentController @Inject()(
   }
 
   def createForm(teamId: String, forCase: Option[IssueKey], client: Option[UniversityID], start: Option[OffsetDateTime], duration: Option[Duration]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    val baseForm = form(teamRequest.team, profiles, cases, permissions, locations)
+    val baseForm = form(teamRequest.team, profiles, cases, permissions, locations, Set())
     val baseBind = Map("teamMembers[0]" -> teamRequest.context.user.get.usercode.string)
 
     if (forCase.nonEmpty && client.nonEmpty) {
@@ -238,7 +247,7 @@ class AppointmentController @Inject()(
   }
 
   def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    form(teamRequest.team, profiles, cases, permissions, locations).bindFromRequest().fold(
+    form(teamRequest.team, profiles, cases, permissions, locations, Set()).bindFromRequest().fold(
       formWithErrors => {
         val caseIDs =
           formWithErrors.data.keys.filter(_.startsWith("cases")).toSeq
@@ -267,7 +276,7 @@ class AppointmentController @Inject()(
       Ok(
         views.html.admin.appointments.edit(
           a.appointment,
-          form(a.appointment.team, profiles, cases, permissions, locations, Some(a.appointment.lastUpdated))
+          form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), Some(a.appointment.lastUpdated))
             .fill(AppointmentFormData(
               a.clients.map(_.client.universityID),
               a.teamMembers.map(_.member.usercode),
@@ -289,7 +298,7 @@ class AppointmentController @Inject()(
 
   def edit(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
     ServiceResults.zip(appointments.findForRender(appointmentKey), locations.availableRooms).successFlatMap { case (a, availableRooms) =>
-      form(a.appointment.team, profiles, cases, permissions, locations, Some(a.appointment.lastUpdated)).bindFromRequest().fold(
+      form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), Some(a.appointment.lastUpdated)).bindFromRequest().fold(
         formWithErrors => Future.successful(
           Ok(
             views.html.admin.appointments.edit(
@@ -420,61 +429,47 @@ class AppointmentController @Inject()(
     )
   }
 
-  def editNoteForm(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
-    withAppointmentNote(id) { note =>
-      Future.successful(
+  def editNoteForm(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentNoteAction(id) { implicit request =>
+    Ok(
+      views.html.admin.appointments.editNote(
+        appointmentKey,
+        request.note,
+        appointmentNoteForm(request.note.lastUpdated).fill(AppointmentNoteFormData(request.note.text, request.note.lastUpdated))
+      )
+    )
+  }
+
+  def editNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentNoteAction(id).async { implicit request =>
+    appointmentNoteForm(request.note.lastUpdated).bindFromRequest().fold(
+      formWithErrors => Future.successful(
         Ok(
           views.html.admin.appointments.editNote(
             appointmentKey,
-            note,
-            appointmentNoteForm(note.lastUpdated).fill(AppointmentNoteFormData(note.text, note.lastUpdated))
+            request.note,
+            formWithErrors.bindVersion(request.note.lastUpdated)
           )
         )
-      )
-    }
+      ),
+      data =>
+        appointments.updateNote(request.appointment.id, request.note.id, AppointmentNoteSave(data.text, currentUser.usercode), data.version).successMap { _ =>
+          Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
+            .flashing("success" -> Messages("flash.appointment.noteUpdated"))
+        }
+    )
   }
 
-  def editNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
-    withAppointmentNote(id) { note =>
-      appointmentNoteForm(note.lastUpdated).bindFromRequest().fold(
-        formWithErrors => Future.successful(
-          Ok(
-            views.html.admin.appointments.editNote(
-              appointmentKey,
-              note,
-              formWithErrors.bindVersion(note.lastUpdated)
-            )
-          )
-        ),
-        data =>
-          appointments.updateNote(request.appointment.id, note.id, AppointmentNoteSave(data.text, currentUser.usercode), data.version).successMap { _ =>
-            Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
-              .flashing("success" -> Messages("flash.appointment.noteUpdated"))
-          }
-      )
-    }
+  def deleteNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentNoteAction(id).async { implicit request =>
+    deleteForm(request.note.lastUpdated).bindFromRequest().fold(
+      formWithErrors => Future.successful(
+        // Nowhere to show a validation error so just fall back to an error page
+        showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
+      ),
+      version =>
+        appointments.deleteNote(request.appointment.id, request.note.id, version).successMap { _ =>
+          Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
+            .flashing("success" -> Messages("flash.appointment.noteDeleted"))
+        }
+    )
   }
-
-  def deleteNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
-    withAppointmentNote(id) { note =>
-      deleteForm(note.lastUpdated).bindFromRequest().fold(
-        formWithErrors => Future.successful(
-          // Nowhere to show a validation error so just fall back to an error page
-          showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
-        ),
-        version =>
-          appointments.deleteNote(request.appointment.id, note.id, version).successMap { _ =>
-            Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
-              .flashing("success" -> Messages("flash.appointment.noteDeleted"))
-          }
-      )
-    }
-  }
-
-  private def withAppointmentNote(id: UUID)(f: AppointmentNote => Future[Result])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
-    appointments.getNotes(request.appointment.id).successFlatMap { notes =>
-      notes.find(_.id == id).map(f)
-        .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
-    }
 
 }

@@ -11,9 +11,12 @@
 
 <div class="row">
   <div class="col-sm-6">
-    @b3.free('_label -> "Clients", '_class -> form.error("clients").map(_ => "has-error")) {
+    @hasClientError = @{
+      (form.errors("clients") ++ form("clients").indexes.flatMap(i => form.errors(s"clients[$i]"))).headOption
+    }
+    @b3.free('_label -> "Clients", '_class -> hasClientError.map(_ => "has-error")) {
       @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Add a client", multiple = true, universityId = true)
-      @b3.errors(form("clients"))
+      @b3.indexedFieldErrors(form, "clients")
     }
   </div>
   <div class="col-sm-6">
@@ -40,15 +43,14 @@
 <div class="row">
   <div class="col-sm-6">
     @b3.free('_label -> "Team members", '_class -> form.error("teamMembers").map(_ => "has-error")) {
-      @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("teamMembers[") && v.nonEmpty }.values.toSeq, name = "teamMembers[]", placeholder = "Add a team member", multiple = true, team = "any")
+      @tags.memberPicker(values = form.data.filter { case (k, v) => k.startsWith("teamMembers[") && v.nonEmpty }.values.toSeq, name = "teamMembers[]", placeholder = "Add a team member", multiple = true)
       @b3.errors(form("teamMembers"))
     }
   </div>
   <div class="col-sm-6">
     @b3.select(form("appointment.roomID"),
-      options = availableRooms.map { r => r.id.toString -> s"${r.name}, ${r.building.name}" },
-      '_label -> "Room",
-      '_default -> ""
+      options = ("", "") +: availableRooms.map { r => r.id.toString -> s"${r.name}, ${r.building.name}" },
+      '_label -> "Room"
     )
   </div>
 </div>

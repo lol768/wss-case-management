@@ -8,23 +8,23 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.AppointmentDao.{AppointmentCase, AppointmentSearchQuery, Appointments, StoredAppointment, StoredAppointmentClient, StoredAppointmentNote, StoredAppointmentTeamMember}
+import domain.dao.AppointmentDao.{AppointmentCase, AppointmentSearchQuery, Appointments, NoteAndAppointment, StoredAppointment, StoredAppointmentClient, StoredAppointmentNote, StoredAppointmentTeamMember}
 import domain.dao.CaseDao.Case
-import domain.dao.{AppointmentDao, DaoRunner}
 import domain.dao.ClientDao.StoredClient
+import domain.dao.MemberDao.StoredMember
+import domain.dao.{AppointmentDao, DaoRunner}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import org.quartz._
+import _root_.helpers.ServiceResults.Implicits._
 import play.api.libs.json.Json
 import services.AppointmentService._
 import services.job.SendAppointmentClientReminderJob
 import uk.ac.warwick.util.mywarwick.model.request.Activity
-import warwick.core.timing.TimingContext
 import warwick.core.Logging
+import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
-import ServiceResults.Implicits._
-import domain.dao.MemberDao.StoredMember
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.higherKinds
@@ -74,6 +74,7 @@ trait AppointmentService {
 
   def addNote(appointmentID: UUID, note: AppointmentNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]]
   def getNotes(appointmentID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentNote]]]
+  def getNote(noteID: UUID)(implicit t: TimingContext): Future[ServiceResult[NoteAndAppointment]]
   def updateNote(appointmentID: UUID, noteID: UUID, note: AppointmentNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]]
   def deleteNote(appointmentID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
@@ -527,6 +528,9 @@ class AppointmentServiceImpl @Inject()(
     daoRunner.run(
       dao.findNotesQuery(appointmentID).sortBy(_.created.desc).withMember.result
     ).map(notes => Right(notes.map { case (n, m) => n.asAppointmentNote(m.asMember) } ))
+
+  override def getNote(id: UUID)(implicit t: TimingContext): Future[ServiceResult[NoteAndAppointment]] =
+    daoRunner.run(dao.findNote(id)).map(Right.apply)
 
   override def updateNote(appointmentID: UUID, noteID: UUID, note: AppointmentNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]] =
     auditService.audit('AppointmentNoteUpdate, appointmentID.toString, 'Appointment, Json.obj("noteID" -> noteID.toString)) {

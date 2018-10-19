@@ -5,6 +5,7 @@ import 'core-js/modules/es6.object.assign';
 import './jquery.are-you-sure';
 import FieldHistory from './field-history';
 import './flexi-picker';
+import './member-picker';
 import ClientSearch from './client-search';
 import UserListPopovers from './user-list-popovers';
 import MessageThreads from './message-threads';
@@ -25,6 +26,10 @@ function closePopover($popover) {
 }
 
 $(() => {
+  $('.nav-tabs a').off('shown.bs.tab.id7Navigation').on('shown.bs.tab.id7navigation', (e) => {
+    window.history.replaceState({}, null, e.target.hash);
+  });
+
   $('[data-toggle="popover"]').popover();
 
   $('i.icon-tooltip, .btn-tooltip').tooltip({
@@ -55,7 +60,6 @@ $(() => {
       CasePicker(element);
     });
   });
-
 
   $('.case-search').each((i, container) => {
     CaseSearch(container);
@@ -99,7 +103,8 @@ $(() => {
       } else if ($target.closest('.close').length > 0) {
         closePopover($target.closest('.popover'));
       }
-    }).on('keyup.popoverDismiss', (e) => {
+    })
+    .on('keyup.popoverDismiss', (e) => {
       const key = e.which || e.keyCode;
       if (key === 27) {
         $('.popover').each((i, popover) => closePopover($(popover)));

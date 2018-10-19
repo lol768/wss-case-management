@@ -1,0 +1,11 @@
+@(form: Form[_], fieldPrefix: String, args: (Symbol,Any)*)(implicit fc: b3.B3FieldConstructor, messages: MessagesProvider)
+
+@defining(
+  (Seq(form(fieldPrefix)) ++ form(fieldPrefix).indexes.map(i => form(s"$fieldPrefix[$i]"))).map(field =>
+    B3FieldInfo(field, withFeedback = false, withLabelFor = false, args, messages)
+  )
+) { allFieldInfos: Seq[B3FieldInfo] =>
+  @allFieldInfos.flatMap(_.errorsAndInfos).map { case (id, text) =>
+    <span id="@id" class="help-block">@text</span>
+  }
+}

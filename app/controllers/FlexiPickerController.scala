@@ -12,8 +12,8 @@ import play.api.data.Forms._
 import play.api.libs.json.{Json, Writes}
 import play.api.mvc.{Action, AnyContent}
 import services.PermissionService
-import services.tabula.TabulaResponseParsers.MemberSearchResult
-import services.tabula.{MemberSearchService, ProfileService}
+import services.tabula.TabulaResponseParsers.TabulaMemberSearchResult
+import services.tabula.{TabulaMemberSearchService, ProfileService}
 import warwick.sso._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -52,7 +52,7 @@ object FlexiPickerController {
         )
       )
 
-    def apply(member: MemberSearchResult, universityIdAsValue: Boolean): UserFlexiPickerResult =
+    def apply(member: TabulaMemberSearchResult, universityIdAsValue: Boolean): UserFlexiPickerResult =
       UserFlexiPickerResult(
         s"${member.firstName} ${member.lastName}",
         member.department.name,
@@ -117,7 +117,7 @@ object FlexiPickerController {
 class FlexiPickerController @Inject()(
   anyTeamActionRefiner: AnyTeamActionRefiner,
   userLookupService: UserLookupService,
-  memberSearchService: MemberSearchService,
+  memberSearchService: TabulaMemberSearchService,
   groupService: GroupService,
   profileService: ProfileService,
   permissions: PermissionService,

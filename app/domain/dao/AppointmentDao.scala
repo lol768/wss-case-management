@@ -7,6 +7,7 @@ import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
+import domain.QueryHelpers._
 import domain._
 import domain.dao.AppointmentDao.AppointmentCase.AppointmentCases
 import domain.dao.AppointmentDao._
@@ -62,6 +63,8 @@ trait AppointmentDao {
   def deleteNote(note: StoredAppointmentNote, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findNotesQuery(appointmentID: UUID): Query[AppointmentNotes, StoredAppointmentNote, Seq]
   def findNotesQuery(appointmentIDs: Set[UUID]): Query[AppointmentNotes, StoredAppointmentNote, Seq]
+  def findNote(id: UUID): DBIO[NoteAndAppointment]
+
 }
 
 @Singleton
@@ -219,6 +222,18 @@ class AppointmentDaoImpl @Inject()(
 
   override def findNotesQuery(appointmentIDs: Set[UUID]): Query[AppointmentNotes, StoredAppointmentNote, Seq] =
     appointmentNotes.table.filter(_.appointmentId.inSet(appointmentIDs))
+
+  override def findNote(id: UUID): DBIO[NoteAndAppointment] =
+    appointmentNotes.table.filter(_.id === id)
+      .withMember
+      .join(
+        appointments.table
+          .withMember
+      )
+      .on { case ((n, _), (a, _)) => n.appointmentId === a.id }
+      .flattenJoin
+      .result.head
+      .map { case (n, nMember, a, aMember) => NoteAndAppointment(n.asAppointmentNote(nMember.asMember), a.asAppointment(aMember.asMember))}
 
 }
 
@@ -647,6 +662,11 @@ object AppointmentDao {
       .join(MemberDao.members.table)
       .on(_.teamMember === _.usercode)
   }
+
+  case class NoteAndAppointment(
+    note: AppointmentNote,
+    appointment: Appointment
+  )
 
   case class AppointmentSearchQuery(
     query: Option[String] = None,
