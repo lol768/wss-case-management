@@ -8,7 +8,7 @@ import domain.OutgoingEmail
 import domain.dao.{DaoRunner, OutgoingEmailDao}
 import helpers.ServiceResults.ServiceResult
 import helpers.{JavaTime, ServiceResults}
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
 import org.quartz.{JobBuilder, JobKey, Scheduler, TriggerBuilder}
 import play.api.libs.json.Json
 import play.api.libs.mailer.{Email, MailerClient}
@@ -36,6 +36,7 @@ class EmailServiceImpl @Inject()(
   scheduler: Scheduler,
   userLookupService: UserLookupService,
   mailer: MailerClient,
+  @Named("mailer") mailerExecutionContext: ExecutionContext,
 )(implicit executionContext: ExecutionContext) extends EmailService with Logging {
 
   override def queue(email: Email, recipients: Seq[User])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[OutgoingEmail]]] = {
@@ -88,7 +89,7 @@ class EmailServiceImpl @Inject()(
             }
           ))
           Right(Done)
-        }
+        }(mailerExecutionContext)
 
         sendEmail
           .recover { case t => ServiceResults.exceptionToServiceResult(t) }

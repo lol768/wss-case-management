@@ -59,6 +59,7 @@ export default function CasePicker(element) {
     highlighter: html => html,
     showHintOnFocus: 'all',
     changeInputOnMove: false,
+    selectOnBlur: false,
     afterSelect: (item) => {
       if (item) {
         const text = displayItem(item);

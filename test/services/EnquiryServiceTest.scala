@@ -15,12 +15,6 @@ class EnquiryServiceTest extends AbstractDaoTest {
 
   override implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
 
-  override def fakeApplicationBuilder: GuiceApplicationBuilder =
-    super.fakeApplicationBuilder
-      .overrides(
-        bind[NotificationService].to[NullNotificationService]
-      )
-
   private val enquiryService = get[EnquiryService]
 
   val uniId1 = UniversityID("1")

@@ -10,7 +10,7 @@ import domain.dao.{DaoRunner, UploadedFileDao}
 import domain.{UploadedFile, UploadedFileOwner, UploadedFileSave}
 import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
 import play.api.libs.json.Json
 import domain.ExtendedPostgresProfile.api._
 import play.api.mvc.{BodyParser, DefaultPlayBodyParsers}
@@ -38,7 +38,8 @@ class UploadedFileServiceImpl @Inject()(
   objectStorageService: ObjectStorageService,
   daoRunner: DaoRunner,
   dao: UploadedFileDao,
-  timing: TimingService
+  timing: TimingService,
+  @Named("objectStorage") objectStorageExecutionContext: ExecutionContext,
 )(implicit ec: ExecutionContext) extends UploadedFileService {
 
   import timing._
@@ -53,7 +54,7 @@ class UploadedFileServiceImpl @Inject()(
             contentType = metadata.contentType,
             fileHash = None, // This is calculated and stored by EncryptedObjectStorageService so no need to do it here
           ))
-        }
+        }(objectStorageExecutionContext)
       })
       file <- dao.insert(StoredUploadedFile(
         id,

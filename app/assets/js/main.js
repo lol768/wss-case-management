@@ -34,6 +34,10 @@ $(() => {
 
   aysncBindings($('body'));
 
+  $('.nav-tabs a').off('shown.bs.tab.id7Navigation').on('shown.bs.tab.id7navigation', (e) => {
+    window.history.replaceState({}, null, e.target.hash);
+  });
+
   $('[data-toggle="popover"]').popover();
 
   $('i.icon-tooltip, .btn-tooltip').tooltip({

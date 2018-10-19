@@ -13,7 +13,7 @@ GET         /assets/*file                           @controllers.Assets.versione
 
 # Service health check
 GET         /service/gtg                            @controllers.ServiceCheckController.gtg
-GET         /service/healthcheck                    @controllers.ServiceCheckController.healthcheck
+GET         /service/healthcheck                    @warwick.healthcheck.InjectedHealthcheckController.index
 
 # Other services
 POST        /service/flexipicker                    @controllers.FlexiPickerController.queryJson

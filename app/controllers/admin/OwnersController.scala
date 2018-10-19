@@ -2,7 +2,7 @@ package controllers.admin
 
 import controllers.BaseController
 import controllers.refiners.{CanEditCaseActionRefiner, CanEditEnquiryActionRefiner}
-import domain.IssueKey
+import domain.{IssueKey, Member}
 import helpers.ServiceResults.ServiceResult
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
@@ -50,18 +50,20 @@ class OwnersController @Inject()(
   }
 
   def enquirySubmit(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
-    bindAndVerifyOwners.fold(
-      errors => Future.successful(showErrors(errors)),
-      form => form.fold(
-        formWithErrors => {
-          Future.successful(Ok(views.html.admin.enquiry.owners(formWithErrors, request.enquiry)))
-        },
-        data => {
-          enquiryService.setOwners(request.enquiry.id.get, data.toSet).successMap(_ =>
-            Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key))
-              .flashing("success" -> Messages("flash.enquiry.owners.updated"))
-          )
-        }
+    enquiryService.getOwners(Set(request.enquiry.id.get)).successFlatMap(previousOwners =>
+      bindAndVerifyOwners(previousOwners.getOrElse(request.enquiry.id.get, Set())).fold(
+        errors => Future.successful(showErrors(errors)),
+        form => form.fold(
+          formWithErrors => {
+            Future.successful(Ok(views.html.admin.enquiry.owners(formWithErrors, request.enquiry)))
+          },
+          data => {
+            enquiryService.setOwners(request.enquiry.id.get, data.toSet).successMap(_ =>
+              Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key))
+                .flashing("success" -> Messages("flash.enquiry.owners.updated"))
+            )
+          }
+        )
       )
     )
   }
@@ -81,14 +83,14 @@ class OwnersController @Inject()(
   }
 
   def caseSubmit(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit request =>
-    bindAndVerifyOwners.fold(
-      errors => Future.successful(showErrors(errors)),
-      form => form.fold(
-        formWithErrors => {
-          Future.successful(Ok(views.html.admin.cases.owners(formWithErrors, request.`case`)))
-        },
-        data => {
-          caseService.getOwners(Set(request.`case`.id.get)).successFlatMap(previousOwners =>
+    caseService.getOwners(Set(request.`case`.id.get)).successFlatMap(previousOwners =>
+      bindAndVerifyOwners(previousOwners.getOrElse(request.`case`.id.get, Set())).fold(
+        errors => Future.successful(showErrors(errors)),
+        form => form.fold(
+          formWithErrors => {
+            Future.successful(Ok(views.html.admin.cases.owners(formWithErrors, request.`case`)))
+          },
+          data => {
             caseService.setOwners(request.`case`.id.get, data.toSet).successFlatMap { updatedOwners =>
               val newOwners = updatedOwners.map(_.usercode) -- previousOwners.getOrElse(request.`case`.id.get, Set()).map(_.usercode)
               notificationService.newCaseOwner(newOwners, request.`case`).successMap(_ =>
@@ -96,8 +98,8 @@ class OwnersController @Inject()(
                   .flashing("success" -> Messages("flash.case.owners.updated"))
               )
             }
-          )
-        }
+          }
+        )
       )
     )
   }
@@ -119,19 +121,20 @@ class OwnersController @Inject()(
   /**
     * Check is each of the provided user codes in the request is a found user and in any team
     */
-  private def bindAndVerifyOwners(implicit request: Request[_]): ServiceResult[Form[Seq[Usercode]]] = {
+  private def bindAndVerifyOwners(existing: Set[Member])(implicit request: Request[_]): ServiceResult[Form[Seq[Usercode]]] = {
     ownersForm.bindFromRequest.fold(
       formWithErrors => Right(formWithErrors),
       usercodes => {
-        val users = userLookupService.getUsers(usercodes).toOption.getOrElse(Map.empty)
-        val invalid = usercodes.filter(u => !users.get(u).exists(_.isFound))
+        val usercodesToValidate = usercodes.toSet.diff(existing.map(_.usercode)) // Only validate new usercodes
+        val users = userLookupService.getUsers(usercodesToValidate.toSeq).toOption.getOrElse(Map.empty)
+        val invalid = usercodesToValidate.filter(u => !users.get(u).exists(_.isFound))
         if (invalid.nonEmpty) {
           Right(
             ownersForm.fill(usercodes)
               .withError(FormError("owners", "error.userIds.invalid", Seq(invalid.map(_.string).mkString(", "))))
           )
         } else {
-          permissionService.inAnyTeam(usercodes.toSet).fold(
+          permissionService.inAnyTeam(usercodesToValidate).fold(
             serviceErrors => Left(serviceErrors),
             resultMap => {
               val notInAnyTeam = resultMap.filter { case (_, inAnyTeam) => !inAnyTeam }.map { case (user, _) => user }.toSeq

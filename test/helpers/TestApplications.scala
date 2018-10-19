@@ -10,6 +10,7 @@ import play.api.{Application, Configuration, Environment}
 import uk.ac.warwick.sso.client.SSOClientHandler
 import warwick.accesslog.LogbackAccessModule
 import routes.EmptyRouter
+import services.{NotificationService, NullNotificationService}
 import services.tabula.ProfileService
 import warwick.sso._
 
@@ -67,7 +68,10 @@ object TestApplications extends MockitoSugar {
         bind[EvolutionsReader].toInstance(new ClassLoaderEvolutionsReader),
 
         // Don't try and get profiles from Tabula
-        bind[ProfileService].to[MockProfileService]
+        bind[ProfileService].to[MockProfileService],
+
+        // Don't try and send notifications
+        bind[NotificationService].to[NullNotificationService],
       )
 
   def full(defaultUser: Option[User] = None, additionalConfiguration: Map[String, Any] = Map.empty): Application =

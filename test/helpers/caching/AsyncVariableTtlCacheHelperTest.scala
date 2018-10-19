@@ -103,7 +103,7 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
     }
 
     "handle a class change in getOrElseUpdateElement" in new ClassChangeContext {
-      val result: CacheElement[ServiceResult[Option[String]]] = wrapper.getOrElseUpdateElement("mykey", CacheOptions.default)(Future(Right(Some("newvalue")))).futureValue
+      val result: CacheElement[ServiceResult[Option[String]]] = wrapper.getOrElseUpdateElement("mykey", CacheOptions.default)(Future.successful(Right(Some("newvalue")))).futureValue
       result.value mustBe Right(Some("newvalue"))
     }
 

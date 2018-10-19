@@ -7,7 +7,7 @@ import com.google.inject.ImplementedBy
 import com.typesafe.config.ConfigMemorySize
 import controllers.UploadedFileControllerHelper._
 import domain.{UploadedFile, UploadedFileSave}
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
 import org.apache.tika.detect.DefaultDetector
 import org.apache.tika.io.{IOUtils, TikaInputStream}
 import org.apache.tika.metadata.{HttpHeaders, Metadata, TikaMetadataKeys}
@@ -87,6 +87,7 @@ class UploadedFileControllerHelperImpl @Inject()(
   timing: TimingService,
   parse: PlayBodyParsers,
   configuration: Configuration,
+  @Named("objectStorage") objectStorageExecutionContext: ExecutionContext,
 )(implicit executionContext: ExecutionContext, mimeTypes: FileMimeTypes)
   extends UploadedFileControllerHelper with ImplicitRequestContext {
 
@@ -114,11 +115,12 @@ class UploadedFileControllerHelperImpl @Inject()(
     } else {
       Future {
         val temporaryFile = temporaryFileCreator.create(prefix = uploadedFile.fileName, suffix = request.context.actualUser.get.usercode.string)
-        val file = temporaryFile.path.toFile
-        source.copyTo(Files.asByteSink(file))
+        source.copyTo(Files.asByteSink(temporaryFile.path.toFile))
 
+        temporaryFile
+      }(objectStorageExecutionContext).map { temporaryFile =>
         Ok.sendFile(
-          content = file,
+          content = temporaryFile.path.toFile,
           inline = config.isServeInline(MediaType.parse(uploadedFile.contentType)),
           fileName = _ => uploadedFile.fileName,
           onClose = () => temporaryFileCreator.delete(temporaryFile))

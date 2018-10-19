@@ -28,7 +28,7 @@ object AppointmentSearchController {
     "startBefore" -> optional(localDate),
     "roomID" -> optional(uuid),
     "team" -> optional(Teams.formField),
-    "member" -> optional(nonEmptyText.transform[Usercode](Usercode.apply, _.string)),
+    "member" -> optional(nonEmptyText).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string)),
     "appointmentType" -> optional(AppointmentType.formField),
     "states" -> set(AppointmentState.formField),
   )(AppointmentSearchQuery.apply)(AppointmentSearchQuery.unapply))
@@ -72,13 +72,19 @@ class AppointmentSearchController @Inject()(
               else "Search results" -> appointmentService.search(query, 10)
 
             results.successFlatMap { appointments =>
-              ServiceResults.futureSequence(
-                appointments.map(a => appointmentService.getClients(a.id).map(_.map(c => a -> c)))
-              ).successMap { appointmentsAndClients =>
+              ServiceResults.zip(
+                ServiceResults.futureSequence(
+                  appointments.map(a => appointmentService.getClients(a.id).map(_.map(c => a -> c)))
+                ),
+                ServiceResults.futureSequence(
+                  appointments.map(a => appointmentService.getTeamMembers(a.id).map(_.map(tm => a -> tm)))
+                )
+              ).successMap { case (appointmentsAndClients, appointmentsAndTeamMembers) =>
                 Ok(Json.toJson(API.Success(data = Json.obj(
                   "results" -> appointmentsAndClients.map { case (a, c) => toJson(
                     a,
                     c,
+                    appointmentsAndTeamMembers.toMap.apply(a),
                     Some(category)
                   )}
                 ))))
@@ -91,24 +97,29 @@ class AppointmentSearchController @Inject()(
   }
 
   def lookup(appointmentKey: IssueKey): Action[AnyContent] = CanViewAppointmentAction(appointmentKey).async { implicit request =>
-    appointmentService.getClients(request.appointment.id).successMap(clients =>
+    ServiceResults.zip(
+      appointmentService.getClients(request.appointment.id),
+      appointmentService.getTeamMembers(request.appointment.id)
+    ).successMap { case (clients, teamMembers) =>
       Ok(Json.toJson(API.Success(data = Json.obj(
         "results" -> Seq(toJson(
           request.appointment,
           clients,
+          teamMembers,
         ))
       ))))
-    )
+    }
   }
 
   private def toJson(
     a: Appointment,
     clients: Set[AppointmentClient],
+    teamMembers: Set[AppointmentTeamMember],
     category: Option[String] = None
   ): JsObject = Json.obj(
     "id" -> a.id,
     "key" -> a.key.string,
-    "subject" -> a.subject(Some(clients)),
+    "subject" -> a.subject(Some(clients), Some(teamMembers)),
     "team" -> a.team.name,
     "appointmentType" -> a.appointmentType.description,
     "created" -> a.created.format(JavaTime.iSO8601DateFormat),

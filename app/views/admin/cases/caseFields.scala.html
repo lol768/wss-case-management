@@ -16,9 +16,12 @@
   '_label -> "Subject"
 )
 
-@b3.free('_label -> "Clients", '_class -> form.error("clients").map(_ => "has-error")) {
+@hasClientError = @{
+  (form.errors("clients") ++ form("clients").indexes.flatMap(i => form.errors(s"clients[$i]"))).headOption
+}
+@b3.free('_label -> "Clients", '_class -> hasClientError.map(_ => "has-error")) {
   @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for users", multiple = true, universityId = true)
-  @b3.errors(form("clients"))
+  @b3.indexedFieldErrors(form, "clients")
 }
 
 @if(CaseType.valuesFor(team).nonEmpty) {
