@@ -4,8 +4,8 @@ import $ from 'jquery';
 import 'core-js/modules/es6.object.assign';
 import './jquery.are-you-sure';
 import FieldHistory from './field-history';
-import './flexi-picker';
-import './member-picker';
+import * as flexiPicker from './flexi-picker';
+import * as memberPicker from './member-picker';
 import ClientSearch from './client-search';
 import UserListPopovers from './user-list-popovers';
 import MessageThreads from './message-threads';
@@ -58,13 +58,9 @@ function bindTo($scope) {
     CasePicker(container);
   });
 
-  $('.flexi-picker', $scope).flexiPicker();
+  flexiPicker.bindTo($scope);
 
-  $('.flexi-picker-collection', $scope).each((i, collection) => {
-    MultiplePickers(collection, (element) => {
-      $(element).flexiPicker();
-    });
-  });
+  memberPicker.bindTo($scope);
 
   $('.case-picker-collection', $scope).each((i, collection) => {
     MultiplePickers(collection, (element) => {

@@ -4,6 +4,7 @@ import _ from 'lodash-es';
 import 'bootstrap-3-typeahead';
 import { postJsonWithCredentials } from './serverpipe';
 import RichResultField from './rich-result-field';
+import MultiplePickers from './multiple-picker';
 
 /**
  * An AJAX autocomplete-style picker that can return a variety of different
@@ -168,3 +169,13 @@ $.fn.flexiPicker = function initFlexiPicker(options = {}) {
     $this.data('flexi-picker', new FlexiPicker(element, allOptions));
   });
 };
+
+export function bindTo($scope) {
+  $('.flexi-picker', $scope).flexiPicker();
+
+  $('.flexi-picker-collection', $scope).each((i, collection) => {
+    MultiplePickers(collection, (element) => {
+      $(element).flexiPicker();
+    });
+  });
+}
