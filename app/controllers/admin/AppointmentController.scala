@@ -35,11 +35,20 @@ object AppointmentController {
     version: Option[OffsetDateTime]
   )
 
-  def form(team: Team, profileService: ProfileService, caseService: CaseService, permissionService: PermissionService, locationService: LocationService, existingVersion: Option[OffsetDateTime] = None)(implicit t: TimingContext, executionContext: ExecutionContext): Form[AppointmentFormData] = {
+  def form(
+    team: Team,
+    profileService: ProfileService,
+    caseService: CaseService,
+    permissionService: PermissionService,
+    locationService: LocationService,
+    existingClients: Set[Client],
+    existingVersion: Option[OffsetDateTime] = None
+  )(implicit t: TimingContext, executionContext: ExecutionContext): Form[AppointmentFormData] = {
     // TODO If we're linked to a case, is it valid to have an appointment with someone who isn't a client on the case?
-    def isValid(u: UniversityID): Boolean =
-      Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
-        .toOption.exists(_.isRight)
+    def isValid(u: UniversityID, existing: Set[Client]): Boolean =
+      existing.exists(_.universityID == u) ||
+        Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
+          .toOption.exists(_.exists(_.nonEmpty))
 
     def isValidTeamMember(usercode: Usercode): Boolean =
       Try(Await.result(permissionService.inAnyTeam(usercode), 5.seconds))
@@ -58,7 +67,7 @@ object AppointmentController {
 
     Form(
       mapping(
-        "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
+        "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u, existingClients))).verifying("error.required", _.exists(_.string.nonEmpty)),
         "cases" -> set(optional(uuid.verifying("error.required", id => isValidCase(id)))),
         "appointment" -> mapping(
           "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", _.isAfter(JavaTime.offsetDateTime)),
@@ -188,7 +197,7 @@ class AppointmentController @Inject()(
   }
 
   def createForm(teamId: String, forCase: Option[IssueKey], client: Option[UniversityID], start: Option[OffsetDateTime], duration: Option[Duration]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    val baseForm = form(teamRequest.team, profiles, cases, permissions, locations)
+    val baseForm = form(teamRequest.team, profiles, cases, permissions, locations, Set())
     val baseBind = Map("appointment.teamMember" -> teamRequest.context.user.get.usercode.string)
 
     if (forCase.nonEmpty && client.nonEmpty) {
@@ -234,7 +243,7 @@ class AppointmentController @Inject()(
   }
 
   def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    form(teamRequest.team, profiles, cases, permissions, locations).bindFromRequest().fold(
+    form(teamRequest.team, profiles, cases, permissions, locations, Set()).bindFromRequest().fold(
       formWithErrors => formWithErrors.data.keys.filter(_.startsWith("cases")).toSeq match {
         case caseKeys if caseKeys.nonEmpty =>
           val ids = caseKeys.map(k => formWithErrors.data(k)).flatMap(id => Try(UUID.fromString(id)).toOption).toSet
@@ -264,7 +273,7 @@ class AppointmentController @Inject()(
       Ok(
         views.html.admin.appointments.edit(
           a.appointment,
-          form(a.appointment.team, profiles, cases, permissions, locations, Some(a.appointment.lastUpdated))
+          form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), Some(a.appointment.lastUpdated))
             .fill(AppointmentFormData(
               a.clients.map(_.client.universityID),
               a.clientCases.flatMap(c => Some(c.id)),
@@ -286,7 +295,7 @@ class AppointmentController @Inject()(
 
   def edit(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
     ServiceResults.zip(appointments.findForRender(appointmentKey), locations.availableRooms).successFlatMap { case (a, availableRooms) =>
-      form(a.appointment.team, profiles, cases, permissions, locations, Some(a.appointment.lastUpdated)).bindFromRequest().fold(
+      form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), Some(a.appointment.lastUpdated)).bindFromRequest().fold(
         formWithErrors => Future.successful(
           Ok(
             views.html.admin.appointments.edit(

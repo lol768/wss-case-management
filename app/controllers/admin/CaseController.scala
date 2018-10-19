@@ -45,10 +45,17 @@ object CaseController {
     version: Option[OffsetDateTime]
   )
 
-  def form(team: Team, profileService: ProfileService, enquiryService: EnquiryService, existingVersion: Option[OffsetDateTime] = None)(implicit t: TimingContext, executionContext: ExecutionContext): Form[CaseFormData] = {
-    def isValid(u: UniversityID): Boolean =
-      Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
-        .toOption.exists(_.isRight)
+  def form(
+    team: Team,
+    profileService: ProfileService,
+    enquiryService: EnquiryService,
+    existingClients: Set[Client],
+    existingVersion: Option[OffsetDateTime] = None
+  )(implicit t: TimingContext, executionContext: ExecutionContext): Form[CaseFormData] = {
+    def isValid(u: UniversityID, existing: Set[Client]): Boolean =
+      existing.exists(_.universityID == u) ||
+        Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
+          .toOption.exists(_.exists(_.nonEmpty))
 
     def isValidEnquiry(id: UUID): Boolean =
       Try(Await.result(enquiryService.get(id), 5.seconds))
@@ -56,7 +63,7 @@ object CaseController {
 
     Form(
       mapping(
-        "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u))).verifying("error.required", _.exists(_.string.nonEmpty)),
+        "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u, existingClients))).verifying("error.required", _.exists(_.string.nonEmpty)),
         "subject" -> nonEmptyText(maxLength = Case.SubjectMaxLength),
         "incident" -> optional(mapping(
           "incidentDate" -> FormHelpers.offsetDateTime,
@@ -267,7 +274,7 @@ class CaseController @Inject()(
   }
 
   def createForm(teamId: String, fromEnquiry: Option[IssueKey], client: Option[UniversityID]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    val baseForm = form(teamRequest.team, profiles, enquiries)
+    val baseForm = form(teamRequest.team, profiles, enquiries, Set())
 
     (fromEnquiry, client) match {
       case (Some(_), Some(_)) => Future.successful(
@@ -300,7 +307,7 @@ class CaseController @Inject()(
   }
 
   def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    form(teamRequest.team, profiles, enquiries).bindFromRequest().fold(
+    form(teamRequest.team, profiles, enquiries, Set()).bindFromRequest().fold(
       formWithErrors => Future.successful(
         Ok(views.html.admin.cases.create(teamRequest.team, formWithErrors))
       ),
@@ -371,7 +378,7 @@ class CaseController @Inject()(
       Ok(
         views.html.admin.cases.edit(
           clientCase,
-          form(clientCase.team, profiles, enquiries, Some(clientCase.version))
+          form(clientCase.team, profiles, enquiries, clients, Some(clientCase.version))
             .fill(CaseFormData(
               clients.map(_.universityID),
               clientCase.subject,
@@ -398,41 +405,43 @@ class CaseController @Inject()(
   def edit(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     val clientCase = caseRequest.`case`
 
-    form(clientCase.team, profiles, enquiries, Some(clientCase.version)).bindFromRequest().fold(
-      formWithErrors => Future.successful(
-        Ok(
-          views.html.admin.cases.edit(
-            clientCase,
-            formWithErrors.bindVersion(clientCase.version)
+    cases.getClients(clientCase.id.get).successFlatMap(clients =>
+      form(clientCase.team, profiles, enquiries, clients, Some(clientCase.version)).bindFromRequest().fold(
+        formWithErrors => Future.successful(
+          Ok(
+            views.html.admin.cases.edit(
+              clientCase,
+              formWithErrors.bindVersion(clientCase.version)
+            )
           )
-        )
-      ),
-      data => {
-        val c = Case(
-          id = clientCase.id,
-          key = clientCase.key,
-          subject = data.subject,
-          created = clientCase.created,
-          team = clientCase.team,
-          version = JavaTime.offsetDateTime,
-          state = clientCase.state,
-          incidentDate = data.incident.map(_.incidentDate),
-          onCampus = data.incident.map(_.onCampus),
-          notifiedPolice = data.incident.map(_.notifiedPolice),
-          notifiedAmbulance = data.incident.map(_.notifiedAmbulance),
-          notifiedFire = data.incident.map(_.notifiedFire),
-          originalEnquiry = data.originalEnquiry,
-          caseType = data.caseType,
-          cause = data.cause
-        )
+        ),
+        data => {
+          val c = Case(
+            id = clientCase.id,
+            key = clientCase.key,
+            subject = data.subject,
+            created = clientCase.created,
+            team = clientCase.team,
+            version = JavaTime.offsetDateTime,
+            state = clientCase.state,
+            incidentDate = data.incident.map(_.incidentDate),
+            onCampus = data.incident.map(_.onCampus),
+            notifiedPolice = data.incident.map(_.notifiedPolice),
+            notifiedAmbulance = data.incident.map(_.notifiedAmbulance),
+            notifiedFire = data.incident.map(_.notifiedFire),
+            originalEnquiry = data.originalEnquiry,
+            caseType = data.caseType,
+            cause = data.cause
+          )
 
-        val clients = data.clients.filter(_.string.nonEmpty)
+          val clients = data.clients.filter(_.string.nonEmpty)
 
-        cases.update(c, clients, data.tags, clientCase.version).successMap { updated =>
-          Redirect(controllers.admin.routes.CaseController.view(updated.key.get))
-            .flashing("success" -> Messages("flash.case.updated"))
+          cases.update(c, clients, data.tags, clientCase.version).successMap { updated =>
+            Redirect(controllers.admin.routes.CaseController.view(updated.key.get))
+              .flashing("success" -> Messages("flash.case.updated"))
+          }
         }
-      }
+      )
     )
   }
 
