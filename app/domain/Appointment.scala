@@ -92,7 +92,7 @@ object AppointmentRender {
     "teamMembers" -> o.teamMembers.map { teamMember =>
       Json.obj(
         "usercode" -> teamMember.member.usercode.string,
-        "fullName" -> teamMember.member.fullName,
+        "fullName" -> teamMember.member.safeFullName,
       )
     },
     "appointmentType" -> Json.obj(
@@ -116,7 +116,7 @@ object AppointmentRender {
       Json.obj(
         "client" -> Json.obj(
           "universityID" -> client.client.universityID.string,
-          "fullName" -> client.client.fullName,
+          "fullName" -> client.client.safeFullName,
         ),
         "state" -> client.state,
         "cancellationReason" -> client.cancellationReason,
