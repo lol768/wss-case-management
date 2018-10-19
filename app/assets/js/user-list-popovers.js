@@ -1,8 +1,8 @@
 import $ from 'jquery';
 import _ from 'lodash-es/lodash.default';
 
-export default function UserListPopovers() {
-  $('.user-list-popover').each((i, button) => {
+export default function UserListPopovers($container) {
+  $('.user-list-popover', $container).each((i, button) => {
     const $button = $(button);
     $button.on('click', () => {
       let content = '';

@@ -4,7 +4,6 @@ import _ from 'lodash-es';
 import 'bootstrap-3-typeahead';
 import { postJsonWithCredentials } from './serverpipe';
 import RichResultField from './rich-result-field';
-import MultiplePickers from './multiple-picker';
 
 /**
  * An AJAX autocomplete-style picker that can return a variety of different
@@ -169,19 +168,3 @@ $.fn.flexiPicker = function initFlexiPicker(options = {}) {
     $this.data('flexi-picker', new FlexiPicker(element, allOptions));
   });
 };
-
-/**
- * Any input with the flexi-picker class will have the picker enabled on it,
- * so you can use the picker without writing any code yourself.
- *
- * More likely you'd use the flexi-picker tag.
- */
-$(() => {
-  $('.flexi-picker').flexiPicker();
-
-  $('.flexi-picker-collection').each((i, collection) => {
-    MultiplePickers(collection, (element) => {
-      $(element).flexiPicker();
-    });
-  });
-});
