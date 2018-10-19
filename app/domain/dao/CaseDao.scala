@@ -103,7 +103,7 @@ class CaseDaoImpl @Inject()(
     def queries(c: Cases, n: Rep[Option[CaseNotes]], o: Rep[Option[Owner.Owners]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
-          val query = plainToTsQuery(queryStr.bind, Some("english"))
+          val query = prefixTsQuery(queryStr.bind)
 
           // Need to search CaseNote fields separately otherwise the @+ will stop it matching cases
           // with no notes
