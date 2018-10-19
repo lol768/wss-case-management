@@ -6,7 +6,7 @@ import { postJsonWithCredentials } from './serverpipe';
 import RichResultField from './rich-result-field';
 import MultiplePickers from './multiple-picker';
 
-function MemberPicker(element) {
+export default function MemberPicker(element) {
   let currentQuery = null;
   const $element = $(element);
 
@@ -98,21 +98,12 @@ $.fn.memberPicker = function initMemberPicker() {
   });
 };
 
-function applyPlugin() {
-  $('.member-picker').memberPicker();
+export function bindTo($scope) {
+  $('.member-picker', $scope).memberPicker();
 
-  $('.member-picker-collection').each((i, collection) => {
+  $('.member-picker-collection', $scope).each((i, collection) => {
     MultiplePickers(collection, (element) => {
       $(element).memberPicker();
     });
   });
 }
-
-/**
- * Any input with the member-picker class will have the picker enabled on it,
- * so you can use the picker without writing any code yourself.
- *
- * More likely you'd use the member-picker tag.
- */
-$(applyPlugin);
-$('html').on('shown.bs.modal', applyPlugin);
