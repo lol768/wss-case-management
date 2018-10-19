@@ -1,6 +1,12 @@
 .apply-brand(@brand-colour);
 .apply-site-imagery(@basedir: './images'; @masthead-image: 'masthead-image.png'; @border-image-left: 'border-image-left.png'; @border-image-right: 'border-image-right.png');
 
+// btn-link should have the colour of a link
+// May be able to remove this if ID-258 is resolved
+.btn-link {
+  color: @brand-colour;
+}
+
 // Override the app footer to be white
 .id7-page-footer .id7-app-footer {
   background: white;

@@ -22,7 +22,7 @@ class NullNotificationService extends NotificationService {
   override def newCaseOwner(newOwners: Set[Usercode], clientCase: CaseDao.Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def caseReassign(clientCase: CaseDao.Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def newAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
-  override def appointmentConfirmation(appointment: Appointment, clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def appointmentConfirmation(appointment: Appointment, teamMembers: Set[Usercode], clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def appointmentReminder(appointment: Appointment, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result

@@ -25,14 +25,20 @@
         <td>
           @tags.icons.appointmentState(a.appointment.state)
           <a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)">
-            @a.appointment.key.string @a.appointment.subject(Some(a.clients))
+            @a.appointment.key.string @a.appointment.subject(Some(a.clients), Some(a.teamMembers))
           </a>
         </td>
         <td>
           @helpers.JavaTime.Relative(a.appointment.start) &ndash;
           @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
         </td>
-        <td>@a.appointment.teamMember.safeFullName</td>
+        <td>
+          <ul class="list-unstyled">
+            @a.teamMembers.toSeq.sortBy(_.member).map { teamMember =>
+              <li>@teamMember.member.safeFullName</li>
+            }
+          </ul>
+        </td>
       </tr>
     }
     </tbody>

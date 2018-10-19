@@ -44,12 +44,18 @@ object CaseOwner {
     Owner(entityId = caseId, entityType = Owner.EntityType.Case, userId = userId, version = version)
 }
 
+object AppointmentOwner {
+  def apply(appointmentID: UUID, userId: Usercode, version: OffsetDateTime = OffsetDateTime.now()) =
+    Owner(entityId = appointmentID, entityType = Owner.EntityType.Appointment, userId = userId, version = version)
+}
+
 object Owner extends Versioning {
 
   sealed trait EntityType extends EnumEntry
   object EntityType extends PlayEnum[EntityType] {
     case object Enquiry extends EntityType
     case object Case extends EntityType
+    case object Appointment extends EntityType
 
     val values: immutable.IndexedSeq[EntityType] = findValues
   }

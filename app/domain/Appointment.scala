@@ -18,7 +18,6 @@ case class Appointment(
   start: OffsetDateTime,
   duration: Duration,
   team: Team,
-  teamMember: Member,
   appointmentType: AppointmentType,
   state: AppointmentState,
   cancellationReason: Option[AppointmentCancellationReason],
@@ -27,9 +26,10 @@ case class Appointment(
 ) {
   val end: OffsetDateTime = start.plus(duration)
 
-  def subject(clientsOption: Option[Set[AppointmentClient]]): String = "%s with %s%s%s".format(
+  def subject(clientsOption: Option[Set[AppointmentClient]], teamMembersOption: Option[Set[AppointmentTeamMember]]): String = Seq(
     appointmentType.description,
-    teamMember.safeFullName,
+    " with ",
+    teamMembersOption.map(_.map(_.member.safeFullName).mkString(", ")).getOrElse(team.name),
     if (clientsOption.nonEmpty) " and " else "",
     clientsOption.map(clients =>
       if (clients.size == 1) {
@@ -38,7 +38,7 @@ case class Appointment(
         s"${clients.size} clients"
       }
     ).getOrElse("")
-  )
+  ).mkString
 }
 
 object Appointment {
@@ -63,13 +63,13 @@ case class AppointmentSave(
   start: OffsetDateTime,
   duration: Duration,
   roomID: Option[UUID],
-  teamMember: Usercode,
   appointmentType: AppointmentType
 )
 
 case class AppointmentRender(
   appointment: Appointment,
   clients: Set[AppointmentClient],
+  teamMembers: Set[AppointmentTeamMember],
   room: Option[Room],
   clientCases: Set[Case],
   notes: Seq[AppointmentNote]
@@ -79,7 +79,7 @@ object AppointmentRender {
   def writer: Writes[AppointmentRender] = (o: AppointmentRender) => Json.obj(
     "id" -> o.appointment.id,
     "key" -> o.appointment.key.string,
-    "subject" -> o.appointment.subject(Some(o.clients)),
+    "subject" -> o.appointment.subject(Some(o.clients), Some(o.teamMembers)),
     "start" -> o.appointment.start,
     "weekNumber" -> AcademicYear.forDate(o.appointment.start).getAcademicWeek(o.appointment.start).getWeekNumber,
     "end" -> o.appointment.end,
@@ -87,10 +87,12 @@ object AppointmentRender {
     "duration" -> o.appointment.duration,
     "location" -> Json.toJsFieldJsValueWrapper(o.room)(Writes.optionWithNull(Room.writer)),
     "team" -> Json.toJsFieldJsValueWrapper(o.appointment.team)(Teams.writer),
-    "teamMember" -> Json.obj(
-      "usercode" -> o.appointment.teamMember.usercode.string,
-      "fullName" -> o.appointment.teamMember.safeFullName,
-    ),
+    "teamMembers" -> o.teamMembers.map { teamMember =>
+      Json.obj(
+        "usercode" -> teamMember.member.usercode.string,
+        "fullName" -> teamMember.member.safeFullName,
+      )
+    },
     "appointmentType" -> Json.obj(
       "id" -> o.appointment.appointmentType,
       "description" -> o.appointment.appointmentType.description,
@@ -123,6 +125,10 @@ case class AppointmentClient(
   client: Client,
   state: AppointmentState,
   cancellationReason: Option[AppointmentCancellationReason]
+)
+
+case class AppointmentTeamMember(
+  member: Member
 )
 
 sealed abstract class AppointmentTypeCategory(val description: String) extends EnumEntry
