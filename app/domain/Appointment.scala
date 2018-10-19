@@ -134,22 +134,28 @@ object AppointmentTypeCategory extends PlayEnum[AppointmentTypeCategory] {
   override def values: immutable.IndexedSeq[AppointmentTypeCategory] = findValues
 }
 
-sealed abstract class AppointmentType(val category: AppointmentTypeCategory, val description: String) extends EnumEntry
+sealed abstract class AppointmentType(val description: String) extends EnumEntry
 object AppointmentType extends PlayEnum[AppointmentType] {
-  case object FaceToFace extends AppointmentType(AppointmentTypeCategory.FaceToFace, "Face to face")
-  case object Workshop extends AppointmentType(AppointmentTypeCategory.FaceToFace, "Workshop")
-  case object Consultation extends AppointmentType(AppointmentTypeCategory.FaceToFace, "Consultation session")
-  case object DropIn extends AppointmentType(AppointmentTypeCategory.FaceToFace, "Drop in")
-  case object Duty extends AppointmentType(AppointmentTypeCategory.FaceToFace, "Duty")
-  case object InitialAssessment extends AppointmentType(AppointmentTypeCategory.FaceToFace, "Initial assessment")
-  case object FollowUp extends AppointmentType(AppointmentTypeCategory.FaceToFace, "Follow up")
-  case object Mentoring extends AppointmentType(AppointmentTypeCategory.FaceToFace, "Mentoring")
-  case object GroupTherapy extends AppointmentType(AppointmentTypeCategory.FaceToFace, "Group therapy")
-  case object Telephone extends AppointmentType(AppointmentTypeCategory.Online, "Telephone")
-  case object Skype extends AppointmentType(AppointmentTypeCategory.Online, "Skype")
-  case object Email extends AppointmentType(AppointmentTypeCategory.Email, "Email")
+  case object FaceToFace extends AppointmentType("Face to face")
+  case object Skype extends AppointmentType("Skype")
+  case object Telephone extends AppointmentType("Telephone")
+  case object Online extends AppointmentType("Online")
 
   override def values: immutable.IndexedSeq[AppointmentType] = findValues
+}
+
+sealed abstract class AppointmentPurpose(val description: String) extends EnumEntry
+object AppointmentPurpose extends PlayEnum[AppointmentPurpose] {
+  case object Workshop extends AppointmentPurpose("Workshop")
+  case object Consultation extends AppointmentPurpose("Consultation session")
+  case object DropIn extends AppointmentPurpose("Drop in")
+  case object Duty extends AppointmentPurpose("Duty")
+  case object InitialAssessment extends AppointmentPurpose("Initial assessment")
+  case object FollowUp extends AppointmentPurpose("Follow up")
+  case object Mentoring extends AppointmentPurpose("Mentoring")
+  case object GroupTherapy extends AppointmentPurpose("Group therapy")
+
+  override def values: immutable.IndexedSeq[AppointmentPurpose] = findValues
 }
 
 sealed abstract class AppointmentState(val labelType: String) extends EnumEntry {
