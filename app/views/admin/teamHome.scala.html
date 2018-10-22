@@ -11,7 +11,6 @@
   closedEnquiries: Int,
   openCases: Seq[(Case, OffsetDateTime)],
   closedCases: Int,
-  cancelledAppointments: Int,
   caseClients: Map[UUID, Set[Client]],
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
@@ -43,10 +42,8 @@
     </div>
     <div role="tabpanel" class="tab-pane" id="appointments">
       @views.html.admin.appointmentsTab(
-        cancelledAppointments,
         controllers.admin.routes.AdminController.appointments(team.id),
         controllers.admin.routes.AppointmentController.createForm(team.id),
-        controllers.admin.routes.AdminController.cancelledAppointments(team.id),
         "team",
         team.id,
         s" assigned to ${team.name}"

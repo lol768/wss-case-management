@@ -32,7 +32,6 @@ object IndexController {
     closedEnquiries: Int,
     openCases: Seq[(Case, OffsetDateTime)],
     closedCases: Int,
-    cancelledAppointments: Int,
     caseClients: Map[UUID, Set[Client]],
   )
 }
@@ -91,8 +90,7 @@ class IndexController @Inject()(
           enquiries.countClosedEnquiries(usercode),
           cases.listOpenCases(usercode),
           cases.countClosedCases(usercode),
-          appointments.countCancelledAppointments(usercode),
-        ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments) =>
+        ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases) =>
           cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMapTo { caseClients =>
             Some(TeamMemberInformation(
               teams,
@@ -101,7 +99,6 @@ class IndexController @Inject()(
               closedEnquiries,
               openCases,
               closedCases,
-              cancelledAppointments,
               caseClients
             ))
           }
@@ -141,18 +138,11 @@ class IndexController @Inject()(
     )
   }
 
-  def cancelledAppointments: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    appointments.findCancelledAppointments(currentUser().usercode).successMap { appointments =>
-      Ok(views.html.admin.cancelledAppointments(appointments))
-    }
-  }
-
   def appointments(start: Option[OffsetDateTime], end: Option[OffsetDateTime]): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     appointments.findForSearch(AppointmentSearchQuery(
       startAfter = start.map(_.toLocalDate),
       startBefore = end.map(_.toLocalDate),
       teamMember = Some(currentUser().usercode),
-      states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended),
     )).successMap { appointments =>
       render {
         case Accepts.Json() =>
