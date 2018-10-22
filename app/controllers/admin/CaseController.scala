@@ -159,7 +159,7 @@ class CaseController @Inject()(
   import canEditCaseNoteActionRefiner._
   import CaseMessageController.messageForm
 
-  def renderCase(caseKey: IssueKey, caseNoteForm: Form[CaseNoteFormData], messageForm: Form[String])(implicit request: CaseSpecificRequest[_]): Future[Result] = {
+  def renderCase(caseKey: IssueKey, messageForm: Form[String])(implicit request: CaseSpecificRequest[_]): Future[Result] = {
     val fetchOriginalEnquiry: Future[ServiceResult[Option[Enquiry]]] =
       request.`case`.originalEnquiry.map { enquiryId =>
         enquiries.get(enquiryId).map(_.right.map(Some(_)))
@@ -195,7 +195,6 @@ class CaseController @Inject()(
     import request.{`case` => c}
     renderCase(
       c.key.get,
-      caseNoteFormPrefilled(c.version),
       messageForm
     )
   }
@@ -489,7 +488,7 @@ class CaseController @Inject()(
 
   def addNote(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
-      formWithErrors => renderCase(caseKey, formWithErrors.withVersion(caseRequest.`case`.version), messageForm),
+      formWithErrors => Future.successful(BadRequest(formWithErrors.errors.mkString(", "))),
       data =>
         // We don't do anything with data.version here, it's validated but we don't lock the case when adding a general note
         cases.addGeneralNote(caseRequest.`case`.id.get, CaseNoteSave(data.text, caseRequest.context.user.get.usercode)).successMap { _ =>
@@ -521,7 +520,7 @@ class CaseController @Inject()(
 
   def reopen(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
-      formWithErrors => renderCase(caseKey, formWithErrors.withVersion(caseRequest.`case`.version), messageForm),
+      formWithErrors => Future.successful(BadRequest(formWithErrors.errors.mkString(", "))),
       data => {
         val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
 

@@ -12,6 +12,7 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData}
 import services.{AuditService, CaseService}
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
+
 import scala.concurrent.{ExecutionContext, Future}
 
 object CaseMessageController {
@@ -45,7 +46,6 @@ class CaseMessageController @Inject() (
             import request.{`case` => c}
             caseController.renderCase(
               c.key.get,
-              CaseController.caseNoteFormPrefilled(c.version),
               formWithErrors
             )
         }
