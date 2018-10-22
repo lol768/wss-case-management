@@ -32,8 +32,8 @@ POST        /service/enquirysearch/:key             @controllers.EnquirySearchCo
 
 GET         /                                       @controllers.IndexController.home
 GET         /my-appointments                        @controllers.appointments.AppointmentController.redirectToMyAppointments
-GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries
-GET         /closed-cases                           @controllers.IndexController.closedCases
+GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries(page: Int ?= 0)
+GET         /closed-cases                           @controllers.IndexController.closedCases(page: Int ?= 0)
 GET         /at-risk-clients                        @controllers.IndexController.atRiskClients
 GET         /appointments                           @controllers.IndexController.appointments(start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
 
@@ -60,8 +60,8 @@ POST        /appointment/:appointmentKey/decline    @controllers.appointments.Ap
 ## Teams ##
 
 GET         /team/:teamId                           @controllers.admin.AdminController.teamHome(teamId: String)
-GET         /team/:teamId/closed-enquiries          @controllers.admin.AdminController.closedEnquiries(teamId: String)
-GET         /team/:teamId/closed-cases              @controllers.admin.AdminController.closedCases(teamId: String)
+GET         /team/:teamId/closed-enquiries          @controllers.admin.AdminController.closedEnquiries(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/closed-cases              @controllers.admin.AdminController.closedCases(teamId: String, page: Int ?= 0)
 GET         /team/:teamId/at-risk-clients           @controllers.admin.AdminController.atRiskClients(teamId: String)
 GET         /team/:teamId/appointments              @controllers.admin.AdminController.appointments(teamId: String, start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
 

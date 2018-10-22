@@ -3,7 +3,6 @@ package controllers
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import controllers.IndexController.{ClientInformation, TeamMemberInformation}
 import controllers.refiners.AnyTeamActionRefiner
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
@@ -11,10 +10,13 @@ import domain.dao.CaseDao.Case
 import helpers.ServiceResults.ServiceResult
 import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
+import play.api.data.Form
+import play.api.data.Forms._
 import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent}
 import services._
 import warwick.sso.AuthenticatedRequest
+import IndexController._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -116,18 +118,24 @@ class IndexController @Inject()(
     }
   }
 
-  def closedEnquiries: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    enquiries.findClosedEnquiries(currentUser().usercode).successMap { enquiries =>
-      Ok(views.html.admin.closedEnquiries(enquiries))
-    }
+  def closedEnquiries(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    enquiries.countClosedEnquiries(currentUser().usercode).successFlatMap(closed => {
+      val pagination = Pagination(closed, page, controllers.routes.IndexController.closedEnquiries())
+      enquiries.findClosedEnquiries(currentUser().usercode, Some(pagination.asPage)).successMap { enquiries =>
+        Ok(views.html.admin.closedEnquiries(enquiries, pagination))
+      }
+    })
   }
 
-  def closedCases: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    cases.listClosedCases(currentUser().usercode).successFlatMap { closedCases =>
-      cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
-        Ok(views.html.admin.closedCases(closedCases, clients))
+  def closedCases(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    cases.countClosedCases(currentUser().usercode).successFlatMap(closed => {
+      val pagination = Pagination(closed, page, controllers.routes.IndexController.closedCases())
+      cases.listClosedCases(currentUser().usercode, Some(pagination.asPage)).successFlatMap { closedCases =>
+        cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+          Ok(views.html.admin.closedCases(closedCases, clients, pagination))
+        }
       }
-    }
+    });
   }
 
   def atRiskClients: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>

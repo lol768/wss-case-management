@@ -56,18 +56,24 @@ class AdminController @Inject()(
     }
   }
 
-  def closedEnquiries(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    enquiries.findClosedEnquiries(teamRequest.team).successMap { enquiries =>
-      Ok(views.html.admin.closedEnquiries(enquiries))
-    }
+  def closedEnquiries(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    enquiries.countClosedEnquiries(teamRequest.team).successFlatMap(closed => {
+      val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedEnquiries(teamRequest.team.id))
+      enquiries.findClosedEnquiries(teamRequest.team, Some(pagination.asPage)).successMap { enquiries =>
+        Ok(views.html.admin.closedEnquiries(enquiries, pagination))
+      }
+    })
   }
 
-  def closedCases(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    cases.listClosedCases(teamRequest.team).successFlatMap { closedCases =>
-      cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
-        Ok(views.html.admin.closedCases(closedCases, clients))
+  def closedCases(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    cases.countClosedCases(teamRequest.team).successFlatMap(closed => {
+      val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedCases(teamRequest.team.id))
+      cases.listClosedCases(teamRequest.team, Some(pagination.asPage)).successFlatMap { closedCases =>
+        cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+          Ok(views.html.admin.closedCases(closedCases, clients, pagination))
+        }
       }
-    }
+    })
   }
 
   def atRiskClients(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
