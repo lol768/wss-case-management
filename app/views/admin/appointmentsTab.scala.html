@@ -1,10 +1,6 @@
-
-
 @(
-  cancelledAppointments: Int,
   eventsRoute: Call,
   createRoute: Call,
-  cancelledAppointmentsRoute: Call,
   searchScope: String,
   searchScopeValue: String,
   placeholderSuffix: String
@@ -24,12 +20,3 @@
 <p><a href="@createRoute" class="btn btn-default">Create a new appointment</a></p>
 
 <div class="appointment-calendar no-wide-tables" data-events="@eventsRoute" data-create="@createRoute"></div>
-
-@if(cancelledAppointments > 0) {
-  <details data-toggle="load" data-href="@cancelledAppointmentsRoute" data-target=".content">
-    <summary>Show @tags.p(cancelledAppointments, "cancelled appointments")()</summary>
-    <div class="content">
-      @tags.icons.loadingSpinner() Loading&hellip;
-    </div>
-  </details>
-}

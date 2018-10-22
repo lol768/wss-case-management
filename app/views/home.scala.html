@@ -259,10 +259,8 @@
         </div>
         <div role="tabpanel" class="tab-pane" id="appointments">
           @views.html.admin.appointmentsTab(
-            info.cancelledAppointments,
             routes.IndexController.appointments(),
             controllers.admin.routes.AppointmentController.createSelectTeam(),
-            routes.IndexController.cancelledAppointments,
             "member",
             context.user.get.usercode.string,
             " assigned to me"
