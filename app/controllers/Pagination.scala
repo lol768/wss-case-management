@@ -17,7 +17,7 @@ object Pagination {
   }
 
   implicit class PaginatingQuery[E, U, C[_]](val query: Query[E, U, C]) {
-    def paginate(o: Page): Query[E, U, C] = query.drop(o.offset * o.maxResults).take(o.maxResults)
+    def paginate(o: Page): Query[E, U, C] = query.drop(o.offset).take(o.maxResults)
   }
 }
 
@@ -35,5 +35,5 @@ case class Pagination(
 ) {
   def isFirst: Boolean = currentPage == 0
   def hasNext: Boolean = total > ((currentPage + 1) * itemsPerPage)
-  def asPage = Page(currentPage, itemsPerPage)
+  def asPage = Page(currentPage * itemsPerPage, itemsPerPage)
 }
