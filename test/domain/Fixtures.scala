@@ -178,6 +178,7 @@ object Fixtures {
       None,
       Teams.MentalHealth,
       AppointmentType.FaceToFace,
+      AppointmentPurpose.Consultation,
       AppointmentState.Provisional,
       None,
       JavaTime.offsetDateTime,

@@ -1,6 +1,6 @@
 @import controllers.admin.AppointmentController.AppointmentFormData
 @import domain.dao.CaseDao.Case
-@import domain.{Appointment, AppointmentType, Room}
+@import domain.{Appointment, AppointmentPurpose, AppointmentType, Room}
 @import views.html.b3.B3FieldConstructor
 
 @(
@@ -65,7 +65,12 @@
     )
   </div>
   <div class="col-sm-6">
-    @* TODO CASE-258 Appointment purpose *@
+    @b3.select(form("appointment.purpose"),
+      options = AppointmentPurpose.values.map { p => p.entryName -> p.description },
+      '_label -> "Appointment purpose",
+      '_default -> "",
+      'required -> true
+    )
   </div>
 </div>
 
@@ -92,7 +97,7 @@
     </div>
   </div>
   <div class="col-sm-6">
-    @b3.select(form("appointment.duration"),
+    @b3.radio(form("appointment.duration"),
       options = Appointment.DurationOptions.map { case (s, d) => d.getSeconds.toString -> s },
       '_label -> "Duration",
       '_default -> "",

@@ -83,7 +83,7 @@ class NavigationServiceImpl @Inject() (
     val teamLinks = permission.teams(usercode).right.map(_.map(teamHome)).getOrElse(Nil)
 
     if(teamLinks.nonEmpty) {
-      new NavigationPage("Me", controllers.routes.IndexController.home()) {
+      new NavigationPage("Home", controllers.routes.IndexController.home()) {
         override def isActive(path: String): Boolean = path.equals(route.url)
       } +: teamLinks
     } else {

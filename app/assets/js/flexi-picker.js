@@ -170,18 +170,12 @@ $.fn.flexiPicker = function initFlexiPicker(options = {}) {
   });
 };
 
-/**
- * Any input with the flexi-picker class will have the picker enabled on it,
- * so you can use the picker without writing any code yourself.
- *
- * More likely you'd use the flexi-picker tag.
- */
-$(() => {
-  $('.flexi-picker').flexiPicker();
+export function bindTo($scope) {
+  $('.flexi-picker', $scope).flexiPicker();
 
-  $('.flexi-picker-collection').each((i, collection) => {
+  $('.flexi-picker-collection', $scope).each((i, collection) => {
     MultiplePickers(collection, (element) => {
       $(element).flexiPicker();
     });
   });
-});
+}

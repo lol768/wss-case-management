@@ -18,6 +18,7 @@ const icons = {
 
 const dateTimeHiddenFieldFormat = 'YYYY-MM-DDTHH:mm';
 const dateTimeTextFieldFormat = 'Do MMM YYYY, HH:mm';
+const dayAndDateTimeTextFieldFormat = 'ddd Do MMM YYYY, HH:mm';
 
 export function DateTimePicker(container) {
   const hiddenField = $(container).find('input[type=hidden]');
@@ -55,13 +56,12 @@ export function InlineDateTimePicker(container) {
       label.append(span);
     }
 
-    span.text(`: ${newDate.format(dateTimeTextFieldFormat)}`);
+    span.text(`: ${newDate.format(dayAndDateTimeTextFieldFormat)}`);
   };
 
   let currentDate;
   if (hiddenField.val()) {
     currentDate = moment(hiddenField.val(), dateTimeHiddenFieldFormat);
-    updateLabel(currentDate);
   }
 
   div.datetimepicker({
@@ -70,7 +70,7 @@ export function InlineDateTimePicker(container) {
     date: currentDate,
     sideBySide: true,
     stepping: 1,
-    useCurrent: false,
+    useCurrent: true,
     inline: true,
     ...options,
   }).on('dp.change', ({ date }) => {
@@ -78,4 +78,6 @@ export function InlineDateTimePicker(container) {
     hiddenField.val(d.format(dateTimeHiddenFieldFormat));
     updateLabel(d);
   }).trigger('init.datetimepicker');
+
+  updateLabel(div.data('DateTimePicker').viewDate());
 }

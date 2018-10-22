@@ -23,7 +23,7 @@ function handleData($container, data) {
     }
   });
 
-  $('.fa-history.has-popover.has-field-history').on('click', (e) => {
+  $container.find('.fa-history.has-popover.has-field-history').on('click', (e) => {
     const $i = $(e.target);
     $i.popover({
       container: 'body',
