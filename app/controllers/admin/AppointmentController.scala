@@ -5,7 +5,7 @@ import java.time.{Duration, OffsetDateTime}
 import java.util.UUID
 
 import controllers.{API, BaseController}
-import controllers.admin.AppointmentController.{form, _}
+import controllers.admin.AppointmentController._
 import controllers.refiners._
 import domain._
 import domain.dao.CaseDao.Case
@@ -170,7 +170,7 @@ class AppointmentController @Inject()(
   import appointmentActionFilters._
   import canViewTeamActionRefiner._
 
-  private def renderAppointment(appointmentKey: IssueKey, appointmentNoteForm: Form[AppointmentNoteFormData], cancelForm: Form[CancelAppointmentData])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
+  private def renderAppointment(appointmentKey: IssueKey, cancelForm: Form[CancelAppointmentData])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
     appointments.findForRender(appointmentKey).successFlatMap { render =>
       profiles.getProfiles(render.clients.map(_.client.universityID)).successMap { clientProfiles =>
         val clients = render.clients.map(c => c -> clientProfiles.get(c.client.universityID)).toMap
@@ -178,7 +178,6 @@ class AppointmentController @Inject()(
         Ok(views.html.admin.appointments.view(
           render,
           clients,
-          appointmentNoteForm,
           cancelForm
         ))
       }
@@ -187,7 +186,6 @@ class AppointmentController @Inject()(
   def view(appointmentKey: IssueKey): Action[AnyContent] = CanViewAppointmentAction(appointmentKey).async { implicit request =>
     renderAppointment(
       appointmentKey,
-      appointmentNoteFormPrefilled(request.appointment.lastUpdated),
       cancelForm(request.appointment.lastUpdated).withVersion(request.appointment.lastUpdated).discardingErrors
     )
   }
@@ -403,7 +401,6 @@ class AppointmentController @Inject()(
     cancelForm(appointment.lastUpdated).bindFromRequest().fold(
       formWithErrors => renderAppointment(
         appointmentKey,
-        appointmentNoteFormPrefilled(appointment.lastUpdated),
         formWithErrors.withVersion(appointment.lastUpdated)
       ),
       data => appointments.cancel(appointment.id, data.cancellationReason, data.version).successMap { updated =>
@@ -413,15 +410,21 @@ class AppointmentController @Inject()(
     )
   }
 
+  def notes(appointmentKey: IssueKey): Action[AnyContent] = CanViewAppointmentAction(appointmentKey).async { implicit request =>
+    appointments.getNotes(request.appointment.id).successMap { notes =>
+      Ok(views.html.admin.appointments.sections.notes(
+        request.appointment,
+        notes,
+        appointmentNoteFormPrefilled(request.appointment.lastUpdated)
+      ))
+    }
+  }
+
   def addNote(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
     val appointment = request.appointment
 
     appointmentNoteForm(appointment.lastUpdated).bindFromRequest().fold(
-      formWithErrors => renderAppointment(
-        appointmentKey,
-        formWithErrors.withVersion(appointment.lastUpdated),
-        cancelForm(appointment.lastUpdated).withVersion(appointment.lastUpdated).discardingErrors
-      ),
+      formWithErrors => Future.successful(BadRequest(formWithErrors.errors.mkString(", "))),
       data =>
         // We don't do anything with data.version here, it's validated but we don't lock the appointment when adding a note
         appointments.addNote(appointment.id, AppointmentNoteSave(data.text, currentUser.usercode)).successMap { _ =>
