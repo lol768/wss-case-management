@@ -24,8 +24,8 @@ import warwick.sso.{UniversityID, UserLookupService, Usercode}
 import QueryHelpers._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.higherKinds
-import controllers.Page
-import controllers.Pagination._
+import domain.Page
+import domain.Pagination._
 
 @ImplementedBy(classOf[CaseServiceImpl])
 trait CaseService {

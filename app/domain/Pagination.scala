@@ -1,4 +1,4 @@
-package controllers
+package domain
 
 import play.api.data.Form
 import play.api.data.Forms.{mapping, number, optional}

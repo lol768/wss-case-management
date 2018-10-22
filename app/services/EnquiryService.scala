@@ -21,8 +21,8 @@ import ServiceResults.Implicits._
 import domain.dao.ClientDao.StoredClient
 import domain.dao.MemberDao.StoredMember
 import QueryHelpers._
-import controllers.Page
-import controllers.Pagination._
+import domain.Page
+import domain.Pagination._
 import slick.lifted.Query
 
 import scala.concurrent.{ExecutionContext, Future}

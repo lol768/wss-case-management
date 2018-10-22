@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import controllers.refiners.{CanViewTeamActionRefiner, TeamSpecificRequest}
-import controllers.{API, BaseController, Pagination}
+import controllers.{API, BaseController}
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.CaseDao.Case

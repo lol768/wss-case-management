@@ -1,7 +1,6 @@
 @import java.util.UUID
 
-@import controllers.Pagination
-@import domain.{Enquiry, MessageData, SitsProfile}
+@import domain.{Enquiry, MessageData, Pagination, SitsProfile}
 @import warwick.sso.UniversityID
 
 @import domain.Client
@@ -36,9 +35,11 @@
           <th class="col-sm-3">Last message</th>
         </tr>
       </thead>
+      <tfoot>
+        @pagination.map(p => tags.tablePagination(p))
+      </tfoot>
       <tbody>
         @enquiries.map { case (enquiry, message) => @enquiryRow(enquiry, message)}
-        @pagination.map(p => tags.tablePagination(p))
       </tbody>
     </table>
   } else {

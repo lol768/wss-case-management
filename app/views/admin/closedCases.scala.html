@@ -1,11 +1,9 @@
 @import java.time.OffsetDateTime
 @import java.util.UUID
-
-@import domain.SitsProfile
+@import domain.{Client, Pagination, SitsProfile}
 @import domain.dao.CaseDao.Case
 @import warwick.sso.UniversityID
 
-@import domain.Client
 @(
   cases: Seq[(Case, OffsetDateTime)],
   clients: Map[UUID, Set[Client]],

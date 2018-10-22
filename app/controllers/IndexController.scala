@@ -16,6 +16,7 @@ import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent}
 import services._
 import warwick.sso.AuthenticatedRequest
+import IndexController._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -53,7 +54,6 @@ class IndexController @Inject()(
 )(implicit executionContext: ExecutionContext) extends BaseController {
   import anyTeamActionRefiner._
   import securityService._
-  import IndexController._
 
   private def clientHome(implicit request: AuthenticatedRequest[AnyContent]): Future[ServiceResult[ClientInformation]] = {
     val client = request.context.user.get.universityId.get

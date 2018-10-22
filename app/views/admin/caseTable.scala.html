@@ -6,6 +6,7 @@
 @import warwick.sso.UniversityID
 
 @import domain.Client
+@import domain.Pagination
 @(
   title: Option[String],
   cases: Seq[(Case, OffsetDateTime)],
@@ -43,11 +44,13 @@
           <th class="col-sm-3">Last updated</th>
         </tr>
       </thead>
+      <tfoot>
+        @pagination.map(p => tags.tablePagination(p))
+      </tfoot>
       <tbody>
         @cases.map { case (clientCase, lastUpdated) =>
           @caseRow(clientCase, lastUpdated)
         }
-        @pagination.map(p => tags.tablePagination(p))
       </tbody>
     </table>
   } else {
