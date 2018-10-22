@@ -229,7 +229,7 @@ function bindTo($scope) {
     });
   });
 
-  $('table.table-paginated', element).each((i, container) => PaginatingTable(container));
+  $('table.table-paginated', $scope).each((i, container) => PaginatingTable(container));
 }
 
 $(() => {
