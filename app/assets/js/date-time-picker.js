@@ -20,6 +20,15 @@ const dateTimeHiddenFieldFormat = 'YYYY-MM-DDTHH:mm';
 const dateTimeTextFieldFormat = 'Do MMM YYYY, HH:mm';
 const dayAndDateTimeTextFieldFormat = 'ddd Do MMM YYYY, HH:mm';
 
+const commonOptions = {
+  locale: 'en-gb',
+  format: dateTimeTextFieldFormat,
+  icons,
+  sideBySide: true,
+  stepping: 1,
+  useCurrent: true,
+};
+
 export function DateTimePicker(container) {
   const hiddenField = $(container).find('input[type=hidden]');
   const inputGroup = $(container).find('.input-group');
@@ -33,12 +42,9 @@ export function DateTimePicker(container) {
   }
 
   inputGroup.datetimepicker({
-    format: dateTimeTextFieldFormat,
-    icons,
+    ...commonOptions,
     date: currentDate,
-    sideBySide: true,
     allowInputToggle: true,
-    stepping: 1,
     ...options,
   }).on('dp.change', ({ date }) => hiddenField.val(moment(date, dateTimeTextFieldFormat).format(dateTimeHiddenFieldFormat)));
 }
@@ -65,12 +71,9 @@ export function InlineDateTimePicker(container) {
   }
 
   div.datetimepicker({
-    format: dateTimeTextFieldFormat,
-    icons,
+    ...commonOptions,
     date: currentDate,
-    sideBySide: true,
-    stepping: 1,
-    useCurrent: true,
+    daysOfWeekDisabled: [0, 6],
     inline: true,
     ...options,
   }).on('dp.change', ({ date }) => {
