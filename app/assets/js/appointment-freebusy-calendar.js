@@ -10,6 +10,7 @@ import CommonFullCalendarOptions from './common-fullcalendar-options';
 
 export default function AppointmentFreeBusyForm(form) {
   const $form = $(form);
+  const $modal = $('#appointment-freebusy-modal');
 
   const getFormValues = name => $form.find(`:input[name="${name}"]`)
     .filter((i, el) => !!el.value)
@@ -43,22 +44,32 @@ export default function AppointmentFreeBusyForm(form) {
           const rooms = getFormValues('appointment.roomID');
 
           if ([...clients, ...teamMembers, ...rooms].length) {
-            $('#appointment-freebusy-modal').modal('show');
+            $modal.modal('show');
           }
         }),
     );
 
-    $('#appointment-freebusy-modal')
-      .on('shown.bs.modal', (e) => {
-        const $modal = $(e.target);
+    $modal
+      .on('shown.bs.modal', () => {
         const currentHint = $modal.find('.current');
 
+        const selectedDuration = () => $form.find(':input[name="appointment.duration"]:checked').val();
+
         const updateSelected = (start, durationMinutes) => {
-          currentHint.text(`Selected: ${formatTimeMoment(start)} - ${formatTimeMoment(start.add(durationMinutes, 'm'))} (${durationMinutes} minutes), ${formatDateMoment(start)}`);
+          currentHint.text(`Selected: ${formatTimeMoment(start)}${(durationMinutes > 0) ? ` - ${formatTimeMoment(start.add(durationMinutes, 'm'))} (${durationMinutes} minutes)` : ''}, ${formatDateMoment(start)}`);
         };
+
         if (dateTimePicker.date()) {
-          updateSelected(dateTimePicker.date(), ($('#appointment_duration').val() || 0) / 60);
+          updateSelected(dateTimePicker.date(), (selectedDuration() || 0) / 60);
         }
+
+        const select = (start, end) => {
+          $modal
+            .data('start', moment(start))
+            .data('duration', moment.duration(end.diff(start)).asSeconds());
+
+          updateSelected(moment(start), moment.duration(end.diff(start)).asMinutes());
+        };
 
         // Get clients
         const clients = getFormValues('clients[]');
@@ -138,23 +149,26 @@ export default function AppointmentFreeBusyForm(form) {
           },
           selectable: true,
           selectHelper: true,
-          select: (start, end) => {
-            dateTimePicker.date(start);
-            $('#appointment_duration').val(moment.duration(end.diff(start)).asSeconds());
-
-            updateSelected(start, moment.duration(end.diff(start)).asMinutes());
-          },
+          select,
           selectAllow: ({ start, end }) => {
             // Return false if we're selecting an invalid duration
             const duration = moment.duration(end.diff(start)).asSeconds();
-            return !!$(`#appointment_duration > option[value="${duration}"]`).length;
+            return !!$form.find(`:input[name="appointment.duration"][value="${duration}"]`).length;
           },
         });
       })
-      .on('hidden.bs.modal', (e) => {
-        const $modal = $(e.target);
-
+      .on('hidden.bs.modal', () => {
         $modal.find('.appointment-freebusy-calendar').fullCalendar('destroy');
       });
+
+    $modal.find(':button[data-toggle="select"]').on('click', () => {
+      const start = $modal.data('start');
+      const duration = $modal.data('duration');
+
+      dateTimePicker.date(start);
+      $form.find(`:input[name="appointment.duration"][value="${duration}"]`).prop('checked', true);
+
+      $modal.modal('hide');
+    });
   });
 }
