@@ -166,13 +166,13 @@
       </div>
     </div>
 
-    @tags.sectioned.sectionAsync("case", "Case links", isCollapsible = true, url = controllers.admin.routes.CaseController.links(c.key.get), isOpen=true)
+    @tags.sectioned.sectionAsync("case", "Case links", isCollapsible = true, url = controllers.admin.routes.CaseController.links(c.key.get), isOpen = true)
 
-    @tags.sectioned.sectionAsync("case", "Documents", isCollapsible=true, url = controllers.admin.routes.CaseController.documents(c.key.get), isOpen=true)
+    @tags.sectioned.sectionAsync("case", "Documents", isCollapsible = true, url = controllers.admin.routes.CaseController.documents(c.key.get), isOpen = true)
 
-    @tags.sectioned.sectionAsync("case", "Appointments", isCollapsible=true, url = controllers.admin.routes.CaseController.appointments(c.key.get), isOpen=true)
+    @tags.sectioned.sectionAsync("case", "Appointments", isCollapsible = true, url = controllers.admin.routes.CaseController.appointments(c.key.get), isOpen = true)
 
-    @tags.sectioned.sectionAsync("case", "Case notes", isCollapsible=true, url = controllers.admin.routes.CaseController.notes(c.key.get), showCount = true)
+    @tags.sectioned.sectionAsync("case", "Case notes", isCollapsible = true, url = controllers.admin.routes.CaseController.notes(c.key.get), showCount = true)
 
     @tags.sectioned.sectionAsync("case", "Messages", isCollapsible = profiles.size == 1, url = controllers.admin.routes.CaseController.messages(c.key.get), showCount = true)
 

@@ -226,6 +226,8 @@ class CaseServiceTest extends AbstractDaoTest {
 
     "search" in withData(new CaseFixture) { c =>
       service.search(CaseSearchQuery(query = Some("assessment")), 5).serviceValue mustBe Seq(c)
+      // Test prefix searching
+      service.search(CaseSearchQuery(query = Some("asse")), 5).serviceValue mustBe Seq(c)
     }
   }
 }
