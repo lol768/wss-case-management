@@ -25,7 +25,7 @@
 
   <div class="tab-content">
     <div role="tabpanel" class="tab-pane active" id="enquiries" data-href="@controllers.admin.routes.AdminController.enquiries(team.id)"></div>
-    <div role="tabpanel" class="tab-pane" id="cases" data-href="@controllers.admin.routes.AdminController.enquiries(team.id)"></div>
+    <div role="tabpanel" class="tab-pane" id="cases" data-href="@controllers.admin.routes.AdminController.cases(team.id)"></div>
     <div role="tabpanel" class="tab-pane" id="clients">
       @views.html.admin.clientsTab(controllers.admin.routes.AdminController.atRiskClients(team.id))
     </div>
