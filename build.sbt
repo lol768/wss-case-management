@@ -37,7 +37,7 @@ lazy val main = (project in file("."))
   )
 
 val playUtilsVersion = "1.20"
-val ssoClientVersion = "2.55"
+val ssoClientVersion = "2.57"
 val warwickUtilsVersion = "20180831"
 val enumeratumVersion = "1.5.13"
 val enumeratumSlickVersion = "1.5.15"

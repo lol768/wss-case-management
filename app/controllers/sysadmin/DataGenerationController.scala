@@ -169,8 +169,7 @@ object DataGenerationController {
 
     val paras = dummyParagraphs(paragraphCount)
 
-    val fullList = paras.toList ::: wordsPara :: Nil
-    fullList.mkString("\n\n")
+    s"$paras\n\n$wordsPara"
   }
 
   def dummyParagraphs(paragraphs: Int): String =
