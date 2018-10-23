@@ -53,3 +53,5 @@ flash.building.created=The building has been created
 flash.building.updated=The building has been updated
 flash.room.created=The room has been created
 flash.room.updated=The room has been updated
+flash.datageneration.scheduled=Dummy data generation has been scheduled. This may take some time
+flash.datageneration.alreadyRunning=Dummy data generation job is already running!

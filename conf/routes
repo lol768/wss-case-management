@@ -155,6 +155,8 @@ POST        /admin/locations/room/:id               @controllers.locations.Locat
 
 GET         /sysadmin                               @controllers.IndexController.redirectToPath(path = "/sysadmin/masquerade")
 GET         /sysadmin/masquerade                    @controllers.sysadmin.MasqueradeController.masquerade
+GET         /sysadmin/data-generation               @controllers.sysadmin.DataGenerationController.generateForm()
+POST        /sysadmin/data-generation               @controllers.sysadmin.DataGenerationController.generate()
 
 ## Fallbacks ##
 

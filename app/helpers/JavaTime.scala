@@ -58,7 +58,7 @@ object JavaTime {
     private val dateTimeFullFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm")
 
     def apply(date: LocalDate): String = {
-      val now = LocalDate.now(clock)
+      val now = localDate
 
       if (date.isEqual(now)) {
         "today"

@@ -662,7 +662,7 @@ object AppointmentDao {
     appointmentID: UUID,
     caseID: UUID,
     teamMember: Usercode,
-    version: OffsetDateTime = OffsetDateTime.now(),
+    version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]

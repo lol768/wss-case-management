@@ -64,8 +64,8 @@ case class EnquiryNote(
   noteType: EnquiryNoteType,
   text: String,
   teamMember: Member,
-  created: OffsetDateTime = OffsetDateTime.now(),
-  lastUpdated: OffsetDateTime = OffsetDateTime.now()
+  created: OffsetDateTime = JavaTime.offsetDateTime,
+  lastUpdated: OffsetDateTime = JavaTime.offsetDateTime,
 )
 
 object EnquiryNote {
