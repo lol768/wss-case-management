@@ -1,0 +1,79 @@
+@import domain.IssueRender
+@import domain.Registration
+@import helpers.JavaTime
+@import domain.MessageSender
+@import domain.Enquiry
+@import domain.dao.CaseDao.Case
+@import play.api.data.Forms._
+@import org.apache.tika.mime.MediaType
+@(issues: Seq[IssueRender], registration: Option[Registration], supportedMimeTypes: Seq[MediaType])(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+<div class="pull-right">
+  <a href="@controllers.registration.routes.RegisterController.form()" class="btn btn-default">
+  @if(registration.isDefined) {
+    View and update registration
+  } else {
+    Register
+  }
+  </a>
+</div>
+
+<p>If you have a question or would like to arrange to speak to somebody about an issue:</p>
+<a class="btn btn-primary" href="@controllers.enquiries.routes.EnquiryController.form()">
+@if(issues.isEmpty) {
+  Make an enquiry
+} else {
+  Make another enquiry
+}
+</a>
+
+@if(issues.nonEmpty) {
+  <h2>Your messages</h2>
+
+  <div class="panel-group message-threads" id="enquiries-accordion" role="tablist" aria-multiselectable="true">
+  @issues.map { issueRender =>
+    <div class="panel panel-default thread thread--client state-@issueRender.issue.state.entryName">
+
+      <div class="panel-heading" role="tab" id="heading-@issueRender.issue.id.get.toString">
+        <h4 class="panel-title">
+          <a class="@if(issues.head.issue != issueRender.issue){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@issueRender.issue.id.get.toString" aria-expanded="true" aria-controls="collapse-@issueRender.issue.id.get.toString">
+            <div class="pull-right">
+              @JavaTime.Relative(issueRender.lastUpdatedDate)
+              <i class="fas fa-fw fa-angle-down"></i>
+              <i class="fas fa-fw fa-angle-up"></i>
+            </div>
+            @tags.icons.enquiryState(issueRender.issue.state, issueRender.messages.last.message, MessageSender.Client)
+            @issueRender.issue match {
+              case e: Enquiry => {
+                @e.subject
+              }
+              case c: Case => {
+                Enquiry
+              }
+              case _ => {}
+            }
+          </a>
+        </h4>
+      </div>
+
+      <div id="collapse-@issueRender.issue.id.get.toString" class="panel-collapse collapse @if(issues.head.issue == issueRender.issue){in}" role="tabpanel" aria-labelledby="heading-@issueRender.issue.id.get.toString" data-ping="@controllers.routes.ClientMessagesController.auditView(issueRender.issue.id.get)">
+        <div class="panel-body">
+        @issueRender.messages.map { render =>
+          @views.html.tags.messages.message(
+            message = render.message,
+            files = render.files,
+            clientName = "You",
+            teamName = render.message.team.getOrElse(issueRender.issue.team).name,
+            attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id.get, f.id))
+        }
+        </div>
+        <div class="panel-footer">
+          @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
+            @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), form, supportedMimeTypes)
+          }
+        </div>
+      </div>
+    </div>
+  }
+  </div>
+}

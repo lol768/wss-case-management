@@ -5,14 +5,7 @@
 @import domain.dao.CaseDao.Case
 @import domain.{Client, Enquiry, MessageData, Team}
 
-@(team: Team,
-  enquiriesRequiringAction: Seq[(Enquiry, MessageData)],
-  enquiriesAwaitingClient: Seq[(Enquiry, MessageData)],
-  closedEnquiries: Int,
-  openCases: Seq[(Case, OffsetDateTime)],
-  closedCases: Int,
-  caseClients: Map[UUID, Set[Client]],
-)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+@(team: Team)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main(team.name) {
   <ul class="nav nav-tabs" role="tablist">
@@ -31,12 +24,8 @@
   </ul>
 
   <div class="tab-content">
-    <div role="tabpanel" class="tab-pane active" id="enquiries">
-      @views.html.admin.enquiriesTab(enquiriesRequiringAction, enquiriesAwaitingClient, closedEnquiries, controllers.admin.routes.AdminController.closedEnquiries(team.id), "team", team.id, s" assigned to ${team.name}")
-    </div>
-    <div role="tabpanel" class="tab-pane" id="cases">
-      @views.html.admin.casesTab(openCases, closedCases, caseClients, controllers.admin.routes.CaseController.createForm(team.id), controllers.admin.routes.AdminController.closedCases(team.id), "team", team.id, s" assigned to ${team.name}")
-    </div>
+    <div role="tabpanel" class="tab-pane active" id="enquiries" data-href="@controllers.admin.routes.AdminController.enquiries(team.id)"></div>
+    <div role="tabpanel" class="tab-pane" id="cases" data-href="@controllers.admin.routes.AdminController.enquiries(team.id)"></div>
     <div role="tabpanel" class="tab-pane" id="clients">
       @views.html.admin.clientsTab(controllers.admin.routes.AdminController.atRiskClients(team.id))
     </div>

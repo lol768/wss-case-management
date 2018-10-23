@@ -14,7 +14,6 @@ class HomeSpec extends BaseSpec {
       val home = req("/").forUser(users.studentNewVisitor).get()
       status(home) mustEqual OK
       contentType(home).get mustEqual "text/html"
-      contentAsString(home) must include("Make an enquiry")
 
       val html = contentAsHtml(home)
       html.navigationPages.all mustBe 'empty
