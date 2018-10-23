@@ -16,13 +16,13 @@ import javax.inject.{Inject, Singleton}
 import org.quartz._
 import play.api.Configuration
 import play.api.i18n.Messages
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, ActionFilter, AnyContent, Result}
 import services._
 import uk.ac.warwick.util.core.DateTimeUtils
 import uk.ac.warwick.util.workingdays.{WorkingDaysHelper, WorkingDaysHelperImpl}
 import warwick.core.Logging
 import warwick.core.timing.TimingContext
-import warwick.sso.{UniversityID, Usercode}
+import warwick.sso.{AuthenticatedRequest, UniversityID, Usercode}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
@@ -258,16 +258,28 @@ object DataGenerationController {
 class DataGenerationController @Inject()(
   scheduler: Scheduler,
   securityService: SecurityService,
+  configuration: Configuration,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import securityService._
 
-  def generateForm(): Action[AnyContent] = RequireSysadmin { implicit request =>
+  private[this] val enabled = configuration.get[Boolean]("wellbeing.dummyDataGeneration")
+
+  private[this] val EnabledGuard = new ActionFilter[AuthenticatedRequest] {
+    override protected def filter[A](request: AuthenticatedRequest[A]): Future[Option[Result]] =
+      Future.successful {
+        if (enabled) None
+        else Some(BadRequest("wellbeing.dummyDataGeneration = false"))
+      }
+    override protected def executionContext: ExecutionContext = DataGenerationController.this.executionContext
+  }
+
+  def generateForm(): Action[AnyContent] = RequireSysadmin.andThen(EnabledGuard) { implicit request =>
     // TODO Allow customising DataGenerationOptions
     Ok(views.html.sysadmin.generateData())
   }
 
-  def generate(): Action[AnyContent] = RequireSysadmin { implicit request =>
+  def generate(): Action[AnyContent] = RequireSysadmin.andThen(EnabledGuard) { implicit request =>
     if (scheduler.checkExists(new JobKey("DataGenerationJob", null))) {
       Redirect(controllers.sysadmin.routes.DataGenerationController.generateForm())
         .flashing("error" -> Messages("flash.datageneration.alreadyRunning"))
@@ -341,7 +353,12 @@ class DataGenerationJob @Inject()(
 
   private[this] def randomClient(): UniversityID = allClients(Random.nextInt(allClients.size))
 
+  private[this] val enabled = configuration.get[Boolean]("wellbeing.dummyDataGeneration")
+
   override def execute(context: JobExecutionContext): Unit = {
+    if (!enabled)
+      throw new JobExecutionException("Tried to run DataGenerationJob but wellbeing.dummyDataGeneration = false")
+
     val options = DataGenerationOptions(context.getJobDetail.getJobDataMap)
     val allRooms = locations.availableRooms(auditLogContext(Usercode("system"))).serviceValue
 
