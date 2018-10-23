@@ -5,6 +5,7 @@
 @import domain.dao.CaseDao.Case
 @import domain.IssueRender
 @import domain.MessageSender
+@import domain.Client
 @(
   issueRender: IssueRender,
   f: Form[String],
@@ -41,7 +42,7 @@
       </div>
       <div class="panel-footer">
         @if(issueRender.issue.state != IssueState.Closed) {
-          @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), f, supportedMimeTypes)
+          @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), f, supportedMimeTypes, issueRender.issue.id.get, context.user.get.universityId.get)
         }
       </div>
     </div>

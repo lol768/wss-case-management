@@ -23,6 +23,8 @@
 @brand-colour: #a14418;
 @nav-link-padding: 10px 15px;
 
+@gray-light: lighten(@gray-base, 45%); // #737373, ARIA
+
 // Always scrollbar to avoid horizontal dancing
 html {
   overflow-y: scroll;
@@ -428,7 +430,7 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
   }
 
   .help-block {
-    color: #808080;
+    color: @gray-light;
   }
 }
 
@@ -494,6 +496,10 @@ a[role="button"] {
           align-items: center;
         }
       }
+    }
+
+    table td.old, td.new {
+      color: @gray-light; // ARIA
     }
   }
 }

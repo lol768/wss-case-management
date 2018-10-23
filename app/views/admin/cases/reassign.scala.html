@@ -22,10 +22,10 @@
       options = Teams.all.map { t => t.id -> t.name },
       "data-toggle" -> "optional-subform",
       "data-toggle-value" -> Teams.MentalHealth.id,
-      "data-target" -> "#caseType"
+      "data-target" -> "#caseType-field"
     )
 
-    <fieldset id="caseType">
+    <fieldset id="caseType-field">
       @b3.select(form("caseType"),
         options = Seq("" -> "") ++ CaseType.values.map { t => t.entryName -> t.description },
         'colClass -> "col-md-6",

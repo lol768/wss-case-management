@@ -36,11 +36,11 @@
 }
 
 @if(message.sender == MessageSender.Client) {
-  <div class="message message-client">
+  <div class="message message-client" tabindex="0">
     @renderMessage(clientName)
   </div>
 } else {
-  <div class="message message-team">
+  <div class="message message-team" tabindex="0">
     @renderMessage(teamName)
   </div>
 }
