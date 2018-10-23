@@ -49,10 +49,13 @@ class AdminController @Inject()(
     }
   }
 
-  def closedEnquiries(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    enquiryService.findClosedEnquiries(teamRequest.team).successMap { enquiries =>
-      Ok(views.html.admin.closedEnquiries(enquiries))
-    }
+  def closedEnquiries(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    enquiryService.countClosedEnquiries(teamRequest.team).successFlatMap(closed => {
+      val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedEnquiries(teamRequest.team.id))
+      enquiryService.findClosedEnquiries(teamRequest.team, Some(pagination.asPage)).successMap { enquiries =>
+        Ok(views.html.admin.closedEnquiries(enquiries, pagination))
+      }
+    })
   }
 
   def cases(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
@@ -75,12 +78,15 @@ class AdminController @Inject()(
     }
   }
 
-  def closedCases(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    caseService.listClosedCases(teamRequest.team).successFlatMap { closedCases =>
-      caseService.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
-        Ok(views.html.admin.closedCases(closedCases, clients))
+  def closedCases(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    caseService.countClosedCases(teamRequest.team).successFlatMap(closed => {
+      val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedCases(teamRequest.team.id))
+      caseService.listClosedCases(teamRequest.team, Some(pagination.asPage)).successFlatMap { closedCases =>
+        caseService.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+          Ok(views.html.admin.closedCases(closedCases, clients, pagination))
+        }
       }
-    }
+    })
   }
 
   def atRiskClients(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>

@@ -58,10 +58,13 @@ class IndexController @Inject()(
     }
   }
 
-  def closedEnquiries: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    enquiryService.findClosedEnquiries(currentUser().usercode).successMap { enquiries =>
-      Ok(views.html.admin.closedEnquiries(enquiries))
-    }
+  def closedEnquiries(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    enquiryService.countClosedEnquiries(currentUser().usercode).successFlatMap(closed => {
+      val pagination = Pagination(closed, page, controllers.routes.IndexController.closedEnquiries())
+      enquiryService.findClosedEnquiries(currentUser().usercode, Some(pagination.asPage)).successMap { enquiries =>
+        Ok(views.html.admin.closedEnquiries(enquiries, pagination))
+      }
+    })
   }
 
   def cases: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
@@ -85,12 +88,15 @@ class IndexController @Inject()(
     }
   }
 
-  def closedCases: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    caseService.listClosedCases(currentUser().usercode).successFlatMap { closedCases =>
-      caseService.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
-        Ok(views.html.admin.closedCases(closedCases, clients))
+  def closedCases(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    caseService.countClosedCases(currentUser().usercode).successFlatMap(closed => {
+      val pagination = Pagination(closed, page, controllers.routes.IndexController.closedCases())
+      caseService.listClosedCases(currentUser().usercode, Some(pagination.asPage)).successFlatMap { closedCases =>
+        caseService.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+          Ok(views.html.admin.closedCases(closedCases, clients, pagination))
+        }
       }
-    }
+    });
   }
 
   def atRiskClients: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
