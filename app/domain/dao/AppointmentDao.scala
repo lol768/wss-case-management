@@ -43,6 +43,7 @@ trait AppointmentDao {
   def findAttendedQuery: Query[Appointments, StoredAppointment, Seq]
   def findCancelledQuery: Query[Appointments, StoredAppointment, Seq]
   def searchQuery(query: AppointmentSearchQuery): Query[Appointments, StoredAppointment, Seq]
+  def countForClientBadge(universityID: UniversityID): DBIO[Int]
 
   def casesForAppointmentQuery(appointment: UUID): Query[AppointmentCases, AppointmentCase, Seq]
   def insertCaseLinks(joins: Set[AppointmentCase])(implicit ac: AuditLogContext): DBIO[Seq[AppointmentCase]]
@@ -160,6 +161,19 @@ class AppointmentDaoImpl @Inject()(
       .filter { case (a, _, c, tm, _, n) => queries(a, c, tm, n).reduce(_ && _) }
       .distinct
       .map { case (a, _, _, _, _, _) => a }
+  }
+
+  override def countForClientBadge(universityID: UniversityID): DBIO[Int] = {
+    appointments.table
+      .withClients
+      .filter { case (appointment, ac, client) =>
+        client.universityID === universityID &&
+          appointment.start > JavaTime.offsetDateTime &&
+          appointment.state =!= (AppointmentState.Cancelled:AppointmentState) &&
+          ac.state =!= (AppointmentState.Cancelled:AppointmentState)
+      }
+      .length
+      .result
   }
 
   override def casesForAppointmentQuery(appointmentId: UUID): Query[AppointmentCases, AppointmentCase, Seq] = {

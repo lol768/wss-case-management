@@ -1,199 +1,13 @@
-@import controllers.IndexController.{ClientInformation, TeamMemberInformation}
 @import controllers.RequestContext
-@import domain.dao.CaseDao.Case
-@import domain.{AppointmentCancellationReason, AppointmentRender, AppointmentState, Enquiry, IssueRender, Registration}
-@import helpers.JavaTime
+@import domain.Team
 @import org.apache.tika.mime.MediaType
-@import play.api.data.Form
-@import play.api.data.Forms._
-@import warwick.sso.{User, Usercode}
-
-@import domain.MessageSender
 @(
-  clientInformation: ClientInformation,
-  teamMemberInformation: Option[TeamMemberInformation],
+  clientAppointmentCount: Int,
+  teams: Seq[Team],
   supportedMimeTypes: Seq[MediaType],
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
-@renderClientMessages(issues: Seq[IssueRender], registration: Option[Registration]) = {
-  <div class="pull-right">
-    <a href="@controllers.registration.routes.RegisterController.form()" class="btn btn-default">
-      @if(registration.isDefined) {
-        View and update registration
-      } else {
-        Register
-      }
-    </a>
-  </div>
-
-  <p>If you have a question or would like to arrange to speak to somebody about an issue:</p>
-  <a class="btn btn-primary" href="@controllers.enquiries.routes.EnquiryController.form()">
-    @if(issues.isEmpty) {
-      Make an enquiry
-    } else {
-      Make another enquiry
-    }
-  </a>
-
-  @if(issues.nonEmpty) {
-    <h2>Your messages</h2>
-
-    <div class="panel-group message-threads" id="enquiries-accordion" role="tablist" aria-multiselectable="true">
-      @issues.map { issueRender =>
-        <div class="panel panel-default thread thread--client state-@issueRender.issue.state.entryName">
-
-          <div class="panel-heading" role="tab" id="heading-@issueRender.issue.id.get.toString">
-            <h4 class="panel-title">
-                <a class="@if(issues.head.issue != issueRender.issue){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@issueRender.issue.id.get.toString" aria-expanded="true" aria-controls="collapse-@issueRender.issue.id.get.toString">
-                <div class="pull-right">
-                  @JavaTime.Relative(issueRender.lastUpdatedDate)
-                  <i class="fas fa-fw fa-angle-down"></i>
-                  <i class="fas fa-fw fa-angle-up"></i>
-                </div>
-                @tags.icons.enquiryState(issueRender.issue.state, issueRender.messages.last.message, MessageSender.Client)
-                @issueRender.issue match {
-                  case e: Enquiry => {
-                    @e.subject
-                  }
-                  case c: Case => {
-                    Enquiry
-                  }
-                  case _ => {}
-                }
-              </a>
-            </h4>
-          </div>
-
-          <div id="collapse-@issueRender.issue.id.get.toString" class="panel-collapse collapse @if(issues.head.issue == issueRender.issue){in}" role="tabpanel" aria-labelledby="heading-@issueRender.issue.id.get.toString" data-ping="@controllers.routes.ClientMessagesController.auditView(issueRender.issue.id.get)">
-            <div class="panel-body">
-              @issueRender.messages.map { render =>
-                @views.html.tags.messages.message(
-                  message = render.message,
-                  files = render.files,
-                  clientName = "You",
-                  teamName = render.message.team.getOrElse(issueRender.issue.team).name,
-                  attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id.get, f.id))
-              }
-            </div>
-              <div class="panel-footer">
-                @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
-                  @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), form, supportedMimeTypes)
-                }
-              </div>
-          </div>
-        </div>
-      }
-    </div>
-  }
-}
-
-@renderClientAppointments(appointments: Seq[AppointmentRender]) = {
-  <table class="table table-default">
-    <thead>
-      <tr>
-        <th class="col-sm-3">Subject</th>
-        <th class="col-sm-2">When</th>
-        <th class="col-sm-3">Staff member</th>
-        <th class="col-sm-2">Location</th>
-        <th class="col-sm-2">Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      @appointments.map { a =>
-        <tr>
-          <td>
-            @tags.icons.appointmentState(a.appointment.state)
-            @a.appointment.subject(None, None)
-          </td>
-          <td>@JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))</td>
-          <td>
-            @a.teamMembers.toSeq.sortBy(_.member).map(_.member.safeFullName).mkString(", ")
-            (@a.appointment.team.name team)
-          </td>
-          <td>
-            @a.room.map { r => @tags.mapLink(r) }
-            (@a.appointment.appointmentType.description)
-          </td>
-          <td>
-            @a.clients.find(_.client.universityID == context.user.get.universityId.get).map { client =>
-              @if(a.appointment.state == AppointmentState.Provisional) {
-                @if(client.state != AppointmentState.Provisional) {
-                  <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
-                    @tags.icons.appointmentState(client.state, client = true)
-                    @client.state.clientDescription
-                  </span>
-                  &nbsp;
-                }
-              } else {
-                <span class="label label-@a.appointment.state.labelType" @a.appointment.cancellationReason.map { r => title="@r.description" }>
-                  @tags.icons.appointmentState(a.appointment.state)
-                  @a.appointment.state
-                </span>
-                &nbsp;
-              }
-
-              @if(a.appointment.state.nonTerminal) {
-                @if(client.state == AppointmentState.Provisional) {
-                  @b3.inline.formCSRF(controllers.appointments.routes.AppointmentController.accept(a.appointment.key), 'class -> "inline-form") { implicit ifc =>
-                    <button type="submit" class="btn btn-default btn-xs">@tags.icons.appointmentAccept() Accept</button>
-                  }
-                }
-
-                @if(client.state.nonTerminal) {
-                  @b3.horizontal.formCSRF(controllers.appointments.routes.AppointmentController.decline(a.appointment.key), "col-sm-3", "col-sm-9", 'class -> "inline-form") { implicit ifc =>
-                    <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#decline-@{a.appointment.id.toString}-modal">@tags.icons.appointmentDecline() Decline</button>
-
-                    <div class="modal fade" id="decline-@{a.appointment.id.toString}-modal" tabindex="-1" role="dialog" aria-labelledby="decline-@{a.appointment.id.toString}-modal-label">
-                      <div class="modal-dialog" role="document">
-                        <div class="modal-content">
-                          <div class="modal-header">
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                            <h4 class="modal-title" id="decline-@{a.appointment.id.toString}-modal-label">Decline appointment</h4>
-                          </div>
-                          <div class="modal-body form-vertical">
-                            @defining(Form(single("cancellationReason" -> AppointmentCancellationReason.formField))) { form: Form[AppointmentCancellationReason] =>
-                              @b3.select(form("cancellationReason"),
-                                options = AppointmentCancellationReason.values.map { r => r.entryName -> r.description },
-                                '_label -> "Reason",
-                                '_default -> "",
-                                'required -> true
-                              )
-                            }
-                          </div>
-                          <div class="modal-footer spaced-buttons">
-                            <button type="submit" class="btn btn-primary">Decline appointment</button>
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  }
-                }
-              }
-            }
-          </td>
-        </tr>
-      }
-    </tbody>
-  </table>
-}
-
-@myAppointmentsBadge() = {
-  @defining(
-    clientInformation.appointments.count(a =>
-      a.appointment.start.isAfter(JavaTime.offsetDateTime) &&
-          a.appointment.state != AppointmentState.Cancelled &&
-          a.clients.find(c => context.user.flatMap(_.universityId).contains(c.client.universityID))
-              .forall(_.state != AppointmentState.Cancelled)
-    )
-  ) { count: Int =>
-    @if(count > 0) {
-      <span class="badge">@count</span>
-    }
-  }
-}
-
-@if(teamMemberInformation.isEmpty) {
+@if(teams.isEmpty) {
   @main("My messages", hidePageTitle = true) {
     <ul class="nav nav-tabs" role="tablist">
       <li role="presentation" class="active">
@@ -203,76 +17,66 @@
         <a href="#myappointments" aria-controls="myappointments" role="tab" data-toggle="tab">
           @tags.icons.myAppointments()
           My appointments
-          @myAppointmentsBadge()
+          @if(clientAppointmentCount > 0) {
+            <span class="badge">@clientAppointmentCount</span>
+          }
         </a>
       </li>
     </ul>
 
     <div class="tab-content">
-      <div role="tabpanel" class="tab-pane active" id="mymessages">
-        @renderClientMessages(clientInformation.issues, clientInformation.registration)
-      </div>
-      <div role="tabpanel" class="tab-pane" id="myappointments">
-        @renderClientAppointments(clientInformation.appointments)
-      </div>
+      <div role="tabpanel" class="tab-pane active" id="mymessages" data-href="@routes.IndexController.messages()"></div>
+      <div role="tabpanel" class="tab-pane" id="myappointments" data-href="@routes.IndexController.clientAppointments()"></div>
     </div>
   }
 } else {
-  @teamMemberInformation.map { info =>
-    @main(s"${context.user.flatMap(_.name.full).get}${if(info.teams.size == 1) s", ${info.teams.head.name}" else ""}") {
-      <h4>Enquiries, cases and appointments assigned to me</h4>
+  @main(s"${context.user.flatMap(_.name.full).get}${if(teams.size == 1) s", ${teams.head.name}" else ""}") {
+    <h4>Enquiries, cases and appointments assigned to me</h4>
 
-      <ul class="nav nav-tabs" role="tablist">
-        <li role="presentation" class="active">
-          <a href="#enquiries" aria-controls="enquiries" role="tab" data-toggle="tab">@tags.icons.enquiries() Enquiries</a>
-        </li>
-        <li role="presentation">
-          <a href="#cases" aria-controls="cases" role="tab" data-toggle="tab">@tags.icons.cases() Cases</a>
-        </li>
-        <li role="presentation">
-          <a href="#clients" aria-controls="clients" role="tab" data-toggle="tab">@tags.icons.clients() Clients</a>
-        </li>
-        <li role="presentation">
-          <a href="#appointments" aria-controls="appointments" role="tab" data-toggle="tab">@tags.icons.appointments() Appointments</a>
-        </li>
-        <li role="presentation">
-          <a href="#mymessages" aria-controls="mymessages" role="tab" data-toggle="tab">@tags.icons.myMessages() My messages</a>
-        </li>
-        <li role="presentation">
-          <a href="#myappointments" aria-controls="myappointments" role="tab" data-toggle="tab">
-            @tags.icons.myAppointments()
-            My appointments
-            @myAppointmentsBadge()
-          </a>
-        </li>
-      </ul>
+    <ul class="nav nav-tabs" role="tablist">
+      <li role="presentation" class="active">
+        <a href="#enquiries" aria-controls="enquiries" role="tab" data-toggle="tab">@tags.icons.enquiries() Enquiries</a>
+      </li>
+      <li role="presentation">
+        <a href="#cases" aria-controls="cases" role="tab" data-toggle="tab">@tags.icons.cases() Cases</a>
+      </li>
+      <li role="presentation">
+        <a href="#clients" aria-controls="clients" role="tab" data-toggle="tab">@tags.icons.clients() Clients</a>
+      </li>
+      <li role="presentation">
+        <a href="#appointments" aria-controls="appointments" role="tab" data-toggle="tab">@tags.icons.appointments() Appointments</a>
+      </li>
+      <li role="presentation">
+        <a href="#mymessages" aria-controls="mymessages" role="tab" data-toggle="tab">@tags.icons.myMessages() My messages</a>
+      </li>
+      <li role="presentation">
+        <a href="#myappointments" aria-controls="myappointments" role="tab" data-toggle="tab">
+          @tags.icons.myAppointments()
+          My appointments
+          @if(clientAppointmentCount > 0) {
+            <span class="badge">@clientAppointmentCount</span>
+          }
+        </a>
+      </li>
+    </ul>
 
-      <div class="tab-content">
-        <div role="tabpanel" class="tab-pane active" id="enquiries">
-          @views.html.admin.enquiriesTab(info.enquiriesRequiringAction, info.enquiriesAwaitingClient, info.closedEnquiries, routes.IndexController.closedEnquiries(), "member", context.user.get.usercode.string, " assigned to me")
-        </div>
-        <div role="tabpanel" class="tab-pane" id="cases">
-          @views.html.admin.casesTab(info.openCases, info.closedCases, info.caseClients, controllers.admin.routes.CaseController.createSelectTeam(), routes.IndexController.closedCases(), "member", context.user.get.usercode.string, " assigned to me")
-        </div>
-        <div role="tabpanel" class="tab-pane" id="clients">
-          @views.html.admin.clientsTab(routes.IndexController.atRiskClients)
-        </div>
-        <div role="tabpanel" class="tab-pane" id="appointments">
-          @views.html.admin.appointmentsTab(
-            routes.IndexController.appointments(),
-            controllers.admin.routes.AppointmentController.createSelectTeam(),
-            "member",
-            context.user.get.usercode.string,
-            " assigned to me"
-          )
-        </div>
-        <div role="tabpanel" class="tab-pane" id="mymessages">
-          @renderClientMessages(clientInformation.issues, clientInformation.registration)
-        </div>
-        <div role="tabpanel" class="tab-pane" id="myappointments">
-          @renderClientAppointments(clientInformation.appointments)
-        </div>
+    <div class="tab-content">
+      <div role="tabpanel" class="tab-pane active" id="enquiries" data-href="@routes.IndexController.enquiries()"></div>
+      <div role="tabpanel" class="tab-pane" id="cases" data-href="@routes.IndexController.cases()"></div>
+      <div role="tabpanel" class="tab-pane" id="clients">
+        @views.html.admin.clientsTab(routes.IndexController.atRiskClients)
       </div>
-    }
+      <div role="tabpanel" class="tab-pane" id="appointments">
+        @views.html.admin.appointmentsTab(
+          routes.IndexController.appointments(),
+          controllers.admin.routes.AppointmentController.createSelectTeam(),
+          "member",
+          context.user.get.usercode.string,
+          " assigned to me"
+        )
+      </div>
+      <div role="tabpanel" class="tab-pane" id="mymessages" data-href="@routes.IndexController.messages()"></div>
+      <div role="tabpanel" class="tab-pane" id="myappointments" data-href="@routes.IndexController.clientAppointments()"></div>
+    </div>
   }
 }

@@ -1,52 +1,28 @@
 package controllers
 
 import java.time.OffsetDateTime
-import java.util.UUID
 
 import controllers.refiners.AnyTeamActionRefiner
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.CaseDao.Case
-import helpers.ServiceResults.ServiceResult
 import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
-import play.api.data.Form
-import play.api.data.Forms._
 import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent}
 import services._
-import warwick.sso.AuthenticatedRequest
-import IndexController._
 
 import scala.concurrent.{ExecutionContext, Future}
-
-object IndexController {
-  case class ClientInformation(
-    issues: Seq[IssueRender],
-    registration: Option[Registration],
-    appointments: Seq[AppointmentRender]
-  )
-
-  case class TeamMemberInformation(
-    teams: Seq[Team],
-    enquiriesRequiringAction: Seq[(Enquiry, MessageData)],
-    enquiriesAwaitingClient: Seq[(Enquiry, MessageData)],
-    closedEnquiries: Int,
-    openCases: Seq[(Case, OffsetDateTime)],
-    closedCases: Int,
-    caseClients: Map[UUID, Set[Client]],
-  )
-}
 
 @Singleton
 class IndexController @Inject()(
   securityService: SecurityService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
   permissions: PermissionService,
-  enquiries: EnquiryService,
+  enquiryService: EnquiryService,
   registrations: RegistrationService,
   audit: AuditService,
-  cases: CaseService,
+  caseService: CaseService,
   clientSummaries: ClientSummaryService,
   appointments: AppointmentService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
@@ -54,84 +30,69 @@ class IndexController @Inject()(
   import anyTeamActionRefiner._
   import securityService._
 
-  private def clientHome(implicit request: AuthenticatedRequest[AnyContent]): Future[ServiceResult[ClientInformation]] = {
-    val client = request.context.user.get.universityId.get
-
-    ServiceResults.zip(
-      enquiries.findEnquiriesForClient(client),
-      cases.findForClient(client).map(_.map(_.filter(_.messages.nonEmpty))),
-      registrations.get(client),
-      appointments.findForClient(client)
-    ).flatMap(_.fold(
-      errors => Future.successful(Left(errors)),
-      { case (clientEnquiries, clientCases, registration, a) =>
-        val issues = (clientEnquiries.map(_.toIssue) ++ clientCases.map(_.toIssue)).sortBy(_.lastUpdatedDate)(JavaTime.dateTimeOrdering).reverse
-
-        val result = Future.successful(Right(ClientInformation(issues, registration, a)))
-
-        // Record an EnquiryView or CaseView event for the first issue as that's open by default in the accordion
-        issues.headOption.map(issue => issue.issue match {
-          case e: Enquiry => audit.audit('EnquiryView, e.id.get.toString, 'Enquiry, Json.obj())(result)
-          case c: Case => audit.audit('CaseView, c.id.get.toString, 'Case, Json.obj())(result)
-          case _ => result
-        }).getOrElse(result)
-      }
-    ))
-  }
-
-  private def teamMemberHome(implicit request: AuthenticatedRequest[AnyContent]): Future[ServiceResult[Option[TeamMemberInformation]]] = {
-    val usercode = request.context.user.get.usercode
-
-    permissions.teams(usercode).fold(
-      errors => Future.successful(Left(errors)),
-      teams => {
-        if (teams.isEmpty) Future.successful(Right(None))
-        else ServiceResults.zip(
-          enquiries.findEnquiriesNeedingReply(usercode),
-          enquiries.findEnquiriesAwaitingClient(usercode),
-          enquiries.countClosedEnquiries(usercode),
-          cases.listOpenCases(usercode),
-          cases.countClosedCases(usercode),
-        ).successFlatMapTo { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases) =>
-          cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMapTo { caseClients =>
-            Some(TeamMemberInformation(
-              teams,
-              enquiriesNeedingReply,
-              enquiriesAwaitingClient,
-              closedEnquiries,
-              openCases,
-              closedCases,
-              caseClients
-            ))
-          }
-        }
-      }
-    )
-  }
-
   def home: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
     ServiceResults.zip(
-      clientHome,
-      teamMemberHome
-    ).successMap { case (clientInformation, teamMemberInformation) =>
-      Ok(views.html.home(clientInformation, teamMemberInformation, uploadedFileControllerHelper.supportedMimeTypes))
+      appointments.countForClientBadge(currentUser().universityId.get),
+      Future.successful(permissions.teams(currentUser().usercode))
+    ).successMap { case (count, teams) =>
+      Ok(views.html.home(count, teams, uploadedFileControllerHelper.supportedMimeTypes))
+    }
+  }
+
+  def enquiries: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    val usercode = currentUser().usercode
+    ServiceResults.zip(
+      enquiryService.findEnquiriesNeedingReply(usercode),
+      enquiryService.findEnquiriesAwaitingClient(usercode),
+      enquiryService.countClosedEnquiries(usercode)
+    ).successMap { case (requiringAction, awaitingClient, closedEnquiries) =>
+      Ok(views.html.admin.enquiriesTab(
+        requiringAction,
+        awaitingClient,
+        closedEnquiries,
+        routes.IndexController.closedEnquiries(),
+        "member",
+        currentUser().usercode.string,
+        " assigned to me"
+      ))
     }
   }
 
   def closedEnquiries(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    enquiries.countClosedEnquiries(currentUser().usercode).successFlatMap(closed => {
+    enquiryService.countClosedEnquiries(currentUser().usercode).successFlatMap(closed => {
       val pagination = Pagination(closed, page, controllers.routes.IndexController.closedEnquiries())
-      enquiries.findClosedEnquiries(currentUser().usercode, Some(pagination.asPage)).successMap { enquiries =>
+      enquiryService.findClosedEnquiries(currentUser().usercode, Some(pagination.asPage)).successMap { enquiries =>
         Ok(views.html.admin.closedEnquiries(enquiries, pagination))
       }
     })
   }
 
+  def cases: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    val usercode = currentUser().usercode
+    ServiceResults.zip(
+      caseService.listOpenCases(usercode),
+      caseService.countClosedCases(usercode)
+    ).successFlatMap { case (openCases, closedCases) =>
+      caseService.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMap { caseClients =>
+        Ok(views.html.admin.casesTab(
+          openCases,
+          closedCases,
+          caseClients,
+          controllers.admin.routes.CaseController.createSelectTeam(),
+          routes.IndexController.closedCases(),
+          "member",
+          currentUser().usercode.string,
+          " assigned to me"
+        ))
+      }
+    }
+  }
+
   def closedCases(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    cases.countClosedCases(currentUser().usercode).successFlatMap(closed => {
+    caseService.countClosedCases(currentUser().usercode).successFlatMap(closed => {
       val pagination = Pagination(closed, page, controllers.routes.IndexController.closedCases())
-      cases.listClosedCases(currentUser().usercode, Some(pagination.asPage)).successFlatMap { closedCases =>
-        cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+      caseService.listClosedCases(currentUser().usercode, Some(pagination.asPage)).successFlatMap { closedCases =>
+        caseService.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
           Ok(views.html.admin.closedCases(closedCases, clients, pagination))
         }
       }
@@ -159,6 +120,36 @@ class IndexController @Inject()(
           Redirect(routes.IndexController.home().withFragment("appointments"))
       }
     }
+  }
+
+  def messages: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
+    val client = currentUser().universityId.get
+    ServiceResults.zip(
+      enquiryService.findEnquiriesForClient(client),
+      caseService.findForClient(client).map(_.map(_.filter(_.messages.nonEmpty))),
+      registrations.get(client)
+    ).successFlatMapTo { case (clientEnquiries, clientCases, registration) =>
+      val issues = (clientEnquiries.map(_.toIssue) ++ clientCases.map(_.toIssue)).sortBy(_.lastUpdatedDate)(JavaTime.dateTimeOrdering).reverse
+
+      val result = Future.successful(Right(Ok(views.html.messagesTab(
+        issues,
+        registration,
+        uploadedFileControllerHelper.supportedMimeTypes
+      ))))
+
+      // Record an EnquiryView or CaseView event for the first issue
+      issues.headOption.map(issue => issue.issue match {
+        case e: Enquiry => audit.audit('EnquiryView, e.id.get.toString, 'Enquiry, Json.obj())(result)
+        case c: Case => audit.audit('CaseView, c.id.get.toString, 'Case, Json.obj())(result)
+        case _ => result
+      }).getOrElse(result)
+    }.successMap(r => r)
+  }
+
+  def clientAppointments: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
+    appointments.findForClient(currentUser().universityId.get).successMap(appointments =>
+      Ok(views.html.clientAppointmentsTab(appointments))
+    )
   }
 
   def redirectToPath(path: String, status: Int = MOVED_PERMANENTLY) = Action {
