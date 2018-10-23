@@ -2,6 +2,7 @@ package domain
 
 import java.time.OffsetDateTime
 
+import helpers.JavaTime
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.{JsObject, Json}
 
@@ -20,7 +21,7 @@ class RegistrationTest extends PlaySpec {
     }
 
     "use id and description in JSON for appropriate fields" in {
-      val now = OffsetDateTime.now()
+      val now = JavaTime.offsetDateTime
       val d = RegistrationDataHistory(
         gp = Seq(("A doctor", now)),
         tutor = Seq(("A tutor", now)),
@@ -73,7 +74,7 @@ class RegistrationTest extends PlaySpec {
     }
 
     "flatten history" in {
-      val now = OffsetDateTime.now
+      val now = JavaTime.offsetDateTime
 
       val data1 = RegistrationData(
         gp = "A doctor",

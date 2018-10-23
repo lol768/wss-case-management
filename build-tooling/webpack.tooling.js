@@ -1,7 +1,6 @@
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import UglifyWebpackPlugin from 'uglifyjs-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
-import PurifyCSSPlugin from 'purifycss-webpack';
 import Autoprefixer from 'autoprefixer';
 import CssNano from 'cssnano';
 import OptimizeCssAssetsPlugin from 'optimize-css-assets-webpack-plugin';
@@ -11,6 +10,7 @@ const autoprefix = () => ({
   loader: 'postcss-loader',
   options: {
     plugins: () => [Autoprefixer()],
+    sourceMap: true,
   },
 });
 
@@ -103,6 +103,7 @@ const extractCSS = ({ resolverPaths } = {}) => ({
             options: {
               paths: resolverPaths,
               relativeUrls: false,
+              sourceMap: true,
             },
           },
         ],
@@ -116,9 +117,6 @@ const extractCSS = ({ resolverPaths } = {}) => ({
   ],
 });
 
-const purifyCSS = ({ paths }) => ({
-  plugins: [new PurifyCSSPlugin({ paths })],
-});
 
 const minify = () => ({
   optimization: {
@@ -156,7 +154,6 @@ export {
   lintJS,
   transpileJS,
   extractCSS,
-  purifyCSS,
   minify,
   generateSourceMaps,
 };

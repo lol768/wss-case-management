@@ -1,17 +1,15 @@
 package controllers.admin
 
 import java.time.OffsetDateTime
-import java.util.UUID
 
-import controllers.refiners.{CanViewTeamActionRefiner, TeamSpecificRequest}
+import controllers.refiners.CanViewTeamActionRefiner
 import controllers.{API, BaseController}
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
-import domain.dao.CaseDao.Case
 import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, Result}
+import play.api.mvc.{Action, AnyContent}
 import services.{AppointmentService, CaseService, ClientSummaryService, EnquiryService}
 import warwick.sso.UserLookupService
 
@@ -20,8 +18,8 @@ import scala.concurrent.ExecutionContext
 @Singleton
 class AdminController @Inject()(
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
-  enquiries: EnquiryService,
-  cases: CaseService,
+  enquiryService: EnquiryService,
+  caseService: CaseService,
   clientSummaryService: ClientSummaryService,
   userLookupService: UserLookupService,
   appointments: AppointmentService,
@@ -29,47 +27,62 @@ class AdminController @Inject()(
 
   import canViewTeamActionRefiner._
 
-  def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    findEnquiriesAndCasesAndAppointments { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, caseClients) => {
-      Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, caseClients))
-    }}
+  def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId) { implicit teamRequest =>
+    Ok(views.html.admin.teamHome(teamRequest.team))
   }
 
-  private def findEnquiriesAndCasesAndAppointments(f: (
-      Seq[(Enquiry, MessageData)],
-      Seq[(Enquiry, MessageData)],
-      Int,
-      Seq[(Case, OffsetDateTime)],
-      Int,
-      Map[UUID, Set[Client]]
-    ) => Result)(implicit teamRequest: TeamSpecificRequest[_]) = {
+  def enquiries(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     ServiceResults.zip(
-      enquiries.findEnquiriesNeedingReply(teamRequest.team),
-      enquiries.findEnquiriesAwaitingClient(teamRequest.team),
-      enquiries.countClosedEnquiries(teamRequest.team),
-      cases.listOpenCases(teamRequest.team),
-      cases.countClosedCases(teamRequest.team),
-    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases) =>
-      cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMap { caseClients =>
-        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, caseClients)
-      }
+      enquiryService.findEnquiriesNeedingReply(teamRequest.team),
+      enquiryService.findEnquiriesAwaitingClient(teamRequest.team),
+      enquiryService.countClosedEnquiries(teamRequest.team)
+    ).successMap { case (requiringAction, awaitingClient, closedEnquiries) =>
+      Ok(views.html.admin.enquiriesTab(
+        requiringAction,
+        awaitingClient,
+        closedEnquiries,
+        controllers.admin.routes.AdminController.closedEnquiries(teamId),
+        "team",
+        teamId,
+        s" assigned to ${teamRequest.team.name}"
+      ))
     }
   }
 
   def closedEnquiries(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    enquiries.countClosedEnquiries(teamRequest.team).successFlatMap(closed => {
+    enquiryService.countClosedEnquiries(teamRequest.team).successFlatMap(closed => {
       val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedEnquiries(teamRequest.team.id))
-      enquiries.findClosedEnquiries(teamRequest.team, Some(pagination.asPage)).successMap { enquiries =>
+      enquiryService.findClosedEnquiries(teamRequest.team, Some(pagination.asPage)).successMap { enquiries =>
         Ok(views.html.admin.closedEnquiries(enquiries, pagination))
       }
     })
   }
 
+  def cases(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    ServiceResults.zip(
+      caseService.listOpenCases(teamRequest.team),
+      caseService.countClosedCases(teamRequest.team)
+    ).successFlatMap { case (openCases, closedCases) =>
+      caseService.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMap { caseClients =>
+        Ok(views.html.admin.casesTab(
+          openCases,
+          closedCases,
+          caseClients,
+          controllers.admin.routes.CaseController.createSelectTeam(),
+          controllers.admin.routes.AdminController.closedCases(teamId),
+          "team",
+          teamId,
+          s" assigned to ${teamRequest.team.name}"
+        ))
+      }
+    }
+  }
+
   def closedCases(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    cases.countClosedCases(teamRequest.team).successFlatMap(closed => {
+    caseService.countClosedCases(teamRequest.team).successFlatMap(closed => {
       val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedCases(teamRequest.team.id))
-      cases.listClosedCases(teamRequest.team, Some(pagination.asPage)).successFlatMap { closedCases =>
-        cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+      caseService.listClosedCases(teamRequest.team, Some(pagination.asPage)).successFlatMap { closedCases =>
+        caseService.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
           Ok(views.html.admin.closedCases(closedCases, clients, pagination))
         }
       }

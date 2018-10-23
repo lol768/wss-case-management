@@ -1,0 +1,97 @@
+@import domain.AppointmentRender
+@import helpers.JavaTime
+@import domain.AppointmentState
+@import play.api.data.Form
+@import play.api.data.Forms._
+@import domain.AppointmentCancellationReason
+
+@(appointments: Seq[AppointmentRender])(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+<table class="table table-default">
+  <thead>
+    <tr>
+      <th class="col-sm-3">Subject</th>
+      <th class="col-sm-2">When</th>
+      <th class="col-sm-3">Staff member</th>
+      <th class="col-sm-2">Location</th>
+      <th class="col-sm-2">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    @appointments.map { a =>
+      <tr>
+        <td>
+          @tags.icons.appointmentState(a.appointment.state)
+          @a.appointment.subject(None, None)
+        </td>
+        <td>@JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))</td>
+        <td>
+          @a.teamMembers.toSeq.sortBy(_.member).map(_.member.safeFullName).mkString(", ")
+          (@a.appointment.team.name team)
+        </td>
+        <td>
+          @a.room.map { r => @tags.mapLink(r) }
+          (@a.appointment.appointmentType.description)
+        </td>
+        <td>
+          @a.clients.find(_.client.universityID == context.user.get.universityId.get).map { client =>
+            @if(a.appointment.state == AppointmentState.Provisional) {
+              @if(client.state != AppointmentState.Provisional) {
+                <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
+                  @tags.icons.appointmentState(client.state, client = true)
+                  @client.state.clientDescription
+                </span>
+                &nbsp;
+              }
+            } else {
+              <span class="label label-@a.appointment.state.labelType" @a.appointment.cancellationReason.map { r => title="@r.description" }>
+                @tags.icons.appointmentState(a.appointment.state)
+                @a.appointment.state
+              </span>
+              &nbsp;
+            }
+
+            @if(a.appointment.state.nonTerminal) {
+              @if(client.state == AppointmentState.Provisional) {
+                @b3.inline.formCSRF(controllers.appointments.routes.AppointmentController.accept(a.appointment.key), 'class -> "inline-form") { implicit ifc =>
+                  <button type="submit" class="btn btn-default btn-xs">@tags.icons.appointmentAccept() Accept</button>
+                }
+              }
+
+              @if(client.state.nonTerminal) {
+                @b3.horizontal.formCSRF(controllers.appointments.routes.AppointmentController.decline(a.appointment.key), "col-sm-3", "col-sm-9", 'class -> "inline-form") { implicit ifc =>
+                  <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#decline-@{a.appointment.id.toString}-modal">@tags.icons.appointmentDecline() Decline</button>
+
+                  <div class="modal fade" id="decline-@{a.appointment.id.toString}-modal" tabindex="-1" role="dialog" aria-labelledby="decline-@{a.appointment.id.toString}-modal-label">
+                    <div class="modal-dialog" role="document">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                          <h4 class="modal-title" id="decline-@{a.appointment.id.toString}-modal-label">Decline appointment</h4>
+                        </div>
+                        <div class="modal-body form-vertical">
+                          @defining(Form(single("cancellationReason" -> AppointmentCancellationReason.formField))) { form: Form[AppointmentCancellationReason] =>
+                            @b3.select(form("cancellationReason"),
+                              options = AppointmentCancellationReason.values.map { r => r.entryName -> r.description },
+                              '_label -> "Reason",
+                              '_default -> "",
+                              'required -> true
+                            )
+                          }
+                        </div>
+                        <div class="modal-footer spaced-buttons">
+                          <button type="submit" class="btn btn-primary">Decline appointment</button>
+                          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              }
+            }
+          }
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>

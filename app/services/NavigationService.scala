@@ -3,6 +3,7 @@ package services
 import com.google.inject.ImplementedBy
 import domain.Team
 import javax.inject.{Inject, Singleton}
+import play.api.Configuration
 import play.api.mvc.Call
 import system.Roles._
 import warwick.sso.{LoginContext, Usercode}
@@ -51,8 +52,11 @@ trait NavigationService {
 
 @Singleton
 class NavigationServiceImpl @Inject() (
-  permission: PermissionService
+  permission: PermissionService,
+  configuration: Configuration,
 ) extends NavigationService {
+
+  private[this] val dataGenerationEnabled = configuration.get[Boolean]("wellbeing.dummyDataGeneration")
 
   private lazy val masquerade = NavigationPage("Masquerade", controllers.sysadmin.routes.MasqueradeController.masquerade())
 
@@ -61,6 +65,13 @@ class NavigationServiceImpl @Inject() (
       NavigationPage("Reports", controllers.reports.routes.ReportsController.home()),
       NavigationPage("Locations", controllers.locations.routes.LocationsController.list())
     ))
+
+  private lazy val sysadmin =
+    NavigationDropdown("Sysadmin", Call("GET", "/sysadmin"), Seq(
+      Some(masquerade),
+      Some(NavigationPage("Dummy data generation", controllers.sysadmin.routes.DataGenerationController.generateForm()))
+        .filter(_ => dataGenerationEnabled)
+    ).flatten)
 
   private def teamHome(team: Team) = NavigationPage(team.name, controllers.admin.routes.AdminController.teamHome(team.id))
 
@@ -71,10 +82,13 @@ class NavigationServiceImpl @Inject() (
       Nil
 
   private def sysadminMenu(loginContext: LoginContext): Seq[Navigation] =
-    Nil
+    if (loginContext.actualUserHasRole(Sysadmin))
+      Seq(sysadmin)
+    else
+      Nil
 
   private def masqueraderLinks(loginContext: LoginContext): Seq[Navigation] =
-    Seq(masquerade).filter(_ => loginContext.actualUserHasRole(Masquerader))
+    Seq(masquerade).filter(_ => !loginContext.actualUserHasRole(Sysadmin) && loginContext.actualUserHasRole(Masquerader))
 
   def teamLinks(login: LoginContext): Seq[NavigationPage] =
     login.user.map(_.usercode).map(teamLinksForUser).getOrElse(Nil)

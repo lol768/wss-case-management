@@ -1,8 +1,8 @@
 package services.healthcheck
 
-import java.time.LocalDateTime.now
 import java.time.OffsetDateTime
 
+import helpers.JavaTime.{localDateTime => now}
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status._
 import uk.ac.warwick.util.service.{ServiceHealthcheck, ServiceHealthcheckProvider}

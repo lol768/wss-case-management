@@ -84,8 +84,8 @@ case class CaseNote(
   noteType: CaseNoteType,
   text: String,
   teamMember: Member,
-  created: OffsetDateTime = OffsetDateTime.now(),
-  lastUpdated: OffsetDateTime = OffsetDateTime.now()
+  created: OffsetDateTime = JavaTime.offsetDateTime,
+  lastUpdated: OffsetDateTime = JavaTime.offsetDateTime,
 )
 
 object CaseNote {
@@ -120,8 +120,8 @@ case class CaseDocument(
   file: UploadedFile,
   teamMember: Member,
   caseNote: CaseNote,
-  created: OffsetDateTime = OffsetDateTime.now(),
-  lastUpdated: OffsetDateTime = OffsetDateTime.now()
+  created: OffsetDateTime = JavaTime.offsetDateTime,
+  lastUpdated: OffsetDateTime = JavaTime.offsetDateTime,
 ) extends HasCreator
 
 /**

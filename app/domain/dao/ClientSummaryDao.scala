@@ -127,7 +127,7 @@ object ClientSummaryDao {
     case class StoredReasonableAdjustment(
       universityID: UniversityID,
       reasonableAdjustment: ReasonableAdjustment,
-      version: OffsetDateTime = OffsetDateTime.now()
+      version: OffsetDateTime = JavaTime.offsetDateTime,
     ) extends Versioned[StoredReasonableAdjustment] {
       override def atVersion(at: OffsetDateTime): StoredReasonableAdjustment = copy(version = at)
       override def storedVersion[B <: StoredVersion[StoredReasonableAdjustment]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
@@ -144,7 +144,7 @@ object ClientSummaryDao {
     case class StoredReasonableAdjustmentVersion(
       universityID: UniversityID,
       reasonableAdjustment: ReasonableAdjustment,
-      version: OffsetDateTime = OffsetDateTime.now(),
+      version: OffsetDateTime = JavaTime.offsetDateTime,
       operation: DatabaseOperation,
       timestamp: OffsetDateTime,
       auditUser: Option[Usercode]

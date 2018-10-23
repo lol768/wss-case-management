@@ -7,6 +7,7 @@ import domain.CustomJdbcTypes._
 import enumeratum.{EnumEntry, PlayEnum}
 import ExtendedPostgresProfile.api._
 import domain.dao.MemberDao
+import helpers.JavaTime
 import services.AuditLogContext
 import warwick.sso.Usercode
 
@@ -35,17 +36,17 @@ case class Owner(
 }
 
 object EnquiryOwner {
-  def apply(enquiryId: UUID, userId: Usercode, version: OffsetDateTime = OffsetDateTime.now()) =
+  def apply(enquiryId: UUID, userId: Usercode, version: OffsetDateTime = JavaTime.offsetDateTime) =
     Owner(entityId = enquiryId, entityType = Owner.EntityType.Enquiry, userId = userId, version = version)
 }
 
 object CaseOwner {
-  def apply(caseId: UUID, userId: Usercode, version: OffsetDateTime = OffsetDateTime.now()) =
+  def apply(caseId: UUID, userId: Usercode, version: OffsetDateTime = JavaTime.offsetDateTime) =
     Owner(entityId = caseId, entityType = Owner.EntityType.Case, userId = userId, version = version)
 }
 
 object AppointmentOwner {
-  def apply(appointmentID: UUID, userId: Usercode, version: OffsetDateTime = OffsetDateTime.now()) =
+  def apply(appointmentID: UUID, userId: Usercode, version: OffsetDateTime = JavaTime.offsetDateTime) =
     Owner(entityId = appointmentID, entityType = Owner.EntityType.Appointment, userId = userId, version = version)
 }
 
@@ -105,7 +106,7 @@ case class OwnerVersion(
   entityId: UUID,
   entityType: Owner.EntityType,
   userId: Usercode,
-  version: OffsetDateTime = OffsetDateTime.now(),
+  version: OffsetDateTime = JavaTime.offsetDateTime,
   operation: DatabaseOperation,
   timestamp: OffsetDateTime,
   auditUser: Option[Usercode]

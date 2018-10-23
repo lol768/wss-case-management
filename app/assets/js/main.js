@@ -230,6 +230,33 @@ function bindTo($scope) {
   });
 
   $('table.table-paginated', $scope).each((i, container) => PaginatingTable(container));
+
+  function loadTabPanelContent($tabPanel) {
+    if (!$tabPanel.data('tabPanelLoaded')) {
+      $tabPanel
+        .data('tabPanelLoaded', true)
+        .empty()
+        .append('<i class="fas fa-spinner fa-pulse"></i> Loading&hellip;')
+        .load($tabPanel.data('href'), (text, status, xhr) => {
+          if (status === 'error') {
+            $tabPanel.text(`Unable to load content: ${xhr.statusText || xhr.status || 'error'}`);
+          } else {
+            bindTo($tabPanel);
+          }
+        });
+    }
+  }
+
+  $('a[data-toggle="tab"]', $scope).on('show.bs.tab', (e) => {
+    const $tabPanel = $($(e.target).attr('href'), $scope);
+    if ($tabPanel && $tabPanel.data('href')) {
+      loadTabPanelContent($tabPanel);
+    }
+  });
+
+  $('.tab-pane.active[data-href]', $scope).each((i, tabPanel) => {
+    loadTabPanelContent($(tabPanel));
+  });
 }
 
 $(() => {

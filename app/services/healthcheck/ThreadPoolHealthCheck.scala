@@ -1,10 +1,10 @@
 package services.healthcheck
 
-import java.time.LocalDateTime.now
 import java.util.concurrent.{ExecutorService, ThreadPoolExecutor}
 
 import akka.actor.ActorSystem
 import akka.dispatch.{Dispatcher, ExecutorServiceDelegate, ForkJoinExecutorConfigurator}
+import helpers.JavaTime.{localDateTime => now}
 import javax.inject.{Inject, Named, Singleton}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status
