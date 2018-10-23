@@ -108,7 +108,7 @@ class NotificationServiceImpl @Inject()(
       val url = controllers.admin.routes.TeamEnquiryController.messages(enquiryKey).build
 
       queueEmailAndSendActivity(
-        subject = s"$teamSubjectPrefix New enquiry received",
+        subject = s"$teamSubjectPrefix ${enquiryKey.string} - New enquiry received",
         body = views.txt.emails.newenquiry(url),
         recipients = users,
         activity = buildActivity(
@@ -132,7 +132,7 @@ class NotificationServiceImpl @Inject()(
       val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key).build
 
       queueEmailAndSendActivity(
-        subject = s"$teamSubjectPrefix Enquiry message from client received",
+        subject = s"$teamSubjectPrefix ${enquiry.key.string} - Enquiry message from client received",
         body = views.txt.emails.enquirymessagefromclient(url),
         recipients = users,
         activity = buildActivity(
@@ -175,7 +175,7 @@ class NotificationServiceImpl @Inject()(
       val url = controllers.admin.routes.CaseController.view(c.key.get).build
 
       queueEmailAndSendActivity(
-        subject = s"$teamSubjectPrefix Case message from client received",
+        subject = s"$teamSubjectPrefix ${c.key.get.string} - Case message from client received",
         body = views.txt.emails.casemessagefromclient(url),
         recipients = users,
         activity = buildActivity(
@@ -193,7 +193,7 @@ class NotificationServiceImpl @Inject()(
       val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key).build
 
       queueEmailAndSendActivity(
-        subject = s"$teamSubjectPrefix Enquiry assigned",
+        subject = s"$teamSubjectPrefix ${enquiry.key.string} - Enquiry assigned",
         body = views.txt.emails.enquiryreassigned(url),
         recipients = users,
         activity = buildActivity(
@@ -213,7 +213,7 @@ class NotificationServiceImpl @Inject()(
         val url = controllers.admin.routes.CaseController.view(clientCase.key.get).build
 
         queueEmailAndSendActivity(
-          subject = s"$teamSubjectPrefix New case owner",
+          subject = s"$teamSubjectPrefix ${clientCase.key.get.string} - New case owner",
           body = views.txt.emails.newcaseowner(url),
           recipients = users.toSeq,
           activity = buildActivity(
@@ -231,7 +231,7 @@ class NotificationServiceImpl @Inject()(
       val url = controllers.admin.routes.CaseController.view(clientCase.key.get).build
 
       queueEmailAndSendActivity(
-        subject = s"$teamSubjectPrefix Case assigned",
+        subject = s"$teamSubjectPrefix ${clientCase.key.get.string} - Case assigned",
         body = views.txt.emails.casereassigned(url),
         recipients = users,
         activity = buildActivity(
@@ -302,7 +302,7 @@ class NotificationServiceImpl @Inject()(
       val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
 
       queueEmailAndSendActivity(
-        subject = s"$teamSubjectPrefix Appointment ${clientState.clientDescription}",
+        subject = s"$teamSubjectPrefix ${appointment.key.string} - Appointment ${clientState.clientDescription}",
         body = views.txt.emails.appointmentResponse(url, clientState.clientDescription.toLowerCase),
         recipients = teamMembers.toSeq,
         activity = buildActivity(
