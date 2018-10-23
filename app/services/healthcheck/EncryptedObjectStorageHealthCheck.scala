@@ -1,10 +1,10 @@
 package services.healthcheck
 
 import java.nio.charset.StandardCharsets
-import java.time.LocalDateTime.now
 
 import akka.actor.ActorSystem
 import com.google.common.io.CharSource
+import helpers.JavaTime.{localDateTime => now}
 import javax.inject.{Inject, Singleton}
 import services.healthcheck.EncryptedObjectStorageHealthCheck._
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status

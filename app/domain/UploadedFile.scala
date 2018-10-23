@@ -6,6 +6,7 @@ import java.util.UUID
 import com.google.common.io.{ByteSource, Files}
 import controllers.refiners.EnquirySpecificRequest
 import enumeratum.{EnumEntry, PlayEnum}
+import helpers.JavaTime
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc.MultipartFormData
 import warwick.sso.{AuthenticatedRequest, Usercode}
@@ -18,8 +19,8 @@ case class UploadedFile(
   contentLength: Long,
   contentType: String,
   uploadedBy: Usercode,
-  created: OffsetDateTime = OffsetDateTime.now(),
-  lastUpdated: OffsetDateTime = OffsetDateTime.now()
+  created: OffsetDateTime = JavaTime.offsetDateTime,
+  lastUpdated: OffsetDateTime = JavaTime.offsetDateTime,
 )
 
 /**

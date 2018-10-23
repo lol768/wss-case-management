@@ -473,7 +473,7 @@ object CaseDao {
   case class StoredCaseTag(
     caseId: UUID,
     caseTag: CaseTag,
-    version: OffsetDateTime = OffsetDateTime.now()
+    version: OffsetDateTime = JavaTime.offsetDateTime,
   ) extends Versioned[StoredCaseTag] {
     override def atVersion(at: OffsetDateTime): StoredCaseTag = copy(version = at)
     override def storedVersion[B <: StoredVersion[StoredCaseTag]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
@@ -490,7 +490,7 @@ object CaseDao {
   case class StoredCaseTagVersion(
     caseId: UUID,
     caseTag: CaseTag,
-    version: OffsetDateTime = OffsetDateTime.now(),
+    version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
@@ -531,7 +531,7 @@ object CaseDao {
   case class StoredCaseClient(
     caseId: UUID,
     universityID: UniversityID,
-    version: OffsetDateTime = OffsetDateTime.now()
+    version: OffsetDateTime = JavaTime.offsetDateTime,
   ) extends Versioned[StoredCaseClient] {
     override def atVersion(at: OffsetDateTime): StoredCaseClient = copy(version = at)
     override def storedVersion[B <: StoredVersion[StoredCaseClient]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
@@ -548,7 +548,7 @@ object CaseDao {
   case class StoredCaseClientVersion(
     caseId: UUID,
     universityID: UniversityID,
-    version: OffsetDateTime = OffsetDateTime.now(),
+    version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
@@ -600,7 +600,7 @@ object CaseDao {
     incomingCaseID: UUID,
     caseNote: UUID,
     teamMember: Usercode,
-    version: OffsetDateTime = OffsetDateTime.now()
+    version: OffsetDateTime = JavaTime.offsetDateTime,
   ) extends Versioned[StoredCaseLink] {
     override def atVersion(at: OffsetDateTime): StoredCaseLink = copy(version = at)
 
@@ -626,7 +626,7 @@ object CaseDao {
     incomingCaseID: UUID,
     caseNote: UUID,
     teamMember: Usercode,
-    version: OffsetDateTime = OffsetDateTime.now(),
+    version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]

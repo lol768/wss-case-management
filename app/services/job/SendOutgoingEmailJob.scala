@@ -4,6 +4,7 @@ import java.time.Instant
 import java.util.{Date, UUID}
 
 import akka.Done
+import helpers.JavaTime
 import javax.inject.Inject
 import org.quartz._
 import services.{AuditLogContext, EmailService}
@@ -47,7 +48,7 @@ class SendOutgoingEmailJob @Inject()(
               errors => {
                 val throwable = errors.flatMap(_.cause).headOption
                 logger.error(s"Error sending email $id: ${errors.mkString(", ")}", throwable.orNull)
-                rescheduleFor(Instant.now().plusSeconds(30))
+                rescheduleFor(JavaTime.instant.plusSeconds(30))
                 Done
               },
               _ => {}
@@ -56,7 +57,7 @@ class SendOutgoingEmailJob @Inject()(
     } catch {
       case t: Throwable =>
         logger.error(s"Error sending outgoing email $id - retrying in 30 seconds", t)
-        rescheduleFor(Instant.now().plusSeconds(30))
+        rescheduleFor(JavaTime.instant.plusSeconds(30))
     }
   }
 

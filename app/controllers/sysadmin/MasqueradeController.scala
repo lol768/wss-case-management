@@ -5,9 +5,8 @@ import domain.{Teams, UserType}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.mvc.{Action, AnyContent}
-import services.{PhotoService, SecurityService}
 import services.tabula.ProfileService
-import system.Roles.Masquerader
+import services.{PhotoService, SecurityService}
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
 
 import scala.concurrent.ExecutionContext
@@ -27,7 +26,7 @@ class MasqueradeController @Inject()(
   private[this] val testTeamMemberUsers = configuration.get[Map[String, Seq[String]]]("wellbeing.testTeamMembers")
   private[this] val testAdminUsers = configuration.get[Seq[String]]("wellbeing.testAdmins")
   
-  def masquerade: Action[AnyContent] = RequiredActualUserRoleAction(Masquerader).async { implicit request =>
+  def masquerade: Action[AnyContent] = RequireMasquerader.async { implicit request =>
     profiles.getProfiles(testTabulaUsers.map(UniversityID.apply).toSet).successMap { profiles =>
       val testUsers =
         profiles.values

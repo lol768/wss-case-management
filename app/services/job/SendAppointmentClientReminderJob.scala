@@ -64,7 +64,7 @@ class SendAppointmentClientReminderJob @Inject()(
               errors => {
                 val throwable = errors.flatMap(_.cause).headOption
                 logger.error(s"Error sending appointment reminder $id: ${errors.mkString(", ")}", throwable.orNull)
-                rescheduleFor(Instant.now().plus(10, ChronoUnit.MINUTES))
+                rescheduleFor(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
                 Done
               },
               _ => {}
@@ -73,7 +73,7 @@ class SendAppointmentClientReminderJob @Inject()(
     } catch {
       case t: Throwable =>
         logger.error(s"Error sending appointment reminder $id - retrying in 10 minutes", t)
-        rescheduleFor(Instant.now().plus(10, ChronoUnit.MINUTES))
+        rescheduleFor(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
     }
   }
 

@@ -62,6 +62,12 @@ class NavigationServiceImpl @Inject() (
       NavigationPage("Locations", controllers.locations.routes.LocationsController.list())
     ))
 
+  private lazy val sysadmin =
+    NavigationDropdown("Sysadmin", Call("GET", "/sysadmin"), Seq(
+      masquerade,
+      NavigationPage("Dummy data generation", controllers.sysadmin.routes.DataGenerationController.generateForm())
+    ))
+
   private def teamHome(team: Team) = NavigationPage(team.name, controllers.admin.routes.AdminController.teamHome(team.id))
 
   private def adminMenu(loginContext: LoginContext): Seq[Navigation] =
@@ -71,10 +77,13 @@ class NavigationServiceImpl @Inject() (
       Nil
 
   private def sysadminMenu(loginContext: LoginContext): Seq[Navigation] =
-    Nil
+    if (loginContext.actualUserHasRole(Sysadmin))
+      Seq(sysadmin)
+    else
+      Nil
 
   private def masqueraderLinks(loginContext: LoginContext): Seq[Navigation] =
-    Seq(masquerade).filter(_ => loginContext.actualUserHasRole(Masquerader))
+    Seq(masquerade).filter(_ => !loginContext.actualUserHasRole(Sysadmin) && loginContext.actualUserHasRole(Masquerader))
 
   def teamLinks(login: LoginContext): Seq[NavigationPage] =
     login.user.map(_.usercode).map(teamLinksForUser).getOrElse(Nil)

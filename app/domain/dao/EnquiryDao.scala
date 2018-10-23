@@ -141,8 +141,8 @@ object EnquiryDao {
     subject: String,
     team: Team,
     state: IssueState = Open,
-    version: OffsetDateTime = OffsetDateTime.now(),
-    created: OffsetDateTime = OffsetDateTime.now(),
+    version: OffsetDateTime = JavaTime.offsetDateTime,
+    created: OffsetDateTime = JavaTime.offsetDateTime,
   ) extends Versioned[StoredEnquiry] {
     override def atVersion(at: OffsetDateTime): StoredEnquiry = copy(version = at)
 
@@ -180,8 +180,8 @@ object EnquiryDao {
     subject: String,
     team: Team,
     state: IssueState,
-    version: OffsetDateTime = OffsetDateTime.now(),
-    created: OffsetDateTime = OffsetDateTime.now(),
+    version: OffsetDateTime = JavaTime.offsetDateTime,
+    created: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]

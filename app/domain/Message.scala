@@ -28,8 +28,8 @@ case class Message (
   team: Option[Team],
   ownerId: UUID,
   ownerType: MessageOwner,
-  created: OffsetDateTime = OffsetDateTime.now(),
-  version: OffsetDateTime = OffsetDateTime.now()
+  created: OffsetDateTime = JavaTime.offsetDateTime,
+  version: OffsetDateTime = JavaTime.offsetDateTime,
 ) extends Versioned[Message] {
   override def atVersion(at: OffsetDateTime): Message = copy(version = at)
 
@@ -122,7 +122,7 @@ case class MessageVersion (
   ownerId: UUID,
   ownerType: MessageOwner,
   created: OffsetDateTime,
-  version: OffsetDateTime = OffsetDateTime.now(),
+  version: OffsetDateTime = JavaTime.offsetDateTime,
   operation: DatabaseOperation,
   timestamp: OffsetDateTime,
   auditUser: Option[Usercode]
