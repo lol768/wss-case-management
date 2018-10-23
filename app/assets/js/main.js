@@ -234,6 +234,7 @@ function bindTo($scope) {
   function loadTabPanelContent($tabPanel) {
     if (!$tabPanel.data('tabPanelLoaded')) {
       $tabPanel
+        .data('tabPanelLoaded', true)
         .empty()
         .append('<i class="fas fa-spinner fa-pulse"></i> Loading&hellip;')
         .load($tabPanel.data('href'), (text, status, xhr) => {
@@ -241,7 +242,6 @@ function bindTo($scope) {
             $tabPanel.text(`Unable to load content: ${xhr.statusText || xhr.status || 'error'}`);
           } else {
             bindTo($tabPanel);
-            $tabPanel.data('tabPanelLoaded', true);
           }
         });
     }
