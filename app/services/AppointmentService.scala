@@ -70,6 +70,7 @@ trait AppointmentService {
   def clientAccept(appointmentID: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
   def clientDecline(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
+  def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentState, Option[AppointmentCancellationReason])], note: AppointmentNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
   def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def addNote(appointmentID: UUID, note: AppointmentNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]]
@@ -478,6 +479,44 @@ class AppointmentServiceImpl @Inject()(
       }
     }
 
+  override def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentState, Option[AppointmentCancellationReason])], note: AppointmentNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
+    auditService.audit('AppointmentOutcomes, appointmentID.toString, 'Appointment, Json.obj()) {
+      memberService.getOrAddMember(note.teamMember).successFlatMapTo { _ =>
+        daoRunner.run(for {
+          appointment <- dao.findByIDQuery(appointmentID).filter(_.version === version).result.head
+          clients <- getClientsQuery(appointmentID).result
+
+          // Update individual clients
+          _ <- DBIO.seq(clients.map { client =>
+            clientAttendance.get(client.universityID) match {
+              case Some((AppointmentState.Attended, _)) if client.state != AppointmentState.Attended || client.cancellationReason.nonEmpty =>
+                // Set attended
+                dao.updateClient(client.copy(state = AppointmentState.Attended, cancellationReason = None))
+
+              case Some((AppointmentState.Cancelled, reason)) if client.state != AppointmentState.Cancelled || client.cancellationReason != reason =>
+                // Set cancelled
+                dao.updateClient(client.copy(state = AppointmentState.Cancelled, cancellationReason = reason))
+
+              case _ => DBIO.successful(()) // no-op
+            }
+          }: _*)
+
+          // Set the appointment to attended if at least one client has attended and it's not already attended
+          // else set it as cancelled with the first client reason
+          updatedAppointment <-
+            if (clientAttendance.values.exists { case (s, _) => s == AppointmentState.Attended } && (appointment.state != AppointmentState.Attended || appointment.cancellationReason.nonEmpty))
+              dao.update(appointment.copy(state = AppointmentState.Attended, cancellationReason = None), version)
+            else if (clientAttendance.values.forall { case (s, _) => s == AppointmentState.Cancelled } && (appointment.state != AppointmentState.Cancelled || clientAttendance.values.forall { case (_, r) => r != appointment.cancellationReason }))
+              dao.update(appointment.copy(state = AppointmentState.Cancelled, cancellationReason = clientAttendance.values.headOption.flatMap { case (_, r) => r }), version)
+            else
+              DBIO.successful(appointment)
+
+          // Add an appointment note
+          _ <- addNoteDBIO(updatedAppointment.id, note)
+        } yield updatedAppointment).map { a => Right(a.asAppointment) }
+      }
+    }
+
   override def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
     auditService.audit('AppointmentCancel, appointmentID.toString, 'Appointment, Json.obj()) {
       daoRunner.run(for {
@@ -491,19 +530,23 @@ class AppointmentServiceImpl @Inject()(
       }
     }
 
+  private def addNoteDBIO(appointmentID: UUID, note: AppointmentNoteSave)(implicit ac: AuditLogContext): DBIO[StoredAppointmentNote] =
+    dao.insertNote(
+      AppointmentDao.StoredAppointmentNote(
+        id = UUID.randomUUID(),
+        appointmentId = appointmentID,
+        text = note.text,
+        teamMember = note.teamMember,
+        created = JavaTime.offsetDateTime,
+        version = JavaTime.offsetDateTime
+      )
+    )
+
   override def addNote(appointmentID: UUID, note: AppointmentNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]] =
     auditService.audit('AppointmentAddNote, appointmentID.toString, 'Appointment, Json.obj()) {
       memberService.getOrAddMember(note.teamMember).successFlatMapTo(member =>
-        daoRunner.run(dao.insertNote(
-          AppointmentDao.StoredAppointmentNote(
-            id = UUID.randomUUID(),
-            appointmentId = appointmentID,
-            text = note.text,
-            teamMember = note.teamMember,
-            created = JavaTime.offsetDateTime,
-            version = JavaTime.offsetDateTime
-          )
-        )).map { n => Right(n.asAppointmentNote(member)) }
+        daoRunner.run(addNoteDBIO(appointmentID, note))
+          .map { n => Right(n.asAppointmentNote(member)) }
       )
     }
 

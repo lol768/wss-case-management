@@ -92,7 +92,7 @@ object AppointmentRender {
     "teamMembers" -> o.teamMembers.map { teamMember =>
       Json.obj(
         "usercode" -> teamMember.member.usercode.string,
-        "fullName" -> teamMember.member.fullName,
+        "fullName" -> teamMember.member.safeFullName,
       )
     },
     "appointmentType" -> Json.obj(
@@ -116,7 +116,7 @@ object AppointmentRender {
       Json.obj(
         "client" -> Json.obj(
           "universityID" -> client.client.universityID.string,
-          "fullName" -> client.client.fullName,
+          "fullName" -> client.client.safeFullName,
         ),
         "state" -> client.state,
         "cancellationReason" -> client.cancellationReason,
@@ -161,15 +161,16 @@ object AppointmentPurpose extends PlayEnum[AppointmentPurpose] {
   override def values: immutable.IndexedSeq[AppointmentPurpose] = findValues
 }
 
-sealed abstract class AppointmentState(val labelType: String) extends EnumEntry {
+sealed abstract class AppointmentState(val labelType: String, val isTerminal: Boolean) extends EnumEntry {
   // When attached to AppointmentClient, the displayable description
   val clientDescription: String = entryName
+  val nonTerminal: Boolean = !isTerminal
 }
 object AppointmentState extends PlayEnum[AppointmentState] {
-  case object Provisional extends AppointmentState("default")
-  case object Accepted extends AppointmentState("info")
-  case object Attended extends AppointmentState("success")
-  case object Cancelled extends AppointmentState("danger") {
+  case object Provisional extends AppointmentState("default", isTerminal = false)
+  case object Accepted extends AppointmentState("info", isTerminal = false)
+  case object Attended extends AppointmentState("success", isTerminal = true)
+  case object Cancelled extends AppointmentState("danger", isTerminal = true) {
     override val clientDescription = "Declined"
   }
 

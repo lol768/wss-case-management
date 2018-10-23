@@ -95,7 +95,7 @@ class EnquiryDaoImpl @Inject() (
     def queries(e: Enquiries, m: Rep[Option[Message.Messages]], f: Rep[Option[UploadedFileDao.UploadedFiles]], o: Rep[Option[Owner.Owners]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
-          val query = plainToTsQuery(queryStr.bind, Some("english"))
+          val query = prefixTsQuery(queryStr.bind)
 
           // Need to search UploadedFile fields separately otherwise the @+ will stop it matching messages
           // with no file

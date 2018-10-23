@@ -18,6 +18,16 @@ const icons = {
 
 const dateTimeHiddenFieldFormat = 'YYYY-MM-DDTHH:mm';
 const dateTimeTextFieldFormat = 'Do MMM YYYY, HH:mm';
+const dayAndDateTimeTextFieldFormat = 'ddd Do MMM YYYY, HH:mm';
+
+const commonOptions = {
+  locale: 'en-gb',
+  format: dateTimeTextFieldFormat,
+  icons,
+  sideBySide: true,
+  stepping: 1,
+  useCurrent: true,
+};
 
 export function DateTimePicker(container) {
   const hiddenField = $(container).find('input[type=hidden]');
@@ -32,12 +42,9 @@ export function DateTimePicker(container) {
   }
 
   inputGroup.datetimepicker({
-    format: dateTimeTextFieldFormat,
-    icons,
+    ...commonOptions,
     date: currentDate,
-    sideBySide: true,
     allowInputToggle: true,
-    stepping: 1,
     ...options,
   }).on('dp.change', ({ date }) => hiddenField.val(moment(date, dateTimeTextFieldFormat).format(dateTimeHiddenFieldFormat)));
 }
@@ -55,22 +62,18 @@ export function InlineDateTimePicker(container) {
       label.append(span);
     }
 
-    span.text(`: ${newDate.format(dateTimeTextFieldFormat)}`);
+    span.text(`: ${newDate.format(dayAndDateTimeTextFieldFormat)}`);
   };
 
   let currentDate;
   if (hiddenField.val()) {
     currentDate = moment(hiddenField.val(), dateTimeHiddenFieldFormat);
-    updateLabel(currentDate);
   }
 
   div.datetimepicker({
-    format: dateTimeTextFieldFormat,
-    icons,
+    ...commonOptions,
     date: currentDate,
-    sideBySide: true,
-    stepping: 1,
-    useCurrent: false,
+    daysOfWeekDisabled: [0, 6],
     inline: true,
     ...options,
   }).on('dp.change', ({ date }) => {
@@ -78,4 +81,6 @@ export function InlineDateTimePicker(container) {
     hiddenField.val(d.format(dateTimeHiddenFieldFormat));
     updateLabel(d);
   }).trigger('init.datetimepicker');
+
+  updateLabel(div.data('DateTimePicker').viewDate());
 }

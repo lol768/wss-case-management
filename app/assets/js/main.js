@@ -17,6 +17,7 @@ import AppointmentSearch from './appointment-search';
 import AppointmentCalendar from './appointment-calendar';
 import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
 import { DateTimePicker, InlineDateTimePicker } from './date-time-picker';
+import PaginatingTable from './paginating-table';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -227,6 +228,8 @@ function bindTo($scope) {
       }
     });
   });
+
+  $('table.table-paginated', $scope).each((i, container) => PaginatingTable(container));
 }
 
 $(() => {

@@ -23,6 +23,7 @@
     &.Provisional, &.Tentative {
       background-color: @state-info-bg;
       border-color: @state-info-text;
+      opacity: 0.8;
 
       #gradient > .striped();
     }
@@ -35,6 +36,9 @@
     &.Cancelled {
       background-color: @state-danger-bg;
       border-color: @state-danger-text;
+      opacity: 0.6;
+
+      #gradient > .striped();
     }
   }
 
@@ -78,6 +82,8 @@
       &.Cancelled {
         background-color: @state-danger-bg;
         border-color: @state-danger-text;
+
+        #gradient > .striped();
       }
 
       &.fc-has-url {

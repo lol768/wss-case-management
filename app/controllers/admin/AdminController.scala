@@ -30,8 +30,8 @@ class AdminController @Inject()(
   import canViewTeamActionRefiner._
 
   def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    findEnquiriesAndCasesAndAppointments { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments, caseClients) => {
-      Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments, caseClients))
+    findEnquiriesAndCasesAndAppointments { (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, caseClients) => {
+      Ok(views.html.admin.teamHome(teamRequest.team, enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, caseClients))
     }}
   }
 
@@ -41,7 +41,6 @@ class AdminController @Inject()(
       Int,
       Seq[(Case, OffsetDateTime)],
       Int,
-      Int, // Cancelled
       Map[UUID, Set[Client]]
     ) => Result)(implicit teamRequest: TeamSpecificRequest[_]) = {
     ServiceResults.zip(
@@ -50,26 +49,31 @@ class AdminController @Inject()(
       enquiries.countClosedEnquiries(teamRequest.team),
       cases.listOpenCases(teamRequest.team),
       cases.countClosedCases(teamRequest.team),
-      appointments.countCancelledAppointments(teamRequest.team),
-    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments) =>
+    ).successFlatMap { case (enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases) =>
       cases.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMap { caseClients =>
-        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, cancelledAppointments, caseClients)
+        f(enquiriesNeedingReply, enquiriesAwaitingClient, closedEnquiries, openCases, closedCases, caseClients)
       }
     }
   }
 
-  def closedEnquiries(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    enquiries.findClosedEnquiries(teamRequest.team).successMap { enquiries =>
-      Ok(views.html.admin.closedEnquiries(enquiries))
-    }
+  def closedEnquiries(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    enquiries.countClosedEnquiries(teamRequest.team).successFlatMap(closed => {
+      val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedEnquiries(teamRequest.team.id))
+      enquiries.findClosedEnquiries(teamRequest.team, Some(pagination.asPage)).successMap { enquiries =>
+        Ok(views.html.admin.closedEnquiries(enquiries, pagination))
+      }
+    })
   }
 
-  def closedCases(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    cases.listClosedCases(teamRequest.team).successFlatMap { closedCases =>
-      cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
-        Ok(views.html.admin.closedCases(closedCases, clients))
+  def closedCases(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    cases.countClosedCases(teamRequest.team).successFlatMap(closed => {
+      val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedCases(teamRequest.team.id))
+      cases.listClosedCases(teamRequest.team, Some(pagination.asPage)).successFlatMap { closedCases =>
+        cases.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+          Ok(views.html.admin.closedCases(closedCases, clients, pagination))
+        }
       }
-    }
+    })
   }
 
   def atRiskClients(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
@@ -78,18 +82,11 @@ class AdminController @Inject()(
     )
   }
 
-  def cancelledAppointments(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    appointments.findCancelledAppointments(teamRequest.team).successMap { appointments =>
-      Ok(views.html.admin.cancelledAppointments(appointments))
-    }
-  }
-
   def appointments(teamId: String, start: Option[OffsetDateTime], end: Option[OffsetDateTime]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     appointments.findForSearch(AppointmentSearchQuery(
       startAfter = start.map(_.toLocalDate),
       startBefore = end.map(_.toLocalDate),
       team = Some(teamRequest.team),
-      states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended),
     )).successMap { appointments =>
       render {
         case Accepts.Json() =>

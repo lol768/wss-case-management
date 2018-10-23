@@ -32,11 +32,10 @@ POST        /service/enquirysearch/:key             @controllers.EnquirySearchCo
 
 GET         /                                       @controllers.IndexController.home
 GET         /my-appointments                        @controllers.appointments.AppointmentController.redirectToMyAppointments
-GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries
-GET         /closed-cases                           @controllers.IndexController.closedCases
+GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries(page: Int ?= 0)
+GET         /closed-cases                           @controllers.IndexController.closedCases(page: Int ?= 0)
 GET         /at-risk-clients                        @controllers.IndexController.atRiskClients
 GET         /appointments                           @controllers.IndexController.appointments(start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
-GET         /cancelled-appointments                 @controllers.IndexController.cancelledAppointments
 
 ## Clients ##
 
@@ -61,11 +60,10 @@ POST        /appointment/:appointmentKey/decline    @controllers.appointments.Ap
 ## Teams ##
 
 GET         /team/:teamId                           @controllers.admin.AdminController.teamHome(teamId: String)
-GET         /team/:teamId/closed-enquiries          @controllers.admin.AdminController.closedEnquiries(teamId: String)
-GET         /team/:teamId/closed-cases              @controllers.admin.AdminController.closedCases(teamId: String)
+GET         /team/:teamId/closed-enquiries          @controllers.admin.AdminController.closedEnquiries(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/closed-cases              @controllers.admin.AdminController.closedCases(teamId: String, page: Int ?= 0)
 GET         /team/:teamId/at-risk-clients           @controllers.admin.AdminController.atRiskClients(teamId: String)
 GET         /team/:teamId/appointments              @controllers.admin.AdminController.appointments(teamId: String, start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
-GET         /team/:teamId/cancelled-appointments    @controllers.admin.AdminController.cancelledAppointments(teamId: String)
 
 GET         /team/client/:universityID                          @controllers.admin.ClientController.client(universityID: warwick.sso.UniversityID)
 POST        /team/client/:universityID                          @controllers.admin.ClientController.updateSummary(universityID: warwick.sso.UniversityID)
@@ -130,11 +128,14 @@ GET         /team/appointment/:key                  @controllers.admin.Appointme
 GET         /team/appointment/:key/edit             @controllers.admin.AppointmentController.editForm(key: domain.IssueKey)
 POST        /team/appointment/:key                  @controllers.admin.AppointmentController.edit(key: domain.IssueKey)
 POST        /team/appointment/:key/cancel           @controllers.admin.AppointmentController.cancel(key: domain.IssueKey)
+GET         /team/appointment/:key/notes            @controllers.admin.AppointmentController.notes(key: domain.IssueKey)
 POST        /team/appointment/:key/note             @controllers.admin.AppointmentController.addNote(key: domain.IssueKey)
 GET         /team/appointment/:key/note/:id         @controllers.admin.AppointmentController.editNoteForm(key: domain.IssueKey, id: java.util.UUID)
 POST        /team/appointment/:key/note/:id         @controllers.admin.AppointmentController.editNote(key: domain.IssueKey, id: java.util.UUID)
 POST        /team/appointment/:key/note/:id/delete  @controllers.admin.AppointmentController.deleteNote(key: domain.IssueKey, id: java.util.UUID)
 DELETE      /team/appointment/:key/note/:id         @controllers.admin.AppointmentController.deleteNote(key: domain.IssueKey, id: java.util.UUID)
+GET         /team/appointment/:key/outcomes         @controllers.admin.AppointmentOutcomesController.outcomesForm(key: domain.IssueKey)
+POST        /team/appointment/:key/outcomes         @controllers.admin.AppointmentOutcomesController.outcomes(key: domain.IssueKey)
 
 ## Admins ##
 

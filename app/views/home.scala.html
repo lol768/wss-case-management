@@ -132,14 +132,14 @@
                 &nbsp;
               }
 
-              @if(a.appointment.state == AppointmentState.Provisional || a.appointment.state == AppointmentState.Accepted) {
+              @if(a.appointment.state.nonTerminal) {
                 @if(client.state == AppointmentState.Provisional) {
                   @b3.inline.formCSRF(controllers.appointments.routes.AppointmentController.accept(a.appointment.key), 'class -> "inline-form") { implicit ifc =>
                     <button type="submit" class="btn btn-default btn-xs">@tags.icons.appointmentAccept() Accept</button>
                   }
                 }
 
-                @if(client.state == AppointmentState.Provisional || client.state == AppointmentState.Accepted) {
+                @if(client.state.nonTerminal) {
                   @b3.horizontal.formCSRF(controllers.appointments.routes.AppointmentController.decline(a.appointment.key), "col-sm-3", "col-sm-9", 'class -> "inline-form") { implicit ifc =>
                     <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#decline-@{a.appointment.id.toString}-modal">@tags.icons.appointmentDecline() Decline</button>
 
@@ -249,20 +249,18 @@
 
       <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="enquiries">
-          @views.html.admin.enquiriesTab(info.enquiriesRequiringAction, info.enquiriesAwaitingClient, info.closedEnquiries, routes.IndexController.closedEnquiries, "member", context.user.get.usercode.string, " assigned to me")
+          @views.html.admin.enquiriesTab(info.enquiriesRequiringAction, info.enquiriesAwaitingClient, info.closedEnquiries, routes.IndexController.closedEnquiries(), "member", context.user.get.usercode.string, " assigned to me")
         </div>
         <div role="tabpanel" class="tab-pane" id="cases">
-          @views.html.admin.casesTab(info.openCases, info.closedCases, info.caseClients, controllers.admin.routes.CaseController.createSelectTeam(), routes.IndexController.closedCases, "member", context.user.get.usercode.string, " assigned to me")
+          @views.html.admin.casesTab(info.openCases, info.closedCases, info.caseClients, controllers.admin.routes.CaseController.createSelectTeam(), routes.IndexController.closedCases(), "member", context.user.get.usercode.string, " assigned to me")
         </div>
         <div role="tabpanel" class="tab-pane" id="clients">
           @views.html.admin.clientsTab(routes.IndexController.atRiskClients)
         </div>
         <div role="tabpanel" class="tab-pane" id="appointments">
           @views.html.admin.appointmentsTab(
-            info.cancelledAppointments,
             routes.IndexController.appointments(),
             controllers.admin.routes.AppointmentController.createSelectTeam(),
-            routes.IndexController.cancelledAppointments,
             "member",
             context.user.get.usercode.string,
             " assigned to me"

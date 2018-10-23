@@ -90,14 +90,15 @@
           </div>
           <div class="modal-footer">
             <p class="pull-left current"></p>
-            <button type="button" class="btn btn-primary" data-dismiss="modal">Select this slot</button>
+            <button type="button" class="btn btn-primary" data-toggle="select">Select this slot</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
           </div>
         </div>
       </div>
     </div>
   </div>
   <div class="col-sm-6">
-    @b3.select(form("appointment.duration"),
+    @b3.radio(form("appointment.duration"),
       options = Appointment.DurationOptions.map { case (s, d) => d.getSeconds.toString -> s },
       '_label -> "Duration",
       '_default -> "",
