@@ -69,7 +69,7 @@
         </div>
         <div class="panel-footer">
           @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
-            @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), form, supportedMimeTypes)
+            @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), form, supportedMimeTypes, issueRender.issue.id.get, context.user.get.universityId.get)
           }
         </div>
       </div>
