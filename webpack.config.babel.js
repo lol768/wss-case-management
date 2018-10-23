@@ -98,7 +98,7 @@ const developmentConfig = merge([
       new WatchEventsPlugin({ emitter: new EventEmitter() }),
     ],
   },
-  tooling.generateSourceMaps('inline-cheap-source-map'),
+  tooling.generateSourceMaps('cheap-module-source-map'),
 ]);
 
 module.exports = ({ production } = {}) => {
