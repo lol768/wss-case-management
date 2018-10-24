@@ -1,7 +1,7 @@
 /* eslint-env browser */
+import './polyfills';
 
 import $ from 'jquery';
-import 'core-js/modules/es6.object.assign';
 import './jquery.are-you-sure';
 import FieldHistory from './field-history';
 import * as flexiPicker from './flexi-picker';
