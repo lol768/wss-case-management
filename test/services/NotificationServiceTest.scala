@@ -1,7 +1,5 @@
 package services
 
-import java.time.LocalDate
-
 import domain._
 import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
@@ -17,7 +15,7 @@ import services.tabula.ProfileService
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import uk.ac.warwick.util.mywarwick.model.response.Response
-import warwick.sso.{Department, Group, GroupName, GroupService, UniversityID, User, UserLookupService, Usercode}
+import warwick.sso._
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters
