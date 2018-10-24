@@ -275,6 +275,14 @@ section.indent {
     font-weight: bold;
     padding: 0;
   }
+
+  td > .list-unstyled:last-child {
+    margin-bottom: 0;
+
+    > li:last-child {
+      margin-bottom: 0;
+    }
+  }
 }
 
 .tab-content > .active {
@@ -330,7 +338,8 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 }
 
 .search-default {
-  .make-md-column(5);
+  .make-md-column(7);
+  .make-lg-column(5);
   position: relative;
   .form-control {
     color: #000000;
@@ -552,4 +561,12 @@ i.fa-comment-edit.awaiting {
 
 .appointment-outcomes table .form-group {
   margin-bottom: 0;
+}
+
+.form-control-static > .list-unstyled:last-child {
+  margin-bottom: 0;
+
+  > li:last-child {
+    margin-bottom: 0;
+  }
 }
