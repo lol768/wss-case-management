@@ -366,6 +366,11 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
       i.open { display: inline-block; }
     }
 
+    html.no-details &, html.no-details &[open] {
+      i.closed { display: none; }
+      i.open { display: none; }
+    }
+
     summary {
       &:first-of-type {
         list-style-type: none;
