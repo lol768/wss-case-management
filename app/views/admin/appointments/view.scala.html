@@ -95,6 +95,12 @@
                       '_default -> "",
                       'required -> true
                     )
+                    @b3.textarea(
+                      cancelForm("message"),
+                      '_label -> "Appointment note (optional)",
+                      '_help -> s"(why is this appointment being cancelled?)",
+                      'helpOnTop -> true
+                    )
                     </div>
                     <div class="modal-footer spaced-buttons">
                       <button type="submit" class="btn btn-primary">Cancel appointment</button>
