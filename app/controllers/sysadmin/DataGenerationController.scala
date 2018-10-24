@@ -27,7 +27,7 @@ import warwick.sso.{AuthenticatedRequest, UniversityID, Usercode}
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Random => SRandom}
+import scala.util.{Failure, Success, Try, Random => SRandom}
 
 object DataGenerationController {
   case class DataGenerationOptions(
@@ -190,7 +190,7 @@ object DataGenerationController {
 
     if (workingHoursOnly) {
       // Shift to a workday if it's not one already
-      while (dt.getDayOfWeek == DayOfWeek.SATURDAY || dt.getDayOfWeek == DayOfWeek.SUNDAY || workingDays.getHolidayDates.contains(dt.toLocalDate) || dt.isAfter(JavaTime.offsetDateTime)) {
+      while (dt.getDayOfWeek == DayOfWeek.SATURDAY || dt.getDayOfWeek == DayOfWeek.SUNDAY || workingDays.getHolidayDates.contains(dt.toLocalDate) || dt.isAfter(base)) {
         dt = dt.plusDays(Random.nextInt(7).toLong)
         if (dt.isAfter(base))
           dt = dt.minusDays(Random.nextInt(maximumDaysInPast).toLong)
@@ -210,7 +210,7 @@ object DataGenerationController {
 
     if (workingHoursOnly) {
       // Shift to a workday if it's not one already
-      while (dt.getDayOfWeek == DayOfWeek.SATURDAY || dt.getDayOfWeek == DayOfWeek.SUNDAY || workingDays.getHolidayDates.contains(dt.toLocalDate) || dt.isAfter(JavaTime.offsetDateTime)) {
+      while (dt.getDayOfWeek == DayOfWeek.SATURDAY || dt.getDayOfWeek == DayOfWeek.SUNDAY || workingDays.getHolidayDates.contains(dt.toLocalDate) || dt.isBefore(base)) {
         dt = dt.plusDays(Random.nextInt(7).toLong)
         if (dt.isAfter(base.plusDays(maximumDaysInFuture.toLong)))
           dt = dt.minusDays(Random.nextInt(maximumDaysInFuture).toLong)
@@ -330,9 +330,14 @@ class DataGenerationJob @Inject()(
     // to be successful.
     def serviceValue: A =
       Await.result(f, Duration.Inf).fold(
-        e => e.flatMap(_.cause).headOption
-          .map(throw _)
-          .getOrElse(throw new IllegalStateException(e.map(_.message).mkString("; "))),
+        e => {
+          val msg = e.head.message
+          e.headOption.flatMap(_.cause).fold(logger.error(msg))(t => logger.error(msg, t))
+
+          e.flatMap(_.cause).headOption
+            .map(throw _)
+            .getOrElse(throw new IllegalStateException(e.map(_.message).mkString("; ")))
+        },
         identity // return success as-is
       )
   }
@@ -358,158 +363,223 @@ class DataGenerationJob @Inject()(
     if (!enabled)
       throw new JobExecutionException("Tried to run DataGenerationJob but wellbeing.dummyDataGeneration = false")
 
-    val options = DataGenerationOptions(context.getJobDetail.getJobDataMap)
-    val allRooms = locations.availableRooms(auditLogContext(Usercode("system"))).serviceValue
+    Try {
+      val options = DataGenerationOptions(context.getJobDetail.getJobDataMap)
+      val allRooms = locations.availableRooms(auditLogContext(Usercode("system"))).serviceValue
 
-    // Generate enquiries
-    var generatedEnquiries: Seq[Enquiry] = (1 to options.EnquiriesToGenerate).map { _ =>
-      withMockDateTime(randomPastDateTime()) { _ =>
-        val client = randomClient()
-        implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
-
-        val enquiry = EnquirySave(client, dummyWords(Random.nextInt(5) + 3), initialTeam, IssueState.Open)
-        val initialMessage = MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Client, None)
-
-        enquiries.save(enquiry, initialMessage, randomAttachments(options.MessageAttachmentRate)).serviceValue
-      }
-    }
-
-    // Re-assign some enquiries
-    generatedEnquiries = generatedEnquiries.map { enquiry =>
-      withMockDateTime(randomFutureDateTime(base = enquiry.created)) { _ =>
-        val teamMember = randomTeamMember(initialTeam)
-        implicit val ac: AuditLogContext = auditLogContext(teamMember)
-
-        val note = EnquiryNoteSave(dummyWords(Random.nextInt(50)), teamMember)
-
-        if ((options.EnquiryCounsellingRate / Random.nextDouble()).toInt > 0) {
-          enquiries.reassign(enquiry.id.get, Teams.Counselling, note, enquiry.lastUpdated).serviceValue
-        } else if ((options.EnquiryDisabilityRate / Random.nextDouble()).toInt > 0) {
-          enquiries.reassign(enquiry.id.get, Teams.Disability, note, enquiry.lastUpdated).serviceValue
-        } else if ((options.EnquiryMentalHealthRate / Random.nextDouble()).toInt > 0) {
-          enquiries.reassign(enquiry.id.get, Teams.MentalHealth, note, enquiry.lastUpdated).serviceValue
-        } else {
-          enquiry
-        }
-      }
-    }
-
-    // Set owners on enquiries
-    generatedEnquiries.map { enquiry =>
-      withMockDateTime(randomFutureDateTime(base = enquiry.lastUpdated)) { _ =>
-        implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(enquiry.team))
-        val owners: Set[Usercode] = Random.nextInt(4) match {
-          case 0 => Set()
-          case 1 => Set(randomTeamMember(enquiry.team))
-          case 2 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team))
-          case 3 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team), randomTeamMember(initialTeam))
-        }
-
-        if (owners.nonEmpty) {
-          enquiries.setOwners(enquiry.id.get, owners).serviceValue
-        }
-      }
-    }
-
-    // Add messages to enquiries
-    val enquiryMessages: Seq[(Enquiry, Seq[(MessageData, Seq[UploadedFile])])] = generatedEnquiries.map { enquiry =>
-      enquiry -> (1 to Random.nextInt(options.AverageMessagesPerEnquiry * 2)).map { i =>
-        withMockDateTime(randomFutureDateTime(base = enquiry.created, maximumDaysInFuture = i)) { _ =>
-          val isClient = i % 2 == 0
-
-          val message =
-            if (isClient) MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Client, None)
-            else MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Team, Some(randomTeamMember(enquiry.team)))
-
-          implicit val ac: AuditLogContext =
-            if (isClient) auditLogContext(Usercode(s"u${enquiry.client.universityID.string}"))
-            else auditLogContext(message.teamMember.get)
-
-          enquiries.addMessage(enquiry, message, randomAttachments(options.MessageAttachmentRate)).serviceValue
-        }
-      }
-    }
-
-    // Generate client summaries
-    val generatedClientSummaries: Seq[ClientSummary] = allClients.map { client =>
-      implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(randomTeam()))
-      withMockDateTime(randomPastDateTime()) { _ =>
-        val summary = ClientSummarySave(
-          highMentalHealthRisk =
-            if ((options.HighMentalHealthRiskSetRate / Random.nextDouble()).toInt > 0) {
-              if ((options.HighMentalHealthRiskRate / Random.nextDouble()).toInt > 0) {
-                Some(true)
-              } else {
-                Some(false)
-              }
-            } else {
-              None
-            },
-          notes = dummyWords(Random.nextInt(30)),
-          alternativeContactNumber = f"07${Random.nextInt(999999999)}%09d",
-          alternativeEmailAddress = s"${Random.alphanumeric.take(Random.nextInt(10) + 10).mkString("")}@gmail.com",
-          riskStatus =
-            if ((options.HighMentalHealthRiskSetRate / Random.nextDouble()).toInt > 0) {
-              Some(randomEnum(ClientRiskStatus))
-            } else {
-              None
-            },
-          reasonableAdjustments =
-            (1 to (options.ReasonableAdjustmentRate / Random.nextDouble()).toInt).map { _ =>
-              randomEnum(ReasonableAdjustment)
-            }.toSet
-        )
-
-        clientSummaries.get(client).serviceValue match {
-          case Some(existing) =>
-            clientSummaries.update(client, summary, existing.updatedDate).serviceValue
-
-          case _ =>
-            clientSummaries.save(client, summary).serviceValue
-        }
-      }
-    }
-
-    // Generate registrations
-    val generatedRegistration: Seq[Option[Registration]] = allClients.map { client =>
-      if ((options.RegistrationRate / Random.nextDouble()).toInt > 0) Some {
-        implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
+      // Generate enquiries
+      var generatedEnquiries: Seq[Enquiry] = (1 to options.EnquiriesToGenerate).map { _ =>
         withMockDateTime(randomPastDateTime()) { _ =>
-          val registration = RegistrationData(
-            gp = s"Dr. ${dummyWords(Random.nextInt(2))}",
-            tutor = s"Prof. ${dummyWords(Random.nextInt(2))}",
-            disabilities =
-              (1 to (options.DisabilityRate / Random.nextDouble()).toInt).map { _ =>
-                randomEnum(Disabilities)
-              }.toSet,
-            medications =
-              (1 to (options.MedicationRate / Random.nextDouble()).toInt).map { _ =>
-                randomEnum(Medications)
-              }.toSet,
-            appointmentAdjustments = dummyWords(Random.nextInt(10)),
-            referrals =
-              (1 to (options.ReferralRate / Random.nextDouble()).toInt).map { _ =>
-                randomEnum(RegistrationReferrals)
-              }.toSet,
-            consentPrivacyStatement = Some(true)
-          )
+          val client = randomClient()
+          implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
 
-          registrations.get(client).serviceValue match {
-            case Some(existing) =>
-              registrations.update(client, registration, existing.updatedDate).serviceValue
+          val enquiry = EnquirySave(client, dummyWords(Random.nextInt(5) + 3), initialTeam, IssueState.Open)
+          val initialMessage = MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Client, None)
 
-            case _ =>
-              registrations.save(client, registration).serviceValue
+          enquiries.save(enquiry, initialMessage, randomAttachments(options.MessageAttachmentRate)).serviceValue
+        }
+      }
+
+      // Re-assign some enquiries
+      generatedEnquiries = generatedEnquiries.map { enquiry =>
+        withMockDateTime(randomFutureDateTime(base = enquiry.created)) { _ =>
+          val teamMember = randomTeamMember(initialTeam)
+          implicit val ac: AuditLogContext = auditLogContext(teamMember)
+
+          val note = EnquiryNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+
+          if ((options.EnquiryCounsellingRate / Random.nextDouble()).toInt > 0) {
+            enquiries.reassign(enquiry.id.get, Teams.Counselling, note, enquiry.lastUpdated).serviceValue
+          } else if ((options.EnquiryDisabilityRate / Random.nextDouble()).toInt > 0) {
+            enquiries.reassign(enquiry.id.get, Teams.Disability, note, enquiry.lastUpdated).serviceValue
+          } else if ((options.EnquiryMentalHealthRate / Random.nextDouble()).toInt > 0) {
+            enquiries.reassign(enquiry.id.get, Teams.MentalHealth, note, enquiry.lastUpdated).serviceValue
+          } else {
+            enquiry
           }
         }
-      } else None
-    }
+      }
 
-    // Generate cases
-    val enquiryCases: Seq[(Case, Set[UniversityID])] = generatedEnquiries.flatMap { enquiry =>
-      if ((options.EnquiryToCaseRate / Random.nextDouble()).toInt > 0) Some {
+      // Set owners on enquiries
+      generatedEnquiries.map { enquiry =>
         withMockDateTime(randomFutureDateTime(base = enquiry.lastUpdated)) { _ =>
           implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(enquiry.team))
+          val owners: Set[Usercode] = Random.nextInt(4) match {
+            case 0 => Set()
+            case 1 => Set(randomTeamMember(enquiry.team))
+            case 2 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team))
+            case 3 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team), randomTeamMember(initialTeam))
+          }
+
+          if (owners.nonEmpty) {
+            enquiries.setOwners(enquiry.id.get, owners).serviceValue
+          }
+        }
+      }
+
+      // Add messages to enquiries
+      val enquiryMessages: Seq[(Enquiry, Seq[(MessageData, Seq[UploadedFile])])] = generatedEnquiries.map { enquiry =>
+        enquiry -> (1 to Random.nextInt(options.AverageMessagesPerEnquiry * 2)).map { i =>
+          withMockDateTime(randomFutureDateTime(base = enquiry.created, maximumDaysInFuture = i)) { _ =>
+            val isClient = i % 2 == 0
+
+            val message =
+              if (isClient) MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Client, None)
+              else MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Team, Some(randomTeamMember(enquiry.team)))
+
+            implicit val ac: AuditLogContext =
+              if (isClient) auditLogContext(Usercode(s"u${enquiry.client.universityID.string}"))
+              else auditLogContext(message.teamMember.get)
+
+            enquiries.addMessage(enquiry, message, randomAttachments(options.MessageAttachmentRate)).serviceValue
+          }
+        }
+      }
+
+      // Generate client summaries
+      val generatedClientSummaries: Seq[ClientSummary] = allClients.map { client =>
+        implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(randomTeam()))
+        withMockDateTime(randomPastDateTime()) { _ =>
+          val summary = ClientSummarySave(
+            highMentalHealthRisk =
+              if ((options.HighMentalHealthRiskSetRate / Random.nextDouble()).toInt > 0) {
+                if ((options.HighMentalHealthRiskRate / Random.nextDouble()).toInt > 0) {
+                  Some(true)
+                } else {
+                  Some(false)
+                }
+              } else {
+                None
+              },
+            notes = dummyWords(Random.nextInt(30)),
+            alternativeContactNumber = f"07${Random.nextInt(999999999)}%09d",
+            alternativeEmailAddress = s"${Random.alphanumeric.take(Random.nextInt(10) + 10).mkString("")}@gmail.com",
+            riskStatus =
+              if ((options.HighMentalHealthRiskSetRate / Random.nextDouble()).toInt > 0) {
+                Some(randomEnum(ClientRiskStatus))
+              } else {
+                None
+              },
+            reasonableAdjustments =
+              (1 to (options.ReasonableAdjustmentRate / Random.nextDouble()).toInt).map { _ =>
+                randomEnum(ReasonableAdjustment)
+              }.toSet
+          )
+
+          clientSummaries.get(client).serviceValue match {
+            case Some(existing) =>
+              clientSummaries.update(client, summary, existing.updatedDate).serviceValue
+
+            case _ =>
+              clientSummaries.save(client, summary).serviceValue
+          }
+        }
+      }
+
+      // Generate registrations
+      val generatedRegistration: Seq[Option[Registration]] = allClients.map { client =>
+        if ((options.RegistrationRate / Random.nextDouble()).toInt > 0) Some {
+          implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
+          withMockDateTime(randomPastDateTime()) { _ =>
+            val registration = RegistrationData(
+              gp = s"Dr. ${dummyWords(Random.nextInt(2))}",
+              tutor = s"Prof. ${dummyWords(Random.nextInt(2))}",
+              disabilities =
+                (1 to (options.DisabilityRate / Random.nextDouble()).toInt).map { _ =>
+                  randomEnum(Disabilities)
+                }.toSet,
+              medications =
+                (1 to (options.MedicationRate / Random.nextDouble()).toInt).map { _ =>
+                  randomEnum(Medications)
+                }.toSet,
+              appointmentAdjustments = dummyWords(Random.nextInt(10)),
+              referrals =
+                (1 to (options.ReferralRate / Random.nextDouble()).toInt).map { _ =>
+                  randomEnum(RegistrationReferrals)
+                }.toSet,
+              consentPrivacyStatement = Some(true)
+            )
+
+            registrations.get(client).serviceValue match {
+              case Some(existing) =>
+                registrations.update(client, registration, existing.updatedDate).serviceValue
+
+              case _ =>
+                registrations.save(client, registration).serviceValue
+            }
+          }
+        } else None
+      }
+
+      // Generate cases
+      val enquiryCases: Seq[(Case, Set[UniversityID])] = generatedEnquiries.flatMap { enquiry =>
+        if ((options.EnquiryToCaseRate / Random.nextDouble()).toInt > 0) Some {
+          withMockDateTime(randomFutureDateTime(base = enquiry.lastUpdated)) { _ =>
+            implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(enquiry.team))
+
+            val incident: Option[CaseIncidentFormData] =
+              if ((options.CaseIncidentRate / Random.nextDouble()).toInt > 0)
+                Some(CaseIncidentFormData(
+                  incidentDate = randomPastDateTime(maximumDaysInPast = 7),
+                  onCampus = Random.nextBoolean(),
+                  notifiedPolice = Random.nextBoolean(),
+                  notifiedAmbulance = Random.nextBoolean(),
+                  notifiedFire = Random.nextBoolean(),
+                ))
+              else None
+
+            val c = cases.create(
+              Case(
+                id = None, // Set by service
+                key = None, // Set by service
+                subject = dummyWords(Random.nextInt(5) + 3),
+                created = JavaTime.offsetDateTime,
+                team = enquiry.team,
+                version = JavaTime.offsetDateTime,
+                state = IssueState.Open,
+                incidentDate = incident.map(_.incidentDate),
+                onCampus = incident.map(_.onCampus),
+                notifiedPolice = incident.map(_.notifiedPolice),
+                notifiedAmbulance = incident.map(_.notifiedAmbulance),
+                notifiedFire = incident.map(_.notifiedFire),
+                originalEnquiry = enquiry.id,
+                caseType = {
+                  val typesForTeam = CaseType.valuesFor(enquiry.team)
+                  if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
+                  else None
+                },
+                cause = randomEnum(CaseCause)
+              ),
+              Set(enquiry.client.universityID),
+              (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
+                randomEnum(CaseTag)
+              }.toSet
+            ).serviceValue
+
+            // Close the enquiry
+            enquiries.updateState(enquiry.id.get, IssueState.Closed, enquiry.lastUpdated).serviceValue
+
+            // Copy enquiry owners to case owners
+            cases.setOwners(
+              c.id.get,
+              enquiries.getOwners(enquiry.id.toSet).serviceValue.values.toSet.flatten.map(_.usercode)
+            ).serviceValue
+
+            c -> Set(enquiry.client.universityID)
+          }
+        } else None
+      }
+
+      // Non-enquiry cases
+      val nonEnquiryCases: Seq[(Case, Set[UniversityID])] = (enquiryCases.size to options.CasesToGenerate).map { _ =>
+        withMockDateTime(randomPastDateTime()) { _ =>
+          val team = randomTeam()
+          implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(team))
+
+          val clients: Set[UniversityID] =
+            (0 to (options.MultiClientCaseRate / Random.nextDouble()).toInt).map { _ =>
+              randomClient()
+            }.toSet
 
           val incident: Option[CaseIncidentFormData] =
             if ((options.CaseIncidentRate / Random.nextDouble()).toInt > 0)
@@ -528,7 +598,7 @@ class DataGenerationJob @Inject()(
               key = None, // Set by service
               subject = dummyWords(Random.nextInt(5) + 3),
               created = JavaTime.offsetDateTime,
-              team = enquiry.team,
+              team = team,
               version = JavaTime.offsetDateTime,
               state = IssueState.Open,
               incidentDate = incident.map(_.incidentDate),
@@ -536,199 +606,168 @@ class DataGenerationJob @Inject()(
               notifiedPolice = incident.map(_.notifiedPolice),
               notifiedAmbulance = incident.map(_.notifiedAmbulance),
               notifiedFire = incident.map(_.notifiedFire),
-              originalEnquiry = enquiry.id,
+              originalEnquiry = None,
               caseType = {
-                val typesForTeam = CaseType.valuesFor(enquiry.team)
+                val typesForTeam = CaseType.valuesFor(team)
                 if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
                 else None
               },
               cause = randomEnum(CaseCause)
             ),
-            Set(enquiry.client.universityID),
+            clients,
             (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
               randomEnum(CaseTag)
             }.toSet
           ).serviceValue
 
-          // Close the enquiry
-          enquiries.updateState(enquiry.id.get, IssueState.Closed, enquiry.lastUpdated).serviceValue
+          val owners: Set[Usercode] = Random.nextInt(4) match {
+            case 0 => Set()
+            case 1 => Set(randomTeamMember(team))
+            case 2 => Set(randomTeamMember(team), randomTeamMember(team))
+            case 3 => Set(randomTeamMember(team), randomTeamMember(team), randomTeamMember(initialTeam))
+          }
 
-          // Copy enquiry owners to case owners
-          cases.setOwners(
-            c.id.get,
-            enquiries.getOwners(enquiry.id.toSet).serviceValue.values.toSet.flatten.map(_.usercode)
-          ).serviceValue
+          if (owners.nonEmpty) {
+            cases.setOwners(c.id.get, owners).serviceValue
+          }
 
-          c -> Set(enquiry.client.universityID)
+          c -> clients
         }
-      } else None
-    }
-
-    // Non-enquiry cases
-    val nonEnquiryCases: Seq[(Case, Set[UniversityID])] = (enquiryCases.size to options.CasesToGenerate).map { _ =>
-      withMockDateTime(randomPastDateTime()) { _ =>
-        val team = randomTeam()
-        implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(team))
-
-        val clients: Set[UniversityID] =
-          (0 to (options.MultiClientCaseRate / Random.nextDouble()).toInt).map { _ =>
-            randomClient()
-          }.toSet
-
-        val incident: Option[CaseIncidentFormData] =
-          if ((options.CaseIncidentRate / Random.nextDouble()).toInt > 0)
-            Some(CaseIncidentFormData(
-              incidentDate = randomPastDateTime(maximumDaysInPast = 7),
-              onCampus = Random.nextBoolean(),
-              notifiedPolice = Random.nextBoolean(),
-              notifiedAmbulance = Random.nextBoolean(),
-              notifiedFire = Random.nextBoolean(),
-            ))
-          else None
-
-        val c = cases.create(
-          Case(
-            id = None, // Set by service
-            key = None, // Set by service
-            subject = dummyWords(Random.nextInt(5) + 3),
-            created = JavaTime.offsetDateTime,
-            team = team,
-            version = JavaTime.offsetDateTime,
-            state = IssueState.Open,
-            incidentDate = incident.map(_.incidentDate),
-            onCampus = incident.map(_.onCampus),
-            notifiedPolice = incident.map(_.notifiedPolice),
-            notifiedAmbulance = incident.map(_.notifiedAmbulance),
-            notifiedFire = incident.map(_.notifiedFire),
-            originalEnquiry = None,
-            caseType = {
-              val typesForTeam = CaseType.valuesFor(team)
-              if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
-              else None
-            },
-            cause = randomEnum(CaseCause)
-          ),
-          clients,
-          (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
-            randomEnum(CaseTag)
-          }.toSet
-        ).serviceValue
-
-        val owners: Set[Usercode] = Random.nextInt(4) match {
-          case 0 => Set()
-          case 1 => Set(randomTeamMember(team))
-          case 2 => Set(randomTeamMember(team), randomTeamMember(team))
-          case 3 => Set(randomTeamMember(team), randomTeamMember(team), randomTeamMember(initialTeam))
-        }
-
-        if (owners.nonEmpty) {
-          cases.setOwners(c.id.get, owners).serviceValue
-        }
-
-        c -> clients
       }
-    }
 
-    var generatedCases = enquiryCases ++ nonEnquiryCases
+      var generatedCases = enquiryCases ++ nonEnquiryCases
 
-    // Re-assign some cases
-    generatedCases = generatedCases.map { case (c, clients) =>
-      withMockDateTime(randomFutureDateTime(base = c.created)) { _ =>
-        val teamMember = randomTeamMember(c.team)
-        implicit val ac: AuditLogContext = auditLogContext(teamMember)
-
-        val newTeam = randomTeam()
-        if (newTeam != c.team && (options.CaseReassignRate / Random.nextDouble()).toInt > 0) {
-          val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
-
-          cases.reassign(
-            c,
-            newTeam,
-            {
-              val typesForTeam = CaseType.valuesFor(newTeam)
-              if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
-              else None
-            },
-            note,
-            c.version
-          ).serviceValue -> clients
-        } else c -> clients
-      }
-    }
-
-    // Link some cases
-    generatedCases = generatedCases.map { case (c, clients) =>
-      withMockDateTime(randomFutureDateTime(base = c.created)) { _ =>
-        val teamMember = randomTeamMember(c.team)
-        implicit val ac: AuditLogContext = auditLogContext(teamMember)
-
-        val other = generatedCases(Random.nextInt(generatedCases.size))._1
-        if (other != c && (options.CaseLinkRate / Random.nextDouble()).toInt > 0) {
-          val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
-
-          cases.addLink(CaseLinkType.Related, c.id.get, other.id.get, note).serviceValue
-        }
-
-        c -> clients
-      }
-    }
-
-    // Add some case documents
-    val caseDocuments: Seq[(Case, Seq[CaseDocument])] = generatedCases.map { case (c, _) =>
-      c -> (1 to Random.nextInt(options.AverageCaseDocumentsPerCase * 2)).map { i =>
-        withMockDateTime(randomFutureDateTime(base = c.created, maximumDaysInFuture = i)) { _ =>
+      // Re-assign some cases
+      generatedCases = generatedCases.map { case (c, clients) =>
+        withMockDateTime(randomFutureDateTime(base = c.created)) { _ =>
           val teamMember = randomTeamMember(c.team)
           implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
-          val document = CaseDocumentSave(randomEnum(CaseDocumentType), teamMember)
-          val attachment = randomAttachment()
-          val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+          val newTeam = randomTeam()
+          if (newTeam != c.team && (options.CaseReassignRate / Random.nextDouble()).toInt > 0) {
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
 
-          cases.addDocument(c.id.get, document, attachment._1, attachment._2, note).serviceValue
+            cases.reassign(
+              c,
+              newTeam,
+              {
+                val typesForTeam = CaseType.valuesFor(newTeam)
+                if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
+                else None
+              },
+              note,
+              c.version
+            ).serviceValue -> clients
+          } else c -> clients
         }
       }
-    }
 
-    // Add some messages
-    val caseMessages: Seq[(Case, Seq[(MessageData, Seq[UploadedFile])])] = generatedCases.map { case (c, clients) =>
-      c -> clients.toSeq.flatMap { client =>
-        (1 to Random.nextInt(options.AverageMessagesPerCasePerClient * 2)).map { i =>
+      // Link some cases
+      generatedCases = generatedCases.map { case (c, clients) =>
+        withMockDateTime(randomFutureDateTime(base = c.created)) { _ =>
+          val teamMember = randomTeamMember(c.team)
+          implicit val ac: AuditLogContext = auditLogContext(teamMember)
+
+          val other = generatedCases(Random.nextInt(generatedCases.size))._1
+          if (other != c && (options.CaseLinkRate / Random.nextDouble()).toInt > 0) {
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+
+            cases.addLink(CaseLinkType.Related, c.id.get, other.id.get, note).serviceValue
+          }
+
+          c -> clients
+        }
+      }
+
+      // Add some case documents
+      val caseDocuments: Seq[(Case, Seq[CaseDocument])] = generatedCases.map { case (c, _) =>
+        c -> (1 to Random.nextInt(options.AverageCaseDocumentsPerCase * 2)).map { i =>
           withMockDateTime(randomFutureDateTime(base = c.created, maximumDaysInFuture = i)) { _ =>
-            val isClient = i % 2 == 0
+            val teamMember = randomTeamMember(c.team)
+            implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
-            val message =
-              if (isClient) MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Client, None)
-              else MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Team, Some(randomTeamMember(c.team)))
+            val document = CaseDocumentSave(randomEnum(CaseDocumentType), teamMember)
+            val attachment = randomAttachment()
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
 
-            implicit val ac: AuditLogContext =
-              if (isClient) auditLogContext(Usercode(s"u${client.string}"))
-              else auditLogContext(message.teamMember.get)
-
-            cases.addMessage(c, client, message, randomAttachments(options.MessageAttachmentRate)).serviceValue
+            cases.addDocument(c.id.get, document, attachment._1, attachment._2, note).serviceValue
           }
         }
       }
-    }
 
-    // Add some notes
-    val caseNotes: Seq[(Case, Seq[CaseNote])] = generatedCases.map { case (c, _) =>
-      c -> (1 to Random.nextInt(options.AverageNotesPerCase * 2)).map { i =>
-        withMockDateTime(randomFutureDateTime(base = c.created, maximumDaysInFuture = i)) { _ =>
-          val teamMember = randomTeamMember(c.team)
-          implicit val ac: AuditLogContext = auditLogContext(teamMember)
+      // Add some messages
+      val caseMessages: Seq[(Case, Seq[(MessageData, Seq[UploadedFile])])] = generatedCases.map { case (c, clients) =>
+        c -> clients.toSeq.flatMap { client =>
+          (1 to Random.nextInt(options.AverageMessagesPerCasePerClient * 2)).map { i =>
+            withMockDateTime(randomFutureDateTime(base = c.created, maximumDaysInFuture = i)) { _ =>
+              val isClient = i % 2 == 0
 
-          val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+              val message =
+                if (isClient) MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Client, None)
+                else MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Team, Some(randomTeamMember(c.team)))
 
-          cases.addGeneralNote(c.id.get, note).serviceValue
+              implicit val ac: AuditLogContext =
+                if (isClient) auditLogContext(Usercode(s"u${client.string}"))
+                else auditLogContext(message.teamMember.get)
+
+              cases.addMessage(c, client, message, randomAttachments(options.MessageAttachmentRate)).serviceValue
+            }
+          }
         }
       }
-    }
 
-    // Generate appointments
-    val caseAppointments: Seq[(Appointment, Set[UniversityID])] = generatedCases.flatMap { case (c, clients) =>
-      (1 to Random.nextInt(options.AverageAppointmentsPerCase * 2)).map { i =>
-        withMockDateTime(randomFutureDateTime(base = c.version)) { _ =>
-          implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(c.team))
+      // Add some notes
+      val caseNotes: Seq[(Case, Seq[CaseNote])] = generatedCases.map { case (c, _) =>
+        c -> (1 to Random.nextInt(options.AverageNotesPerCase * 2)).map { i =>
+          withMockDateTime(randomFutureDateTime(base = c.created, maximumDaysInFuture = i)) { _ =>
+            val teamMember = randomTeamMember(c.team)
+            implicit val ac: AuditLogContext = auditLogContext(teamMember)
+
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+
+            cases.addGeneralNote(c.id.get, note).serviceValue
+          }
+        }
+      }
+
+      // Generate appointments
+      val caseAppointments: Seq[(Appointment, Set[UniversityID])] = generatedCases.flatMap { case (c, clients) =>
+        (1 to Random.nextInt(options.AverageAppointmentsPerCase * 2)).map { _ =>
+          withMockDateTime(randomFutureDateTime(base = c.created)) { _ =>
+            implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(c.team))
+
+            val appointmentType = randomEnum(AppointmentType)
+
+            val appointment = AppointmentSave(
+              start = randomFutureDateTime(workingHoursOnly = true),
+              duration = Appointment.DurationOptions(Random.nextInt(Appointment.DurationOptions.size))._2,
+              roomID =
+                if (appointmentType == AppointmentType.FaceToFace)
+                  Some(allRooms(Random.nextInt(allRooms.size)).id)
+                else None,
+              appointmentType = appointmentType,
+              purpose = randomEnum(AppointmentPurpose),
+            )
+
+            val teamMembers =
+              (1 to (options.MultipleTeamMemberAppointmentRate / Random.nextDouble()).toInt).map { _ =>
+                randomTeamMember(randomTeam())
+              }.toSet + randomTeamMember(c.team)
+
+            val caseIDs =
+              (1 to (options.MultipleCaseAppointmentRate / Random.nextDouble()).toInt).map { _ =>
+                generatedCases(Random.nextInt(generatedCases.size))._1.id.get
+              }.toSet + c.id.get
+
+            appointments.create(appointment, clients, teamMembers, c.team, caseIDs).serviceValue -> clients
+          }
+        }
+      }
+
+      val nonCaseAppointments: Seq[(Appointment, Set[UniversityID])] = (caseAppointments.size to options.AppointmentsToGenerate).map { _ =>
+        withMockDateTime(randomPastDateTime()) { _ =>
+          val team = randomTeam()
+          implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(team))
 
           val appointmentType = randomEnum(AppointmentType)
 
@@ -743,148 +782,121 @@ class DataGenerationJob @Inject()(
             purpose = randomEnum(AppointmentPurpose),
           )
 
+          val clients =
+            (1 to (options.MultipleClientAppointmentRate / Random.nextDouble()).toInt).map { _ =>
+              randomClient()
+            }.toSet + randomClient()
+
           val teamMembers =
             (1 to (options.MultipleTeamMemberAppointmentRate / Random.nextDouble()).toInt).map { _ =>
               randomTeamMember(randomTeam())
-            }.toSet + randomTeamMember(c.team)
+            }.toSet + randomTeamMember(team)
 
-          val caseIDs =
-            (1 to (options.MultipleCaseAppointmentRate / Random.nextDouble()).toInt).map { _ =>
-              generatedCases(Random.nextInt(generatedCases.size))._1.id.get
-            }.toSet + c.id.get
-
-          appointments.create(appointment, clients, teamMembers, c.team, caseIDs).serviceValue -> clients
+          appointments.create(appointment, clients, teamMembers, team, Set()).serviceValue -> clients
         }
       }
-    }
 
-    val nonCaseAppointments: Seq[(Appointment, Set[UniversityID])] = (caseAppointments.size to options.AppointmentsToGenerate).map { _ =>
-      withMockDateTime(randomPastDateTime()) { _ =>
-        val team = randomTeam()
-        implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(team))
+      var generatedAppointments = caseAppointments ++ nonCaseAppointments
 
-        val appointmentType = randomEnum(AppointmentType)
+      // Client appointment acceptance
+      generatedAppointments = generatedAppointments.map { case (appointment, clients) =>
+        clients.toSeq.map { client =>
+          if ((options.AppointmentAcceptanceRate / Random.nextDouble()).toInt > 0) {
+            withMockDateTime(randomFutureDateTime(base = appointment.created)) { _ =>
+              implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
 
-        val appointment = AppointmentSave(
-          start = randomFutureDateTime(workingHoursOnly = true),
-          duration = Appointment.DurationOptions(Random.nextInt(Appointment.DurationOptions.size))._2,
-          roomID =
-            if (appointmentType == AppointmentType.FaceToFace)
-              Some(allRooms(Random.nextInt(allRooms.size)).id)
-            else None,
-          appointmentType = appointmentType,
-          purpose = randomEnum(AppointmentPurpose),
-        )
-
-        val clients =
-          (1 to (options.MultipleClientAppointmentRate / Random.nextDouble()).toInt).map { _ =>
-            randomClient()
-          }.toSet + randomClient()
-
-        val teamMembers =
-          (1 to (options.MultipleTeamMemberAppointmentRate / Random.nextDouble()).toInt).map { _ =>
-            randomTeamMember(randomTeam())
-          }.toSet + randomTeamMember(team)
-
-        appointments.create(appointment, clients, teamMembers, team, Set()).serviceValue -> clients
+              appointments.clientAccept(appointment.id, client).serviceValue -> clients
+            }
+          } else appointment -> clients
+        }.last
       }
-    }
 
-    var generatedAppointments = caseAppointments ++ nonCaseAppointments
+      // Client appointment decline
+      generatedAppointments = generatedAppointments.map { case (appointment, clients) =>
+        clients.toSeq.map { client =>
+          if ((options.AppointmentDeclineRate / Random.nextDouble()).toInt > 0) {
+            withMockDateTime(randomFutureDateTime(base = appointment.created)) { _ =>
+              implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
 
-    // Client appointment acceptance
-    generatedAppointments = generatedAppointments.map { case (appointment, clients) =>
-      clients.toSeq.map { client =>
-        if ((options.AppointmentAcceptanceRate / Random.nextDouble()).toInt > 0) {
+              appointments.clientDecline(appointment.id, client, randomEnum(AppointmentCancellationReason)).serviceValue -> clients
+            }
+          } else appointment -> clients
+        }.last
+      }
+
+      // Appointment reschedule
+      generatedAppointments = generatedAppointments.map { case (appointment, clients) =>
+        (1 to (options.AppointmentRescheduleRate / Random.nextDouble()).toInt).map { _ =>
+          withMockDateTime(randomFutureDateTime(base = appointment.start).withNano(Random.nextInt(1000000000))) { _ =>
+            implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(appointment.team))
+
+            val a = appointments.findForRender(appointment.key).serviceValue
+
+            val changes = AppointmentSave(
+              start = randomFutureDateTime(workingHoursOnly = true, base = a.appointment.start),
+              duration = a.appointment.duration,
+              roomID = a.room.map(_.id),
+              appointmentType = a.appointment.appointmentType,
+              purpose = a.appointment.purpose,
+            )
+
+            appointments.update(
+              appointment.id,
+              changes,
+              a.clientCases.map(_.id.get),
+              a.clients.map(_.client.universityID),
+              a.teamMembers.map(_.member.usercode),
+              a.appointment.lastUpdated
+            ).serviceValue -> clients
+          }
+        }.lastOption.getOrElse(appointment -> clients)
+      }
+
+      // Appointment cancellation
+      generatedAppointments = generatedAppointments.map { case (appointment, clients) =>
+        if ((options.AppointmentCancelledRate / Random.nextDouble()).toInt > 0) {
           withMockDateTime(randomFutureDateTime(base = appointment.created)) { _ =>
-            implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
+            val teamMember = randomTeamMember(appointment.team)
+            implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
-            appointments.clientAccept(appointment.id, client).serviceValue -> clients
+            val a = appointments.cancel(appointment.id, randomEnum(AppointmentCancellationReason), appointment.lastUpdated).serviceValue
+            appointments.addNote(appointment.id, AppointmentNoteSave(dummyWords(Random.nextInt(50)), teamMember)).serviceValue
+
+            a -> clients
           }
         } else appointment -> clients
-      }.last
-    }
+      }
 
-    // Client appointment decline
-    generatedAppointments = generatedAppointments.map { case (appointment, clients) =>
-      clients.toSeq.map { client =>
-        if ((options.AppointmentDeclineRate / Random.nextDouble()).toInt > 0) {
-          withMockDateTime(randomFutureDateTime(base = appointment.created)) { _ =>
-            implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
+      // Appointment attended
+      generatedAppointments = generatedAppointments.filterNot(_._1.state.isTerminal).map { case (appointment, clients) =>
+        if ((options.AppointmentAttendedRate / Random.nextDouble()).toInt > 0) {
+          withMockDateTime(randomFutureDateTime(base = appointment.start)) { _ =>
+            val teamMember = randomTeamMember(appointment.team)
+            implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
-            appointments.clientDecline(appointment.id, client, randomEnum(AppointmentCancellationReason)).serviceValue -> clients
+            val attendance: Map[UniversityID, (AppointmentState, Option[AppointmentCancellationReason])] =
+              clients.map { client =>
+                if ((options.AppointmentAttendedRate / Random.nextDouble()).toInt > 0) {
+                  (client, (AppointmentState.Attended, None))
+                } else {
+                  (client, (AppointmentState.Cancelled, Some(randomEnum(AppointmentCancellationReason))))
+                }
+              }.toMap
+
+            appointments.recordOutcomes(
+              appointment.id,
+              attendance,
+              AppointmentNoteSave(dummyWords(Random.nextInt(50)), teamMember),
+              appointment.lastUpdated,
+            ).serviceValue -> clients
           }
         } else appointment -> clients
-      }.last
-    }
-
-    // Appointment reschedule
-    generatedAppointments = generatedAppointments.map { case (appointment, clients) =>
-      (1 to (options.AppointmentRescheduleRate / Random.nextDouble()).toInt).map { _ =>
-        withMockDateTime(randomFutureDateTime(base = appointment.start)) { _ =>
-          implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(appointment.team))
-
-          val a = appointments.findForRender(appointment.key).serviceValue
-
-          val changes = AppointmentSave(
-            start = randomFutureDateTime(workingHoursOnly = true, base = a.appointment.start),
-            duration = a.appointment.duration,
-            roomID = a.room.map(_.id),
-            appointmentType = a.appointment.appointmentType,
-            purpose = a.appointment.purpose,
-          )
-
-          appointments.update(
-            appointment.id,
-            changes,
-            a.clientCases.map(_.id.get),
-            a.clients.map(_.client.universityID),
-            a.teamMembers.map(_.member.usercode),
-            a.appointment.lastUpdated
-          ).serviceValue -> clients
-        }
-      }.lastOption.getOrElse(appointment -> clients)
-    }
-
-    // Appointment cancellation
-    generatedAppointments = generatedAppointments.map { case (appointment, clients) =>
-      if ((options.AppointmentCancelledRate / Random.nextDouble()).toInt > 0) {
-        withMockDateTime(randomFutureDateTime(base = appointment.created)) { _ =>
-          val teamMember = randomTeamMember(appointment.team)
-          implicit val ac: AuditLogContext = auditLogContext(teamMember)
-
-          val a = appointments.cancel(appointment.id, randomEnum(AppointmentCancellationReason), appointment.lastUpdated).serviceValue
-          appointments.addNote(appointment.id, AppointmentNoteSave(dummyWords(Random.nextInt(50)), teamMember)).serviceValue
-
-          a -> clients
-        }
-      } else appointment -> clients
-    }
-
-    // Appointment attended
-    generatedAppointments = generatedAppointments.filterNot(_._1.state.isTerminal).map { case (appointment, clients) =>
-      if ((options.AppointmentAttendedRate / Random.nextDouble()).toInt > 0) {
-        withMockDateTime(randomFutureDateTime(base = appointment.start)) { _ =>
-          val teamMember = randomTeamMember(appointment.team)
-          implicit val ac: AuditLogContext = auditLogContext(teamMember)
-
-          val attendance: Map[UniversityID, (AppointmentState, Option[AppointmentCancellationReason])] =
-            clients.map { client =>
-              if ((options.AppointmentAttendedRate / Random.nextDouble()).toInt > 0) {
-                (client, (AppointmentState.Attended, None))
-              } else {
-                (client, (AppointmentState.Cancelled, Some(randomEnum(AppointmentCancellationReason))))
-              }
-            }.toMap
-
-          appointments.recordOutcomes(
-            appointment.id,
-            attendance,
-            AppointmentNoteSave(dummyWords(Random.nextInt(50)), teamMember),
-            appointment.lastUpdated,
-          ).serviceValue -> clients
-        }
-      } else appointment -> clients
+      }
+    } match {
+      case Success(_) =>
+      case Failure(t) =>
+        logger.error("Something went wrong!", t)
+        throw new JobExecutionException(t)
     }
   }
 

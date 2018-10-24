@@ -7,6 +7,7 @@ import domain._
 import domain.dao.CaseDao.Case
 import helpers.{JavaTime, ServiceResults}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
+import helpers.ServiceResults.Implicits._
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.mailer.Email
@@ -66,6 +67,9 @@ class NotificationServiceImpl @Inject()(
 
   private implicit lazy val domain: NotificationService.Domain = config.get[String]("domain")
   private lazy val initialTeam = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
+
+  private lazy val myWarwickEnabled: Boolean = config.get[Boolean]("wellbeing.features.notifications.mywarwick")
+  private lazy val emailEnabled: Boolean = config.get[Boolean]("wellbeing.features.notifications.email")
 
   override def newRegistration(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withInitialTeamUsers { users =>
@@ -332,18 +336,21 @@ class NotificationServiceImpl @Inject()(
       )
     }
 
-  private def queueEmailAndSendActivity(subject: String, body: TxtFormat.Appendable, recipients: Seq[User], activity: Activity)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
-    emailService.queue(
-      Email(
-        subject = subject,
-        from = fromAddress,
-        bodyText = Some(body.toString.trim)
-      ),
-      recipients
-    ).flatMap {
-      case Left(errors) => Future.successful(Left(errors))
-      case _ => sendAndHandleResponse(activity)
-    }
+  private def queueEmailAndSendActivity(subject: String, body: TxtFormat.Appendable, recipients: Seq[User], activity: Activity)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    val queueEmail =
+      if (emailEnabled)
+        emailService.queue(
+          Email(
+            subject = subject,
+            from = fromAddress,
+            bodyText = Some(body.toString.trim)
+          ),
+          recipients
+        )
+      else Future.successful(Right(Nil))
+
+    queueEmail.successFlatMapTo(_ => sendAndHandleResponse(activity))
+  }
 
   private def buildActivity(users: Set[User], title: String, url: String, activityType: String): Activity =
     buildActivity(users, title, url, activityType, null)
@@ -371,18 +378,19 @@ class NotificationServiceImpl @Inject()(
       activityType
     )
 
-  private def sendAndHandleResponse(activity: Activity)(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
-    FutureConverters.toScala(myWarwickService.sendAsNotification(activity)).map { resultList =>
-      val results = resultList.asScala
-      if (results.forall(_.getErrors.isEmpty)) {
-        Right(activity)
-      } else {
-        Left(results.toList.filterNot(_.getErrors.isEmpty).map(response => ServiceError(
-          response.getErrors.asScala.map(_.getMessage).mkString(", ")
-        )))
+  private def sendAndHandleResponse(activity: Activity)(implicit t: TimingContext): Future[ServiceResult[Activity]] =
+    if (myWarwickEnabled)
+      FutureConverters.toScala(myWarwickService.sendAsNotification(activity)).map { resultList =>
+        val results = resultList.asScala
+        if (results.forall(_.getErrors.isEmpty)) {
+          Right(activity)
+        } else {
+          Left(results.toList.filterNot(_.getErrors.isEmpty).map(response => ServiceError(
+            response.getErrors.asScala.map(_.getMessage).mkString(", ")
+          )))
+        }
       }
-    }
-  }
+    else Future.successful(Right(activity))
 
   private def withInitialTeamUsers(f: Seq[User] => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] =
     withTeamUsers(initialTeam)(f)

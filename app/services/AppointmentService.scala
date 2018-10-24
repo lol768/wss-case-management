@@ -15,9 +15,10 @@ import domain.dao.MemberDao.StoredMember
 import domain.dao.{AppointmentDao, DaoRunner}
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{JavaTime, ServiceResults}
+import helpers.ServiceResults.Implicits._
 import javax.inject.{Inject, Singleton}
 import org.quartz._
-import _root_.helpers.ServiceResults.Implicits._
+import play.api.Configuration
 import play.api.libs.json.Json
 import services.AppointmentService._
 import services.job.SendAppointmentClientReminderJob
@@ -97,7 +98,10 @@ class AppointmentServiceImpl @Inject()(
   daoRunner: DaoRunner,
   dao: AppointmentDao,
   scheduler: Scheduler,
+  configuration: Configuration,
 )(implicit ec: ExecutionContext) extends AppointmentService with Logging {
+
+  private lazy val clientRemindersEnabled = configuration.get[Boolean]("wellbeing.features.appointmentClientReminders")
 
   private def createStoredAppointment(id: UUID, key: IssueKey, save: AppointmentSave, team: Team): StoredAppointment =
     StoredAppointment(
@@ -585,30 +589,32 @@ class AppointmentServiceImpl @Inject()(
     }
 
   private def scheduleClientReminder(appointment: Appointment) = {
-    val jobKey = new JobKey(appointment.id.toString, "SendAppointmentClientReminder")
-    val triggerKey = new TriggerKey(appointment.id.toString, "SendAppointmentClientReminder")
+    if (clientRemindersEnabled) {
+      val jobKey = new JobKey(appointment.id.toString, "SendAppointmentClientReminder")
+      val triggerKey = new TriggerKey(appointment.id.toString, "SendAppointmentClientReminder")
 
-    val triggerTime = appointment.start.minusDays(1).toInstant
+      val triggerTime = appointment.start.minusDays(1).toInstant
 
-    if (scheduler.checkExists(triggerKey)) {
-      scheduler.rescheduleJob(
-        triggerKey,
-        TriggerBuilder.newTrigger()
-          .withIdentity(triggerKey)
-          .startAt(Date.from(triggerTime))
-          .build()
-      )
-    } else {
-      scheduler.scheduleJob(
-        JobBuilder.newJob(classOf[SendAppointmentClientReminderJob])
-          .withIdentity(jobKey)
-          .usingJobData("id", appointment.id.toString)
-          .build(),
-        TriggerBuilder.newTrigger()
-          .withIdentity(triggerKey)
-          .startAt(Date.from(triggerTime))
-          .build()
-      )
+      if (scheduler.checkExists(triggerKey)) {
+        scheduler.rescheduleJob(
+          triggerKey,
+          TriggerBuilder.newTrigger()
+            .withIdentity(triggerKey)
+            .startAt(Date.from(triggerTime))
+            .build()
+        )
+      } else {
+        scheduler.scheduleJob(
+          JobBuilder.newJob(classOf[SendAppointmentClientReminderJob])
+            .withIdentity(jobKey)
+            .usingJobData("id", appointment.id.toString)
+            .build(),
+          TriggerBuilder.newTrigger()
+            .withIdentity(triggerKey)
+            .startAt(Date.from(triggerTime))
+            .build()
+        )
+      }
     }
   }
 

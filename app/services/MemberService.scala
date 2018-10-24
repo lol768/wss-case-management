@@ -5,11 +5,12 @@ import domain.ExtendedPostgresProfile.api._
 import domain.dao.MemberDao.StoredMember
 import domain.dao.{DaoRunner, MemberDao}
 import domain.{Member, Teams}
+import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import slick.dbio.DBIOAction
 import warwick.sso.{GroupService, UserLookupService, Usercode}
-import helpers.ServiceResults.Implicits._
+
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
