@@ -30,7 +30,9 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
   private trait Fixture {
     val config: Configuration = Configuration.from(Map(
       "domain" -> "wss.warwick.ac.uk",
-      "app.enquiries.initialTeamId" -> "disability"
+      "app.enquiries.initialTeamId" -> "disability",
+      "wellbeing.features.notifications.email" -> true,
+      "wellbeing.features.notifications.mywarwick" -> true,
     ))
 
     val profileService: ProfileService = mock[ProfileService](RETURNS_SMART_NULLS)
