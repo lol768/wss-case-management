@@ -438,29 +438,28 @@ object CaseDao {
 
 
     def withLastUpdated = q
-      .joinLeft(Message.messages.table)
-      .on((c, m) =>
-        m.id in Message.messages.table
-          .filter(m => m.ownerId === c.id && m.ownerType === (MessageOwner.Case: MessageOwner))
-          .sortBy(_.created.reverse)
-          .take(1)
-          .map(_.id)
+      .joinLeft(
+        Message.messages.table
+          .filter(m => m.ownerType === (MessageOwner.Case: MessageOwner))
+          .groupBy(_.ownerId)
+          .map { case (id, m) => (id, m.map(_.created).max) }
       )
-      .joinLeft(caseNotes.table)
-      .on { case ((c, _), n) =>
-        n.id in caseNotes.table
-          .filter(_.caseId === c.id)
-          .sortBy(_.created.reverse)
-          .take(1)
-          .map(_.id)
-      }
-      .map { case ((c, m), n) =>
+      .on { case (c, (id, _)) => c.id === id }
+      .map { case (c, o) => (c, o.flatMap(_._2)) }
+      .joinLeft(
+        caseNotes.table
+          .groupBy(_.caseId)
+          .map { case (id, n) => (id, n.map(_.created).max) }
+      )
+      .on { case ((c, _), (id, _)) => c.id === id }
+      .map { case ((c, messageCreated), o) => (c, messageCreated, o.flatMap(_._2)) }
+      .map { case (c, m, n) =>
         // working out the most recent date is made easier if we deal with an arbitrary min date rather than handling the options
         val MinDate = OffsetDateTime.from(Instant.EPOCH.atOffset(ZoneOffset.UTC))
 
         val caseUpdated = c.version
-        val latestMessage = m.map(_.created).getOrElse(MinDate)
-        val latestNote = n.map(_.created).getOrElse(MinDate)
+        val latestMessage = m.getOrElse(MinDate)
+        val latestNote = n.getOrElse(MinDate)
 
         val mostRecentUpdate = slick.lifted.Case.If((caseUpdated > latestMessage) && (caseUpdated > latestNote)).Then(caseUpdated)
           .If((latestMessage > caseUpdated) && (latestMessage > latestNote)).Then(latestMessage)
