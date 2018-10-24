@@ -3,19 +3,19 @@ package services
 import java.time.OffsetDateTime
 
 import com.google.inject.ImplementedBy
+import domain.ExtendedPostgresProfile.api._
+import domain._
+import domain.dao.ClientDao.StoredClient
 import domain.dao.ClientSummaryDao.StoredClientSummary
 import domain.dao.ClientSummaryDao.StoredClientSummary.StoredReasonableAdjustment
 import domain.dao.{ClientSummaryDao, DaoRunner}
-import domain._
+import helpers.ServiceResults
+import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import warwick.core.timing.TimingContext
 import warwick.sso.UniversityID
-import domain.ExtendedPostgresProfile.api._
-import helpers.{JavaTime, ServiceResults}
-import ServiceResults.Implicits._
-import domain.dao.ClientDao.StoredClient
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -107,25 +107,18 @@ class ClientSummaryServiceImpl @Inject()(
         Set(ClientRiskStatus.Medium, ClientRiskStatus.High)
       ).withClient.result
     ).flatMap(summaries =>
-      ServiceResults.futureSequence(
-        summaries.map { summary =>
-          val casesAndEnquiries = ServiceResults.zip(
-            caseService.findForClient(summary.client.universityID),
-            enquiryService.findEnquiriesForClient(summary.client.universityID)
+      ServiceResults.zip(
+        caseService.getLastUpdatedForClients(summaries.map(_.client.universityID).toSet),
+        enquiryService.getLastUpdatedForClients(summaries.map(_.client.universityID).toSet)
+      ).successMapTo { case (caseLastUpdated, enquiryLastUpdated) =>
+        summaries.map(summary =>
+          AtRiskClient(
+            summary,
+            caseLastUpdated(summary.client.universityID),
+            enquiryLastUpdated(summary.client.universityID)
           )
-          casesAndEnquiries.map(_.map {
-            case (cases, enquiries) =>
-              AtRiskClient(
-                summary,
-                cases.map(CaseService.lastModified).sorted(JavaTime.dateTimeOrdering).lastOption,
-                enquiries.map(EnquiryService.lastModified).sorted(JavaTime.dateTimeOrdering).lastOption
-              )
-            case _ =>
-              // Never actually used but good for typing
-              AtRiskClient(summary, None, None)
-          })
-        }
-      ).map(_.map(_.toSet))
+        )
+      }.map(_.map(_.toSet))
     )
   }
 

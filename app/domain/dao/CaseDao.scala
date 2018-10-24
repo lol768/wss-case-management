@@ -63,6 +63,7 @@ trait CaseDao {
   def getTagHistory(caseID: UUID): DBIO[Seq[StoredCaseTagVersion]]
   def getClientHistory(caseID: UUID): DBIO[Seq[StoredCaseClientVersion]]
   def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, Case, Seq]
+  def getLastUpdatedForClients(clients: Set[UniversityID]): DBIO[Seq[(UniversityID, Option[OffsetDateTime])]]
 }
 
 @Singleton
@@ -253,6 +254,32 @@ class CaseDaoImpl @Inject()(
   override def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, Case, Seq] = {
     cases.table.filter(c => c.originalEnquiry.map(_ === enquiryId))
   }
+
+  override def getLastUpdatedForClients(clients: Set[UniversityID]): DBIO[Seq[(UniversityID, Option[OffsetDateTime])]] = {
+    cases.table
+      .withClients.filter { case (_, c, _) => c.universityID.inSet(clients) }
+      .joinLeft(Message.lastUpdatedCaseMessage)
+      .on { case ((c, _, _), (id, _)) => c.id === id }
+      .joinLeft(CaseDao.lastUpdatedCaseNote)
+      .on { case (((c, _, _), _), (id, _)) => c.id === id }
+      .map { case (((c, client, _), messages), notes) => (client.universityID, c.version, messages.flatMap(_._2), notes.flatMap(_._2)) }
+      .groupBy { case (client, _, _, _) => client }
+      .map { case (client, tuple) => (client, tuple.map(_._2).max, tuple.map(_._3).max, tuple.map(_._4).max) }
+      .map { case (client, caseUpdated, m, n) =>
+        // working out the most recent date is made easier if we deal with an arbitrary min date rather than handling the options
+        val MinDate = OffsetDateTime.from(Instant.EPOCH.atOffset(ZoneOffset.UTC))
+
+        val latestMessage = m.getOrElse(MinDate)
+        val latestNote = n.getOrElse(MinDate)
+
+        val mostRecentUpdate = slick.lifted.Case.If((caseUpdated > latestMessage) && (caseUpdated > latestNote)).Then(caseUpdated)
+          .If((latestMessage > caseUpdated) && (latestMessage > latestNote)).Then(latestMessage.?)
+          .Else(latestNote.?)
+
+        (client, mostRecentUpdate)
+      }
+      .result
+  }
 }
 
 object CaseDao {
@@ -438,19 +465,10 @@ object CaseDao {
 
 
     def withLastUpdated = q
-      .joinLeft(
-        Message.messages.table
-          .filter(m => m.ownerType === (MessageOwner.Case: MessageOwner))
-          .groupBy(_.ownerId)
-          .map { case (id, m) => (id, m.map(_.created).max) }
-      )
+      .joinLeft(Message.lastUpdatedCaseMessage)
       .on { case (c, (id, _)) => c.id === id }
       .map { case (c, o) => (c, o.flatMap(_._2)) }
-      .joinLeft(
-        caseNotes.table
-          .groupBy(_.caseId)
-          .map { case (id, n) => (id, n.map(_.created).max) }
-      )
+      .joinLeft(CaseDao.lastUpdatedCaseNote)
       .on { case ((c, _), (id, _)) => c.id === id }
       .map { case ((c, messageCreated), o) => (c, messageCreated, o.flatMap(_._2)) }
       .map { case (c, m, n) =>
@@ -876,4 +894,9 @@ object CaseDao {
       caseType.nonEmpty ||
       state.nonEmpty
   }
+
+  val lastUpdatedCaseNote =
+    caseNotes.table
+      .groupBy(_.caseId)
+      .map { case (id, n) => (id, n.map(_.created).max) }
 }

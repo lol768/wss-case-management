@@ -90,6 +90,8 @@ trait CaseService {
   def getHistory(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseHistory]]
 
   def findFromOriginalEnquiry(enquiryId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
+
+  def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]]
 }
 
 @Singleton
@@ -128,7 +130,7 @@ class CaseServiceImpl @Inject() (
   }
 
   override def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]] =
-    daoRunner.run(dao.find(id)).map(Right(_)).recover {
+    daoRunner.run(dao.find(id)).map(ServiceResults.success).recover {
       case _: NoSuchElementException => ServiceResults.error[Case](s"Could not find a Case with ID $id")
     }
 
@@ -143,7 +145,7 @@ class CaseServiceImpl @Inject() (
     }
 
   override def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]] =
-    daoRunner.run(dao.find(caseKey)).map(Right(_)).recover {
+    daoRunner.run(dao.find(caseKey)).map(ServiceResults.success).recover {
       case _: NoSuchElementException => ServiceResults.error[Case](s"Could not find a Case with key ${caseKey.string}")
     }
 
@@ -553,6 +555,9 @@ class CaseServiceImpl @Inject() (
   override def findFromOriginalEnquiry(enquiryId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] = {
     daoRunner.run(dao.findByOriginalEnquiryQuery(enquiryId).result).map(Right.apply)
   }
+
+  override def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]] =
+    daoRunner.run(dao.getLastUpdatedForClients(clients)).map(r => Right(r.toMap.withDefaultValue(None)))
 }
 
 object CaseService {

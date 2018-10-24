@@ -1,6 +1,6 @@
 package domain.dao
 
-import java.time.{LocalDate, OffsetDateTime}
+import java.time.{Instant, LocalDate, OffsetDateTime, ZoneOffset}
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
@@ -36,6 +36,7 @@ trait EnquiryDao {
   def findClosedQuery(owner: Usercode): Query[Enquiries, StoredEnquiry, Seq]
   def findNotesQuery(enquiryIDs: Set[UUID]): Query[EnquiryNotes, StoredEnquiryNote, Seq]
   def searchQuery(query: EnquirySearchQuery): Query[Enquiries, StoredEnquiry, Seq]
+  def getLastUpdatedForClients(clients: Set[UniversityID]): DBIO[Seq[(UniversityID, Option[OffsetDateTime])]]
 }
 
 @Singleton
@@ -122,6 +123,27 @@ class EnquiryDaoImpl @Inject() (
       .sortBy { case (e, isOpen) => (isOpen.desc, e.created.desc) }
       .distinct
       .map { case (e, _) => e }
+  }
+
+  override def getLastUpdatedForClients(clients: Set[UniversityID]): DBIO[Seq[(UniversityID, Option[OffsetDateTime])]] = {
+    enquiries.table
+      .filter(_.universityId.inSet(clients))
+      .joinLeft(Message.lastUpdatedEnquiryMessage)
+      .on { case (e, (id, _)) => e.id === id }
+      .map { case (e, messages) => (e.universityId, e.version, messages.flatMap(_._2)) }
+      .groupBy { case (client, _, _) => client }
+      .map { case (client, tuple) => (client, tuple.map(_._2).max, tuple.map(_._3).max) }
+      .map { case (client, enquiryUpdated, m) =>
+        // working out the most recent date is made easier if we deal with an arbitrary min date rather than handling the options
+        val MinDate = OffsetDateTime.from(Instant.EPOCH.atOffset(ZoneOffset.UTC))
+
+        val latestMessage = m.getOrElse(MinDate)
+
+        val mostRecentUpdate = slick.lifted.Case.If(latestMessage > enquiryUpdated).Then(latestMessage.?).Else(enquiryUpdated)
+
+        (client, mostRecentUpdate)
+      }
+      .result
   }
 
 }
