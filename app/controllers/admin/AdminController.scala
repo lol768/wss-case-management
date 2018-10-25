@@ -55,8 +55,8 @@ class AdminController @Inject()(
 
   def enquiriesNeedingReply(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     ServiceResults.zip(
-      enquiryService.countClosedEnquiries(teamRequest.team),
-      enquiryService.findClosedEnquiries(teamRequest.team, Pagination.asPage(page))
+      enquiryService.countEnquiriesNeedingReply(teamRequest.team),
+      enquiryService.findEnquiriesNeedingReply(teamRequest.team, Pagination.asPage(page))
     ).successMap { case (requiringActionCount, requiringAction) =>
       val pagination = Pagination(requiringActionCount, page, controllers.admin.routes.AdminController.enquiriesNeedingReply(teamRequest.team.id))
       Ok(views.html.admin.enquiriesNeedingReply(requiringAction, pagination))
@@ -65,8 +65,8 @@ class AdminController @Inject()(
 
   def enquiriesAwaitingClient(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     ServiceResults.zip(
-      enquiryService.countClosedEnquiries(teamRequest.team),
-      enquiryService.findClosedEnquiries(teamRequest.team, Pagination.asPage(page))
+      enquiryService.countEnquiriesAwaitingClient(teamRequest.team),
+      enquiryService.findEnquiriesAwaitingClient(teamRequest.team, Pagination.asPage(page))
     ).successMap { case (awaitingClientCount, awaitingClient) =>
       val pagination = Pagination(awaitingClientCount, page, controllers.admin.routes.AdminController.enquiriesAwaitingClient(teamRequest.team.id))
       Ok(views.html.admin.enquiriesAwaitingClient(awaitingClient, pagination))
