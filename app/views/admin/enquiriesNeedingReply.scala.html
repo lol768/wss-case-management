@@ -1,7 +1,5 @@
-@import java.util.UUID
-@import domain.{Enquiry, MessageData, Pagination, SitsProfile}
-@import warwick.sso.UniversityID
+@import domain.{EnquiryListRender, Pagination}
 
-@(enquiries: Seq[(Enquiry, MessageData)], pagination: Pagination)(implicit context: RequestContext)
+@(enquiries: Seq[EnquiryListRender], pagination: Pagination)(implicit context: RequestContext)
 
 @views.html.admin.enquiryTable(None, enquiries, pagination)
