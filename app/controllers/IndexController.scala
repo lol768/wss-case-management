@@ -42,13 +42,17 @@ class IndexController @Inject()(
   def enquiries: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     val usercode = currentUser().usercode
     ServiceResults.zip(
-      enquiryService.findEnquiriesNeedingReply(usercode),
-      enquiryService.findEnquiriesAwaitingClient(usercode),
+      enquiryService.countEnquiriesNeedingReply(usercode),
+      enquiryService.findEnquiriesNeedingReply(usercode, Pagination.firstPage()),
+      enquiryService.countEnquiriesAwaitingClient(usercode),
+      enquiryService.findEnquiriesAwaitingClient(usercode, Pagination.firstPage()),
       enquiryService.countClosedEnquiries(usercode)
-    ).successMap { case (requiringAction, awaitingClient, closedEnquiries) =>
+    ).successMap { case (requiringActionCount, requiringAction, awaitingClientCount, awaitingClient, closedEnquiries) =>
       Ok(views.html.admin.enquiriesTab(
         requiringAction,
+        Pagination(requiringActionCount, 0, controllers.routes.IndexController.enquiriesNeedingReply()),
         awaitingClient,
+        Pagination(awaitingClientCount, 0, controllers.routes.IndexController.enquiriesAwaitingClient()),
         closedEnquiries,
         routes.IndexController.closedEnquiries(),
         "member",
@@ -58,13 +62,37 @@ class IndexController @Inject()(
     }
   }
 
+  def enquiriesNeedingReply(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    val usercode = currentUser().usercode
+    ServiceResults.zip(
+      enquiryService.countEnquiriesNeedingReply(usercode),
+      enquiryService.findEnquiriesNeedingReply(usercode, Pagination.asPage(page))
+    ).successMap { case (requiringActionCount, requiringAction) =>
+      val pagination = Pagination(requiringActionCount, page, controllers.routes.IndexController.enquiriesNeedingReply())
+      Ok(views.html.admin.enquiriesNeedingReply(requiringAction, pagination))
+    }
+  }
+
+  def enquiriesAwaitingClient(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    val usercode = currentUser().usercode
+    ServiceResults.zip(
+      enquiryService.countEnquiriesAwaitingClient(usercode),
+      enquiryService.findEnquiriesAwaitingClient(usercode, Pagination.asPage(page))
+    ).successMap { case (awaitingClientCount, awaitingClient) =>
+      val pagination = Pagination(awaitingClientCount, page, controllers.routes.IndexController.enquiriesAwaitingClient())
+      Ok(views.html.admin.enquiriesAwaitingClient(awaitingClient, pagination))
+    }
+  }
+
   def closedEnquiries(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    enquiryService.countClosedEnquiries(currentUser().usercode).successFlatMap(closed => {
+    val usercode = currentUser().usercode
+    ServiceResults.zip(
+      enquiryService.countClosedEnquiries(usercode),
+      enquiryService.findClosedEnquiries(usercode, Pagination.asPage(page))
+    ).successMap { case (closed, closedEnquiries) =>
       val pagination = Pagination(closed, page, controllers.routes.IndexController.closedEnquiries())
-      enquiryService.findClosedEnquiries(currentUser().usercode, Some(pagination.asPage)).successMap { enquiries =>
-        Ok(views.html.admin.closedEnquiries(enquiries, pagination))
-      }
-    })
+      Ok(views.html.admin.closedEnquiries(closedEnquiries, pagination))
+    }
   }
 
   def cases: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>

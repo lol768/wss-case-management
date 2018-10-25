@@ -1,12 +1,10 @@
-@import java.util.UUID
+@import domain.{EnquiryListRender, Pagination}
 
-@import domain.{EnquiryListRender, SitsProfile, Team}
-@import warwick.sso.UniversityID
-
-@import domain.Client
 @(
   requiringAction: Seq[EnquiryListRender],
+  requiringActionPagination: Pagination,
   awaitingClient: Seq[EnquiryListRender],
+  awaitingClientPagination: Pagination,
   closedEnquiries: Int,
   closedEnquiriesRoute: Call,
   searchScope: String,
@@ -25,8 +23,8 @@
   }
 }
 
-@views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction)
-@views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient)
+@views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction, requiringActionPagination)
+@views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient, awaitingClientPagination)
 
 @if(closedEnquiries == 0) {
   <p>No closed enquiries to show</p>

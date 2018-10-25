@@ -33,13 +33,17 @@ class AdminController @Inject()(
 
   def enquiries(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     ServiceResults.zip(
-      enquiryService.findEnquiriesNeedingReply(teamRequest.team),
-      enquiryService.findEnquiriesAwaitingClient(teamRequest.team),
+      enquiryService.countEnquiriesNeedingReply(teamRequest.team),
+      enquiryService.findEnquiriesNeedingReply(teamRequest.team, Pagination.firstPage()),
+      enquiryService.countEnquiriesAwaitingClient(teamRequest.team),
+      enquiryService.findEnquiriesAwaitingClient(teamRequest.team, Pagination.firstPage()),
       enquiryService.countClosedEnquiries(teamRequest.team)
-    ).successMap { case (requiringAction, awaitingClient, closedEnquiries) =>
+    ).successMap { case (requiringActionCount, requiringAction, awaitingClientCount, awaitingClient, closedEnquiries) =>
       Ok(views.html.admin.enquiriesTab(
         requiringAction,
+        Pagination(requiringActionCount, 0, controllers.admin.routes.AdminController.enquiriesNeedingReply(teamRequest.team.id)),
         awaitingClient,
+        Pagination(awaitingClientCount, 0, controllers.admin.routes.AdminController.enquiriesAwaitingClient(teamRequest.team.id)),
         closedEnquiries,
         controllers.admin.routes.AdminController.closedEnquiries(teamId),
         "team",
@@ -49,13 +53,34 @@ class AdminController @Inject()(
     }
   }
 
+  def enquiriesNeedingReply(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    ServiceResults.zip(
+      enquiryService.countEnquiriesNeedingReply(teamRequest.team),
+      enquiryService.findEnquiriesNeedingReply(teamRequest.team, Pagination.asPage(page))
+    ).successMap { case (requiringActionCount, requiringAction) =>
+      val pagination = Pagination(requiringActionCount, page, controllers.admin.routes.AdminController.enquiriesNeedingReply(teamRequest.team.id))
+      Ok(views.html.admin.enquiriesNeedingReply(requiringAction, pagination))
+    }
+  }
+
+  def enquiriesAwaitingClient(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    ServiceResults.zip(
+      enquiryService.countEnquiriesAwaitingClient(teamRequest.team),
+      enquiryService.findEnquiriesAwaitingClient(teamRequest.team, Pagination.asPage(page))
+    ).successMap { case (awaitingClientCount, awaitingClient) =>
+      val pagination = Pagination(awaitingClientCount, page, controllers.admin.routes.AdminController.enquiriesAwaitingClient(teamRequest.team.id))
+      Ok(views.html.admin.enquiriesAwaitingClient(awaitingClient, pagination))
+    }
+  }
+
   def closedEnquiries(teamId: String, page: Int): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    enquiryService.countClosedEnquiries(teamRequest.team).successFlatMap(closed => {
+    ServiceResults.zip(
+      enquiryService.countClosedEnquiries(teamRequest.team),
+      enquiryService.findClosedEnquiries(teamRequest.team, Pagination.asPage(page))
+    ).successMap { case (closed, closedEnquiries) =>
       val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedEnquiries(teamRequest.team.id))
-      enquiryService.findClosedEnquiries(teamRequest.team, Some(pagination.asPage)).successMap { enquiries =>
-        Ok(views.html.admin.closedEnquiries(enquiries, pagination))
-      }
-    })
+      Ok(views.html.admin.closedEnquiries(closedEnquiries, pagination))
+    }
   }
 
   def cases(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
