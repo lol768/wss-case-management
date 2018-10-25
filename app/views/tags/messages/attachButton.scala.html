@@ -1,0 +1,13 @@
+@import org.apache.tika.mime.MediaType
+@(supportedMimeTypes: Seq[MediaType], id: String)
+<label class="btn btn-primary">
+  <input
+    type="file"
+    name="file"
+    accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}"
+    class="wellbeing-message-file-attach"
+    multiple
+    aria-label="Attach files"
+  >
+  @tags.icons.fileAttach()
+</label>

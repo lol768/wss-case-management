@@ -16,6 +16,7 @@
     <div class="flex">
       @b3.textarea(messageForm("text"), 'rows -> 1, 'id -> s"${issueID.toString}-${client.string}-text", Symbol("aria-label") -> "Add a message")(b3.clear.fieldConstructorSpecific, messagesProvider)
       @tags.messages.sendButton()
+      @tags.messages.attachButton(supportedMimeTypes, s"${issueID.toString}-${client.string}-file")
     </div>
 
     @if(messageForm("text").hasErrors) {
@@ -26,10 +27,4 @@
       </div>
     }
   }
-  @* TODO - move file uploads into a modal *@
-  <div class="form-group">
-    <div class="row">
-      <div class="col-md-5"><input type="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" class="form-control" multiple aria-label="Attach a file"></div>
-    </div>
-  </div>
 }

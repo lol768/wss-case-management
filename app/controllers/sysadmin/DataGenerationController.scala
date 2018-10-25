@@ -859,8 +859,8 @@ class DataGenerationJob @Inject()(
             val teamMember = randomTeamMember(appointment.team)
             implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
-            val a = appointments.cancel(appointment.id, randomEnum(AppointmentCancellationReason), appointment.lastUpdated).serviceValue
-            appointments.addNote(appointment.id, AppointmentNoteSave(dummyWords(Random.nextInt(50)), teamMember)).serviceValue
+          val cancellationNote = Some(AppointmentNoteSave(dummyWords(Random.nextInt(50)), teamMember))
+          val a = appointments.cancel(appointment.id, randomEnum(AppointmentCancellationReason), cancellationNote, appointment.lastUpdated).serviceValue
 
             a -> clients
           }

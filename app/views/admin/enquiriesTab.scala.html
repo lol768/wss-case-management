@@ -1,9 +1,9 @@
-@import domain.{Enquiry, MessageData, Pagination}
+@import domain.{EnquiryListRender, Pagination}
 
 @(
-  requiringAction: Seq[(Enquiry, MessageData)],
+  requiringAction: Seq[EnquiryListRender],
   requiringActionPagination: Pagination,
-  awaitingClient: Seq[(Enquiry, MessageData)],
+  awaitingClient: Seq[EnquiryListRender],
   awaitingClientPagination: Pagination,
   closedEnquiries: Int,
   closedEnquiriesRoute: Call,

@@ -88,6 +88,7 @@ object AppointmentController {
 
   case class CancelAppointmentData(
     cancellationReason: AppointmentCancellationReason,
+    message: Option[String],
     version: OffsetDateTime
   )
 
@@ -95,6 +96,7 @@ object AppointmentController {
     Form(
       mapping(
         "cancellationReason" -> AppointmentCancellationReason.formField,
+        "message" -> optional(text),
         "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == existingVersion)
       )(CancelAppointmentData.apply)(CancelAppointmentData.unapply)
     )
@@ -403,9 +405,12 @@ class AppointmentController @Inject()(
         appointmentKey,
         formWithErrors.withVersion(appointment.lastUpdated)
       ),
-      data => appointments.cancel(appointment.id, data.cancellationReason, data.version).successMap { updated =>
-        Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
-          .flashing("success" -> Messages("flash.appointment.cancelled"))
+      data => {
+        val note = data.message.map(AppointmentNoteSave(_, request.user.get.usercode))
+        appointments.cancel(appointment.id, data.cancellationReason, note, data.version).successMap { updated =>
+          Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
+            .flashing("success" -> Messages("flash.appointment.cancelled"))
+        }
       }
     )
   }

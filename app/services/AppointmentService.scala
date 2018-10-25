@@ -77,7 +77,7 @@ trait AppointmentService {
   def clientDecline(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentState, Option[AppointmentCancellationReason])], note: AppointmentNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
-  def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+  def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, note: Option[AppointmentNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def addNote(appointmentID: UUID, note: AppointmentNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentNote]]
   def getNotes(appointmentID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentNote]]]
@@ -529,16 +529,20 @@ class AppointmentServiceImpl @Inject()(
       }
     }
 
-  override def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
+  override def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, note: Option[AppointmentNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
     auditService.audit('AppointmentCancel, appointmentID.toString, 'Appointment, Json.obj()) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
         clients <- getClientsQuery(appointmentID).result
         updatedAppointment <- dao.update(appointment.copy(state = AppointmentState.Cancelled, cancellationReason = Some(reason)), version)
+        _ <- note.map(addNoteDBIO(appointmentID, _)).getOrElse(DBIO.successful(()))
       } yield (updatedAppointment, clients)).flatMap { case (a, clients) =>
-        notificationService.cancelledAppointment(clients.map(_.universityID).toSet).map(sr =>
-          ServiceResults.logErrors(sr, logger, ())
-        ).map(_ => Right(a.asAppointment))
+        (for {
+          _ <- note.map(n => memberService.getOrAddMember(n.teamMember)).getOrElse(Future.successful(()))
+          activity <- notificationService.cancelledAppointment(clients.map(_.universityID).toSet).map(sr => ServiceResults.logErrors(sr, logger, ()))
+        } yield activity).map(_ =>
+          Right(a.asAppointment)
+        )
       }
     }
 
