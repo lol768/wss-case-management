@@ -50,8 +50,6 @@ html {
   }
 }
 
-
-
 .popover button.close {
   padding: 0 2px;
 }
@@ -586,3 +584,8 @@ i.fa-comment-edit.awaiting {
     margin-bottom: 0;
   }
 }
+
+// Gets rid of the annoying outline for mouse users but preserves it for keyboard users,
+// and is ignored by browsers that don’t support :focus-visible.
+// https://twitter.com/LeaVerou/status/1045768279753666562?s=19
+:focus:not(:focus-visible) { outline: none }
