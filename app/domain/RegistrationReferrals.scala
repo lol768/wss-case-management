@@ -27,7 +27,7 @@ object RegistrationReferrals extends Enum[RegistrationReferral] {
   case object IAPT extends RegistrationReferral("IAPT", "IAPT")
   case object Tutor extends RegistrationReferral("Tutor", "Personal/Academic Tutor")
   case object Residential extends RegistrationReferral("Residential", "Residential Life Team")
-  case object StudentUnion extends RegistrationReferral("Student Union", "Student Union")
+  case object StudentUnion extends RegistrationReferral("Student Union", "Students' Union")
   case object Other extends RegistrationReferral("Other", "Other")
 
   val values: immutable.IndexedSeq[RegistrationReferral] = findValues
