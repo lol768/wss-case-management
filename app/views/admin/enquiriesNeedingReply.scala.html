@@ -2,4 +2,4 @@
 
 @(enquiries: Seq[EnquiryListRender], pagination: Pagination)(implicit context: RequestContext)
 
-@views.html.admin.enquiryTable(None, enquiries, pagination, Some("There are no closed enquiries"))
+@views.html.admin.enquiryTable(None, enquiries, pagination)
