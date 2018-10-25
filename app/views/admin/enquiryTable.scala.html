@@ -1,26 +1,26 @@
 @import java.util.UUID
 
-@import domain.{Enquiry, MessageData, Pagination, SitsProfile}
+@import domain.{EnquiryListRender, Pagination, SitsProfile}
 @import warwick.sso.UniversityID
 
 @import domain.Client
 @import services.EnquiryService
 @(
   title: Option[String],
-  enquiries: Seq[(Enquiry, MessageData)],
+  enquiries: Seq[EnquiryListRender],
   pagination: Option[Pagination] = None,
   emptyMessage: Option[String] = None,
 )(implicit context: RequestContext)
 
-@enquiryRow(enquiry: Enquiry, message: MessageData) = {
+@enquiryRow(render: EnquiryListRender) = {
   <tr>
     <td>
-      <a href="@controllers.admin.routes.ClientController.client(enquiry.client.universityID)">@enquiry.client.safeFullName</a>
+      <a href="@controllers.admin.routes.ClientController.client(render.enquiry.client.universityID)">@render.enquiry.client.safeFullName</a>
     </td>
     <td>
-      <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key)">@enquiry.key.string @enquiry.subject</a>
+      <a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)">@render.enquiry.key.string @render.enquiry.subject</a>
     </td>
-    <td>@helpers.JavaTime.Relative(message.created)</td>
+    <td>@helpers.JavaTime.Relative(render.lastUpdated)</td>
   </tr>
 }
 
@@ -32,18 +32,18 @@
         <tr>
           <th class="col-sm-3">Client</th>
           <th class="col-sm-6">Subject</th>
-          <th class="col-sm-3">Last message</th>
+          <th class="col-sm-3">Last updated</th>
         </tr>
       </thead>
       <tfoot>
         @pagination.map(p => tags.tablePagination(p))
       </tfoot>
       <tbody>
-        @enquiries.map { case (enquiry, message) => @enquiryRow(enquiry, message)}
+        @enquiries.map(e => enquiryRow(e))
       </tbody>
     </table>
   } else {
-    @enquiries.map { case (enquiry, message) => @enquiryRow(enquiry, message)}
+    @enquiries.map(e => enquiryRow(e))
     @pagination.map(p => tags.tablePagination(p))
   }
 } else {
