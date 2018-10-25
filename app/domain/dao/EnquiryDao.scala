@@ -235,7 +235,6 @@ object EnquiryDao {
     def withClient = q
       .join(ClientDao.clients.table)
       .on { case (e, c) => e.universityId === c.universityID }
-      .map { case (e, c) => (e, c) }
     def withClientAndMessages = q
       .withClient
       .joinLeft(
