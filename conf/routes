@@ -33,7 +33,9 @@ POST        /service/enquirysearch/:key             @controllers.EnquirySearchCo
 GET         /                                       @controllers.IndexController.home
 GET         /my-appointments                        @controllers.appointments.AppointmentController.redirectToMyAppointments
 GET         /enquiries                              @controllers.IndexController.enquiries
-GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries(page: Int ?= 0)
+GET         /enquiries/needing-reply                @controllers.IndexController.enquiriesNeedingReply(page: Int ?= 0)
+GET         /enquiries/awaiting-client              @controllers.IndexController.enquiriesAwaitingClient(page: Int ?= 0)
+GET         /enquiries/closed                       @controllers.IndexController.closedEnquiries(page: Int ?= 0)
 GET         /cases                                  @controllers.IndexController.cases
 GET         /cases/open                             @controllers.IndexController.openCases(page: Int ?= 0)
 GET         /cases/closed                           @controllers.IndexController.closedCases(page: Int ?= 0)
@@ -66,7 +68,9 @@ POST        /appointment/:appointmentKey/decline    @controllers.appointments.Ap
 
 GET         /team/:teamId                           @controllers.admin.AdminController.teamHome(teamId: String)
 GET         /team/:teamId/enquiries                 @controllers.admin.AdminController.enquiries(teamId: String)
-GET         /team/:teamId/closed-enquiries          @controllers.admin.AdminController.closedEnquiries(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/enquiries/needing-reply   @controllers.admin.AdminController.enquiriesNeedingReply(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/enquiries/awaiting-client @controllers.admin.AdminController.enquiriesAwaitingClient(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/enquiries/closed          @controllers.admin.AdminController.closedEnquiries(teamId: String, page: Int ?= 0)
 GET         /team/:teamId/cases                     @controllers.admin.AdminController.cases(teamId: String)
 GET         /team/:teamId/cases/open                @controllers.admin.AdminController.openCases(teamId: String, page: Int ?= 0)
 GET         /team/:teamId/cases/closed              @controllers.admin.AdminController.closedCases(teamId: String, page: Int ?= 0)

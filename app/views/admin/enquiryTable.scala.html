@@ -1,14 +1,9 @@
-@import java.util.UUID
+@import domain.{Enquiry, MessageData, Pagination}
 
-@import domain.{Enquiry, MessageData, Pagination, SitsProfile}
-@import warwick.sso.UniversityID
-
-@import domain.Client
-@import services.EnquiryService
 @(
   title: Option[String],
   enquiries: Seq[(Enquiry, MessageData)],
-  pagination: Option[Pagination] = None,
+  pagination: Pagination,
   emptyMessage: Option[String] = None,
 )(implicit context: RequestContext)
 
@@ -25,8 +20,8 @@
 }
 
 @if(enquiries.nonEmpty) {
-  @if(pagination.isEmpty || pagination.exists(_.isFirst)) {
-    <table class="table table-default @if(pagination.isDefined){table-paginated}">
+  @if(pagination.isFirst) {
+    <table class="table table-default table-paginated">
       @title.map { t => <caption>@t</caption> }
       <thead>
         <tr>
@@ -36,7 +31,7 @@
         </tr>
       </thead>
       <tfoot>
-        @pagination.map(p => tags.tablePagination(p))
+        @tags.tablePagination(pagination)
       </tfoot>
       <tbody>
         @enquiries.map { case (enquiry, message) => @enquiryRow(enquiry, message)}
@@ -44,7 +39,7 @@
     </table>
   } else {
     @enquiries.map { case (enquiry, message) => @enquiryRow(enquiry, message)}
-    @pagination.map(p => tags.tablePagination(p))
+    @tags.tablePagination(pagination))
   }
 } else {
   @emptyMessage.map { m => <p>@m</p> }
