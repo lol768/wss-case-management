@@ -35,7 +35,8 @@ GET         /my-appointments                        @controllers.appointments.Ap
 GET         /enquiries                              @controllers.IndexController.enquiries
 GET         /closed-enquiries                       @controllers.IndexController.closedEnquiries(page: Int ?= 0)
 GET         /cases                                  @controllers.IndexController.cases
-GET         /closed-cases                           @controllers.IndexController.closedCases(page: Int ?= 0)
+GET         /cases/open                             @controllers.IndexController.openCases(page: Int ?= 0)
+GET         /cases/closed                           @controllers.IndexController.closedCases(page: Int ?= 0)
 GET         /at-risk-clients                        @controllers.IndexController.atRiskClients
 GET         /appointments                           @controllers.IndexController.appointments(start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
 GET         /messages                               @controllers.IndexController.messages
@@ -67,7 +68,8 @@ GET         /team/:teamId                           @controllers.admin.AdminCont
 GET         /team/:teamId/enquiries                 @controllers.admin.AdminController.enquiries(teamId: String)
 GET         /team/:teamId/closed-enquiries          @controllers.admin.AdminController.closedEnquiries(teamId: String, page: Int ?= 0)
 GET         /team/:teamId/cases                     @controllers.admin.AdminController.cases(teamId: String)
-GET         /team/:teamId/closed-cases              @controllers.admin.AdminController.closedCases(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/cases/open                @controllers.admin.AdminController.openCases(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/cases/closed              @controllers.admin.AdminController.closedCases(teamId: String, page: Int ?= 0)
 GET         /team/:teamId/at-risk-clients           @controllers.admin.AdminController.atRiskClients(teamId: String)
 GET         /team/:teamId/appointments              @controllers.admin.AdminController.appointments(teamId: String, start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
 

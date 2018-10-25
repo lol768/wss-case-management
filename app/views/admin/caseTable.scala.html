@@ -1,17 +1,14 @@
 @import java.time.OffsetDateTime
 @import java.util.UUID
 
-@import domain.SitsProfile
+@import domain.{Client, Pagination}
 @import domain.dao.CaseDao.Case
-@import warwick.sso.UniversityID
 
-@import domain.Client
-@import domain.Pagination
 @(
   title: Option[String],
   cases: Seq[(Case, OffsetDateTime)],
   clients: Map[UUID, Set[Client]],
-  pagination: Option[Pagination] = None,
+  pagination: Pagination,
   emptyMessage: Option[String] = None
 )(implicit context: RequestContext)
 
@@ -34,8 +31,8 @@
 }
 
 @if(cases.nonEmpty) {
-  @if(pagination.isEmpty || pagination.exists(_.isFirst)) {
-    <table class="table table-default @if(pagination.isDefined){table-paginated}">
+  @if(pagination.isFirst) {
+    <table class="table table-default table-paginated">
       @title.map { t => <caption>@t</caption> }
       <thead>
         <tr>
@@ -45,7 +42,7 @@
         </tr>
       </thead>
       <tfoot>
-        @pagination.map(p => tags.tablePagination(p))
+        @tags.tablePagination(pagination)
       </tfoot>
       <tbody>
         @cases.map { case (clientCase, lastUpdated) =>
@@ -57,7 +54,7 @@
     @cases.map { case (clientCase, lastUpdated) =>
       @caseRow(clientCase, lastUpdated)
     }
-    @pagination.map(p => tags.tablePagination(p))
+    @tags.tablePagination(pagination)
   }
 } else {
   @emptyMessage.map { m => <p>@m</p> }
