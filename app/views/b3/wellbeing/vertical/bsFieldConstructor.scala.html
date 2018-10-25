@@ -3,7 +3,7 @@
 Custom field constructor for vertical forms
 
 Features:
-    'colClass -> "col-md-6" will apply a column width to the input element only,
+    '_colClass -> "col-md-6" will apply a column width to the input element only,
         by wrapping it in a row.
 
 *@
@@ -13,8 +13,8 @@ Features:
         <label class="control-label@if(fieldInfo.hideLabel) { sr-only}" @if(fieldInfo.withLabelFor) {
             for="@fieldInfo.id"}>@bs.Args.msg(label)(msgsProv)</label>
     }
-    @* If 'colClass is specified, wrap in a row for widthiness *@
-    @fieldInfo.argsMap.get('colClass).map { clazz =>
+    @* If '_colClass is specified, wrap in a row for widthiness *@
+    @fieldInfo.argsMap.get('_colClass).map { clazz =>
         <div class="row">
             <div class="@clazz">
                 @content

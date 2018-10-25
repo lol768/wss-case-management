@@ -17,7 +17,7 @@
     @b3.select(form("documentType"),
       options = CaseDocumentType.values.map { t => t.entryName -> t.description },
       '_label -> "Document type",
-      'colClass -> "col-md-6",
+      '_colClass -> "col-md-6",
       '_default -> "",
       'required -> true
     )
@@ -34,7 +34,7 @@
     @b3.textarea(
       form("description"),
       '_label -> "Document description",
-      'colClass -> "col-md-6",
+      '_colClass -> "col-md-6",
     )
 
     @tags.submitOrCancel("Add document", controllers.admin.routes.CaseController.view(caseKey))

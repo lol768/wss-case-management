@@ -12,14 +12,14 @@
   @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.CaseController.link(c.key.get)) { implicit fc =>
     @b3.select(form("linkType"),
       options = CaseLinkType.values.map { t => t.entryName -> t.outwardDescription },
-      'colClass -> "col-md-6",
+      '_colClass -> "col-md-6",
       '_label -> "This case",
       '_default -> "",
       'required -> true
     )
 
     @b3.text(form("targetID"),
-      'colClass -> "col-md-6",
+      '_colClass -> "col-md-6",
       '_label -> "Case",
       'class -> "case-picker",
       '_class -> "case-picker-container",
@@ -28,7 +28,7 @@
 
     @b3.textarea(
       form("message"),
-      'colClass -> "col-md-6",
+      '_colClass -> "col-md-6",
       '_label -> "Associated case note",
       '_help -> "(why is this case being linked to another case?)",
       'helpOnTop -> true
