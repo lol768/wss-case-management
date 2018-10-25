@@ -82,6 +82,9 @@ trait EnquiryService {
 
   def countEnquiriesOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def countEnquiriesClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
+
+  def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]]
+
 }
 
 @Singleton
@@ -211,7 +214,7 @@ class EnquiryServiceImpl @Inject() (
   }
 
   override def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Enquiry]] =
-    daoRunner.run(enquiryDao.findByIDQuery(id).withClient.result.head).map { case (e, c) => Right(e.asEnquiry(c.asClient)) }.recover {
+    daoRunner.run(enquiryDao.findByIDQuery(id).withClient.result.head).map { case (e, c) => ServiceResults.success(e.asEnquiry(c.asClient)) }.recover {
       case _: NoSuchElementException => ServiceResults.error(s"Could not find an Enquiry with ID $id")
     }
 
@@ -228,7 +231,7 @@ class EnquiryServiceImpl @Inject() (
     }
 
   override def get(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Enquiry]] =
-    daoRunner.run(enquiryDao.findByKeyQuery(enquiryKey).withClient.result.head).map { case (e, c) => Right(e.asEnquiry(c.asClient)) }.recover {
+    daoRunner.run(enquiryDao.findByKeyQuery(enquiryKey).withClient.result.head).map { case (e, c) => ServiceResults.success(e.asEnquiry(c.asClient)) }.recover {
       case _: NoSuchElementException => ServiceResults.error(s"Could not find an Enquiry with key ${enquiryKey.string}")
     }
 
@@ -318,12 +321,7 @@ class EnquiryServiceImpl @Inject() (
     daoQuery
       .withClient
       // group-by join to fetch the ID and sent date of the most recent message for each enquiry
-      .join(
-        Message.messages.table
-          .filter(_.ownerType === (MessageOwner.Enquiry: MessageOwner))
-          .groupBy { m => m.ownerId }
-          .map { case (id, m) => (id, m.map(_.created).max) }
-      )
+      .join(Message.lastUpdatedEnquiryMessage)
       .on { case ((e, _), (id, _)) => e.id === id }
       // rejoin message on created date to get at sender and filter on it
       .join(Message.messages.table)
@@ -359,12 +357,7 @@ class EnquiryServiceImpl @Inject() (
     daoRunner.run(
       daoQuery
         .withClient
-        .join(
-          Message.messages.table
-            .filter(_.ownerType === (MessageOwner.Enquiry: MessageOwner))
-            .groupBy { m => m.ownerId }
-            .map { case (id, m) => (id, m.map(_.created).max) }
-        )
+        .join(Message.lastUpdatedEnquiryMessage)
         .on { case ((e, _), (id, _)) => e.id === id }
         .map { case ((e, c), (_, messageCreated)) =>
           val MinDate = OffsetDateTime.from(Instant.EPOCH.atOffset(ZoneOffset.UTC))
@@ -394,6 +387,9 @@ class EnquiryServiceImpl @Inject() (
         .filter(_.version >= date)
         .length.result
     ).map(Right.apply)
+
+  override def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]] =
+    daoRunner.run(enquiryDao.getLastUpdatedForClients(clients)).map(r => Right(r.toMap.withDefaultValue(None)))
 }
 
 object EnquiryService {

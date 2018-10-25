@@ -96,6 +96,8 @@ object ServiceResults {
     )
   }
 
+  def success[A](result: A): ServiceResult[A] = Right(result)
+
   def sequence[A](in: Seq[ServiceResult[A]]): ServiceResult[Seq[A]] = in.partition(_.isLeft) match {
     case (Nil, results) => Right(results.collect { case Right(x) => x })
     case (errors, _) => Left(errors.toList.collect { case Left(x) => x }.flatten)

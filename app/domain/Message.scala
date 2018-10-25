@@ -110,6 +110,18 @@ object Message extends Versioning {
   val messages: VersionedTableQuery[Message, MessageVersion, Messages, MessageVersions] =
     VersionedTableQuery(TableQuery[Messages], TableQuery[MessageVersions])
 
+  val lastUpdatedCaseMessage =
+    Message.messages.table
+      .filter(m => m.ownerType === (MessageOwner.Case: MessageOwner))
+      .groupBy(_.ownerId)
+      .map { case (id, m) => (id, m.map(_.created).max) }
+
+  val lastUpdatedEnquiryMessage =
+    Message.messages.table
+      .filter(m => m.ownerType === (MessageOwner.Enquiry: MessageOwner))
+      .groupBy(_.ownerId)
+      .map { case (id, m) => (id, m.map(_.created).max) }
+
 }
 
 case class MessageVersion (
