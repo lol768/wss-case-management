@@ -251,7 +251,7 @@ FC.views.table = {
   buttonTextKey: 'table',
   duration: { days: 7 },
   defaults: {
-    buttonText: 'table',
+    buttonText: 'list',
     noEventsMessage: 'No appointments to display',
   },
 };
@@ -261,9 +261,9 @@ export default function AppointmentCalendar(container) {
   $calendar.fullCalendar({
     ...CommonFullCalendarOptions,
     header: {
-      left: 'title',
-      center: 'agendaFourWeek,agendaWeek,agendaDay,table',
-      right: 'prev,next',
+      left: 'prev,next today title',
+      center: '',
+      right: 'agendaFourWeek,agendaWeek,agendaDay,table',
     },
     height: 'auto',
     contentHeight: 'auto',
