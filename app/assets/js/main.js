@@ -39,6 +39,7 @@ function bindTo($scope) {
   $('i.icon-tooltip, .btn-tooltip', $scope).tooltip({
     delay: { show: 500, hide: 100 },
     placement: 'auto top',
+    container: 'body',
   });
 
   UserListPopovers($scope);
@@ -256,6 +257,24 @@ function bindTo($scope) {
 
   $('.tab-pane.active[data-href]', $scope).each((i, tabPanel) => {
     loadTabPanelContent($(tabPanel));
+  });
+
+  $('.wellbeing-message-file-attach', $scope).each((i, input) => {
+    const $input = $(input);
+    const $label = $input.closest('label');
+    const $tooltip = $label.find('.icon-tooltip');
+    const originalText = $tooltip.attr('title') || $tooltip.data('original-title');
+    $input.on('change', () => {
+      const fileCount = ($input.prop('files') && $input.prop('files').length > 1) ? $input.prop('files').length : 1;
+      const newText = (fileCount > 1) ? `${$input.prop('files').length} files selected` : $input.val().split('\\').pop();
+      if (newText) {
+        $tooltip.attr('data-original-title', newText);
+        $label.append($('<span/>').addClass('badge').text(fileCount));
+      } else {
+        $tooltip.attr('data-original-title', originalText);
+        $label.find('.badge').remove();
+      }
+    });
   });
 }
 
