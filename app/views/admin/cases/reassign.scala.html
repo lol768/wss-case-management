@@ -28,14 +28,14 @@
     <fieldset id="caseType-field">
       @b3.select(form("caseType"),
         options = Seq("" -> "") ++ CaseType.values.map { t => t.entryName -> t.description },
-        'colClass -> "col-md-6",
+        '_colClass -> "col-md-6",
         '_label -> "Case type"
       )
     </fieldset>
 
     @b3.textarea(form("message"),
       'rows -> 5,
-      'colClass -> "col-md-6",
+      '_colClass -> "col-md-6",
       '_label -> "Reassignment note",
       '_help -> "(why is this case being assigned to a different team?)",
       'helpOnTop -> true

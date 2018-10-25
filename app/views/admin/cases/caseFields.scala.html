@@ -13,7 +13,8 @@
 @b3.validatedHidden(form, "originalEnquiry")
 
 @b3.text(form("subject"),
-  '_label -> "Subject"
+  '_label -> "Subject",
+  'autocomplete -> "off",
 )
 
 @hasClientError = @{
