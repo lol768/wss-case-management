@@ -1,7 +1,7 @@
 /* eslint-env browser */
+import './polyfills';
 
 import $ from 'jquery';
-import 'core-js/modules/es6.object.assign';
 import './jquery.are-you-sure';
 import FieldHistory from './field-history';
 import * as flexiPicker from './flexi-picker';
@@ -170,6 +170,14 @@ function bindTo($scope) {
     }
   });
 
+  // In browsers that don't support details, trigger a load immediately
+  // This is a non-perfect feature detection but we don't care about early webkit, just IE/Edge
+  if (!('open' in document.createElement('details'))) {
+    $('details[data-toggle="load"][data-href][data-target]', $scope)
+      .each(function setOpen() { this.open = true; })
+      .trigger('toggle');
+  }
+
   // be sure to bind the confirm-submit handler before other handlers on submit buttons
   $('a[data-toggle~="confirm-submit"][data-message], :button[data-toggle~="confirm-submit"][data-message]', $scope).on('click', function confirmBeforeSubmit(event) {
     const $button = $(this);
@@ -260,6 +268,12 @@ function bindTo($scope) {
 }
 
 $(() => {
+  if (!('open' in document.createElement('details'))) {
+    $('html').addClass('no-details');
+  } else {
+    $('html').addClass('details');
+  }
+
   // Apply to all content loaded non-AJAXically
   bindTo($('#main'));
 

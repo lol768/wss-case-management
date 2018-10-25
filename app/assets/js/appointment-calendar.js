@@ -339,6 +339,7 @@ export default function AppointmentCalendar(container) {
     $('a[data-toggle="tab"]').on('shown.bs.tab', () => {
       if ($calendar.is(':visible')) {
         $calendar.fullCalendar('render');
+        $calendar.fullCalendar('rerenderEvents');
       }
     });
   }

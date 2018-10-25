@@ -3,7 +3,7 @@
 
 @views.html.tags.nav.primary(context.navigation, context.path)
 
-@context.navigation.filter(_.isActive(context.path)).map { section =>
+@context.navigation.filter(_.isActive(context.path) && context.path != "/").map { section =>
   @views.html.tags.nav.secondary(section, context.path)
 }
 
