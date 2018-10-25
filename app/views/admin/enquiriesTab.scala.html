@@ -1,12 +1,12 @@
 @import java.util.UUID
 
-@import domain.{EnquiryListRender, SitsProfile, Team}
+@import domain.{Enquiry, MessageData, SitsProfile, Team}
 @import warwick.sso.UniversityID
 
 @import domain.Client
 @(
-  requiringAction: Seq[EnquiryListRender],
-  awaitingClient: Seq[EnquiryListRender],
+  requiringAction: Seq[(Enquiry, MessageData)],
+  awaitingClient: Seq[(Enquiry, MessageData)],
   closedEnquiries: Int,
   closedEnquiriesRoute: Call,
   searchScope: String,
