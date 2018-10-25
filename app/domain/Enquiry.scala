@@ -59,6 +59,11 @@ case class EnquiryRender(
   )
 }
 
+case class EnquiryListRender(
+  enquiry: Enquiry,
+  lastUpdated: OffsetDateTime
+)
+
 case class EnquiryNote(
   id: UUID,
   noteType: EnquiryNoteType,

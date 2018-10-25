@@ -15,8 +15,6 @@ import scala.concurrent.ExecutionContext
 @ImplementedBy(classOf[MessageDaoImpl])
 trait MessageDao {
   def insert(message: Message)(implicit ac: AuditLogContext): DBIO[Message]
-
-  def latestForEnquiryQuery(enquiry: Enquiries): Query[Message.Messages, Message, Seq]
 }
 
 @Singleton
@@ -27,12 +25,4 @@ class MessageDaoImpl @Inject() (
 
   override def insert(message: Message)(implicit ac: AuditLogContext): DBIO[Message] =
     Message.messages += message
-
-  override def latestForEnquiryQuery(enquiry: Enquiries): Query[Message.Messages, Message, Seq] = {
-    Message.messages.table
-      .filter(m => enquiry.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner))
-      .sortBy(_.created.reverse)
-      .take(1)
-  }
-
 }
