@@ -70,12 +70,15 @@ class IndexController @Inject()(
   def cases: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     val usercode = currentUser().usercode
     ServiceResults.zip(
-      caseService.listOpenCases(usercode),
+      caseService.countOpenCases(usercode),
+      caseService.listOpenCases(usercode, Pagination.firstPage()),
       caseService.countClosedCases(usercode)
-    ).successFlatMap { case (openCases, closedCases) =>
+    ).successFlatMap { case (open, openCases, closedCases) =>
+      val pagination = Pagination(open, 0, controllers.routes.IndexController.openCases())
       caseService.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMap { caseClients =>
         Ok(views.html.admin.casesTab(
           openCases,
+          pagination,
           closedCases,
           caseClients,
           controllers.admin.routes.CaseController.createSelectTeam(),
@@ -88,15 +91,30 @@ class IndexController @Inject()(
     }
   }
 
-  def closedCases(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
-    caseService.countClosedCases(currentUser().usercode).successFlatMap(closed => {
-      val pagination = Pagination(closed, page, controllers.routes.IndexController.closedCases())
-      caseService.listClosedCases(currentUser().usercode, Some(pagination.asPage)).successFlatMap { closedCases =>
-        caseService.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
-          Ok(views.html.admin.closedCases(closedCases, clients, pagination))
-        }
+  def openCases(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    val usercode = currentUser().usercode
+    ServiceResults.zip(
+      caseService.countOpenCases(usercode),
+      caseService.listOpenCases(usercode, Pagination.asPage(page))
+    ).successFlatMap { case (open, openCases) =>
+      val pagination = Pagination(open, page, controllers.routes.IndexController.openCases())
+      caseService.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+        Ok(views.html.admin.openCases(openCases, clients, pagination))
       }
-    });
+    }
+  }
+
+  def closedCases(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    val usercode = currentUser().usercode
+    ServiceResults.zip(
+      caseService.countClosedCases(usercode),
+      caseService.listClosedCases(usercode, Pagination.asPage(page))
+    ).successFlatMap { case (closed, closedCases) =>
+      val pagination = Pagination(closed, page, controllers.routes.IndexController.closedCases())
+      caseService.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+        Ok(views.html.admin.closedCases(closedCases, clients, pagination))
+      }
+    }
   }
 
   def atRiskClients: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>

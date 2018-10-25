@@ -1,13 +1,12 @@
 @import java.time.OffsetDateTime
 @import java.util.UUID
 
+@import domain.{Client, Pagination}
 @import domain.dao.CaseDao.Case
-@import domain.{SitsProfile, Team}
-@import warwick.sso.UniversityID
 
-@import domain.Client
 @(
   openCases: Seq[(Case, OffsetDateTime)],
+  pagination: Pagination,
   closedCases: Int,
   clients: Map[UUID, Set[Client]],
   createRoute: Call,
@@ -30,7 +29,7 @@
 
 <p><a href="@createRoute" class="btn btn-default">Create a new case</a></p>
 
-@views.html.admin.caseTable(Some("Open cases"), openCases, clients)
+@views.html.admin.caseTable(Some("Open cases"), openCases, clients, pagination)
 
 @if(closedCases == 0) {
   <p>No closed cases to show</p>
