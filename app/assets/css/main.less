@@ -229,13 +229,15 @@ section.indent {
       }
 
       input[type="file"] {
-        background-color: transparent;
-        border: none;
-        box-shadow: none;
-        padding-left: 0;
+        width: 0.1px;
+        height: 0.1px;
+        opacity: 0;
+        overflow: hidden;
+        position: absolute;
+        z-index: -1;
       }
 
-      button {
+      button, label.btn {
         margin-left: @grid-gutter-width;
         @diameter: 36px;
         padding: 0;
@@ -249,6 +251,15 @@ section.indent {
           width: @diameter;
           height: @diameter;
           margin-left: -2px; // get the airplane points equal distances from the circle edges :awyeah:
+        }
+
+        position: relative;
+
+        .badge {
+          position: absolute;
+          top: auto;
+          bottom: -7px;
+          right: -7px;
         }
       }
     }
