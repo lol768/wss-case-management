@@ -6,9 +6,11 @@
 )(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
 
 @b3.text(form("building.name"),
-  '_label -> "Name"
+  '_label -> "Name",
+  'autocomplete -> "off",
 )
 
 @b3.text(form("building.wai2GoID"),
-  '_label -> "Campus map"
+  '_label -> "Campus map",
+  'autocomplete -> "off",
 )

@@ -21,12 +21,14 @@
 
     @b3.text(form("gp"),
       'colClass -> "col-md-6",
-      '_label -> "Confirm the name of your GP/Doctor"
+      '_label -> "Confirm the name of your GP/Doctor",
+      'autocomplete -> "off",
     )
 
     @b3.text(form("tutor"),
       'colClass -> "col-md-6",
-      '_label -> "Confirm the name of your Personal Tutor/Supervisor"
+      '_label -> "Confirm the name of your Personal Tutor/Supervisor",
+      'autocomplete -> "off",
     )
 
     @b3.checkboxGroup(

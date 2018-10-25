@@ -304,12 +304,14 @@
       <div class="row">
         <div class="col-sm-6">
           @b3.text(form("alternative-contact-number"),
-            '_label -> "Alternative contact number"
+            '_label -> "Alternative contact number",
+            'autocomplete -> "off",
           )
         </div>
         <div class="col-sm-6">
           @b3.email(form("alternative-email-address"),
-            '_label -> "Alternative email address"
+            '_label -> "Alternative email address",
+            'autocomplete -> "off",
           )
         </div>
       </div>
