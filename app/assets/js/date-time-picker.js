@@ -73,7 +73,6 @@ export function InlineDateTimePicker(container) {
   div.datetimepicker({
     ...commonOptions,
     date: currentDate,
-    daysOfWeekDisabled: [0, 6],
     inline: true,
     ...options,
   }).on('dp.change', ({ date }) => {
