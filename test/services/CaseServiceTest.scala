@@ -54,17 +54,17 @@ class CaseServiceTest extends AbstractDaoTest {
       val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty)(definedAuditLogContext).serviceValue
       val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness))(definedAuditLogContext).serviceValue
 
-      service.findForClient(UniversityID("0672089")).serviceValue.map(_.clientCase) mustBe Seq(created2, created)
-      service.findForClient(UniversityID("0672088")).serviceValue.map(_.clientCase) mustBe Seq(created2)
-      service.findForClient(UniversityID("1234567")).serviceValue mustBe 'empty
+      service.findAllForClient(UniversityID("0672089")).serviceValue.map(_.clientCase) mustBe Seq(created2, created)
+      service.findAllForClient(UniversityID("0672088")).serviceValue.map(_.clientCase) mustBe Seq(created2)
+      service.findAllForClient(UniversityID("1234567")).serviceValue mustBe 'empty
 
       // Only return messages for specified client (but still return the case)
       service.addMessage(created2, UniversityID("0672088"), MessageSave("text", MessageSender.Team, Some(Usercode("cusfal"))), Seq())(definedAuditLogContext)
-      val resultFor0672088 = service.findForClient(UniversityID("0672088")).serviceValue
+      val resultFor0672088 = service.findAllForClient(UniversityID("0672088")).serviceValue
       resultFor0672088.size mustBe 1
       resultFor0672088.head.clientCase mustBe created2
       resultFor0672088.head.messages.size mustBe 1
-      val resultFor0672089 = service.findForClient(UniversityID("0672089")).serviceValue
+      val resultFor0672089 = service.findAllForClient(UniversityID("0672089")).serviceValue
       resultFor0672089.size mustBe 2
       resultFor0672089.find(_.clientCase == created2).get.messages.size mustBe 0
     }
