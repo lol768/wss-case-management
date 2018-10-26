@@ -26,6 +26,8 @@ trait EmailService {
   def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]]
   def sendImmediately(email: OutgoingEmail)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
   def countUnsentEmails()(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def oldestUnsentEmail()(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]]
+  def mostRecentlySentEmail()(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]]
 }
 
 @Singleton
@@ -122,4 +124,11 @@ class EmailServiceImpl @Inject()(
 
   override def countUnsentEmails()(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(dao.countUnsentEmails()).map(Right.apply)
+
+  override def oldestUnsentEmail()(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]] =
+    daoRunner.run(dao.oldestUnsentEmail()).map(_.map(_.parsed)).map(Right.apply)
+
+  override def mostRecentlySentEmail()(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]] =
+    daoRunner.run(dao.mostRecentlySentEmail()).map(_.map(_.parsed)).map(Right.apply)
+
 }
