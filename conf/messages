@@ -11,6 +11,7 @@ error.appointmentAvailability.missing=Please select an availability
 error.optimisticLocking=This has changed since you started editing (it was probably edited by somebody else)
 error.userIds.invalid=These user codes are invalid: {0}
 error.owners.invalid=These user codes are not in any WSS team: {0}
+error.owners.case.nonEmpty=A case must have at least 1 owner
 error.client.invalid=Please choose a valid client
 error.caseType.invalid=Please select a valid case type
 error.localDateTime=Please enter a valid date/time

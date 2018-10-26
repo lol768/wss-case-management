@@ -51,7 +51,7 @@ class OwnersController @Inject()(
 
   def enquirySubmit(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
     enquiryService.getOwners(Set(request.enquiry.id.get)).successFlatMap(previousOwners =>
-      bindAndVerifyOwners(previousOwners.getOrElse(request.enquiry.id.get, Set())).fold(
+      bindAndVerifyOwners(previousOwners.getOrElse(request.enquiry.id.get, Set()), allowEmpty = true).fold(
         errors => Future.successful(showErrors(errors)),
         form => form.fold(
           formWithErrors => {
@@ -84,7 +84,7 @@ class OwnersController @Inject()(
 
   def caseSubmit(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit request =>
     caseService.getOwners(Set(request.`case`.id.get)).successFlatMap(previousOwners =>
-      bindAndVerifyOwners(previousOwners.getOrElse(request.`case`.id.get, Set())).fold(
+      bindAndVerifyOwners(previousOwners.getOrElse(request.`case`.id.get, Set()), allowEmpty = false).fold(
         errors => Future.successful(showErrors(errors)),
         form => form.fold(
           formWithErrors => {
@@ -121,33 +121,37 @@ class OwnersController @Inject()(
   /**
     * Check is each of the provided user codes in the request is a found user and in any team
     */
-  private def bindAndVerifyOwners(existing: Set[Member])(implicit request: Request[_]): ServiceResult[Form[Seq[Usercode]]] = {
+  private def bindAndVerifyOwners(existing: Set[Member], allowEmpty: Boolean)(implicit request: Request[_]): ServiceResult[Form[Seq[Usercode]]] = {
     ownersForm.bindFromRequest.fold(
       formWithErrors => Right(formWithErrors),
       usercodes => {
-        val usercodesToValidate = usercodes.toSet.diff(existing.map(_.usercode)) // Only validate new usercodes
-        val users = userLookupService.getUsers(usercodesToValidate.toSeq).toOption.getOrElse(Map.empty)
-        val invalid = usercodesToValidate.filter(u => !users.get(u).exists(_.isFound))
-        if (invalid.nonEmpty) {
-          Right(
-            ownersForm.fill(usercodes)
-              .withError(FormError("owners", "error.userIds.invalid", Seq(invalid.map(_.string).mkString(", "))))
-          )
-        } else {
-          permissionService.inAnyTeam(usercodesToValidate).fold(
-            serviceErrors => Left(serviceErrors),
-            resultMap => {
-              val notInAnyTeam = resultMap.filter { case (_, inAnyTeam) => !inAnyTeam }.map { case (user, _) => user }.toSeq
-              if (notInAnyTeam.isEmpty) {
-                Right(ownersForm.fill(usercodes))
-              } else {
-                Right(
-                  ownersForm.fill(usercodes)
-                    .withError(FormError("owners", "error.owners.invalid", Seq(notInAnyTeam.map(_.string).mkString(", "))))
-                )
+        if (usercodes.nonEmpty || allowEmpty) {
+          val usercodesToValidate = usercodes.toSet.diff(existing.map(_.usercode)) // Only validate new usercodes
+          val users = userLookupService.getUsers(usercodesToValidate.toSeq).toOption.getOrElse(Map.empty)
+          val invalid = usercodesToValidate.filter(u => !users.get(u).exists(_.isFound))
+          if (invalid.nonEmpty) {
+            Right(
+              ownersForm.fill(usercodes)
+                .withError(FormError("owners", "error.userIds.invalid", Seq(invalid.map(_.string).mkString(", "))))
+            )
+          } else {
+            permissionService.inAnyTeam(usercodesToValidate).fold(
+              serviceErrors => Left(serviceErrors),
+              resultMap => {
+                val notInAnyTeam = resultMap.filter { case (_, inAnyTeam) => !inAnyTeam }.map { case (user, _) => user }.toSeq
+                if (notInAnyTeam.isEmpty) {
+                  Right(ownersForm.fill(usercodes))
+                } else {
+                  Right(
+                    ownersForm.fill(usercodes)
+                      .withError(FormError("owners", "error.owners.invalid", Seq(notInAnyTeam.map(_.string).mkString(", "))))
+                  )
+                }
               }
-            }
-          )
+            )
+          }
+        } else {
+          Right(ownersForm.fill(existing.map(_.usercode).toSeq).withGlobalError("error.owners.case.nonEmpty"))
         }
       }
     )
