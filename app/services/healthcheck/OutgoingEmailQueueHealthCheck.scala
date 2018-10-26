@@ -1,8 +1,11 @@
 package services.healthcheck
 
+import java.time.OffsetDateTime
+
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import helpers.JavaTime
+import javax.inject.Singleton
 import services.EmailService
 import warwick.core.Logging
 import warwick.core.timing.TimingContext
@@ -10,6 +13,7 @@ import warwick.core.timing.TimingContext
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
+@Singleton
 class OutgoingEmailQueueHealthCheck @Inject()(
   emailService: EmailService,
   system: ActorSystem,
@@ -18,11 +22,11 @@ class OutgoingEmailQueueHealthCheck @Inject()(
   // No timing
   private implicit def timingContext: TimingContext = TimingContext.none
 
-  override def value = Await.result(emailService.countUnsentEmails(), Duration.Inf).right.getOrElse(Int.MaxValue)
-  override def warning = 50
-  override def critical = 100
-  override def message = s"$value items in outgoing email queue"
-  override def testedAt = JavaTime.offsetDateTime
+  override def value: Int = Await.result(emailService.countUnsentEmails(), Duration.Inf).right.getOrElse(Int.MaxValue)
+  override val warning: Int = 50
+  override val critical: Int = 100
+  override def message: String = s"$value unsent emails in outgoing email queue (warning: $warning, critical: $critical)"
+  override def testedAt: OffsetDateTime = JavaTime.offsetDateTime
 
   import system.dispatcher
   system.scheduler.schedule(0.seconds, interval = 1.minute) {

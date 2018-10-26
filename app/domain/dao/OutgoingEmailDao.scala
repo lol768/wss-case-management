@@ -26,6 +26,8 @@ trait OutgoingEmailDao {
   def update(email: OutgoingEmail, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[PersistedOutgoingEmail]
   def get(id: UUID): DBIO[Option[PersistedOutgoingEmail]]
   def countUnsentEmails(): DBIO[Int]
+  def oldestUnsentEmail(): DBIO[Option[PersistedOutgoingEmail]]
+  def mostRecentlySentEmail(): DBIO[Option[PersistedOutgoingEmail]]
 }
 
 object OutgoingEmailDao {
@@ -112,6 +114,8 @@ object OutgoingEmailDao {
       override def matchesPrimaryKey(other: PersistedOutgoingEmail): Rep[Boolean] = id === other.id
 
       def id = column[UUID]("id", O.PrimaryKey)
+      def isSent: Rep[Boolean] = sent.?.nonEmpty
+      def isQueued: Rep[Boolean] = !isSent && (lastSendAttempt.?.nonEmpty || failureReason.?.isEmpty)
 
       def * = (id, created, email, recipient.?, emailAddress.?, sent.?, lastSendAttempt.?, failureReason.?, version).mapTo[PersistedOutgoingEmail]
     }
@@ -184,6 +188,22 @@ class OutgoingEmailDaoImpl @Inject()(
     outgoingEmails.table.filter(_.id === id).take(1).result.headOption
 
   override def countUnsentEmails(): DBIO[Int] =
-    outgoingEmails.table.filter { e => e.sent.?.isEmpty && (e.lastSendAttempt.?.nonEmpty || e.failureReason.?.isEmpty) }.length.result
+    outgoingEmails.table.filter(_.isQueued).length.result
+
+  override def oldestUnsentEmail(): DBIO[Option[PersistedOutgoingEmail]] =
+    outgoingEmails.table
+      .filter(_.isQueued)
+      .sortBy(_.created)
+      .take(1)
+      .result
+      .headOption
+
+  override def mostRecentlySentEmail(): DBIO[Option[PersistedOutgoingEmail]] =
+    outgoingEmails.table
+      .filter(_.isSent)
+      .sortBy(_.created.desc)
+      .take(1)
+      .result
+      .headOption
 
 }

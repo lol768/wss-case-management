@@ -20,6 +20,7 @@ class AppModule extends ScalaModule {
     healthchecks.addBinding.to[UptimeHealthCheck]
     healthchecks.addBinding.to[EncryptedObjectStorageHealthCheck]
     healthchecks.addBinding.to[OutgoingEmailQueueHealthCheck]
+    healthchecks.addBinding.to[OutgoingEmailDelayHealthCheck]
     healthchecks.addBinding.to[DefaultThreadPoolHealthCheck]
     healthchecks.addBinding.to[MailerThreadPoolHealthCheck]
     healthchecks.addBinding.to[ObjectStorageThreadPoolHealthCheck]
