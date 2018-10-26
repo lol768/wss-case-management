@@ -1,11 +1,10 @@
-@import java.time.OffsetDateTime
-@import java.util.UUID
-
 @import controllers.RequestContext
-@import domain.dao.CaseDao.Case
-@import domain.{Client, Enquiry, MessageData, Team}
+@import domain.{Team, UserPreferences}
 
-@(team: Team)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+@(
+  team: Team,
+  preferences: UserPreferences,
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main(team.name) {
   <ul class="nav nav-tabs" role="tablist">
@@ -35,7 +34,8 @@
         controllers.admin.routes.AppointmentController.createForm(team.id),
         "team",
         team.id,
-        s" assigned to ${team.name}"
+        s" assigned to ${team.name}",
+        preferences,
       )
     </div>
   </div>
