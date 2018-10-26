@@ -589,3 +589,15 @@ i.fa-comment-edit.awaiting {
 // and is ignored by browsers that don’t support :focus-visible.
 // https://twitter.com/LeaVerou/status/1045768279753666562?s=19
 :focus:not(:focus-visible) { outline: none }
+
+.case-details--incident {
+  > span:not(:last-child)::after {
+    display: inline;
+    content: ','
+  }
+}
+
+s {
+  color: @gray-light;
+  text-decoration-color: black;
+}
