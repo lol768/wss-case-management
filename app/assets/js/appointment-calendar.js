@@ -270,7 +270,8 @@ export default function AppointmentCalendar(container) {
     contentHeight: 'auto',
     defaultView: $calendar.data('default-view') || 'agendaWeek',
     // CASE-303 Sticky view
-    viewRender: (view) => {
+    viewRender: (view, element) => {
+      CommonFullCalendarOptions.viewRender(view, element);
       // Prevent un-necessary POST from just rendering
       if (view.name !== $calendar.data('default-view')) {
         $calendar.data('default-view', view.name);
