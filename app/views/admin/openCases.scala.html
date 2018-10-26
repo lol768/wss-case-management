@@ -1,11 +1,10 @@
-@import java.time.OffsetDateTime
 @import java.util.UUID
 
-@import domain.dao.CaseDao.Case
+@import domain.dao.CaseDao.CaseListRender
 @import domain.{Client, Pagination}
 
 @(
-  cases: Seq[(Case, OffsetDateTime)],
+  cases: Seq[CaseListRender],
   clients: Map[UUID, Set[Client]],
   pagination: Pagination,
 )(implicit context: RequestContext)

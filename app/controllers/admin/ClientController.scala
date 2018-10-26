@@ -5,7 +5,7 @@ import java.util.UUID
 import controllers.BaseController
 import controllers.refiners.{AnyTeamActionRefiner, ValidUniversityIDActionFilter}
 import domain._
-import domain.dao.CaseDao.CaseRender
+import domain.dao.CaseDao.CaseListRender
 import helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -45,17 +45,17 @@ class ClientController @Inject()(
     "reasonable-adjustments" -> set(ReasonableAdjustment.formField)
   )(ClientSummarySave.apply)(ClientSummarySave.unapply))
 
-  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], Seq[EnquiryRender], Seq[CaseRender], Map[UUID, Set[Member]])]] = {
+  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], Seq[EnquiryListRender], Seq[CaseListRender], Map[UUID, Set[Member]])]] = {
     zip(
       profileService.getProfile(universityID).map(_.value),
       registrationService.get(universityID),
       clientSummaryService.get(universityID),
-      enquiryService.findEnquiriesForClient(universityID),
-      caseService.findForClient(universityID)
+      enquiryService.listEnquiriesForClient(universityID),
+      caseService.listForClient(universityID),
     ).successFlatMapTo { case (profile, registration, clientSummary, enquiries, cases) =>
       zip(
         enquiryService.getOwners(enquiries.map(_.enquiry.id.get).toSet),
-        caseService.getOwners(cases.map(_.clientCase.id.get).toSet)
+        caseService.getOwners(cases.map(_.clientCase.id.get).toSet),
       ).successMapTo { case (enquiryOwners, caseOwners) =>
         (profile, registration, clientSummary, enquiries, cases, enquiryOwners ++ caseOwners)
       }
