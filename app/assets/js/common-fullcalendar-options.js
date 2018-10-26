@@ -1,4 +1,5 @@
 /* eslint-env browser */
+import $ from 'jquery';
 
 const CommonFullCalendarOptions = {
   schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
@@ -21,5 +22,11 @@ const CommonFullCalendarOptions = {
   maxTime: '19:00:00',
   weekends: true, // https://warwick.slack.com/archives/CD7FF54NR/p1540539939002200
   timezone: 'Europe/London',
+  viewRender: (view, element) => {
+    if (view.type === 'agendaDay' && view.start.isSame(new Date(), 'day')) {
+      const $header = $(element).closest('.fc').find('.fc-header-toolbar h2');
+      $header.text(`${$header.text()} (today)`);
+    }
+  },
 };
 export default CommonFullCalendarOptions;
