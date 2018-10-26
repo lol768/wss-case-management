@@ -96,7 +96,7 @@ class AdminController @Inject()(
           pagination,
           closedCases,
           caseClients,
-          controllers.admin.routes.CaseController.createSelectTeam(),
+          controllers.admin.routes.CaseController.createForm(teamId),
           controllers.admin.routes.AdminController.closedCases(teamId),
           "team",
           teamId,
