@@ -77,7 +77,7 @@ class AppointmentOutcomesController @Inject()(
         formWithErrors => Future.successful(
           Ok(views.html.admin.appointments.outcomes(
             a,
-            formWithErrors.withVersion(a.appointment.lastUpdated)
+            formWithErrors
           ))
         ),
         data => appointments.recordOutcomes(
