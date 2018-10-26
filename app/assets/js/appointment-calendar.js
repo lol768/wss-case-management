@@ -272,7 +272,7 @@ export default function AppointmentCalendar(container) {
     // CASE-303 Sticky view
     viewRender: (view) => {
       // Prevent un-necessary POST from just rendering
-      if (view !== $calendar.data('default-view')) {
+      if (view.name !== $calendar.data('default-view')) {
         $calendar.data('default-view', view.name);
         postJsonWithCredentials('/user-preferences/calendar-view', { calendarView: view.name });
       }
