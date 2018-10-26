@@ -44,6 +44,8 @@ GET         /appointments                           @controllers.IndexController
 GET         /messages                               @controllers.IndexController.messages
 GET         /client-appointments                    @controllers.IndexController.clientAppointments
 
+POST        /user-preferences/calendar-view         @controllers.UserPreferencesController.calendarView
+
 ## Clients ##
 
 GET         /register                               @controllers.registration.RegisterController.form

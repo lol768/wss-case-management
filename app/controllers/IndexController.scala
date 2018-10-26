@@ -25,6 +25,7 @@ class IndexController @Inject()(
   caseService: CaseService,
   clientSummaries: ClientSummaryService,
   appointments: AppointmentService,
+  userPreferences: UserPreferencesService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
   import anyTeamActionRefiner._
@@ -33,9 +34,10 @@ class IndexController @Inject()(
   def home: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
     ServiceResults.zip(
       appointments.countForClientBadge(currentUser().universityId.get),
-      Future.successful(permissions.teams(currentUser().usercode))
-    ).successMap { case (count, teams) =>
-      Ok(views.html.home(count, teams, uploadedFileControllerHelper.supportedMimeTypes))
+      Future.successful(permissions.teams(currentUser().usercode)),
+      userPreferences.get(currentUser().usercode),
+    ).successMap { case (count, teams, prefs) =>
+      Ok(views.html.home(count, teams, uploadedFileControllerHelper.supportedMimeTypes, prefs))
     }
   }
 

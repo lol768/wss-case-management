@@ -1,13 +1,13 @@
 @import controllers.RequestContext
-@import domain.Team
+@import domain.{Team, UserPreferences}
 @import org.apache.tika.mime.MediaType
+
 @(
   clientAppointmentCount: Int,
   teams: Seq[Team],
   supportedMimeTypes: Seq[MediaType],
+  preferences: UserPreferences,
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
-
-
 
 @if(teams.isEmpty) {
   @main("My messages", hidePageTitle = true) {
@@ -74,7 +74,8 @@
           controllers.admin.routes.AppointmentController.createSelectTeam(),
           "member",
           context.user.get.usercode.string,
-          " assigned to me"
+          " assigned to me",
+          preferences,
         )
       </div>
       <div role="tabpanel" class="tab-pane" id="mymessages" data-href="@routes.IndexController.messages()"></div>

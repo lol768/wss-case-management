@@ -4,7 +4,7 @@ import _ from 'lodash-es';
 import log from 'loglevel';
 import moment from 'moment-timezone';
 import 'fullcalendar';
-import { addQsToUrl, fetchWithCredentials } from './serverpipe';
+import { addQsToUrl, fetchWithCredentials, postJsonWithCredentials } from './serverpipe';
 import { formatDateMoment, formatTimeMoment } from './dateFormats';
 import CommonFullCalendarOptions from './common-fullcalendar-options';
 
@@ -258,6 +258,7 @@ FC.views.table = {
 
 export default function AppointmentCalendar(container) {
   const $calendar = $(container);
+
   $calendar.fullCalendar({
     ...CommonFullCalendarOptions,
     header: {
@@ -267,7 +268,15 @@ export default function AppointmentCalendar(container) {
     },
     height: 'auto',
     contentHeight: 'auto',
-    defaultView: 'agendaWeek',
+    defaultView: $calendar.data('default-view') || 'agendaWeek',
+    // CASE-303 Sticky view
+    viewRender: (view) => {
+      // Prevent un-necessary POST from just rendering
+      if (view.name !== $calendar.data('default-view')) {
+        $calendar.data('default-view', view.name);
+        postJsonWithCredentials('/user-preferences/calendar-view', { calendarView: view.name });
+      }
+    },
     allDaySlot: false,
     nowIndicator: true,
     views: {

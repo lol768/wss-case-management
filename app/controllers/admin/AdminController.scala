@@ -10,7 +10,7 @@ import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
-import services.{AppointmentService, CaseService, ClientSummaryService, EnquiryService}
+import services._
 import warwick.sso.UserLookupService
 
 import scala.concurrent.ExecutionContext
@@ -23,12 +23,15 @@ class AdminController @Inject()(
   clientSummaryService: ClientSummaryService,
   userLookupService: UserLookupService,
   appointments: AppointmentService,
+  userPreferences: UserPreferencesService,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import canViewTeamActionRefiner._
 
-  def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId) { implicit teamRequest =>
-    Ok(views.html.admin.teamHome(teamRequest.team))
+  def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    userPreferences.get(currentUser().usercode).successMap { prefs =>
+      Ok(views.html.admin.teamHome(teamRequest.team, prefs))
+    }
   }
 
   def enquiries(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>

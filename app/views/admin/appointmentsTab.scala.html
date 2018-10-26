@@ -1,9 +1,12 @@
+@import domain.UserPreferences
+
 @(
   eventsRoute: Call,
   createRoute: Call,
   searchScope: String,
   searchScopeValue: String,
-  placeholderSuffix: String
+  placeholderSuffix: String,
+  preferences: UserPreferences,
 )(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
 @b3.vertical.formCSRF(routes.AppointmentSearchController.search(),
@@ -19,4 +22,4 @@
 
 <p><a href="@createRoute" class="btn btn-default">Create a new appointment</a></p>
 
-<div class="appointment-calendar no-wide-tables" data-events="@eventsRoute" data-create="@createRoute"></div>
+<div class="appointment-calendar no-wide-tables" data-events="@eventsRoute" data-create="@createRoute" data-default-view="@{preferences.calendarView}"></div>
