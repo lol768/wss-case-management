@@ -93,7 +93,7 @@ class AdminController @Inject()(
       caseService.countClosedCases(teamRequest.team)
     ).successFlatMap { case (open, openCases, closedCases) =>
       val pagination = Pagination(open, 0, controllers.admin.routes.AdminController.openCases(teamRequest.team.id))
-      caseService.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMap { caseClients =>
+      caseService.getClients(openCases.flatMap(_.clientCase.id).toSet).successMap { caseClients =>
         Ok(views.html.admin.casesTab(
           openCases,
           pagination,
@@ -115,7 +115,7 @@ class AdminController @Inject()(
       caseService.listOpenCases(teamRequest.team, Pagination.asPage(page))
     ).successFlatMap { case (open, openCases) =>
       val pagination = Pagination(open, page, controllers.admin.routes.AdminController.openCases(teamRequest.team.id))
-      caseService.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+      caseService.getClients(openCases.flatMap(_.clientCase.id).toSet).successMap { clients =>
         Ok(views.html.admin.openCases(openCases, clients, pagination))
       }
     }
@@ -127,7 +127,7 @@ class AdminController @Inject()(
       caseService.listClosedCases(teamRequest.team, Pagination.asPage(page))
     ).successFlatMap { case (closed, closedCases) =>
       val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedCases(teamRequest.team.id))
-      caseService.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+      caseService.getClients(closedCases.flatMap(_.clientCase.id).toSet).successMap { clients =>
         Ok(views.html.admin.closedCases(closedCases, clients, pagination))
       }
     }

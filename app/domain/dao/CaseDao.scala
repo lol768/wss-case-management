@@ -355,6 +355,11 @@ object CaseDao {
     )
   }
 
+  case class CaseListRender(
+    clientCase: Case,
+    lastUpdated: OffsetDateTime
+  )
+
   case class NoteAndCase(
     note: CaseNote,
     clientCase: Case
