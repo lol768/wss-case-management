@@ -36,7 +36,8 @@ trait CaseService {
   def find(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def findAll(id: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def findForView(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
-  def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]]
+  def findAllForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]]
+  def listForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
   def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]]
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
@@ -58,14 +59,14 @@ trait CaseService {
   def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def deleteNote(caseID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
-  def listOpenCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
+  def listOpenCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
   def countOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
-  def listOpenCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
+  def listOpenCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
   def countOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
-  def listClosedCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
+  def listClosedCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
   def countClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
-  def listClosedCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]]
+  def listClosedCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
   def countClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
   def countOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
@@ -158,8 +159,17 @@ class CaseServiceImpl @Inject() (
       find(caseKey)
     }
 
-  override def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]] = {
+  override def findAllForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]] = {
     withClientMessagesAndNotes(universityID, dao.findByClientQuery(universityID)).map(Right.apply)
+  }
+
+  override def listForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] = {
+    daoRunner.run(
+      dao.findByClientQuery(universityID)
+        .withLastUpdated
+        .sortBy { case (_, lu) => lu.desc }
+        .result
+    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c, lastUpdated) })}
   }
 
   override def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]] = {
@@ -343,56 +353,56 @@ class CaseServiceImpl @Inject() (
       } yield done).map(Right.apply)
     }
 
-  override def listOpenCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]] =
+  override def listOpenCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] =
     daoRunner.run(
       dao.listQuery(Some(team), None, IssueStateFilter.Open)
         .withLastUpdated
         .sortBy { case (_, lu) => lu.desc }
         .paginate(page)
         .result
-    ).map(Right.apply)
+    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c, lastUpdated) })}
 
   override def countOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
       dao.listQuery(Some(team), None, IssueStateFilter.Open).length.result
     ).map(Right.apply)
 
-  override def listOpenCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]] =
+  override def listOpenCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] =
     daoRunner.run(
       dao.listQuery(None, Some(owner), IssueStateFilter.Open)
         .withLastUpdated
         .sortBy { case (_, lu) => lu.desc }
         .paginate(page)
         .result
-    ).map(Right.apply)
+    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c, lastUpdated) })}
 
   override def countOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
       dao.listQuery(None, Some(owner), IssueStateFilter.Open).length.result
     ).map(Right.apply)
 
-  override def listClosedCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]] =
+  override def listClosedCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] =
     daoRunner.run(
       dao.listQuery(Some(team), None, IssueStateFilter.Closed)
         .withLastUpdated
         .sortBy { case (_, lu) => lu.desc }
         .paginate(page)
         .result
-    ).map(Right.apply)
+    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c, lastUpdated) })}
 
   override def countClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
       dao.listQuery(Some(team), None, IssueStateFilter.Closed).length.result
     ).map(Right.apply)
 
-  override def listClosedCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[(Case, OffsetDateTime)]]] =
+  override def listClosedCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] =
     daoRunner.run(
       dao.listQuery(None, Some(owner), IssueStateFilter.Closed)
         .withLastUpdated
         .sortBy { case (_, lu) => lu.desc }
         .paginate(page)
         .result
-    ).map(Right.apply)
+    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c, lastUpdated) })}
 
   override def countClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(

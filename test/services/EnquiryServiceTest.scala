@@ -52,7 +52,7 @@ class EnquiryServiceTest extends AbstractDaoTest {
 
     "sort enquiries by own version if no other messages" in {
       withData(new EnquiriesFixture(addMessages = false)) { _ =>
-        val result = enquiryService.findEnquiriesForClient(uniId1).serviceValue
+        val result = enquiryService.findAllEnquiriesForClient(uniId1).serviceValue
         val enquiries = result.map(_.enquiry)
         val ids = enquiries.map(e => (e.id, e.lastUpdated)).mkString("\n")
         val idsSorted = enquiries.sortBy(_.lastUpdated).reverse.map(e => (e.id, e.lastUpdated)).mkString("\n")
@@ -62,7 +62,7 @@ class EnquiryServiceTest extends AbstractDaoTest {
 
     "sort enquiries by message version if newer" ignore {
       withData(new EnquiriesFixture(addMessages = true)) { _ =>
-        val result = enquiryService.findEnquiriesForClient(uniId1).serviceValue
+        val result = enquiryService.findAllEnquiriesForClient(uniId1).serviceValue
         // TODO check that sorting is as expected (most recent message/enquiry timestamp)
         ???
       }

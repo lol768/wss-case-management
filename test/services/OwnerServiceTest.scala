@@ -42,7 +42,7 @@ class OwnerServiceTest extends AbstractDaoTest {
   "saving owners" should {
     "persist enquiry owners correctly" in {
       withData(new EnquiriesFixture) { _ =>
-        val enquiry = enquiryService.findEnquiriesForClient(uniId1).serviceValue.head.enquiry
+        val enquiry = enquiryService.findAllEnquiriesForClient(uniId1).serviceValue.head.enquiry
         val owner1 = Usercode("1234")
         val owner2 = Usercode("2345")
         val owner3 = Usercode("3456")

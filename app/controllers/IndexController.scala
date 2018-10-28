@@ -105,7 +105,7 @@ class IndexController @Inject()(
       caseService.countClosedCases(usercode)
     ).successFlatMap { case (open, openCases, closedCases) =>
       val pagination = Pagination(open, 0, controllers.routes.IndexController.openCases())
-      caseService.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMap { caseClients =>
+      caseService.getClients(openCases.flatMap(_.clientCase.id).toSet).successMap { caseClients =>
         Ok(views.html.admin.casesTab(
           openCases,
           pagination,
@@ -128,7 +128,7 @@ class IndexController @Inject()(
       caseService.listOpenCases(usercode, Pagination.asPage(page))
     ).successFlatMap { case (open, openCases) =>
       val pagination = Pagination(open, page, controllers.routes.IndexController.openCases())
-      caseService.getClients(openCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+      caseService.getClients(openCases.flatMap(_.clientCase.id).toSet).successMap { clients =>
         Ok(views.html.admin.openCases(openCases, clients, pagination))
       }
     }
@@ -141,7 +141,7 @@ class IndexController @Inject()(
       caseService.listClosedCases(usercode, Pagination.asPage(page))
     ).successFlatMap { case (closed, closedCases) =>
       val pagination = Pagination(closed, page, controllers.routes.IndexController.closedCases())
-      caseService.getClients(closedCases.flatMap { case (c, _) => c.id }.toSet).successMap { clients =>
+      caseService.getClients(closedCases.flatMap(_.clientCase.id).toSet).successMap { clients =>
         Ok(views.html.admin.closedCases(closedCases, clients, pagination))
       }
     }
@@ -173,8 +173,8 @@ class IndexController @Inject()(
   def messages: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
     val client = currentUser().universityId.get
     ServiceResults.zip(
-      enquiryService.findEnquiriesForClient(client),
-      caseService.findForClient(client).map(_.map(_.filter(_.messages.nonEmpty))),
+      enquiryService.findAllEnquiriesForClient(client),
+      caseService.findAllForClient(client).map(_.map(_.filter(_.messages.nonEmpty))),
       registrations.get(client)
     ).successFlatMapTo { case (clientEnquiries, clientCases, registration) =>
       val issues = (clientEnquiries.map(_.toIssue) ++ clientCases.map(_.toIssue)).sortBy(_.lastUpdatedDate)(JavaTime.dateTimeOrdering).reverse

@@ -1,12 +1,12 @@
 @import java.time.OffsetDateTime
 @import java.util.UUID
 
+@import domain.dao.CaseDao.{Case, CaseListRender}
 @import domain.{Client, Pagination}
-@import domain.dao.CaseDao.Case
 
 @(
   title: Option[String],
-  cases: Seq[(Case, OffsetDateTime)],
+  cases: Seq[CaseListRender],
   clients: Map[UUID, Set[Client]],
   pagination: Pagination,
   emptyMessage: Option[String] = None
@@ -45,14 +45,14 @@
         @tags.tablePagination(pagination)
       </tfoot>
       <tbody>
-        @cases.map { case (clientCase, lastUpdated) =>
-          @caseRow(clientCase, lastUpdated)
+        @cases.map { r =>
+          @caseRow(r.clientCase, r.lastUpdated)
         }
       </tbody>
     </table>
   } else {
-    @cases.map { case (clientCase, lastUpdated) =>
-      @caseRow(clientCase, lastUpdated)
+    @cases.map { r =>
+      @caseRow(r.clientCase, r.lastUpdated)
     }
     @tags.tablePagination(pagination)
   }

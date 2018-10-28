@@ -270,6 +270,16 @@ object EnquiryDao {
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
       .map { case ((e, c), mfm) => (e, c, mfm) }
+    def withLastUpdated = q
+      .withClient
+      .join(Message.lastUpdatedEnquiryMessage)
+      .on { case ((e, _), (id, _)) => e.id === id }
+      .map { case ((e, c), (_, messageCreated)) =>
+        val MinDate = OffsetDateTime.from(Instant.EPOCH.atOffset(ZoneOffset.UTC))
+        val lastModified = messageCreated.getOrElse(MinDate)
+        val mostRecentUpdate = slick.lifted.Case.If(lastModified > e.version).Then(lastModified).Else(e.version)
+        (e, c, mostRecentUpdate)
+      }
   }
 
   case class StoredEnquiryNote(
