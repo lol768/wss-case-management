@@ -1,20 +1,43 @@
 package helpers
 
 import java.time._
-import java.time.format.DateTimeFormatter
-import java.time.temporal.WeekFields
+import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder}
+import java.time.temporal.ChronoField
+import java.util.Locale
 
-import play.api.data.{FormError, Forms, Mapping}
 import play.api.data.format.{Formats, Formatter}
+import play.api.data.{FormError, Forms, Mapping}
 import play.api.libs.json._
 import uk.ac.warwick.util.core.DateTimeUtils
+
+import scala.collection.JavaConverters._
 
 object JavaTime {
   val timeZone: ZoneId = ZoneId.systemDefault()
 
   val localDateFormat: DateTimeFormatter = DateTimeFormatter.ISO_DATE
   val iSO8601DateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").withZone(timeZone)
-  val dateFullNoDayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
+
+  private val ordinalLookup: Map[java.lang.Long, String] =
+    (1 to 31).map { d =>
+      val ordinal = d % 10 match {
+        case 1 if d != 11 => "st"
+        case 2 if d != 12 => "nd"
+        case 3 if d != 13 => "rd"
+        case _ => "th"
+      }
+
+      (d.toLong: java.lang.Long) -> s"$d$ordinal"
+    }.toMap
+
+  val dateFullNoDayFormatter: DateTimeFormatter =
+    new DateTimeFormatterBuilder()
+      .appendText(ChronoField.DAY_OF_MONTH, ordinalLookup.asJava)
+      .appendLiteral(' ')
+      .appendPattern("MMM")
+      .appendLiteral(' ')
+      .appendPattern("yyyy")
+      .toFormatter(Locale.UK)
 
   implicit def dateTimeOrdering: Ordering[OffsetDateTime] = Ordering.fromLessThan(_.isBefore(_))
   implicit def localDateOrdering: Ordering[LocalDate] = Ordering.fromLessThan(_.isBefore(_))
@@ -50,12 +73,37 @@ object JavaTime {
 
   object Relative {
 
-    private val dateFullWithoutYearFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
-    private val dateFullFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy")
+    private val dateFullWithoutYearFormatter =
+      new DateTimeFormatterBuilder()
+        .appendPattern("EEE")
+        .appendLiteral(' ')
+        .appendText(ChronoField.DAY_OF_MONTH, ordinalLookup.asJava)
+        .appendLiteral(' ')
+        .appendPattern("MMM")
+        .toFormatter(Locale.UK)
+
+    private val dateFullFormatter =
+      new DateTimeFormatterBuilder()
+        .append(dateFullWithoutYearFormatter)
+        .appendLiteral(' ')
+        .appendPattern("yyyy")
+        .toFormatter(Locale.UK)
 
     private val onlyTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    private val dateTimeFullWithoutYearFormatter = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm")
-    private val dateTimeFullFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm")
+
+    private val dateTimeFullWithoutYearFormatter =
+      new DateTimeFormatterBuilder()
+        .append(dateFullWithoutYearFormatter)
+        .appendLiteral(", ")
+        .append(onlyTimeFormatter)
+        .toFormatter(Locale.UK)
+
+    private val dateTimeFullFormatter =
+      new DateTimeFormatterBuilder()
+        .append(dateFullFormatter)
+        .appendLiteral(", ")
+        .append(onlyTimeFormatter)
+        .toFormatter(Locale.UK)
 
     def apply(date: LocalDate): String = {
       val now = localDate
