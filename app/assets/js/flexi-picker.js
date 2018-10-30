@@ -83,6 +83,7 @@ export default class FlexiPicker {
       },
       highlighter: html => html,
       changeInputOnMove: false,
+      selectOnBlur: false,
       afterSelect: (item) => {
         const description = (
           typeof (item.description) !== 'undefined' ? ` (${_.escape(item.description)})` : ''
