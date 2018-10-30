@@ -1,6 +1,6 @@
 @import controllers.admin.AppointmentController.CancelAppointmentData
 @import domain.{AppointmentCancellationReason, AppointmentClient, AppointmentRender, SitsProfile}
-@import helpers.JavaTime
+@import warwick.core.helpers.JavaTime
 
 @(
   a: AppointmentRender,
@@ -29,7 +29,7 @@
       <div class="col-sm-6 col-md-7"> @* TODO history *@
 
         @tags.sectioned.detail("Date/time") {
-          @helpers.JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+          @JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
         }
 
         @a.room.map { room =>

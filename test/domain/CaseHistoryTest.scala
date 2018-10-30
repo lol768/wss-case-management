@@ -4,14 +4,14 @@ import java.time.{OffsetDateTime, ZonedDateTime}
 import java.util.UUID
 
 import domain.dao.CaseDao.StoredCaseTagVersion
-import helpers.JavaTime
 import org.mockito.Mockito.{RETURNS_SMART_NULLS, _}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import services.{ClientService, NoAuditLogging}
 import uk.ac.warwick.util.core.DateTimeUtils
-import warwick.sso.{UniversityID, User, UserLookupService, Usercode, Users}
+import warwick.core.helpers.JavaTime
+import warwick.sso._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

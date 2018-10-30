@@ -3,8 +3,8 @@ package domain.dao
 import java.time.{Clock, ZoneId, ZonedDateTime}
 
 import domain.{Disabilities, Medications, RegistrationData, RegistrationReferrals}
-import helpers.JavaTime
 import uk.ac.warwick.util.core.DateTimeUtils
+import warwick.core.helpers.JavaTime
 import warwick.sso.UniversityID
 
 import scala.concurrent.Future

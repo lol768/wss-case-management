@@ -1,11 +1,7 @@
-@import domain.dao.CaseDao.Case
-@import domain.dao.CaseDao.CaseMessages
-@import domain.MessageRender
-@import domain.Client
-@import domain.SitsProfile
-@import helpers.JavaTime
-@import domain.IssueState
+@import domain.{Client, IssueState, MessageRender, SitsProfile}
+@import domain.dao.CaseDao.{Case, CaseMessages}
 @import org.apache.tika.mime.MediaType
+@import warwick.core.helpers.JavaTime
 
 @(
   c: Case,

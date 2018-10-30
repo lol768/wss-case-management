@@ -7,18 +7,18 @@ import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
+import domain.QueryHelpers._
 import domain._
 import domain.dao.CaseDao.{Cases, _}
 import domain.dao.ClientDao.StoredClient
-import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.{AuditLogContext, CaseService}
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
+import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
-import QueryHelpers._
 
 import scala.concurrent.ExecutionContext
 import scala.language.higherKinds

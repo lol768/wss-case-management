@@ -2,13 +2,14 @@ package domain.dao
 
 import java.time.{Clock, ZonedDateTime}
 
+import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.ClientDao.StoredClient
 import domain.dao.ClientSummaryDao.StoredClientSummary
-import helpers.JavaTime
 import uk.ac.warwick.util.core.DateTimeUtils
+import warwick.core.helpers.JavaTime
 import warwick.sso.UniversityID
-import domain.ExtendedPostgresProfile.api._
+
 import scala.concurrent.Future
 
 class ClientSummaryDaoTest extends AbstractDaoTest {

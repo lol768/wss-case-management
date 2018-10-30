@@ -2,7 +2,7 @@ package helpers.caching
 
 import java.time.OffsetDateTime
 
-import helpers.JavaTimeTest
+import helpers.MockJavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.Provider
 import org.mockito.Mockito._
@@ -17,7 +17,7 @@ import services.{NoAuditLogging, NullTimingService}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with ScalaFutures with NoAuditLogging {
+class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with ScalaFutures with NoAuditLogging with MockJavaTime {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -44,7 +44,7 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
 
       fetchData().futureValue mustBe "Value 1"
       fetchData().futureValue mustBe "Value 1"
-      JavaTimeTest.withMockDateTime(OffsetDateTime.now.plusMinutes(1).toInstant){
+      withMockDateTime(OffsetDateTime.now.plusMinutes(1).toInstant){
         fetchData().futureValue mustBe "Value 1" // returns the cached value but does a background update
       }
       fetchData().futureValue mustBe "Value 2"
@@ -61,7 +61,7 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
       fetchData().futureValue mustBe "Value 1"
       fetchData().futureValue mustBe "Value 1"
 
-      JavaTimeTest.withMockDateTime(OffsetDateTime.now.plusMinutes(12).toInstant) {
+      withMockDateTime(OffsetDateTime.now.plusMinutes(12).toInstant) {
         fetchData().futureValue mustBe "Value 2"
       }
 
@@ -84,7 +84,7 @@ class AsyncVariableTtlCacheHelperTest extends PlaySpec with MockitoSugar with Sc
       }
 
       fetchData().futureValue mustBe "Value 1"
-      JavaTimeTest.withMockDateTime(OffsetDateTime.now.plusMinutes(12).toInstant){
+      withMockDateTime(OffsetDateTime.now.plusMinutes(12).toInstant){
         fetchData().futureValue mustBe "Value 1"
       }
       verify(provider).get

@@ -5,7 +5,6 @@ import controllers.EnquirySearchController._
 import controllers.refiners.{AnyTeamActionRefiner, CanViewEnquiryActionRefiner}
 import domain.dao.EnquiryDao.EnquirySearchQuery
 import domain.{Enquiry, IssueKey, IssueStateFilter, Teams}
-import helpers.JavaTime
 import helpers.Json.JsonClientError
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
@@ -14,6 +13,7 @@ import play.api.data.Forms.{localDate, mapping, nonEmptyText, optional, text}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
 import services.{EnquiryService, PermissionService}
+import warwick.core.helpers.JavaTime
 import warwick.sso.{AuthenticatedRequest, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}

@@ -7,7 +7,7 @@ import java.util.UUID
 import com.google.inject.ImplementedBy
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
-import helpers.{JavaTime, ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
+import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.cache.AsyncCacheApi
@@ -19,6 +19,7 @@ import services.tabula.TabulaFreeBusyService._
 import system.TimingCategories
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
 import warwick.core.Logging
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.{TimingContext, TimingService}
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
 

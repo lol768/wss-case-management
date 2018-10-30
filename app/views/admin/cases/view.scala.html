@@ -2,6 +2,8 @@
 @import domain._
 @import domain.dao.CaseDao.Case
 @import play.api.libs.json.Json
+@import warwick.core.helpers.JavaTime
+
 @(
   c: Case,
   profiles: Map[Client, Option[SitsProfile]],
@@ -52,7 +54,7 @@
     <div class="row">
       <div class="col-sm-6 col-md-7 field-history" data-field-history="@Json.stringify(Json.toJson(history)(CaseHistory.writer))">
 
-        @tags.sectioned.detail("Date raised"){ <div>@helpers.JavaTime.Relative(c.created)</div> }
+        @tags.sectioned.detail("Date raised"){ <div>@JavaTime.Relative(c.created)</div> }
 
         @tags.sectioned.detail("Team"){
           <div data-field-history-field="team">@c.team.name</div>
@@ -65,7 +67,7 @@
           @* If currently related to an incident... *@
           @tags.sectioned.detail("Incident") {
             <div class="case-details--incident">
-              <span data-field-history-field="incidentDate">@helpers.JavaTime.Relative(c.incidentDate.get)</span>
+              <span data-field-history-field="incidentDate">@JavaTime.Relative(c.incidentDate.get)</span>
               <span data-field-history-field="onCampus">@if(c.onCampus.contains(true)) {On-campus} else {Off-campus}</span>
               @if(c.notifiedPolice.contains(true)) {
                 <span data-field-history-field="notifiedPolice">Police notified</span>
@@ -96,7 +98,7 @@
         @originalEnquiry.map { enquiry => @tags.sectioned.detail("Original enquiry"){
             <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key)">@enquiry.key.string @enquiry.subject</a>
             -
-            @helpers.JavaTime.Relative(enquiry.created)
+            @JavaTime.Relative(enquiry.created)
         }}
 
         @tags.sectioned.detail("Cause"){ <div data-field-history-field="cause">@c.cause.description</div> }

@@ -1,12 +1,10 @@
 @import java.time.OffsetDateTime
 
 @import domain.dao.CaseDao.Case
-@import domain.{Enquiry, EnquiryNote, EnquiryNoteType, IssueState, MessageRender, MessageSender, SitsProfile, UserType}
-@import helpers.JavaTime
+@import domain.{Enquiry, EnquiryNote, EnquiryNoteType, IssueState, Member, MessageRender, MessageSender, SitsProfile}
 @import org.apache.tika.mime.MediaType
-@import warwick.sso.{User, Usercode}
+@import warwick.core.helpers.JavaTime
 
-@import domain.Member
 @(
   enquiry: Enquiry,
   profile: Option[SitsProfile],
@@ -86,9 +84,9 @@
                               <div class="panel-heading">
                                 <h3 class="panel-title clearfix">
                                   <span class="date pull-right">
-                                    @helpers.JavaTime.Relative(note.created)
+                                    @JavaTime.Relative(note.created)
                                     @if(note.lastUpdated != note.created) {
-                                      (last updated @helpers.JavaTime.Relative(note.lastUpdated, lowercaseToday = true))
+                                      (last updated @JavaTime.Relative(note.lastUpdated, lowercaseToday = true))
                                     }
                                   </span>
                                 </h3>

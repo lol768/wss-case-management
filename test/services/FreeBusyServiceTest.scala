@@ -2,11 +2,11 @@ package services
 
 import java.time.{LocalDate, LocalTime, Month}
 
-import helpers.JavaTime
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import services.FreeBusyService.{FreeBusyPeriod, FreeBusyStatus}
+import warwick.core.helpers.JavaTime
 
 class FreeBusyServiceTest extends PlaySpec with MockitoSugar with ScalaFutures {
 

@@ -6,14 +6,15 @@ import controllers.refiners.{AnyTeamActionRefiner, AppointmentActionFilters}
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import helpers.Json.JsonClientError
+import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
-import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
 import services.{AppointmentService, PermissionService}
+import warwick.core.helpers.JavaTime
 import warwick.sso.{AuthenticatedRequest, UniversityID, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}

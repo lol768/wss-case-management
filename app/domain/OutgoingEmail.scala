@@ -3,9 +3,9 @@ package domain
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import helpers.JavaTime
 import play.api.libs.json._
 import play.api.libs.mailer.{Attachment, Email}
+import warwick.core.helpers.JavaTime
 import warwick.sso.Usercode
 
 case class OutgoingEmail(

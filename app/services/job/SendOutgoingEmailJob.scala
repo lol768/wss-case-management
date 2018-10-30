@@ -4,11 +4,11 @@ import java.time.Instant
 import java.util.{Date, UUID}
 
 import akka.Done
-import helpers.JavaTime
 import javax.inject.Inject
 import org.quartz._
 import services.{AuditLogContext, EmailService}
 import warwick.core.Logging
+import warwick.core.helpers.JavaTime
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}

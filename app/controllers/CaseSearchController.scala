@@ -4,9 +4,7 @@ import controllers.API.Response._
 import controllers.CaseSearchController._
 import controllers.refiners.{AnyTeamActionRefiner, CanViewCaseActionRefiner}
 import domain.dao.CaseDao.{Case, CaseSearchQuery}
-import domain.{CaseType, IssueKey, IssueStateFilter, Teams}
-import helpers.JavaTime
-import helpers.Json.JsonClientError
+import domain.{CaseType, IssueStateFilter, Teams}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -14,7 +12,8 @@ import play.api.data.Forms._
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
 import services.{CaseService, PermissionService}
-import warwick.sso.{AuthenticatedRequest, Usercode}
+import warwick.core.helpers.JavaTime
+import warwick.sso.Usercode
 
 import scala.concurrent.{ExecutionContext, Future}
 

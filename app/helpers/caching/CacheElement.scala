@@ -1,6 +1,7 @@
 package helpers.caching
 
-import helpers.JavaTime
+import warwick.core.helpers.JavaTime
+
 import scala.reflect.runtime.universe._
 
 @SerialVersionUID(9123323060467832121L)

@@ -6,12 +6,12 @@ import java.util.UUID
 import com.google.inject.ImplementedBy
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.{AppointmentRender, AppointmentState}
-import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import helpers.caching.CacheElement
 import javax.inject.{Inject, Singleton}
 import play.api.cache.AsyncCacheApi
 import services.FreeBusyService.{FreeBusyPeriod, FreeBusyStatus}
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.{TimingContext, TimingService}
 import warwick.sso.{UniversityID, Usercode}
 

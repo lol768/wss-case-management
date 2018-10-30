@@ -8,24 +8,25 @@ import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
-import domain._
+import domain.Pagination._
+import domain.QueryHelpers._
+import domain.{Page, _}
 import domain.dao.CaseDao.{Case, _}
 import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao._
+import helpers.ServiceResults
 import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
-import helpers.{JavaTime, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import services.CaseService._
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
-import QueryHelpers._
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.higherKinds
-import domain.Page
-import domain.Pagination._
 
 @ImplementedBy(classOf[CaseServiceImpl])
 trait CaseService {

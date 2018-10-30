@@ -3,9 +3,9 @@ package system
 import java.time.{Duration, OffsetDateTime, ZoneId}
 
 import org.scalatestplus.play.PlaySpec
-import Binders._
-import helpers.JavaTime
 import play.api.mvc.{PathBindable, QueryStringBindable}
+import system.Binders._
+import warwick.core.helpers.JavaTime
 import warwick.sso.UniversityID
 
 class BindersTest extends PlaySpec {

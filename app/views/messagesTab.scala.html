@@ -1,11 +1,9 @@
-@import domain.IssueRender
-@import domain.Registration
-@import helpers.JavaTime
-@import domain.MessageSender
-@import domain.Enquiry
+@import domain.{Enquiry, IssueRender, MessageSender, Registration}
 @import domain.dao.CaseDao.Case
-@import play.api.data.Forms._
 @import org.apache.tika.mime.MediaType
+@import play.api.data.Forms._
+@import warwick.core.helpers.JavaTime
+
 @(issues: Seq[IssueRender], registration: Option[Registration], supportedMimeTypes: Seq[MediaType])(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 <div class="pull-right">

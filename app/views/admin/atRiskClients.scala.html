@@ -1,6 +1,6 @@
-@import domain.AtRiskClient
-@import domain.ClientRiskStatus
-@import helpers.JavaTime
+@import domain.{AtRiskClient, ClientRiskStatus}
+@import warwick.core.helpers.JavaTime
+
 @(clients: Set[AtRiskClient], showMentalHealth: Boolean)
 
 @if(clients.nonEmpty) {

@@ -3,9 +3,9 @@ package services.healthcheck
 import java.time.OffsetDateTime
 
 import akka.actor.ActorSystem
-import helpers.JavaTime
 import javax.inject.{Inject, Singleton}
 import warwick.core.Logging
+import warwick.core.helpers.JavaTime
 
 import scala.concurrent.duration._
 

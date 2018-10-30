@@ -2,10 +2,10 @@ package services.healthcheck
 
 import java.time.OffsetDateTime
 
-import helpers.JavaTime.{localDateTime => now}
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status._
 import uk.ac.warwick.util.service.{ServiceHealthcheck, ServiceHealthcheckProvider}
+import warwick.core.helpers.JavaTime.{localDateTime => now}
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}

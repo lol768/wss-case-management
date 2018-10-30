@@ -8,7 +8,6 @@ import controllers.admin.CaseDocumentController._
 import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CaseSpecificRequest}
 import controllers.{BaseController, UploadedFileControllerHelper}
 import domain._
-import helpers.JavaTime
 import helpers.ServiceResults.ServiceError
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -16,6 +15,7 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.CaseService
+import warwick.core.helpers.JavaTime
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -2,8 +2,8 @@ package system
 
 import java.time.{Duration, OffsetDateTime, ZoneId}
 
-import helpers.JavaTime
 import play.api.mvc.{PathBindable, QueryStringBindable}
+import warwick.core.helpers.JavaTime
 import warwick.sso.UniversityID
 
 object Binders {

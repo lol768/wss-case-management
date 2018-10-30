@@ -5,15 +5,16 @@ import java.time.temporal.ChronoUnit
 
 import controllers.BaseController
 import controllers.refiners.AdminActionRefiner
+import controllers.reports.ReportsController._
 import domain.{Team, Teams}
-import helpers.{JavaTime, ServiceResults}
+import helpers.ServiceResults
+import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.mvc.{Action, AnyContent}
 import services.{CaseService, EnquiryService}
+import warwick.core.helpers.JavaTime
 
 import scala.concurrent.{ExecutionContext, Future}
-import ReportsController._
-import helpers.ServiceResults.ServiceResult
 
 object ReportsController {
   val ReportDays = Seq(7, 14, 28)
