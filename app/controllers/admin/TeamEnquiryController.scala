@@ -187,7 +187,7 @@ class TeamEnquiryController @Inject()(
       formWithErrors => Future.successful(
         Ok(views.html.admin.enquiry.reassign(
           request.enquiry,
-          formWithErrors.withVersion(request.enquiry.lastUpdated)
+          formWithErrors
         ))
       ),
       data =>

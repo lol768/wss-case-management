@@ -408,7 +408,7 @@ class CaseController @Inject()(
           Ok(
             views.html.admin.cases.edit(
               clientCase,
-              formWithErrors.withVersion(clientCase.version)
+              formWithErrors
             )
           )
         ),
@@ -550,7 +550,7 @@ class CaseController @Inject()(
           views.html.admin.cases.editNote(
             caseKey,
             noteRequest.note,
-            formWithErrors.withVersion(noteRequest.note.lastUpdated)
+            formWithErrors
           )
         )
       ),

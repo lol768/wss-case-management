@@ -109,7 +109,7 @@ class LocationsController @Inject()(
     locations.findBuilding(id).successFlatMap { building =>
       buildingForm(Some(building.lastUpdated)).bindFromRequest.fold(
         formWithErrors => Future.successful(
-          Ok(views.html.locations.editBuilding(building, formWithErrors.withVersion(building.lastUpdated)))
+          Ok(views.html.locations.editBuilding(building, formWithErrors))
         ),
         data => locations.update(id, data.building, data.version.get).successMap { _ =>
           Redirect(controllers.locations.routes.LocationsController.list())
@@ -165,7 +165,7 @@ class LocationsController @Inject()(
     ).successFlatMap { case (room, buildings) =>
       roomForm(locations, Some(room.lastUpdated)).bindFromRequest.fold(
         formWithErrors => Future.successful(
-          Ok(views.html.locations.editRoom(room, buildings, formWithErrors.withVersion(room.lastUpdated)))
+          Ok(views.html.locations.editRoom(room, buildings, formWithErrors))
         ),
         data => locations.update(id, data.room, data.version.get).successMap { _ =>
           Redirect(controllers.locations.routes.LocationsController.list())

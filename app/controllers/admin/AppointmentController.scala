@@ -188,7 +188,7 @@ class AppointmentController @Inject()(
   def view(appointmentKey: IssueKey): Action[AnyContent] = CanViewAppointmentAction(appointmentKey).async { implicit request =>
     renderAppointment(
       appointmentKey,
-      cancelForm(request.appointment.lastUpdated).withVersion(request.appointment.lastUpdated).discardingErrors
+      cancelForm(request.appointment.lastUpdated).discardingErrors
     )
   }
 
@@ -305,7 +305,7 @@ class AppointmentController @Inject()(
           Ok(
             views.html.admin.appointments.edit(
               a.appointment,
-              formWithErrors.withVersion(a.appointment.lastUpdated),
+              formWithErrors,
               a.clientCases,
               availableRooms
             )
@@ -403,7 +403,7 @@ class AppointmentController @Inject()(
     cancelForm(appointment.lastUpdated).bindFromRequest().fold(
       formWithErrors => renderAppointment(
         appointmentKey,
-        formWithErrors.withVersion(appointment.lastUpdated)
+        formWithErrors
       ),
       data => {
         val note = data.message.map(AppointmentNoteSave(_, request.user.get.usercode))
@@ -456,7 +456,7 @@ class AppointmentController @Inject()(
           views.html.admin.appointments.editNote(
             appointmentKey,
             request.note,
-            formWithErrors.withVersion(request.note.lastUpdated)
+            formWithErrors
           )
         )
       ),
