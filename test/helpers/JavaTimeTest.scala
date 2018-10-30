@@ -39,25 +39,25 @@ class JavaTimeTest extends PlaySpec with MockitoSugar {
 
     "handle LocalDate yesterday" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2018, 3, 15)) must be ("Thu 15 Mar")
+        JavaTime.Relative(LocalDate.of(2018, 3, 15)) must be ("Thu 15th Mar")
       }
     }
 
     "handle LocalDate this week" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2018, 3, 18)) must be ("Sun 18 Mar")
+        JavaTime.Relative(LocalDate.of(2018, 3, 18)) must be ("Sun 18th Mar")
       }
     }
 
     "handle LocalDate this year" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2018, 3, 3)) must be ("Sat 3 Mar")
+        JavaTime.Relative(LocalDate.of(2018, 3, 3)) must be ("Sat 3rd Mar")
       }
     }
 
     "handle LocalDate last year" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(LocalDate.of(2017, 3, 3)) must be ("Fri 3 Mar 2017")
+        JavaTime.Relative(LocalDate.of(2017, 3, 3)) must be ("Fri 3rd Mar 2017")
       }
     }
 
@@ -75,25 +75,25 @@ class JavaTimeTest extends PlaySpec with MockitoSugar {
 
     "handle OffsetDateTime yesterday" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(offsetDateTime("2018-03-15T11:13:14.000")) must be ("Thu 15 Mar, 11:13")
+        JavaTime.Relative(offsetDateTime("2018-03-15T11:13:14.000")) must be ("Thu 15th Mar, 11:13")
       }
     }
 
     "handle OffsetDateTime this week" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(offsetDateTime("2018-03-18T11:13:14.000")) must be ("Sun 18 Mar, 11:13")
+        JavaTime.Relative(offsetDateTime("2018-03-18T11:13:14.000")) must be ("Sun 18th Mar, 11:13")
       }
     }
 
     "handle OffsetDateTime this year" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(offsetDateTime("2018-03-03T11:13:14.000")) must be ("Sat 3 Mar, 11:13")
+        JavaTime.Relative(offsetDateTime("2018-03-03T11:13:14.000")) must be ("Sat 3rd Mar, 11:13")
       }
     }
 
     "handle OffsetDateTime last year" in {
       JavaTimeTest.withMockDateTime(now.toInstant) {
-        JavaTime.Relative(offsetDateTime("2017-03-03T11:13:14.000")) must be ("Fri 3 Mar 2017, 11:13")
+        JavaTime.Relative(offsetDateTime("2017-03-03T11:13:14.000")) must be ("Fri 3rd Mar 2017, 11:13")
       }
     }
 
