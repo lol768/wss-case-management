@@ -4,9 +4,9 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import domain.CustomJdbcTypes._
-import helpers.JavaTime
+import domain.ExtendedPostgresProfile.api._
 import play.api.libs.json.JsValue
-import ExtendedPostgresProfile.api._
+import warwick.core.helpers.JavaTime
 import warwick.sso.Usercode
 
 case class AuditEvent(

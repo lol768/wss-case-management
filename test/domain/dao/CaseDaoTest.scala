@@ -4,7 +4,8 @@ import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.CaseDao.{Case, Cases}
 import domain.dao.MemberDao.StoredMember
-import helpers.{DataFixture, JavaTime}
+import helpers.DataFixture
+import warwick.core.helpers.JavaTime
 import warwick.sso.Usercode
 
 class CaseDaoTest extends AbstractDaoTest {

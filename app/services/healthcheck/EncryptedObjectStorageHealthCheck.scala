@@ -4,13 +4,13 @@ import java.nio.charset.StandardCharsets
 
 import akka.actor.ActorSystem
 import com.google.common.io.CharSource
-import helpers.JavaTime.{localDateTime => now}
 import javax.inject.{Inject, Singleton}
 import services.healthcheck.EncryptedObjectStorageHealthCheck._
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status._
 import uk.ac.warwick.util.service.{ServiceHealthcheck, ServiceHealthcheckProvider}
 import warwick.core.Logging
+import warwick.core.helpers.JavaTime.{localDateTime => now}
 import warwick.objectstore.{EncryptedObjectStorageService, ObjectStorageService}
 
 import scala.collection.JavaConverters._

@@ -5,11 +5,11 @@ import java.time.OffsetDateTime
 import akka.Done
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
-import helpers.JavaTime
 import services.AuditLogContext
 import slick.dbio.Effect
 import slick.lifted.Rep
 import slick.sql.FixedSqlStreamingAction
+import warwick.core.helpers.JavaTime
 import warwick.sso.Usercode
 
 import scala.concurrent.ExecutionContext

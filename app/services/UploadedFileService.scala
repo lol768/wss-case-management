@@ -5,17 +5,16 @@ import java.util.UUID
 import akka.Done
 import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
+import domain.ExtendedPostgresProfile.api._
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{DaoRunner, UploadedFileDao}
 import domain.{UploadedFile, UploadedFileOwner, UploadedFileSave}
-import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Named, Singleton}
 import play.api.libs.json.Json
-import domain.ExtendedPostgresProfile.api._
-import play.api.mvc.{BodyParser, DefaultPlayBodyParsers}
 import system.TimingCategories
-import warwick.core.timing.{TimingContext, TimingService}
+import warwick.core.helpers.JavaTime
+import warwick.core.timing.TimingService
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.Usercode
 

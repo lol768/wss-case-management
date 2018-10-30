@@ -6,12 +6,12 @@ import com.google.inject.{ImplementedBy, Inject}
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import helpers.JavaTime
 import javax.inject.Singleton
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{JsValue, Json}
 import services.AuditLogContext
 import slick.jdbc.JdbcProfile
+import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext

@@ -1,4 +1,5 @@
 @import domain.{EnquiryListRender, Pagination}
+@import warwick.core.helpers.JavaTime
 
 @(
   title: Option[String],
@@ -15,7 +16,7 @@
     <td>
       <a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)">@render.enquiry.key.string @render.enquiry.subject</a>
     </td>
-    <td>@helpers.JavaTime.Relative(render.lastUpdated)</td>
+    <td>@JavaTime.Relative(render.lastUpdated)</td>
   </tr>
 }
 

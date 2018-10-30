@@ -5,20 +5,21 @@ import java.util.UUID
 import com.google.inject.ImplementedBy
 import domain._
 import domain.dao.CaseDao.Case
-import helpers.{JavaTime, ServiceResults}
-import helpers.ServiceResults.{ServiceError, ServiceResult}
+import helpers.ServiceResults
 import helpers.ServiceResults.Implicits._
+import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.mailer.Email
 import play.api.mvc.Call
+import play.twirl.api.TxtFormat
+import services.NotificationService._
 import services.tabula.ProfileService
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 import warwick.sso._
-import NotificationService._
-import play.twirl.api.TxtFormat
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters

@@ -8,8 +8,8 @@ import domain.ExtendedPostgresProfile.api._
 import domain.dao.UploadedFileDao
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import enumeratum._
-import helpers.JavaTime
 import services.AuditLogContext
+import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.collection.immutable

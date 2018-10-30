@@ -10,12 +10,12 @@ import domain._
 import domain.dao.ClientDao.StoredClient
 import domain.dao.ClientSummaryDao.StoredClientSummary
 import domain.dao.ClientSummaryDao.StoredClientSummary.{ClientSummaries, ReasonableAdjustments, StoredReasonableAdjustment}
-import helpers.JavaTime
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.{Index, PrimaryKey, ProvenShape}
+import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext

@@ -9,12 +9,12 @@ import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.MemberDao.StoredMember
 import domain.dao.MemberDao.StoredMember.{MemberVersions, Members, VersionedTableQuery}
-import helpers.JavaTime
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.{Index, PrimaryKey, ProvenShape}
+import warwick.core.helpers.JavaTime
 import warwick.sso.Usercode
 
 import scala.concurrent.ExecutionContext

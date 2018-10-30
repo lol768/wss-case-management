@@ -3,6 +3,7 @@
 
 @import domain.dao.CaseDao.{Case, CaseListRender}
 @import domain.{Client, Pagination}
+@import warwick.core.helpers.JavaTime
 
 @(
   title: Option[String],
@@ -26,7 +27,7 @@
     <td>
       <a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">@clientCase.key.get.string @clientCase.subject</a>
     </td>
-    <td>@helpers.JavaTime.Relative(lastUpdated)</td>
+    <td>@JavaTime.Relative(lastUpdated)</td>
   </tr>
 }
 

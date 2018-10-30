@@ -1,12 +1,10 @@
-@import domain.EntityAndCreator
-@import domain.CaseLink
-@import domain.CaseLinkType
-@import domain.dao.CaseDao.Case
-@import controllers.admin.CaseController
 @import java.time.OffsetDateTime
 
-@import domain.CaseDocument
 @import controllers.admin.CaseDocumentController
+@import domain.{CaseDocument, EntityAndCreator}
+@import domain.dao.CaseDao.Case
+@import warwick.core.helpers.JavaTime
+
 @(
   c: Case,
   documents: Seq[EntityAndCreator[CaseDocument]]
@@ -18,7 +16,7 @@
     <li>
       <a href="@controllers.admin.routes.CaseDocumentController.download(c.key.get, doc.entity.id)">@doc.entity.file.fileName</a>,
       @doc.entity.documentType.description,
-      added @helpers.JavaTime.Relative(doc.entity.created, lowercaseToday = true) by @tags.creatorAndTeam(doc.creator)
+      added @JavaTime.Relative(doc.entity.created, lowercaseToday = true) by @tags.creatorAndTeam(doc.creator)
       @defining(CaseDocumentController.deleteForm(doc.entity.lastUpdated).fill(doc.entity.lastUpdated)) { form: Form[OffsetDateTime] =>
         @b3.inline.formCSRF(controllers.admin.routes.CaseDocumentController.delete(c.key.get, doc.entity.id), 'class -> "inline-form") { implicit ifc =>
           @b3.validatedHidden(form, "version")

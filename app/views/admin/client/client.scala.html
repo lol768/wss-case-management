@@ -2,8 +2,7 @@
 
 @import domain._
 @import domain.dao.CaseDao.CaseListRender
-@import helpers.JavaTime
-@import services.CaseService
+@import warwick.core.helpers.JavaTime
 @import warwick.sso.UniversityID
 
 @(
@@ -108,7 +107,7 @@
     @registration.map { registration =>
       <dl class="dl-horizontal field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(universityID)">
         <dt>Registered</dt>
-        <dd>@helpers.JavaTime.Relative(registration.updatedDate)</dd>
+        <dd>@JavaTime.Relative(registration.updatedDate)</dd>
         <dt data-field-history-field="gp">GP</dt>
         <dd>@registration.data.gp</dd>
         <dt data-field-history-field="tutor">Tutor</dt>

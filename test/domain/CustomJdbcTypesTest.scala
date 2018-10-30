@@ -6,7 +6,7 @@ import java.util.UUID
 
 import domain.ExtendedPostgresProfile.api._
 import domain.dao.AbstractDaoTest
-import helpers.JavaTime
+import warwick.core.helpers.JavaTime
 
 class CustomJdbcTypesTest extends AbstractDaoTest {
 

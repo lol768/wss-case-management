@@ -1,11 +1,8 @@
-@import domain.{Enquiry, Issue, IssueState, MessageRender, SitsProfile}
-@import helpers.JavaTime
-@import org.apache.tika.mime.MediaType
-
 @import domain.dao.CaseDao.Case
-@import domain.IssueRender
-@import domain.MessageSender
-@import domain.Client
+@import domain.{Enquiry, IssueRender, IssueState, MessageSender}
+@import org.apache.tika.mime.MediaType
+@import warwick.core.helpers.JavaTime
+
 @(
   issueRender: IssueRender,
   f: Form[String],

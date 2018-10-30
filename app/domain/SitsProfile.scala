@@ -4,9 +4,9 @@ import java.time.LocalDate
 
 import enumeratum.EnumEntry.CapitalWords
 import enumeratum.{Enum, EnumEntry}
-import helpers.JavaTime
 import helpers.StringUtils._
-import warwick.sso.{Department, Name, UniversityID, User, Usercode}
+import warwick.core.helpers.JavaTime
+import warwick.sso._
 
 import scala.collection.immutable
 

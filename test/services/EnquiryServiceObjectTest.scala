@@ -3,8 +3,8 @@ package services
 import java.util.UUID
 
 import domain._
-import helpers.JavaTime
 import org.scalatestplus.play.PlaySpec
+import warwick.core.helpers.JavaTime
 
 class EnquiryServiceObjectTest extends PlaySpec {
 

@@ -2,6 +2,7 @@
 
 @import controllers.admin.AppointmentController
 @import domain.{Appointment, AppointmentNote}
+@import warwick.core.helpers.JavaTime
 
 @(
   appointment: Appointment,
@@ -12,9 +13,9 @@
   <div class="panel-heading">
     <h3 class="panel-title clearfix">
       <span class="date pull-right">
-        @helpers.JavaTime.Relative(note.created)
+        @JavaTime.Relative(note.created)
         @if(note.lastUpdated != note.created) {
-          (last updated @helpers.JavaTime.Relative(note.lastUpdated))
+          (last updated @JavaTime.Relative(note.lastUpdated))
         }
       </span>
     </h3>
