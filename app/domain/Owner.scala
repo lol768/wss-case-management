@@ -18,6 +18,7 @@ case class Owner(
   entityId: UUID,
   entityType: Owner.EntityType,
   userId: Usercode,
+  outlookId: Option[String],
   version: OffsetDateTime
 ) extends Versioned[Owner] {
 
@@ -27,6 +28,7 @@ case class Owner(
       entityId,
       entityType,
       userId,
+      outlookId,
       version,
       operation,
       timestamp,
@@ -37,17 +39,17 @@ case class Owner(
 
 object EnquiryOwner {
   def apply(enquiryId: UUID, userId: Usercode, version: OffsetDateTime = JavaTime.offsetDateTime) =
-    Owner(entityId = enquiryId, entityType = Owner.EntityType.Enquiry, userId = userId, version = version)
+    Owner(entityId = enquiryId, entityType = Owner.EntityType.Enquiry, userId = userId, version = version, outlookId = None)
 }
 
 object CaseOwner {
   def apply(caseId: UUID, userId: Usercode, version: OffsetDateTime = JavaTime.offsetDateTime) =
-    Owner(entityId = caseId, entityType = Owner.EntityType.Case, userId = userId, version = version)
+    Owner(entityId = caseId, entityType = Owner.EntityType.Case, userId = userId, version = version, outlookId = None)
 }
 
 object AppointmentOwner {
   def apply(appointmentID: UUID, userId: Usercode, version: OffsetDateTime = JavaTime.offsetDateTime) =
-    Owner(entityId = appointmentID, entityType = Owner.EntityType.Appointment, userId = userId, version = version)
+    Owner(entityId = appointmentID, entityType = Owner.EntityType.Appointment, userId = userId, version = version, outlookId = None)
 }
 
 object Owner extends Versioning {
@@ -70,6 +72,7 @@ object Owner extends Versioning {
     def entityType = column[Owner.EntityType]("entity_type")
     def userId = column[Usercode]("user_id")
     def version = column[OffsetDateTime]("version_utc")
+    def outlookId = column[Option[String]]("outlook_id")
 
   }
 
@@ -78,7 +81,7 @@ object Owner extends Versioning {
 
     def pk = primaryKey("pk_owner", (entityId, entityType, userId))
 
-    def * = (entityId, entityType, userId, version).mapTo[Owner]
+    def * = (entityId, entityType, userId, outlookId, version).mapTo[Owner]
   }
 
   class OwnerVersions(tag: Tag) extends Table[OwnerVersion](tag, "owner_version") with StoredVersionTable[Owner] with OwnerProperties {
@@ -86,7 +89,7 @@ object Owner extends Versioning {
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
     def auditUser = column[Option[Usercode]]("version_user")
 
-    def * = (entityId, entityType, userId, version, operation, timestamp, auditUser).mapTo[OwnerVersion]
+    def * = (entityId, entityType, userId, outlookId, version, operation, timestamp, auditUser).mapTo[OwnerVersion]
     def pk = primaryKey("pk_ownerversions", (entityId, entityType, userId, timestamp))
     def idx = index("idx_ownerversions", (entityId, entityType, userId, version))
   }
@@ -106,6 +109,7 @@ case class OwnerVersion(
   entityId: UUID,
   entityType: Owner.EntityType,
   userId: Usercode,
+  outlookId: Option[String],
   version: OffsetDateTime = JavaTime.offsetDateTime,
   operation: DatabaseOperation,
   timestamp: OffsetDateTime,

@@ -134,7 +134,8 @@ case class AppointmentClient(
 )
 
 case class AppointmentTeamMember(
-  member: Member
+  member: Member,
+  outlookId: Option[String]
 )
 
 sealed abstract class AppointmentType(val description: String) extends EnumEntry

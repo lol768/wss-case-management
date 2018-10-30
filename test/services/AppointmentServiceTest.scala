@@ -30,7 +30,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
         (ClientDao.clients.table += StoredClient(storedAppointmentClient.universityID, None, now)) andThen
         (AppointmentDao.appointmentClients.table += storedAppointmentClient) andThen
         (MemberDao.members.table += StoredMember(Usercode("mentalhealth-counsellor"), None, now)) andThen
-        (Owner.owners.table += Owner(stored.id, Owner.EntityType.Appointment, Usercode("mentalhealth-counsellor"), JavaTime.offsetDateTime))
+        (Owner.owners.table += Owner(stored.id, Owner.EntityType.Appointment, Usercode("mentalhealth-counsellor"), None, JavaTime.offsetDateTime))
       )
       stored.asAppointment
     }
@@ -83,7 +83,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
             AppointmentClient(Client(UniversityID("0672089"), None, now), AppointmentState.Provisional, None)
           ),
           Set(
-            AppointmentTeamMember(Member(Usercode("u1234567"), None, now))
+            AppointmentTeamMember(Member(Usercode("u1234567"), None, now), None)
           ),
           None,
           Set.empty,
@@ -109,8 +109,8 @@ class AppointmentServiceTest extends AbstractDaoTest {
             AppointmentClient(Client(UniversityID("0672089"), None, now), AppointmentState.Provisional, None)
           ),
           Set(
-            AppointmentTeamMember(Member(Usercode("u1234444"), None, now)),
-            AppointmentTeamMember(Member(Usercode("u1234555"), None, now))
+            AppointmentTeamMember(Member(Usercode("u1234444"), None, now), None),
+            AppointmentTeamMember(Member(Usercode("u1234555"), None, now), None)
           ),
           None,
           Set(c, c2),

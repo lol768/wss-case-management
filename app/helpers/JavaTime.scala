@@ -2,10 +2,9 @@ package helpers
 
 import java.time._
 import java.time.format.DateTimeFormatter
-import java.time.temporal.WeekFields
 
-import play.api.data.{FormError, Forms, Mapping}
 import play.api.data.format.{Formats, Formatter}
+import play.api.data.{FormError, Forms, Mapping}
 import play.api.libs.json._
 import uk.ac.warwick.util.core.DateTimeUtils
 
@@ -14,6 +13,7 @@ object JavaTime {
 
   val localDateFormat: DateTimeFormatter = DateTimeFormatter.ISO_DATE
   val iSO8601DateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").withZone(timeZone)
+  val iSO8601DateFormatNoZone: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
   val dateFullNoDayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
 
   implicit def dateTimeOrdering: Ordering[OffsetDateTime] = Ordering.fromLessThan(_.isBefore(_))

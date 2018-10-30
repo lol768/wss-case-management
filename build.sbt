@@ -36,7 +36,7 @@ lazy val main = (project in file("."))
     javaOptions in Test += "-Dlogger.resource=test-logging.xml"
   )
 
-val playUtilsVersion = "1.20"
+val playUtilsVersion = "1.23"
 val ssoClientVersion = "2.57"
 val warwickUtilsVersion = "20180831"
 val enumeratumVersion = "1.5.13"
