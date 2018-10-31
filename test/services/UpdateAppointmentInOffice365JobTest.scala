@@ -17,7 +17,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.Configuration
-import play.api.libs.json.{JsNull, Json}
+import play.api.libs.json.{JsNull, JsObject, Json}
 import services.job.UpdateAppointmentInOffice365Job
 import warwick.office365.O365Service
 import warwick.sso.{UniversityID, Usercode}
@@ -36,6 +36,12 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
     val mockAppointmentService: AppointmentService = mock[AppointmentService](RETURNS_SMART_NULLS)
     val mockOwnerService: OwnerService = mock[OwnerService](RETURNS_SMART_NULLS)
     val mockO365Service: O365Service = mock[O365Service](RETURNS_SMART_NULLS)
+    val mockPreferencesService: UserPreferencesService = mock[UserPreferencesService](RETURNS_SMART_NULLS)
+
+    when(mockPreferencesService.get(Matchers.any[Set[Usercode]])(Matchers.any())).thenAnswer((invocation: InvocationOnMock) => {
+      val usercodes = invocation.getArguments.apply(0).asInstanceOf[Set[Usercode]]
+      Future.successful(Right(usercodes.map(u => u -> UserPreferences.default.copy(office365Enabled = true)).toMap))
+    })
 
     val appointmentId: UUID = UUID.randomUUID()
     val appointment: Appointment = Appointment(
@@ -61,11 +67,33 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
     ))
     when(mockAppointmentService.findFull(appointmentId)).thenReturn(Future.successful(Right(appointmentRender)))
 
+    val expectedAppointmentJson: JsObject = Json.obj(
+      "Subject" -> "Wellbeing Support Service appointment (APP-001)",
+      "Body" -> Json.obj(
+        "ContentType" -> "Text",
+        "Content" -> "You have a face to face appointment with 1 client"
+      ),
+      "Start" -> Json.obj(
+        "DateTime" -> "2018-01-01T12:00:00.000",
+        "TimeZone" -> "Europe/London"
+      ),
+      "End" -> Json.obj(
+        "DateTime" -> "2018-01-01T13:00:00.000",
+        "TimeZone" -> "Europe/London"
+      ),
+      "WebLink" -> "https:///team/appointment/APP-001",
+      "Location" -> Json.obj(
+        "DisplayName" -> "Room, Building",
+        "Address" -> JsNull
+      )
+    )
+
     val job = new UpdateAppointmentInOffice365Job(
       mockScheduler,
       mockAppointmentService,
       mockOwnerService,
       mockO365Service,
+      mockPreferencesService,
       mockConfig
     )
 
@@ -139,27 +167,6 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
         AppointmentTeamMember(Member(Usercode(owner2), None, null), Some(owner2outlookId))
       ))
 
-      private val expectedAppointmentJson = Json.obj(
-        "Subject" -> "Wellbeing Support Service appointment (APP-001)",
-        "Body" -> Json.obj(
-          "ContentType" -> "Text",
-          "Content" -> "You have a face to face appointment with 1 client"
-        ),
-        "Start" -> Json.obj(
-          "DateTime" -> "2018-01-01T12:00:00.000",
-          "TimeZone" -> "Europe/London"
-        ),
-        "End" -> Json.obj(
-          "DateTime" -> "2018-01-01T13:00:00.000",
-          "TimeZone" -> "Europe/London"
-        ),
-        "WebLink" -> "https:///team/appointment/APP-001",
-        "Location" -> Json.obj(
-          "DisplayName" -> "Room, Building",
-          "Address" -> JsNull
-        )
-      )
-
       when(mockO365Service.deleteO365(owner3, s"events/$owner3outlookId", Json.obj())).thenReturn(Future.successful(Some(JsNull)))
       when(mockO365Service.postO365(owner1, "events", expectedAppointmentJson)).thenReturn(Future.successful(Some(Json.obj("Id" -> "4567"))))
       when(mockO365Service.patchO365(owner2, s"events/$owner2outlookId", expectedAppointmentJson)).thenReturn(Future.successful(Some(Json.obj("Id" -> "5678"))))
@@ -185,27 +192,6 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
         AppointmentTeamMember(Member(Usercode("owner3"), None, null), Some(null)),
         AppointmentTeamMember(Member(Usercode("owner4"), None, null), Some(null))
       ))
-
-      private val expectedAppointmentJson = Json.obj(
-        "Subject" -> "Wellbeing Support Service appointment (APP-001)",
-        "Body" -> Json.obj(
-          "ContentType" -> "Text",
-          "Content" -> "You have a face to face appointment with 1 client"
-        ),
-        "Start" -> Json.obj(
-          "DateTime" -> "2018-01-01T12:00:00.000",
-          "TimeZone" -> "Europe/London"
-        ),
-        "End" -> Json.obj(
-          "DateTime" -> "2018-01-01T13:00:00.000",
-          "TimeZone" -> "Europe/London"
-        ),
-        "WebLink" -> "https:///team/appointment/APP-001",
-        "Location" -> Json.obj(
-          "DisplayName" -> "Room, Building",
-          "Address" -> JsNull
-        )
-      )
 
       when(mockO365Service.postO365("owner1", "events", expectedAppointmentJson)).thenReturn(Future.successful(Some(Json.obj())))
       when(mockO365Service.postO365("owner2", "events", expectedAppointmentJson)).thenReturn(Future.successful(None))
@@ -235,6 +221,48 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
       ownersMap("owner4") mustBe "2345"
       ownersMap("owner5") mustBe "3456"
       dataMap.getIntegerFromString("retries").intValue mustBe 1
+    }
+
+    "only push when opted-in" in new Fixture {
+      val owner1 = "cusfal"
+      val owner1outlookId = ""
+      val owner2 = "cusebr"
+      val owner2outlookId = "1234"
+      val owner3 = "cuscao"
+      val owner3outlookId = "2345"
+      val owner4 = "curef"
+      val owner4outlookId = ""
+      private val context = setupContext(Map(
+        "appointmentId" -> appointmentId.toString,
+        "owners" -> s"""{"$owner1":"$owner1outlookId", "$owner2":"$owner2outlookId", "$owner3":"$owner3outlookId", "$owner4":"$owner4outlookId"}"""
+      ))
+
+      when(appointmentRender.teamMembers).thenReturn(Set(
+        AppointmentTeamMember(Member(Usercode(owner1), None, null), None),
+        AppointmentTeamMember(Member(Usercode(owner2), None, null), Some(owner2outlookId))
+      ))
+
+      when(mockO365Service.deleteO365(owner3, s"events/$owner3outlookId", Json.obj())).thenReturn(Future.successful(Some(JsNull)))
+      when(mockO365Service.postO365(owner1, "events", expectedAppointmentJson)).thenReturn(Future.successful(Some(Json.obj("Id" -> "4567"))))
+      when(mockO365Service.patchO365(owner2, s"events/$owner2outlookId", expectedAppointmentJson)).thenReturn(Future.successful(Some(Json.obj("Id" -> "5678"))))
+
+      when(mockOwnerService.setAppointmentOutlookId(appointmentId, Usercode(owner1), "4567")(auditLogContext)).thenReturn(Future.successful(Right(Owner(appointmentId, EntityType.Appointment, Usercode(owner1), Some("4567"), null))))
+
+      when(mockPreferencesService.get(Set(Usercode(owner1), Usercode(owner2), Usercode(owner3), Usercode(owner4)))).thenReturn(Future.successful(Right(Map(
+        Usercode(owner1) -> UserPreferences.default, // Owner 1 not enabled
+        Usercode(owner2) -> UserPreferences.default.copy(office365Enabled = true),
+        Usercode(owner3) -> UserPreferences.default, // Owner 3 not enabled
+        Usercode(owner4) -> UserPreferences.default.copy(office365Enabled = true),
+      ))))
+
+      job.execute(context)
+
+      verify(mockO365Service, never()).postO365(Matchers.eq(owner1), Matchers.any(), Matchers.any()) // Owner 1 shouldn't be pushed even though they are added
+      verify(mockO365Service, times(1)).patchO365(Matchers.eq(owner2), Matchers.any(), Matchers.any()) // Owner 2 should be pushed
+      verify(mockO365Service, times(1)).deleteO365(Matchers.eq(owner3), Matchers.any(), Matchers.any()) // Owner 3 should be pushed as it's a delete and that should ignore that they're not enabled
+
+      verify(mockOwnerService, never()).setAppointmentOutlookId(Matchers.any(), Matchers.eq(Usercode(owner2)), Matchers.any())(Matchers.any())
+      verify(mockScheduler, never()).scheduleJob(Matchers.any[JobDetail](), Matchers.any[Trigger]())
     }
 
   }
