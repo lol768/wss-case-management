@@ -8,13 +8,11 @@ import _root_.helpers.StringUtils._
 import domain.{AppointmentRender, AppointmentState}
 import javax.inject.Inject
 import org.quartz._
-import _root_.helpers.JavaTime
 import play.api.Configuration
 import play.api.libs.json.{JsNull, JsValue, Json}
-import services.office365.Office365CalendarService
 import services.{AppointmentService, AuditLogContext, OwnerService}
 import warwick.core.Logging
-import warwick.office365.O365Service
+import warwick.office365.{O365, O365Service}
 import warwick.sso.Usercode
 
 import scala.concurrent.duration.Duration
@@ -164,11 +162,11 @@ class UpdateAppointmentInOffice365Job @Inject()(
       )
     ),
     "Start" -> Json.obj(
-      "DateTime" -> JavaTime.iSO8601DateFormatNoZone.format(a.appointment.start),
+      "DateTime" -> O365.office365DateFormat.format(a.appointment.start),
       "TimeZone" -> "Europe/London"
     ),
     "End" -> Json.obj(
-      "DateTime" -> JavaTime.iSO8601DateFormatNoZone.format(a.appointment.start.plusMinutes(a.appointment.duration.toMinutes)),
+      "DateTime" -> O365.office365DateFormat.format(a.appointment.start.plusMinutes(a.appointment.duration.toMinutes)),
       "TimeZone" -> "Europe/London"
     ),
     "WebLink" -> s"https://$domain${controllers.admin.routes.AppointmentController.view(a.appointment.key).url}",

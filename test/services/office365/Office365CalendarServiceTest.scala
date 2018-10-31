@@ -4,7 +4,6 @@ import java.util.UUID
 
 import domain.Owner.EntityType
 import domain.{AppointmentTeamMember, Member, Owner}
-import helpers.JavaTime
 import org.mockito.Matchers
 import org.mockito.Mockito.{RETURNS_SMART_NULLS, _}
 import org.mockito.invocation.InvocationOnMock
@@ -17,6 +16,7 @@ import play.api.Configuration
 import play.api.libs.json.Json
 import services.job.UpdateAppointmentInOffice365Job
 import services.{NoAuditLogging, UpdateDifferencesResult}
+import warwick.core.helpers.JavaTime
 import warwick.sso.Usercode
 
 import scala.concurrent.ExecutionContext.Implicits.global
