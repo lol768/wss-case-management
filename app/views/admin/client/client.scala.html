@@ -12,6 +12,7 @@
   clientSummary: Option[ClientSummary],
   enquiries: Seq[EnquiryListRender],
   cases: Seq[CaseListRender],
+  appointments: Seq[AppointmentRender],
   owners: Map[UUID, Set[Member]],
   form: Form[ClientSummarySave],
   inMentalHealthTeam: Boolean,
@@ -216,7 +217,63 @@
 
     <p><a class="btn btn-default" href="@controllers.admin.routes.CaseController.createSelectTeam(client = Some(universityID))">Create a case</a></p>
 
-    @* TODO List upcoming appointments *@
+    @if(appointments.isEmpty) {
+      <p>No upcoming appointments</p>
+    } else {
+      <p>
+        @tags.p(
+          number = appointments.size,
+          singular = "upcoming appointment"
+        )(
+          plural = "upcoming appointments",
+          zero = "No"
+        )
+        <button class="toggle-element btn btn-default btn-xs" data-target="#appointment-tables" data-shown-label="hide">show</button>
+      </p>
+
+      <div class="hidden" id="appointment-tables">
+        <table class="table table-condensed">
+          <caption>Upcoming appointments</caption>
+          <thead>
+            <tr>
+              <th class="col-sm-1">Appointment ID</th>
+              <th class="col-sm-3">Subject</th>
+              <th class="col-sm-2">When</th>
+              <th class="col-sm-2">Staff member</th>
+              <th class="col-sm-2">Location</th>
+              <th class="col-sm-2">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @appointments.map { a =>
+              <tr>
+                <td><a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)" target="_blank">@a.appointment.key.string</a></td>
+                <td>
+                  @tags.icons.appointmentState(a.appointment.state)
+                  <a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)" target="_blank">@a.appointment.subject(None, None)</a>
+                </td>
+                <td>@JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))</td>
+                <td>
+                  @a.teamMembers.toSeq.sortBy(_.member).map(_.member.safeFullName).mkString(", ")
+                  (@a.appointment.team.name team)
+                </td>
+                <td>
+                  @a.room.map { r => @tags.mapLink(r) }
+                  (@a.appointment.appointmentType.description)
+                </td>
+                <td>
+                  <span class="label label-@a.appointment.state.labelType" @a.appointment.cancellationReason.map { r => title="@r.description" }>
+                    @tags.icons.appointmentState(a.appointment.state)
+                    @a.appointment.state
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
     <p><a class="btn btn-default" href="@controllers.admin.routes.AppointmentController.createSelectTeam(client = Some(universityID))">Create an appointment</a></p>
 
     @if(enquiries.isEmpty) {
