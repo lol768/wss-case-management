@@ -6,15 +6,15 @@ import java.util.UUID
 import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.UploadedFileDao._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import slick.jdbc.JdbcProfile
-import ExtendedPostgresProfile.api._
-import helpers.JavaTime
 import services.AuditLogContext
+import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
+import warwick.core.helpers.JavaTime
 import warwick.sso.Usercode
 
 import scala.concurrent.ExecutionContext

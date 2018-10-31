@@ -4,9 +4,9 @@ import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, OffsetDateTime}
 
 import domain._
-import helpers.JavaTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
 object TabulaResponseParsers {

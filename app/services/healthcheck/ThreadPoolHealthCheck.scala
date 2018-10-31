@@ -4,11 +4,11 @@ import java.util.concurrent.{ExecutorService, ThreadPoolExecutor}
 
 import akka.actor.ActorSystem
 import akka.dispatch.{Dispatcher, ExecutorServiceDelegate, ForkJoinExecutorConfigurator}
-import helpers.JavaTime.{localDateTime => now}
 import javax.inject.{Inject, Named, Singleton}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status
 import uk.ac.warwick.util.service.{ServiceHealthcheck, ServiceHealthcheckProvider}
+import warwick.core.helpers.JavaTime.{localDateTime => now}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext

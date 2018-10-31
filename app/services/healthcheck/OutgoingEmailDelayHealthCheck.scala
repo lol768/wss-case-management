@@ -4,20 +4,20 @@ import java.time.temporal.ChronoUnit
 
 import akka.actor.ActorSystem
 import com.google.inject.Inject
-import helpers.JavaTime
-import helpers.JavaTime.{localDateTime => now}
 import javax.inject.Singleton
 import services.EmailService
 import services.healthcheck.OutgoingEmailDelayHealthCheck._
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status
 import uk.ac.warwick.util.service.{ServiceHealthcheck, ServiceHealthcheckProvider}
 import warwick.core.Logging
+import warwick.core.helpers.JavaTime
+import warwick.core.helpers.JavaTime.{localDateTime => now}
 import warwick.core.timing.TimingContext
 
+import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration._
 import scala.concurrent.duration._
-import scala.collection.JavaConverters._
 
 object OutgoingEmailDelayHealthCheck {
   val Name: String = "outgoing-email-delay"

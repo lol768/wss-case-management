@@ -8,11 +8,12 @@ import domain.ExtendedPostgresProfile.api._
 import domain.dao.LocationDao.{StoredBuilding, StoredRoom}
 import domain.dao.{DaoRunner, LocationDao}
 import domain.{Building, BuildingSave, Room, RoomSave}
-import helpers.{JavaTime, ServiceResults}
+import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import warwick.core.Logging
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 
 import scala.concurrent.{ExecutionContext, Future}

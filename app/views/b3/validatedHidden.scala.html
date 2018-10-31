@@ -1,10 +1,28 @@
 @(
   form: Form[_],
   field: String
-)(implicit fc: views.html.b3.B3FieldConstructor, messagesProvider: MessagesProvider)
+)(implicit fc: views.html.b3.B3FieldConstructor, messagesProvider: MessagesProvider, request: RequestHeader)
 
 @if(form.errors(field).nonEmpty) {
-  @b3.inputWrapped("hidden", form(field)) { input => @input }
+  @if(form.errors(field).map(_.message).contains("error.optimisticLocking")) {
+    <div class="alert alert-danger">
+      <p>
+        This form has changed since you started editing. You will need to reload the page with the
+        most recent version in order to edit it.
+      </p>
+      <p>
+        Use the button below to open this form in a new tab or window, where you can copy any
+        existing changes on this form to the most recent version.
+      </p>
+      <p>
+        <a class="btn btn-primary" target="_blank" href="@request.uri">
+          <i class="far fa-external-link-alt"></i> Open most recent version in new tab or window
+        </a>
+      </p>
+    </div>
+  } else {
+    @b3.inputWrapped("hidden", form(field)) { input => @input }
+  }
 } else {
   @b3.hidden(form(field))
 }

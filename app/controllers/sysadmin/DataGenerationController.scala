@@ -10,7 +10,6 @@ import controllers.sysadmin.DataGenerationController._
 import domain._
 import domain.dao.CaseDao.Case
 import enumeratum.{Enum, EnumEntry}
-import helpers.JavaTime
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import org.quartz._
@@ -21,6 +20,7 @@ import services._
 import uk.ac.warwick.util.core.DateTimeUtils
 import uk.ac.warwick.util.workingdays.{WorkingDaysHelper, WorkingDaysHelperImpl}
 import warwick.core.Logging
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 import warwick.sso.{AuthenticatedRequest, UniversityID, Usercode}
 

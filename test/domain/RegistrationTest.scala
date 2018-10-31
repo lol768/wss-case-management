@@ -1,10 +1,8 @@
 package domain
 
-import java.time.OffsetDateTime
-
-import helpers.JavaTime
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.{JsObject, Json}
+import warwick.core.helpers.JavaTime
 
 class RegistrationTest extends PlaySpec {
 

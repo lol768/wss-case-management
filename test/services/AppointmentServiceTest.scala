@@ -9,9 +9,10 @@ import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.ClientDao.StoredClient
 import domain.dao.MemberDao.StoredMember
 import domain.dao._
-import helpers.{DataFixture, JavaTime}
+import helpers.DataFixture
 import play.api.libs.json.Json
 import uk.ac.warwick.util.core.DateTimeUtils
+import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.Future

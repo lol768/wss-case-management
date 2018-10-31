@@ -1,9 +1,9 @@
 package helpers.caching
 
-import helpers.JavaTime
 import play.api.Logger
 import play.api.cache.AsyncCacheApi
 import system.TimingCategories
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.{TimingContext, TimingService}
 
 import scala.concurrent.duration._

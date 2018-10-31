@@ -31,8 +31,8 @@ const SHORT_DATE_TIME = 'ddd D MMM YYYY, HH:mm';
 const FULL_DATE_TIME = 'ddd Do MMMM YYYY, HH:mm';
 
 const DATE_WEEKDAY = 'ddd';
-const DATE_FULL_WITHOUT_YEAR = 'ddd D MMM';
-const DATE_FULL = 'ddd D MMM YYYY';
+const DATE_FULL_WITHOUT_YEAR = 'ddd Do MMM';
+const DATE_FULL = 'ddd Do MMM YYYY';
 
 export function formatDateMoment(then, now = localMoment()) {
   if (then.isSame(now.clone().subtract(1, 'day'), 'day')) {

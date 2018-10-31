@@ -3,21 +3,22 @@ package controllers.admin
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import controllers.{BaseController, UploadedFileControllerHelper}
 import controllers.admin.CaseController._
 import controllers.refiners.{CanEditCaseActionRefiner, _}
+import controllers.{BaseController, UploadedFileControllerHelper}
+import domain.CaseNoteType._
 import domain._
 import domain.dao.CaseDao.Case
-import domain.CaseNoteType._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
-import helpers.{FormHelpers, JavaTime, ServiceResults}
+import helpers.{FormHelpers, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Result}
-import services.tabula.ProfileService
 import services._
+import services.tabula.ProfileService
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 import warwick.sso._
 
@@ -152,12 +153,12 @@ class CaseController @Inject()(
   uploadedFileControllerHelper: UploadedFileControllerHelper
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
+  import CaseMessageController.messageForm
   import anyTeamActionRefiner._
   import canEditCaseActionRefiner._
+  import canEditCaseNoteActionRefiner._
   import canViewCaseActionRefiner._
   import canViewTeamActionRefiner._
-  import canEditCaseNoteActionRefiner._
-  import CaseMessageController.messageForm
 
   def renderCase(caseKey: IssueKey, messageForm: Form[String])(implicit request: CaseSpecificRequest[_]): Future[Result] = {
     val fetchOriginalEnquiry: Future[ServiceResult[Option[Enquiry]]] =
@@ -408,7 +409,7 @@ class CaseController @Inject()(
           Ok(
             views.html.admin.cases.edit(
               clientCase,
-              formWithErrors.withVersion(clientCase.version)
+              formWithErrors
             )
           )
         ),
@@ -550,7 +551,7 @@ class CaseController @Inject()(
           views.html.admin.cases.editNote(
             caseKey,
             noteRequest.note,
-            formWithErrors.withVersion(noteRequest.note.lastUpdated)
+            formWithErrors
           )
         )
       ),

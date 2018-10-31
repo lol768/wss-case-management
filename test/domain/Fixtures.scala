@@ -4,10 +4,10 @@ import java.time.{Duration, LocalDate}
 import java.util.UUID
 
 import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
-import domain.dao._
 import domain.dao.CaseDao.Case
 import domain.dao.LocationDao.{StoredBuilding, StoredRoom}
-import helpers.JavaTime
+import domain.dao._
+import warwick.core.helpers.JavaTime
 import warwick.sso._
 
 object Fixtures {

@@ -1,6 +1,6 @@
 @import domain.dao.CaseDao.Case
 @import domain.{Appointment, AppointmentClient, AppointmentRender, AppointmentTeamMember, Room}
-@import warwick.sso.{User, Usercode}
+@import warwick.core.helpers.JavaTime
 
 @(
   title: Option[String],
@@ -25,7 +25,7 @@
       <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string @appointment.subject(Some(clients), Some(teamMembers))</a>
     </td>
     <td>
-      @helpers.JavaTime.Relative(appointment.start) &ndash; @appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+      @JavaTime.Relative(appointment.start) &ndash; @appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
     </td>
     <td>
       <ul class="list-unstyled">

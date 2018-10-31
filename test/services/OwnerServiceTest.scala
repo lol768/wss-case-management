@@ -5,10 +5,9 @@ import java.time.{OffsetDateTime, ZonedDateTime}
 import domain.IssueState.Open
 import domain._
 import domain.dao.AbstractDaoTest
-import helpers.{DataFixture, JavaTime}
-import play.api.inject.bind
-import play.api.inject.guice.GuiceApplicationBuilder
+import helpers.DataFixture
 import uk.ac.warwick.util.core.DateTimeUtils
+import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
 class OwnerServiceTest extends AbstractDaoTest {

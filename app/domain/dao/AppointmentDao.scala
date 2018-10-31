@@ -14,13 +14,13 @@ import domain.dao.AppointmentDao.AppointmentCase.AppointmentCases
 import domain.dao.AppointmentDao._
 import domain.dao.CaseDao.cases
 import domain.dao.ClientDao.StoredClient.Clients
-import helpers.JavaTime
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
+import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext

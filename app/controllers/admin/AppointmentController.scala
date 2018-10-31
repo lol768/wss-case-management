@@ -4,13 +4,13 @@ import java.time.format.DateTimeFormatter
 import java.time.{Duration, OffsetDateTime}
 import java.util.UUID
 
-import controllers.{API, BaseController}
 import controllers.admin.AppointmentController._
 import controllers.refiners._
+import controllers.{API, BaseController}
 import domain._
 import domain.dao.CaseDao.Case
 import helpers.ServiceResults.{ServiceError, ServiceResult}
-import helpers.{FormHelpers, JavaTime, ServiceResults}
+import helpers.{FormHelpers, ServiceResults}
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -18,8 +18,9 @@ import play.api.i18n.Messages
 import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent, Result}
 import services.FreeBusyService.FreeBusyPeriod
-import services.tabula.ProfileService
 import services._
+import services.tabula.ProfileService
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 import warwick.sso._
 
@@ -188,7 +189,7 @@ class AppointmentController @Inject()(
   def view(appointmentKey: IssueKey): Action[AnyContent] = CanViewAppointmentAction(appointmentKey).async { implicit request =>
     renderAppointment(
       appointmentKey,
-      cancelForm(request.appointment.lastUpdated).withVersion(request.appointment.lastUpdated).discardingErrors
+      cancelForm(request.appointment.lastUpdated).discardingErrors
     )
   }
 
@@ -305,7 +306,7 @@ class AppointmentController @Inject()(
           Ok(
             views.html.admin.appointments.edit(
               a.appointment,
-              formWithErrors.withVersion(a.appointment.lastUpdated),
+              formWithErrors,
               a.clientCases,
               availableRooms
             )
@@ -403,7 +404,7 @@ class AppointmentController @Inject()(
     cancelForm(appointment.lastUpdated).bindFromRequest().fold(
       formWithErrors => renderAppointment(
         appointmentKey,
-        formWithErrors.withVersion(appointment.lastUpdated)
+        formWithErrors
       ),
       data => {
         val note = data.message.map(AppointmentNoteSave(_, request.user.get.usercode))
@@ -456,7 +457,7 @@ class AppointmentController @Inject()(
           views.html.admin.appointments.editNote(
             appointmentKey,
             request.note,
-            formWithErrors.withVersion(request.note.lastUpdated)
+            formWithErrors
           )
         )
       ),

@@ -6,11 +6,12 @@ import controllers.refiners.AnyTeamActionRefiner
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.CaseDao.Case
-import helpers.{JavaTime, ServiceResults}
+import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent}
 import services._
+import warwick.core.helpers.JavaTime
 
 import scala.concurrent.{ExecutionContext, Future}
 

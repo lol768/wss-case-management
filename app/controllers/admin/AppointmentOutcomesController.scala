@@ -3,19 +3,19 @@ package controllers.admin
 import java.time.OffsetDateTime
 
 import controllers.BaseController
+import controllers.admin.AppointmentOutcomesController._
 import controllers.refiners.AppointmentActionFilters
-import javax.inject.{Inject, Singleton}
-
-import scala.concurrent.{ExecutionContext, Future}
-import AppointmentOutcomesController._
 import domain._
-import helpers.JavaTime
+import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent}
 import services.AppointmentService
+import warwick.core.helpers.JavaTime
 import warwick.sso.UniversityID
+
+import scala.concurrent.{ExecutionContext, Future}
 
 object AppointmentOutcomesController {
   case class AppointmentClientAttendanceFormData(
@@ -77,7 +77,7 @@ class AppointmentOutcomesController @Inject()(
         formWithErrors => Future.successful(
           Ok(views.html.admin.appointments.outcomes(
             a,
-            formWithErrors.withVersion(a.appointment.lastUpdated)
+            formWithErrors
           ))
         ),
         data => appointments.recordOutcomes(

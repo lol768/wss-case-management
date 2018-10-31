@@ -4,10 +4,10 @@ import java.time.OffsetDateTime
 
 import akka.actor.ActorSystem
 import com.google.inject.Inject
-import helpers.JavaTime
 import javax.inject.Singleton
 import services.EmailService
 import warwick.core.Logging
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 
 import scala.concurrent.Await

@@ -1,6 +1,3 @@
-@import domain.AtRiskClient
-@import domain.ClientRiskStatus
-@import helpers.JavaTime
 @(atRiskClientsRoute: Call)(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
 
 @b3.vertical.formCSRF(routes.ClientSearchController.search(), 'class -> "client-search") { implicit ifc =>
