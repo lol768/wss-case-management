@@ -229,7 +229,7 @@ object CaseHistory {
   private def flattenCollection[A <: Versioned[A], B <: StoredVersion[A]](items: Seq[B]): Seq[(Set[A], OffsetDateTime, Option[Usercode])] = {
     def toSpecificItem(item: B): A = item match {
       case tag: StoredCaseTagVersion => StoredCaseTag(tag.caseId, tag.caseTag, tag.version).asInstanceOf[A]
-      case owner: OwnerVersion => Owner(owner.entityId, owner.entityType, owner.userId, owner.version).asInstanceOf[A]
+      case owner: OwnerVersion => Owner(owner.entityId, owner.entityType, owner.userId, owner.outlookId, owner.version).asInstanceOf[A]
       case client: StoredCaseClientVersion => StoredCaseClient(client.caseId, client.universityID, client.version).asInstanceOf[A]
       case _ => throw new IllegalArgumentException("Unsupported versioned item")
     }

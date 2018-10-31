@@ -22,6 +22,7 @@ import play.api.Configuration
 import play.api.libs.json.Json
 import services.AppointmentService._
 import services.job.SendAppointmentClientReminderJob
+import services.office365.Office365CalendarService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.core.Logging
 import warwick.core.helpers.JavaTime
@@ -37,6 +38,7 @@ trait AppointmentService {
   def update(id: UUID, appointment: AppointmentSave, cases: Set[UUID], clients: Set[UniversityID], teamMembers: Set[Usercode], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Appointment]]
+  def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[AppointmentRender]]
   def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
   def find(appointmentKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Appointment]]
   def findForRender(appointmentKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentRender]]
@@ -96,6 +98,7 @@ class AppointmentServiceImpl @Inject()(
   clientService: ClientService,
   memberService: MemberService,
   ownerService: OwnerService,
+  office365CalendarService: Office365CalendarService,
   daoRunner: DaoRunner,
   dao: AppointmentDao,
   scheduler: Scheduler,
@@ -151,7 +154,9 @@ class AppointmentServiceImpl @Inject()(
             )
           })
         } yield inserted).flatMap { a =>
-          ownerService.setAppointmentOwners(a.id, teamMembers).successFlatMapTo { _ =>
+          ownerService.setAppointmentOwners(a.id, teamMembers).successFlatMapTo { setOwnersResult =>
+            office365CalendarService.updateAppointment(a.id, setOwnersResult)
+
             notificationService.newAppointment(clients).map(sr =>
               ServiceResults.logErrors(sr, logger, ())
             ).map(_ => {
@@ -228,7 +233,9 @@ class AppointmentServiceImpl @Inject()(
             version
           )
         } yield (updated, clientsResult)).flatMap { case (a, clientsResult) =>
-          ownerService.setAppointmentOwners(a.id, teamMembers).successFlatMapTo { _ =>
+          ownerService.setAppointmentOwners(a.id, teamMembers).successFlatMapTo { setOwnersResult =>
+            office365CalendarService.updateAppointment(a.id, setOwnersResult)
+
             val notifyAddedClients: Future[ServiceResult[Option[Activity]]] =
               if (clientsResult.added.nonEmpty)
                 notificationService.newAppointment(clientsResult.added.map(_.universityID).toSet).map(sr =>
@@ -266,9 +273,16 @@ class AppointmentServiceImpl @Inject()(
   }
 
   override def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Appointment]] =
-    daoRunner.run(dao.findByIDQuery(id).map(_.appointment).result.head).map(Right(_)).recover {
+    daoRunner.run(dao.findByIDQuery(id).map(_.appointment).result.head).map(ServiceResults.success).recover {
       case _: NoSuchElementException => ServiceResults.error[Appointment](s"Could not find an Appointment with ID $id")
     }
+
+  override def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[AppointmentRender]] = {
+    val query = dao.findByIDQuery(id)
+    listForRender(query).map(_.map(_.head)).recover {
+      case _: NoSuchElementException => ServiceResults.error[AppointmentRender](s"Could not find an Appointment with ID ${id.toString}")
+    }
+  }
 
   override def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]] =
     daoRunner.run(dao.findByIDsQuery(ids.toSet).map(_.appointment).result).map { appointments =>
@@ -281,7 +295,7 @@ class AppointmentServiceImpl @Inject()(
     }
 
   override def find(appointmentKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Appointment]] =
-    daoRunner.run(dao.findByKeyQuery(appointmentKey).map(_.appointment).result.head).map(Right(_)).recover {
+    daoRunner.run(dao.findByKeyQuery(appointmentKey).map(_.appointment).result.head).map(ServiceResults.success).recover {
       case _: NoSuchElementException => ServiceResults.error[Appointment](s"Could not find an Appointment with key ${appointmentKey.string}")
     }
 
@@ -433,7 +447,7 @@ class AppointmentServiceImpl @Inject()(
     ).map(_.map { case (ac, c) => ac.asAppointmentClient(c.asClient) }).map(r => Right(r.toSet))
 
   override def getTeamMembers(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[AppointmentTeamMember]]] =
-    ownerService.getAppointmentOwners(Set(id)).successMapTo(_.getOrElse(id, Set()).map(AppointmentTeamMember.apply))
+    ownerService.getAppointmentOwners(Set(id)).successMapTo(_.getOrElse(id, Set()))
 
   override def clientAccept(appointmentID: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
     auditService.audit('AppointmentAccept, appointmentID.toString, 'Appointment, Json.obj("universityID" -> universityID.string)) {
@@ -538,12 +552,15 @@ class AppointmentServiceImpl @Inject()(
         updatedAppointment <- dao.update(appointment.copy(state = AppointmentState.Cancelled, cancellationReason = Some(reason)), version)
         _ <- note.map(addNoteDBIO(appointmentID, _)).getOrElse(DBIO.successful(()))
       } yield (updatedAppointment, clients)).flatMap { case (a, clients) =>
-        (for {
-          _ <- note.map(n => memberService.getOrAddMember(n.teamMember)).getOrElse(Future.successful(()))
-          activity <- notificationService.cancelledAppointment(clients.map(_.universityID).toSet).map(sr => ServiceResults.logErrors(sr, logger, ()))
-        } yield activity).map(_ =>
-          Right(a.asAppointment)
-        )
+        getTeamMembers(a.id).successFlatMapTo(teamMembers => {
+          office365CalendarService.updateAppointment(a.id, teamMembers)
+          (for {
+            _ <- note.map(n => memberService.getOrAddMember(n.teamMember)).getOrElse(Future.successful(()))
+            activity <- notificationService.cancelledAppointment(clients.map(_.universityID).toSet).map(sr => ServiceResults.logErrors(sr, logger, ()))
+          } yield activity).map(_ =>
+            ServiceResults.success(a.asAppointment)
+          )
+        })
       }
     }
 
@@ -642,7 +659,7 @@ object AppointmentService {
     withClients: Seq[(StoredAppointment, StoredAppointmentClient, StoredClient)],
     withRoom: Seq[(StoredAppointment, Room)],
     withCase: Seq[(StoredAppointment, Case)],
-    teamMembers: Map[UUID, Set[Member]],
+    teamMembers: Map[UUID, Set[AppointmentTeamMember]],
     notes: Seq[(StoredAppointmentNote, StoredMember)]
   ): Seq[AppointmentRender] = {
     val appointmentsAndClients = OneToMany.join(withClients.map {
@@ -657,7 +674,7 @@ object AppointmentService {
     appointmentsAndClients.map { case (appointment, clients) => AppointmentRender(
       appointment = appointment,
       clients = clients.toSet,
-      teamMembers = teamMembers.getOrElse(appointment.id, Set()).map(AppointmentTeamMember.apply),
+      teamMembers = teamMembers.getOrElse(appointment.id, Set()),
       room = roomByAppointment.get(appointment.id),
       appointmentAndCases.getOrElse(appointment.id, Seq()).toSet,
       notesByAppointment(appointment.id)

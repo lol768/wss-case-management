@@ -91,9 +91,8 @@ class OwnersController @Inject()(
             Future.successful(Ok(views.html.admin.cases.owners(formWithErrors, request.`case`)))
           },
           data => {
-            caseService.setOwners(request.`case`.id.get, data.toSet).successFlatMap { updatedOwners =>
-              val newOwners = updatedOwners.map(_.usercode) -- previousOwners.getOrElse(request.`case`.id.get, Set()).map(_.usercode)
-              notificationService.newCaseOwner(newOwners, request.`case`).successMap(_ =>
+            caseService.setOwners(request.`case`.id.get, data.toSet).successFlatMap { setOwnersResult =>
+              notificationService.newCaseOwner(setOwnersResult.added.map(_.userId).toSet, request.`case`).successMap(_ =>
                 Redirect(controllers.admin.routes.CaseController.view(request.`case`.key.get))
                   .flashing("success" -> Messages("flash.case.owners.updated"))
               )

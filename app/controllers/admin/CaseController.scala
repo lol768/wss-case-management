@@ -344,7 +344,7 @@ class CaseController @Inject()(
           cases.create(c, clients, data.tags),
           updateOriginalEnquiry
         ).successFlatMap { case (createdCase, originalEnquiry) =>
-          val setOwners: Future[ServiceResult[Set[Member]]] = {
+          val setOwners: Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
             // Get the original enquiry owner usercodes (if any)
             val enquiryOwners = originalEnquiry
               .map(e => enquiries.getOwners(Set(e.id.get)))

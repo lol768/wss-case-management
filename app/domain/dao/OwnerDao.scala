@@ -1,5 +1,6 @@
 package domain.dao
 
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import akka.Done
@@ -17,6 +18,7 @@ import scala.concurrent.ExecutionContext
 @ImplementedBy(classOf[OwnerDaoImpl])
 trait OwnerDao {
   def insert(owners: Set[Owner])(implicit ac: AuditLogContext): DBIO[Seq[Owner]]
+  def update(owner: Owner, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Owner]
   def delete(owners: Set[Owner])(implicit ac: AuditLogContext): DBIO[Done]
   def findEnquiryOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq]
   def findCaseOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq]
@@ -32,6 +34,9 @@ class OwnerDaoImpl @Inject() (
 
   override def insert(owners: Set[Owner])(implicit ac: AuditLogContext): DBIO[Seq[Owner]] =
     Owner.owners ++= owners.toSeq
+
+  override def update(owner: Owner, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Owner] =
+    Owner.owners.update(owner.atVersion(version))
 
   override def delete(owners: Set[Owner])(implicit ac: AuditLogContext): DBIO[Done] =
     Owner.owners.deleteAll(owners.toSeq)

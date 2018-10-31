@@ -24,9 +24,9 @@ package object services {
     val additions = needsAdding.flatMap(a => insert(a.map(comap).toSet))
 
     for {
+      u <- unchanged
       removed <- removals
       added <- additions
-      u <- unchanged
     } yield UpdateDifferencesResult(added, removed, u)
   }
 
