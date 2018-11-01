@@ -50,6 +50,8 @@ object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
   implicit lazy val messageSenderMapper: JdbcType[MessageSender] = mappedColumnTypeForEnum(MessageSender)
   implicit lazy val issueStateMapper: JdbcType[IssueState] = mappedColumnTypeForEnum(IssueState)
   implicit lazy val caseTypeMapper: JdbcType[CaseType] = mappedColumnTypeForEnum(CaseType)
+  implicit lazy val dsaFundingTypeMapper: JdbcType[DSAFundingType] = mappedColumnTypeForEnum(DSAFundingType)
+  implicit lazy val dSAIneligibilityReasonMapper: JdbcType[DSAIneligibilityReason] = mappedColumnTypeForEnum(DSAIneligibilityReason)
   implicit lazy val caseCauseMapper: JdbcType[CaseCause] = mappedColumnTypeForEnum(CaseCause)
   implicit lazy val caseTagMapper: JdbcType[CaseTag] = mappedColumnTypeForEnum(CaseTag)
   implicit lazy val caseLinkTypeMapper: JdbcType[CaseLinkType] = mappedColumnTypeForEnum(CaseLinkType)

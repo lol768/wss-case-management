@@ -4,7 +4,8 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import domain.CaseHistory.FieldHistory
-import domain.dao.CaseDao.{Case, CaseVersion, StoredCaseClient, StoredCaseClientVersion, StoredCaseTag, StoredCaseTagVersion}
+import domain.DatabaseOperation.Delete
+import domain.dao.CaseDao._
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.ServiceResults.ServiceResult
 import play.api.libs.json.{JsValue, Json, Writes}
@@ -59,6 +60,36 @@ object CaseCause extends PlayEnum[CaseCause] {
   case object SelfReferred extends CaseCause("Self-referred")
 
   override def values: immutable.IndexedSeq[CaseCause] = findValues
+}
+
+case class DSAApplicationAndTypes(
+  application: DSAApplication,
+  fundingTypes: Set[DSAFundingType]
+)
+
+sealed abstract class DSAFundingType(val description: String) extends EnumEntry with IdAndDescription {
+  override val id: String = entryName
+}
+
+object DSAFundingType extends PlayEnum[DSAFundingType] {
+  case object AssistiveTechnology extends DSAFundingType("Assistive technology")
+  case object NmhBand12 extends DSAFundingType("NMH Band 1 & 2")
+  case object NmhBand34 extends DSAFundingType("NMH Band 3 & 4")
+  case object GeneralAllowance extends DSAFundingType("General allowance")
+  case object TravelCosts extends DSAFundingType("Taxi/travel costs")
+
+  override def values: immutable.IndexedSeq[DSAFundingType] = findValues
+}
+
+sealed abstract class DSAIneligibilityReason(val description: String) extends EnumEntry
+object DSAIneligibilityReason extends PlayEnum[DSAIneligibilityReason] {
+  case object EUStudent extends DSAIneligibilityReason("EU student")
+  case object InternationalStudent extends DSAIneligibilityReason("International student")
+  case object HomeStudent extends DSAIneligibilityReason("Home student")
+  case object NoApplication extends DSAIneligibilityReason("Decided not to apply")
+  case object InsufficientEvidence extends DSAIneligibilityReason("Insufficient evidence")
+
+  override def values: immutable.IndexedSeq[DSAIneligibilityReason] = findValues
 }
 
 case class CaseLink(
@@ -157,28 +188,46 @@ object CaseHistory {
 
   private type FieldHistory[A] = Seq[(A, OffsetDateTime, Option[Either[Usercode, User]])]
 
-  val writer: Writes[CaseHistory] = (r: CaseHistory) => Json.obj(
-    "subject" -> toJson(r.subject),
-    "team" -> toJson(r.team)(Teams.writer),
-    "state" -> toJson(r.state),
-    "incidentDate" -> toJson(r.incidentDate.map { case (date, v, u) => (date.map(JavaTime.Relative.apply(_)).getOrElse("Not linked to incident"), v, u) }),
-    "onCampus" -> toJson(r.onCampus.map { case (onCampus, v, u) => (onCampus.map(isOnCampus => if (isOnCampus) "On-campus" else "Off-campus").getOrElse("Not linked to incident"), v, u) }),
-    "notifiedPolice" -> toJson(r.notifiedPolice.map { case (notifiedPolice, v, u) => (notifiedPolice.map(if (_) "Added Police notified" else "Removed Police notified").getOrElse("Not linked to incident"), v, u) }),
-    "notifiedAmbulance" -> toJson(r.notifiedAmbulance.map { case (notifiedAmbulance, v, u) => (notifiedAmbulance.map(if (_) "Added Ambulance called" else "Removed Ambulance called").getOrElse("Not linked to incident"), v, u) }),
-    "notifiedFire" -> toJson(r.notifiedFire.map { case (notifiedFire, v, u) => (notifiedFire.map(if (_) "Added Fire service called" else "Removed Fire service called").getOrElse("Not linked to incident"), v, u) }),
-    "originalEnquiry" -> toJson(r.originalEnquiry),
-    "caseType" -> toJson(r.caseType.map { case (caseType, v, u) => (caseType.map(_.description), v, u) }),
-    "cause" -> toJson(r.cause.map { case (cause, v, u) => (cause.description, v, u) }),
-    "tags" -> toJson(r.tags.map { case (tags, v, u) => (tags.map(_.description).toSeq.sorted.mkString(", "), v, u) }),
-    "owners" -> toJson(r.owners.map { case (owners, v, u) => (owners.map(o => o.map(user => user.name.full.getOrElse(user.usercode.string)).fold(_.string, n => n)).toSeq.sorted.mkString(", "), v, u) }),
-    "clients" -> toJson(r.clients.map { case (clients, v, u) => (clients.map(c => c.safeFullName).toSeq.sorted.mkString(", "), v, u) })
-  )
+  private def optionalHistory[A](emptyMessage: String, history: FieldHistory[Option[A]], toHistoryDescription: A => String) =
+    history.map{ case (value, v, u) => (value.map(toHistoryDescription).getOrElse(emptyMessage), v, u) }
+
+  private def incidentHistory[A](history: FieldHistory[Option[A]], toHistoryDescription: A => String) =
+    optionalHistory("Not linked to incident", history, toHistoryDescription)
+
+  private def dsaHistory[A](history: FieldHistory[Option[A]], toHistoryDescription: A => String) =
+    optionalHistory("Not a DSA application", history, toHistoryDescription)
+
+
+  val writer: Writes[CaseHistory] = (r: CaseHistory) =>
+    Json.obj(
+      "subject" -> toJson(r.subject),
+      "team" -> toJson(r.team)(Teams.writer),
+      "state" -> toJson(r.state),
+      "incidentDate" -> toJson(incidentHistory[OffsetDateTime](r.incidentDate, JavaTime.Relative.apply(_))),
+      "onCampus" -> toJson(incidentHistory[Boolean](r.onCampus, if (_) "On-campus" else "Off-campus")),
+      "notifiedPolice" -> toJson(incidentHistory[Boolean](r.notifiedPolice, if (_) "Added Police notified" else "Removed Police notified")),
+      "notifiedAmbulance" -> toJson(incidentHistory[Boolean](r.notifiedAmbulance, if (_) "Added Ambulance called" else "Removed Ambulance called")),
+      "notifiedFire" -> toJson(incidentHistory[Boolean](r.notifiedFire, if (_) "Added Fire service called" else "Removed Fire service called")),
+      "originalEnquiry" -> toJson(r.originalEnquiry),
+      "caseType" -> toJson(r.caseType.map { case (caseType, v, u) => (caseType.map(_.description), v, u) }),
+      "cause" -> toJson(r.cause.map { case (cause, v, u) => (cause.description, v, u) }),
+      "tags" -> toJson(r.tags.map { case (tags, v, u) => (tags.map(_.description).toSeq.sorted.mkString(", "), v, u) }),
+      "owners" -> toJson(r.owners.map { case (owners, v, u) => (owners.map(o => o.map(user => user.name.full.getOrElse(user.usercode.string)).fold(_.string, n => n)).toSeq.sorted.mkString(", "), v, u) }),
+      "clients" -> toJson(r.clients.map { case (clients, v, u) => (clients.map(c => c.safeFullName).toSeq.sorted.mkString(", "), v, u) }),
+      "dsaApplicationDate" -> toJson(dsaHistory[Option[OffsetDateTime]](r.dsaApplicationDate, date => date.map(JavaTime.Relative.apply(_)).getOrElse("Application date removed"))),
+      "dsaFundingApproved" -> toJson(dsaHistory[Option[Boolean]](r.dsaFundingApproved, approved => approved.map(if (_) "Application approved" else "Application rejected").getOrElse("Application pending"))),
+      "dsaFundingTypes" -> toJson(r.dsaFundingTypes.map { case (tags, v, u) => (tags.map(_.description).toSeq.sorted.mkString(", "), v, u) }),
+      "dsaConfirmationDate" -> toJson(dsaHistory[Option[OffsetDateTime]](r.dsaConfirmationDate, date => date.map(JavaTime.Relative.apply(_)).getOrElse("Decision date removed"))),
+      "dsaIneligibilityReason" -> toJson(dsaHistory[Option[DSAIneligibilityReason]](r.dsaIneligibilityReason, reason => reason.map(_.description).getOrElse("Ineligibility reason removed"))),
+    )
 
   def apply(
     history: Seq[CaseVersion],
     rawTagHistory: Seq[StoredCaseTagVersion],
     rawOwnerHistory: Seq[OwnerVersion],
     rawClientHistory: Seq[StoredCaseClientVersion],
+    rawDSAHistory: Seq[DSAApplicationVersion],
+    rawDSAFundingTypeHistory: Seq[StoredDSAFundingTypeVersion],
     userLookupService: UserLookupService,
     clientService: ClientService
   )(implicit ac: AuditLogContext, ec: ExecutionContext): Future[ServiceResult[CaseHistory]] = {
@@ -190,6 +239,14 @@ object CaseHistory {
       flatten(history.map(c => (getValue(c), c.version, c.auditUser))).map {
         case (c,v,u) => (c, v, u.map(toUsercodeOrUser))
       }
+
+    def dsaFieldHistory[A](getValue: DSAApplicationVersion => A): FieldHistory[Option[A]] = {
+      val history = rawDSAHistory.map(dsa => {
+        val value = if(dsa.operation == Delete) None else Some(getValue(dsa))
+        (value, dsa.version, dsa.auditUser)
+      })
+      flatten(history).map { case (c,v,u) => (c, v, u.map(toUsercodeOrUser))}
+    }
 
     clientService.getOrAddClients(rawClientHistory.map(_.universityID).toSet).map(_.map(clients =>
       CaseHistory(
@@ -210,6 +267,12 @@ object CaseHistory {
           .map { case (owners, v, u) => (owners.map(o => usersByUsercode.get(o.userId).map(Right.apply).getOrElse(Left(o.userId))), v, u.map(toUsercodeOrUser))},
         clients = flattenCollection[StoredCaseClient, StoredCaseClientVersion](rawClientHistory)
           .map { case (c, v, u) => (c.map(c => clients.find(_.universityID == c.universityID).get), v, u.map(toUsercodeOrUser))},
+        dsaApplicationDate = dsaFieldHistory(_.applicationDate),
+        dsaFundingApproved = dsaFieldHistory(_.fundingApproved),
+        dsaConfirmationDate = dsaFieldHistory(_.confirmationDate),
+        dsaFundingTypes = flattenCollection[StoredDSAFundingType, StoredDSAFundingTypeVersion](rawDSAFundingTypeHistory)
+          .map { case (fundingTypes, v, u) => (fundingTypes.map(_.fundingType), v, u.map(toUsercodeOrUser))},
+        dsaIneligibilityReason = dsaFieldHistory(_.ineligibilityReason),
       )
     ))
   }
@@ -231,6 +294,7 @@ object CaseHistory {
       case tag: StoredCaseTagVersion => StoredCaseTag(tag.caseId, tag.caseTag, tag.version).asInstanceOf[A]
       case owner: OwnerVersion => Owner(owner.entityId, owner.entityType, owner.userId, owner.outlookId, owner.version).asInstanceOf[A]
       case client: StoredCaseClientVersion => StoredCaseClient(client.caseId, client.universityID, client.version).asInstanceOf[A]
+      case ft: StoredDSAFundingTypeVersion => StoredDSAFundingType(ft.dsaApplicationID, ft.fundingType, ft.version).asInstanceOf[A]
       case _ => throw new IllegalArgumentException("Unsupported versioned item")
     }
     val result = items.toList.sortBy(_.timestamp) match {
@@ -279,4 +343,9 @@ case class CaseHistory(
   tags: FieldHistory[Set[CaseTag]],
   owners: Seq[(Set[Either[Usercode, User]], OffsetDateTime, Option[Either[Usercode, User]])],
   clients: FieldHistory[Set[Client]],
+  dsaApplicationDate: FieldHistory[Option[Option[OffsetDateTime]]],
+  dsaFundingApproved: FieldHistory[Option[Option[Boolean]]],
+  dsaConfirmationDate: FieldHistory[Option[Option[OffsetDateTime]]],
+  dsaFundingTypes: FieldHistory[Set[DSAFundingType]],
+  dsaIneligibilityReason: FieldHistory[Option[Option[DSAIneligibilityReason]]],
 )

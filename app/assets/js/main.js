@@ -156,6 +156,20 @@ function bindTo($scope) {
     if ($radio.is(':checked')) update();
   });
 
+  $('select[data-toggle="optional-subform"][data-targets]', $scope).each((i, el) => {
+    const $select = $(el);
+    const $targets = $($select.data('targets'));
+
+    const update = () => {
+      const $selected = $($select.find('option:selected').data('target'));
+      $targets.hide().find(':input').prop('disabled', true);
+      $selected.show().find(':input').prop('disabled', false);
+    };
+
+    $select.on('change', update);
+    update();
+  });
+
   $('details[data-toggle="load"][data-href][data-target]', $scope).on('toggle', function load() {
     const $details = $(this);
     if (this.open && !$details.data('loading')) {
