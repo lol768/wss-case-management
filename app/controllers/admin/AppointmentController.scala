@@ -8,11 +8,10 @@ import controllers.admin.AppointmentController._
 import controllers.refiners._
 import controllers.{API, BaseController}
 import domain._
-import domain.dao.CaseDao.Case
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{FormHelpers, ServiceResults}
 import javax.inject.{Inject, Singleton}
-import play.api.data.Form
+import play.api.data.{Form, FormError}
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.{JsValue, Json, Writes}
@@ -46,7 +45,7 @@ object AppointmentController {
     existingClients: Set[Client],
     existingVersion: Option[OffsetDateTime] = None
   )(implicit t: TimingContext, executionContext: ExecutionContext): Form[AppointmentFormData] = {
-    // TODO Is it valid to have an appointment with someone who isn't a client on the case?
+
     def isValid(u: UniversityID, existing: Set[Client]): Boolean =
       existing.exists(_.universityID == u) ||
         Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
@@ -213,10 +212,6 @@ class AppointmentController @Inject()(
         BadRequest("Can't specify both forCase and client")
       )
     } else {
-      val getCase: Future[ServiceResult[Option[Case]]] = forCase.map { caseKey =>
-        cases.find(caseKey).map(_.right.map(Some.apply))
-      }.getOrElse(Future.successful(Right(None)))
-
       val binds: Seq[Future[Map[String, String]]] = Seq(
         Some(Future.successful(baseBind)),
         forCase.map { caseKey =>
@@ -238,11 +233,10 @@ class AppointmentController @Inject()(
       ).flatten
 
       Future.sequence(binds).map(_.reduce(_ ++ _)).flatMap { bind =>
-        ServiceResults.zip(getCase, locations.availableRooms).successMap { case (clientCase, availableRooms) =>
+        locations.availableRooms.successMap { availableRooms =>
           Ok(views.html.admin.appointments.create(
             teamRequest.team,
             baseForm.bind(bind).discardingErrors,
-            clientCase.toSet,
             availableRooms
           ))
         }
@@ -251,25 +245,30 @@ class AppointmentController @Inject()(
   }
 
   def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    form(teamRequest.team, profiles, cases, permissions, locations, Set()).bindFromRequest().fold(
+    val boundForm = form(teamRequest.team, profiles, cases, permissions, locations, Set()).bindFromRequest
+    boundForm.fold(
       formWithErrors => {
-        val caseIDs =
-          formWithErrors.data.keys.filter(_.startsWith("cases")).toSeq
-            .map(k => formWithErrors.data(k))
-            .flatMap(id => Try(UUID.fromString(id)).toOption)
-            .toSet
-
-        ServiceResults.zip(cases.findAll(caseIDs), locations.availableRooms).successMap { case (c, availableRooms) =>
-          Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, c.toSet, availableRooms))
+        locations.availableRooms.successMap { availableRooms =>
+          Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, availableRooms))
         }
       },
       data => {
         val clients = data.clients.filter(_.string.nonEmpty)
-        val cases = data.cases.filter(_.toString.nonEmpty)
-
-        appointments.create(data.appointment, clients, data.teamMembers, teamRequest.team, cases).successMap { appointment =>
-          Redirect(controllers.admin.routes.AppointmentController.view(appointment.key))
-            .flashing("success" -> Messages("flash.appointment.created", appointment.key.string))
+        val linkedCases = data.cases.filter(_.toString.nonEmpty)
+        cases.getClients(linkedCases).successFlatMap { clientMap =>
+          val caseClients = clientMap.values.flatten.toSet
+          val nonCaseClients = clients.filterNot(c => caseClients.exists(_.universityID == c))
+          if (nonCaseClients.nonEmpty) {
+            val formWithErrors = boundForm.withError(FormError("clients", "error.appointment.clients.invalid", Seq(nonCaseClients.map(_.string).mkString(", "))))
+            locations.availableRooms.successMap { availableRooms =>
+              Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, availableRooms))
+            }
+          } else {
+            appointments.create(data.appointment, clients, data.teamMembers, teamRequest.team, linkedCases).successMap { appointment =>
+              Redirect(controllers.admin.routes.AppointmentController.view(appointment.key))
+                .flashing("success" -> Messages("flash.appointment.created", appointment.key.string))
+            }
+          }
         }
       }
     )
@@ -294,7 +293,6 @@ class AppointmentController @Inject()(
               ),
               Some(a.appointment.lastUpdated)
             )),
-          a.clientCases,
           availableRooms
         )
       )
@@ -303,24 +301,26 @@ class AppointmentController @Inject()(
 
   def edit(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
     ServiceResults.zip(appointments.findForRender(appointmentKey), locations.availableRooms).successFlatMap { case (a, availableRooms) =>
-      form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), Some(a.appointment.lastUpdated)).bindFromRequest().fold(
-        formWithErrors => Future.successful(
-          Ok(
-            views.html.admin.appointments.edit(
-              a.appointment,
-              formWithErrors,
-              a.clientCases,
-              availableRooms
-            )
-          )
-        ),
+      val boundForm = form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), Some(a.appointment.lastUpdated)).bindFromRequest
+      boundForm.fold(
+        formWithErrors => Future.successful(Ok(views.html.admin.appointments.edit(a.appointment, formWithErrors, availableRooms))),
         data => {
           val clients = data.clients.filter(_.string.nonEmpty)
-          val cases = data.cases.filter(_.toString.nonEmpty)
-
-          appointments.update(a.appointment.id, data.appointment, cases, clients, data.teamMembers, data.version.get).successMap { updated =>
-            Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
-              .flashing("success" -> Messages("flash.appointment.updated"))
+          val linkedCases = data.cases.filter(_.toString.nonEmpty)
+          cases.getClients(linkedCases).successFlatMap { clientMap =>
+            val caseClients = clientMap.values.flatten.toSet
+            val nonCaseClients = clients.filterNot(c => caseClients.exists(_.universityID == c))
+            if (nonCaseClients.nonEmpty) {
+              val formWithErrors = boundForm.withError(FormError("clients", "error.appointment.clients.invalid", Seq(nonCaseClients.map(_.string).mkString(", "))))
+              locations.availableRooms.successMap { availableRooms =>
+                Ok(views.html.admin.appointments.edit(a.appointment, formWithErrors, availableRooms))
+              }
+            } else {
+              appointments.update(a.appointment.id, data.appointment, linkedCases, clients, data.teamMembers, data.version.get).successMap { updated =>
+                Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
+                  .flashing("success" -> Messages("flash.appointment.updated"))
+              }
+            }
           }
         }
       )
