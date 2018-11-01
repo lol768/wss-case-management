@@ -11,7 +11,6 @@ import domain.ExtendedPostgresProfile.api._
 import domain.Pagination._
 import domain.QueryHelpers._
 import domain.{Page, _}
-import domain._
 import domain.dao.CaseDao.{Case, _}
 import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
@@ -230,8 +229,6 @@ class CaseServiceImpl @Inject() (
             case _ => DBIO.successful(None)
           }
 
-          val dsaId = existingDsa.flatMap(_.application.id).orElse(application.flatMap(_.application.id)).toSet
-
           daoRunner.run(for {
             dsa <- dsaAction
             updated <- dao.update(c.copy(dsaApplication = dsa.flatMap(_.id)), caseVersion)
@@ -245,7 +242,7 @@ class CaseServiceImpl @Inject() (
             )
             _ <- updateDifferencesDBIO[StoredDSAFundingType, DSAFundingType](
               application.map(_.fundingTypes).getOrElse(Set()),
-              dao.findFundingTypesQuery(dsaId),
+              dao.findFundingTypesQuery(existingDsa.flatMap(_.application.id).orElse(application.flatMap(_.application.id)).toSet),
               _.fundingType,
               ft => StoredDSAFundingType(dsa.flatMap(_.id).get, ft, now),
               dao.insertFundingTypes,
