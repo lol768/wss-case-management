@@ -127,13 +127,32 @@ section.indent {
   margin-left: @grid-gutter-width;
 }
 
-.panel-form {
-  .panel-body .form-group {
-    margin-bottom: 0;
+.panel.panel-default.panel-form {
+  border: 0;
+
+  .panel-heading, .panel-body {
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    .clearfix();
   }
 
-  .panel-footer.spaced-buttons {
-    margin-top: 0;
+  .panel-heading {
+    .btn {
+      .pull-right();
+    }
+    label.control-label {
+      padding-top: 0;
+    }
+  }
+
+  .panel-body {
+    .form-group {
+      margin-bottom: 0;
+    }
+    textarea {
+      background-color: #fffef8;
+    }
   }
 }
 
@@ -265,6 +284,7 @@ section.indent {
 .panel-group.message-threads .panel-body {
   max-height: ~"calc(100vh - 300px)";
   overflow-y: auto;
+  background-color: transparent !important;
 }
 
 .inline-form { // *twitch*
@@ -428,6 +448,24 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
         }
         padding-left: @grid-gutter-width / 2;
       }
+    }
+  }
+
+  .panel {
+    .panel-heading {
+      background-color: #f0f0f0;
+      .btn-link {
+        border: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        line-height: 1.1;
+        i {
+          font-size: 16px;
+        }
+      }
+    }
+    .panel-body {
+      background-color: #fffef8;
     }
   }
 }
