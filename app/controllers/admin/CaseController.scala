@@ -43,14 +43,6 @@ object CaseController {
     ineligibilityReason: Option[DSAIneligibilityReason]
   )
 
-  case class DSAFundingTypeFormData(
-    assistiveTechnology: Boolean, // "Assistive technology"
-    nmhBand12: Boolean, // NMH Band 1 & 2
-    nmhBand34: Boolean, // NMH Band 3 & 4
-    generalAllowance: Boolean,// General allowance
-    travelCosts: Boolean, // Taxi/travel costs
-  )
-
   case class CaseFormData(
     clients: Set[UniversityID],
     subject: String,
@@ -339,7 +331,6 @@ class CaseController @Inject()(
         Ok(views.html.admin.cases.create(teamRequest.team, formWithErrors))
       ),
       data => {
-
         val c = Case(
           id = None, // Set by service
           key = None, // Set by service

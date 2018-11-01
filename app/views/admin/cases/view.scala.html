@@ -40,7 +40,7 @@
   }
 }
 
-@dsaField(label: String)(content: Html) ={
+@dsaField(label: String)(content: Html) = {
   <div class="row">
     <div class="col-sm-4 control-label">@label</div>
     <div class="col-sm-8">
@@ -163,6 +163,7 @@
               }
 
               @if(dsa.application.fundingApproved.isDefined) {
+
                 @dsaField("Date of decision") {
                   <div data-field-history-field="dsaConfirmationDate">
                     @dsa.application.confirmationDate.map { confirmationDate =>
@@ -172,8 +173,8 @@
                     }
                   </div>
                 }
+
                 @if(dsa.application.fundingApproved.get){
-                  @* TODO - funding types *@
                   @dsaField("Funding types") {
                     <div data-field-history-field="dsaFundingTypes">
                       @if(dsa.fundingTypes.nonEmpty) {
