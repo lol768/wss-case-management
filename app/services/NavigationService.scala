@@ -99,6 +99,7 @@ class NavigationServiceImpl @Inject() (
     if(teamLinks.nonEmpty) {
       new NavigationPage("Home", controllers.routes.IndexController.home()) {
         override def isActive(path: String): Boolean = path.equals(route.url)
+        override val children: Seq[Navigation] = Seq(NavigationPage("Preferences", controllers.routes.UserPreferencesController.form()))
       } +: teamLinks
     } else {
       teamLinks

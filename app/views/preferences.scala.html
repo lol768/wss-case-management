@@ -1,0 +1,12 @@
+@(form: Form[Boolean])(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@main(s"Update your preferences") {
+  @b3.vertical.formCSRF(action = routes.UserPreferencesController.submit()) { implicit ifc =>
+    @b3.checkbox(form("office365Enabled"),
+      '_text -> "Add my appointments to my Office 365 calendar",
+      '_help -> "Appointments are added to Office 365 when they are created or updated"
+    )
+
+    @tags.submitOrCancel("Update", routes.IndexController.home())
+  }
+}

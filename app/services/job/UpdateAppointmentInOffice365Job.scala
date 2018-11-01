@@ -10,7 +10,7 @@ import javax.inject.Inject
 import org.quartz._
 import play.api.Configuration
 import play.api.libs.json.{JsNull, JsValue, Json}
-import services.{AppointmentService, AuditLogContext, OwnerService}
+import services.{AppointmentService, AuditLogContext, OwnerService, UserPreferencesService}
 import warwick.core.Logging
 import warwick.office365.{O365, O365Service}
 import warwick.sso.Usercode
@@ -38,6 +38,7 @@ class UpdateAppointmentInOffice365Job @Inject()(
   appointmentService: AppointmentService,
   ownerService: OwnerService,
   office365: O365Service,
+  userPreferencesService: UserPreferencesService,
   config: Configuration
 )(implicit ec: ExecutionContext) extends Job with Logging {
 
@@ -64,16 +65,25 @@ class UpdateAppointmentInOffice365Job @Inject()(
           if (render.appointment.state == AppointmentState.Cancelled) {
             Future.sequence(owners.toSeq.filter(_.outlookId.nonEmpty).map(remove))
           } else {
-            val (currentOwners, noLongerOwners) = owners.partition(o => render.teamMembers.map(_.member.usercode).contains(o.owner))
-            val removals = noLongerOwners.filter(_.outlookId.nonEmpty).toSeq.map(remove)
+            userPreferencesService.get(owners.map(_.owner)).flatMap(_.fold(
+              errors => errors.head.cause.map(t => throw t).getOrElse(throw new RuntimeException(errors.head.message)),
+              preferences => {
+                val (currentOwners, noLongerOwners) = owners.partition(o => render.teamMembers.map(_.member.usercode).contains(o.owner))
+                val removals = noLongerOwners.filter(_.outlookId.nonEmpty).toSeq.map(remove)
 
-            val (toSave, toUpdate) = currentOwners.partition(_.outlookId.isEmpty)
+                val (toSave, toUpdate) = currentOwners.partition(_.outlookId.isEmpty)
 
-            val saves = toSave.toSeq.map(o => save(render, o))
+                val saves = toSave
+                  .filter(o => preferences(o.owner).office365Enabled)
+                  .toSeq.map(o => save(render, o))
 
-            val updates = toUpdate.toSeq.map(o => update(render, o))
+                val updates = toUpdate
+                  .filter(o => preferences(o.owner).office365Enabled)
+                  .toSeq.map(o => update(render, o))
 
-            Future.sequence(removals ++ saves ++ updates)
+                Future.sequence(removals ++ saves ++ updates)
+              }
+            ))
           }
         }
       )),
