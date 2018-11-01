@@ -5,12 +5,7 @@
 
 @import "eonasdan-bootstrap-datetimepicker/src/less/_bootstrap-datetimepicker.less";
 
-@id7-image-root-dir: './lib/id7/images';
-@icon-font-path: './lib/id7/fonts';
-@fa-font-path: './lib/id7/fonts';
-
 @import "id7/less/id7-no-fa";
-@id7-ignore-id6-legacy: true;
 @import "id7/less/font-awesome-pro";
 @import "id7-theme";
 @import "sysadmin-notices";
@@ -18,11 +13,14 @@
 @import "flexi-picker";
 @import "icons";
 @import "calendars";
+@import "bootstrap-labels.less";
 
+@id7-ignore-id6-legacy: true;
+@id7-image-root-dir: './lib/id7/images';
+@icon-font-path: './lib/id7/fonts';
 @fa-font-path: './lib/id7/fonts';
 @brand-colour: #a14418;
 @nav-link-padding: 10px 15px;
-
 @gray-light: lighten(@gray-base, 45%); // #737373, ARIA
 
 // Always scrollbar to avoid horizontal dancing
