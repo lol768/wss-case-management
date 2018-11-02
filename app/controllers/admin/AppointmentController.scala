@@ -76,7 +76,7 @@ object AppointmentController {
         ).transform[Set[Usercode]](_.flatten, _.map(Some.apply)).verifying("error.required", _.nonEmpty),
         "cases" -> set(
           optional(uuid.verifying("error.required", id => isValidCase(id)))
-        ).transform[Set[UUID]](_.flatten, _.map(Some.apply)).verifying("error.required", _.nonEmpty),
+        ).transform[Set[UUID]](_.flatten, _.map(Some.apply)).verifying("error.appointment.cases.nonEmpty", _.nonEmpty),
         "appointment" -> mapping(
           "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", _.isAfter(JavaTime.offsetDateTime)),
           "duration" -> number(min = 60, max = 120 * 60).transform[Duration](n => Duration.ofSeconds(n.toLong), _.getSeconds.toInt),
