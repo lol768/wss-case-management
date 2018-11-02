@@ -6,6 +6,7 @@ import java.util.UUID
 import domain.CaseHistory.FieldHistory
 import domain.DatabaseOperation.Delete
 import domain.dao.CaseDao._
+import domain.dao.DSADao.{DSAApplication, DSAApplicationVersion, StoredDSAFundingType, StoredDSAFundingTypeVersion}
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.ServiceResults.ServiceResult
 import play.api.libs.json.{JsValue, Json, Writes}

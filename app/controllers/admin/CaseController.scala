@@ -7,8 +7,9 @@ import controllers.admin.CaseController._
 import controllers.refiners.{CanEditCaseActionRefiner, _}
 import controllers.{BaseController, UploadedFileControllerHelper}
 import domain._
-import domain.dao.CaseDao.{Case, DSAApplication}
+import domain.dao.CaseDao.Case
 import domain.CaseNoteType._
+import domain.dao.DSADao.DSAApplication
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{FormHelpers, ServiceResults}
 import javax.inject.{Inject, Singleton}
@@ -194,20 +195,21 @@ class CaseController @Inject()(
       val sectionNotes = notes.filterNot(note => generalNoteTypes.contains(note.noteType))
       val sectionNotesByType = sectionNotes.groupBy(_.noteType)
 
-      cases.findDSAApplication(c).successFlatMap(dsaApplication =>
-        profiles.getProfiles(clients.map(_.universityID)).successMap { clientProfiles =>
-          Ok(views.html.admin.cases.view(
-            c,
-            clients.toSeq.distinct.map(client => client -> clientProfiles.get(client.universityID)).toMap,
-            tags,
-            owners,
-            sectionNotesByType,
-            originalEnquiry,
-            dsaApplication,
-            history
-          ))
-        }
-      )
+      ServiceResults.zip(
+        cases.findDSAApplication(c),
+        profiles.getProfiles(clients.map(_.universityID))
+      ).successMap { case (dsaApplication, clientProfiles) =>
+        Ok(views.html.admin.cases.view(
+          c,
+          clients.toSeq.distinct.map(client => client -> clientProfiles.get(client.universityID)).toMap,
+          tags,
+          owners,
+          sectionNotesByType,
+          originalEnquiry,
+          dsaApplication,
+          history
+        ))
+      }
     }
   }
 
@@ -443,57 +445,54 @@ class CaseController @Inject()(
 
   def edit(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     val clientCase = caseRequest.`case`
-
-    cases.findDSAApplication(clientCase).successFlatMap(existingDsa =>
-      cases.getClients(clientCase.id.get).successFlatMap(clients =>
-        form(clientCase.team, profiles, enquiries, clients, Some(clientCase.version)).bindFromRequest().fold(
-          formWithErrors => Future.successful(
-            Ok(
-              views.html.admin.cases.edit(
-                clientCase,
-                formWithErrors
-              )
+    cases.getClients(clientCase.id.get).successFlatMap(clients =>
+      form(clientCase.team, profiles, enquiries, clients, Some(clientCase.version)).bindFromRequest().fold(
+        formWithErrors => Future.successful(
+          Ok(
+            views.html.admin.cases.edit(
+              clientCase,
+              formWithErrors
             )
-          ),
-          data => {
-            val c = Case(
-              id = clientCase.id,
-              key = clientCase.key,
-              subject = data.subject,
-              created = clientCase.created,
-              team = clientCase.team,
-              version = JavaTime.offsetDateTime,
-              state = clientCase.state,
-              incidentDate = data.incident.map(_.incidentDate),
-              onCampus = data.incident.map(_.onCampus),
-              notifiedPolice = data.incident.map(_.notifiedPolice),
-              notifiedAmbulance = data.incident.map(_.notifiedAmbulance),
-              notifiedFire = data.incident.map(_.notifiedFire),
-              originalEnquiry = data.originalEnquiry,
-              caseType = data.caseType,
-              cause = data.cause,
-              dsaApplication = clientCase.dsaApplication
-            )
+          )
+        ),
+        data => {
+          val c = Case(
+            id = clientCase.id,
+            key = clientCase.key,
+            subject = data.subject,
+            created = clientCase.created,
+            team = clientCase.team,
+            version = JavaTime.offsetDateTime,
+            state = clientCase.state,
+            incidentDate = data.incident.map(_.incidentDate),
+            onCampus = data.incident.map(_.onCampus),
+            notifiedPolice = data.incident.map(_.notifiedPolice),
+            notifiedAmbulance = data.incident.map(_.notifiedAmbulance),
+            notifiedFire = data.incident.map(_.notifiedFire),
+            originalEnquiry = data.originalEnquiry,
+            caseType = data.caseType,
+            cause = data.cause,
+            dsaApplication = clientCase.dsaApplication
+          )
 
-            val dsaApplication = data.dsaApplication.map(form => DSAApplicationAndTypes(
-              DSAApplication(
-                id = clientCase.dsaApplication,
-                applicationDate = form.applicationDate,
-                fundingApproved = form.fundingApproved,
-                confirmationDate = form.confirmationDate,
-                ineligibilityReason = form.ineligibilityReason,
-                version = JavaTime.offsetDateTime
-              ), form.fundingTypes
-            ))
+          val dsaApplication = data.dsaApplication.map(form => DSAApplicationAndTypes(
+            DSAApplication(
+              id = clientCase.dsaApplication,
+              applicationDate = form.applicationDate,
+              fundingApproved = form.fundingApproved,
+              confirmationDate = form.confirmationDate,
+              ineligibilityReason = form.ineligibilityReason,
+              version = JavaTime.offsetDateTime
+            ), form.fundingTypes
+          ))
 
-            val clients = data.clients.filter(_.string.nonEmpty)
+          val clients = data.clients.filter(_.string.nonEmpty)
 
-            cases.update(c, clients, data.tags, dsaApplication, clientCase.version).successMap { updated =>
-              Redirect(controllers.admin.routes.CaseController.view(updated.key.get))
-                .flashing("success" -> Messages("flash.case.updated"))
-            }
+          cases.update(c, clients, data.tags, dsaApplication, clientCase.version).successMap { updated =>
+            Redirect(controllers.admin.routes.CaseController.view(updated.key.get))
+              .flashing("success" -> Messages("flash.case.updated"))
           }
-        )
+        }
       )
     )
   }

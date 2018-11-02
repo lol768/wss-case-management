@@ -12,6 +12,7 @@ import domain.Pagination._
 import domain.QueryHelpers._
 import domain.{Page, _}
 import domain.dao.CaseDao.{Case, _}
+import domain.dao.DSADao.{DSAApplication, StoredDSAFundingType}
 import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao._
@@ -111,6 +112,7 @@ class CaseServiceImpl @Inject() (
   memberService: MemberService,
   daoRunner: DaoRunner,
   dao: CaseDao,
+  dsaDao: DSADao,
   messageDao: MessageDao,
 )(implicit ec: ExecutionContext) extends CaseService {
 
@@ -125,12 +127,12 @@ class CaseServiceImpl @Inject() (
         val now = JavaTime.offsetDateTime
 
         val dsaInsert: DBIO[Option[DSAApplication]] =
-          application.map(a => dao.insert(a.application.copy(id = Some(UUID.randomUUID())), now).map(Some.apply)).getOrElse(DBIO.successful(None))
+          application.map(a => dsaDao.insert(a.application.copy(id = Some(UUID.randomUUID())), now).map(Some.apply)).getOrElse(DBIO.successful(None))
 
         def fundingTypesInsert(newApplication: Option[UUID]): DBIO[Seq[StoredDSAFundingType]] = (for {
           a <- application
           na <- newApplication
-        } yield dao.insertFundingTypes(a.fundingTypes.map { ft => StoredDSAFundingType(na, ft, now) })).getOrElse(DBIO.successful(Nil))
+        } yield dsaDao.insertFundingTypes(a.fundingTypes.map { ft => StoredDSAFundingType(na, ft, now) })).getOrElse(DBIO.successful(Nil))
 
         daoRunner.run(for {
           nextId <- sql"SELECT nextval('SEQ_CASE_ID')".as[Int].head
@@ -223,9 +225,9 @@ class CaseServiceImpl @Inject() (
           val now = JavaTime.offsetDateTime
 
           val dsaAction: DBIO[Option[DSAApplication]] = (application, existingDsa) match {
-            case (Some(a), Some(e)) => dao.update(a.application, e.application.version).map(Some.apply)
-            case (Some(a), None) =>  dao.insert(a.application.copy(id = Some(UUID.randomUUID())), now).map(Some.apply) // create a new DSA application
-            case (None, Some(e)) => dao.delete(e.application).map(_ => None) // delete the existing DSA application
+            case (Some(a), Some(e)) => dsaDao.update(a.application, e.application.version).map(Some.apply)
+            case (Some(a), None) =>  dsaDao.insert(a.application.copy(id = Some(UUID.randomUUID())), now).map(Some.apply) // create a new DSA application
+            case (None, Some(e)) => dsaDao.delete(e.application).map(_ => None) // delete the existing DSA application
             case _ => DBIO.successful(None)
           }
 
@@ -242,11 +244,11 @@ class CaseServiceImpl @Inject() (
             )
             _ <- updateDifferencesDBIO[StoredDSAFundingType, DSAFundingType](
               application.map(_.fundingTypes).getOrElse(Set()),
-              dao.findFundingTypesQuery(existingDsa.flatMap(_.application.id).orElse(application.flatMap(_.application.id)).toSet),
+              dsaDao.findFundingTypesQuery(existingDsa.flatMap(_.application.id).orElse(application.flatMap(_.application.id)).toSet),
               _.fundingType,
               ft => StoredDSAFundingType(dsa.flatMap(_.id).get, ft, now),
-              dao.insertFundingTypes,
-              dao.deleteFundingTypes
+              dsaDao.insertFundingTypes,
+              dsaDao.deleteFundingTypes
             )
             _ <- updateDifferencesDBIO[StoredCaseTag, CaseTag](
               tags,
@@ -588,8 +590,8 @@ class CaseServiceImpl @Inject() (
           caseHistory <- dao.getHistory(id)
           rawTagHistory <- dao.getTagHistory(id)
           rawClientHistory <- dao.getClientHistory(id)
-          rawDsaHistory <- dao.getDSAHistory(id)
-          rawDSAFundingTypeHistory <- dao.getDSAFundingTypeHistory(id)
+          rawDsaHistory <- dsaDao.getDSAHistory(id)
+          rawDSAFundingTypeHistory <- dsaDao.getDSAFundingTypeHistory(id)
         } yield {
           (caseHistory, rawTagHistory, rawClientHistory, rawDsaHistory, rawDSAFundingTypeHistory)
         }).flatMap { case (caseHistory, rawTagHistory, rawClientHistory, rawDsaHistory, rawDSAFundingTypeHistory) =>
@@ -609,8 +611,8 @@ class CaseServiceImpl @Inject() (
   override def findDSAApplication(`case`: Case)(implicit t: TimingContext): Future[ServiceResult[Option[DSAApplicationAndTypes]]] = {
     `case`.dsaApplication.map(dsaId =>
       daoRunner.run(for {
-        application <- dao.findDSAApplication(dsaId)
-        fundingTypes <- dao.findFundingTypesQuery(Set(dsaId)).result
+        application <- dsaDao.findDSAApplication(dsaId)
+        fundingTypes <- dsaDao.findFundingTypesQuery(Set(dsaId)).result
       } yield (application, fundingTypes)).map { case (a, ft) =>
         Some(DSAApplicationAndTypes(a, ft.map(_.fundingType).toSet))
       }
