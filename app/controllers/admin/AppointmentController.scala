@@ -32,7 +32,7 @@ object AppointmentController {
   case class AppointmentFormData(
     clients: Set[UniversityID],
     teamMembers: Set[Usercode],
-    cases: Set[Option[UUID]],
+    cases: Set[UUID],
     appointment: AppointmentSave,
     version: Option[OffsetDateTime]
   )
@@ -46,7 +46,7 @@ object AppointmentController {
     existingClients: Set[Client],
     existingVersion: Option[OffsetDateTime] = None
   )(implicit t: TimingContext, executionContext: ExecutionContext): Form[AppointmentFormData] = {
-    // TODO If we're linked to a case, is it valid to have an appointment with someone who isn't a client on the case?
+    // TODO Is it valid to have an appointment with someone who isn't a client on the case?
     def isValid(u: UniversityID, existing: Set[Client]): Boolean =
       existing.exists(_.universityID == u) ||
         Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
@@ -74,7 +74,9 @@ object AppointmentController {
           optional(text).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string))
             .verifying("error.appointment.teamMember.invalid", u => u.isEmpty || u.exists { usercode => isValidTeamMember(usercode) })
         ).transform[Set[Usercode]](_.flatten, _.map(Some.apply)).verifying("error.required", _.nonEmpty),
-        "cases" -> set(optional(uuid.verifying("error.required", id => isValidCase(id)))),
+        "cases" -> set(
+          optional(uuid.verifying("error.required", id => isValidCase(id)))
+        ).transform[Set[UUID]](_.flatten, _.map(Some.apply)).verifying("error.appointment.cases.nonEmpty", _.nonEmpty),
         "appointment" -> mapping(
           "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", _.isAfter(JavaTime.offsetDateTime)),
           "duration" -> number(min = 60, max = 120 * 60).transform[Duration](n => Duration.ofSeconds(n.toLong), _.getSeconds.toInt),
@@ -263,7 +265,7 @@ class AppointmentController @Inject()(
       },
       data => {
         val clients = data.clients.filter(_.string.nonEmpty)
-        val cases = data.cases.flatten.filter(_.toString.nonEmpty)
+        val cases = data.cases.filter(_.toString.nonEmpty)
 
         appointments.create(data.appointment, clients, data.teamMembers, teamRequest.team, cases).successMap { appointment =>
           Redirect(controllers.admin.routes.AppointmentController.view(appointment.key))
@@ -282,7 +284,7 @@ class AppointmentController @Inject()(
             .fill(AppointmentFormData(
               a.clients.map(_.client.universityID),
               a.teamMembers.map(_.member.usercode),
-              a.clientCases.flatMap(c => Some(c.id)),
+              a.clientCases.flatMap(_.id),
               AppointmentSave(
                 a.appointment.start,
                 a.appointment.duration,
@@ -314,7 +316,7 @@ class AppointmentController @Inject()(
         ),
         data => {
           val clients = data.clients.filter(_.string.nonEmpty)
-          val cases = data.cases.flatten
+          val cases = data.cases.filter(_.toString.nonEmpty)
 
           appointments.update(a.appointment.id, data.appointment, cases, clients, data.teamMembers, data.version.get).successMap { updated =>
             Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
