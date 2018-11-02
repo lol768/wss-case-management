@@ -1,6 +1,7 @@
 @import controllers.admin.AppointmentOutcomesController.AppointmentOutcomesFormData
 @import domain.{AppointmentCancellationReason, AppointmentRender, AppointmentState}
 
+@import domain.AppointmentOutcome
 @(
   a: AppointmentRender,
   form: Form[AppointmentOutcomesFormData],
@@ -49,7 +50,11 @@
       </table>
     }
 
-    @b3.textarea(form("text"), '_label -> "Notes", 'rows -> 5)
+    @b3.select(form("outcome"), options = AppointmentOutcome.values.map(o => o.entryName -> o.description),
+      '_default -> "Select an outcome",
+      'required -> true,
+      '_label -> "Outcome"
+    )
 
     @tags.submitOrCancel("Record outcomes", controllers.admin.routes.AppointmentController.view(a.appointment.key))
   }
