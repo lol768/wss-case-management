@@ -3,7 +3,7 @@ package services
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
-import domain.{Team, Teams}
+import domain.{IssueState, Team, Teams}
 import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Provider, Singleton}
@@ -114,7 +114,10 @@ class PermissionServiceImpl @Inject() (
     isEnquiryClient(user, id)
 
   override def canAddClientMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
-    isEnquiryClient(user, id)
+    forAll(
+      isEnquiryClient(user, id),
+      isEnquiryOpen(id)
+    )
 
   override def canEditEnquiry(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     oneOf(
@@ -137,6 +140,9 @@ class PermissionServiceImpl @Inject() (
 
   private def isEnquiryClient(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     enquiryService.get(id).map(_.map { enquiry => enquiry.client.universityID == user.universityId.get } )
+
+  private def isEnquiryOpen(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    enquiryService.get(id).map(_.map(_.state != IssueState.Closed))
 
   override def canViewCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     canEditCase(user, id) // view/edit permissions are the same at the moment

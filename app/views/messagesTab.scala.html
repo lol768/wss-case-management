@@ -3,6 +3,7 @@
 @import org.apache.tika.mime.MediaType
 @import play.api.data.Forms._
 @import warwick.core.helpers.JavaTime
+@import domain.IssueState
 
 @(issues: Seq[IssueRender], registration: Option[Registration], supportedMimeTypes: Seq[MediaType])(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
@@ -29,7 +30,7 @@
   <h2>Your messages</h2>
 
   <div class="panel-group message-threads" id="enquiries-accordion" role="tablist" aria-multiselectable="true">
-  @issues.map { issueRender =>
+  @issues.map { issueRender: IssueRender =>
     <div class="panel panel-default thread thread--client state-@issueRender.issue.state.entryName">
 
       <div class="panel-heading" role="tab" id="heading-@issueRender.issue.id.get.toString">
@@ -56,18 +57,27 @@
 
       <div id="collapse-@issueRender.issue.id.get.toString" class="panel-collapse collapse @if(issues.head.issue == issueRender.issue){in}" role="tabpanel" aria-labelledby="heading-@issueRender.issue.id.get.toString" data-ping="@controllers.routes.ClientMessagesController.auditView(issueRender.issue.id.get)">
         <div class="panel-body">
-        @issueRender.messages.map { render =>
-          @views.html.tags.messages.message(
-            message = render.message,
-            files = render.files,
-            clientName = "You",
-            teamName = render.message.team.getOrElse(issueRender.issue.team).name,
-            attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id.get, f.id))
-        }
-        </div>
+          @issueRender.messages.map { render =>
+            @views.html.tags.messages.message(
+              message = render.message,
+              files = render.files,
+              clientName = "You",
+              teamName = render.message.team.getOrElse(issueRender.issue.team).name,
+              attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id.get, f.id))
+          }
+          </div>
         <div class="panel-footer">
-          @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
-            @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), form, supportedMimeTypes, issueRender.issue.id.get, context.user.get.universityId.get)
+          @if(issueRender.issue.state != IssueState.Closed) {
+            @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
+              @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), form, supportedMimeTypes, issueRender.issue.id.get, context.user.get.universityId.get)
+            }
+          } else {
+            <p>
+              We think this enquiry is now resolved, so we've marked it as closed.
+              But if there's anything else you want to ask us about this or any other subject,
+              you can always do so just by sending us a
+              <a href="@controllers.enquiries.routes.EnquiryController.form()">new enquiry</a>.
+            </p>
           }
         </div>
       </div>
