@@ -19,6 +19,8 @@ error.linkTarget.same=You can''t link a case to itself
 error.privacyStatementConsent.required=Please confirm you have read the privacy statement
 error.appointment.start.inPast=Please select a date/time for the appointment in the future
 error.appointment.teamMember.invalid=This user is not in any WSS team
+error.appointment.clients.invalid=These clients are not in any of the associated cases: {0}
+error.appointment.cases.nonEmpty=Appointments must be linked to at least 1 case
 
 flash.client.summary.updated=Client summary updated
 flash.client.registration.invited=Invitation to register sent to client

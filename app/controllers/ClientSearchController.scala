@@ -1,7 +1,7 @@
 package controllers
 
 import controllers.refiners.AnyTeamActionRefiner
-import domain.{Client, SitsProfile}
+import domain.SitsProfile
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
@@ -30,21 +30,29 @@ class ClientSearchController @Inject()(
       // Check client table
       clientService.search(query.safeTrim).map(_.map(_.take(10))).successFlatMap { clientResults =>
         if (clientResults.nonEmpty) {
-          // Inflate
+          // Inflate and filter
           profileService.getProfiles(clientResults.map(_.universityID).toSet).successFlatMap { profileMap =>
+            val users = userLookupService.getUsers(profileMap.values.map(_.usercode).toSeq).toOption.getOrElse(Map())
+            val validProfiles = profileMap.values.filter(p => users.contains(p.usercode))
             Future.successful(Ok(Json.toJson(API.Success(data = Json.obj(
-              "results" -> clientResults.map(c => toJson(c, profileMap.get(c.universityID)))
+              "results" -> validProfiles.map(toJson)
             )))))
           }
         } else {
           // Search for alternate email
           clientSummaryService.getByAlternativeEmailAddress(query).successFlatMap {
             case Some(summary) =>
-              // Inflate
+              // Inflate and filter
               profileService.getProfile(summary.client.universityID).map(_.value).successMap { profileOption =>
-                Ok(Json.toJson(API.Success(data = Json.obj(
-                  "results" -> toJson(summary.client, profileOption)
-                ))))
+                profileOption.flatMap(profile =>
+                  userLookupService.getUsers(Seq(profile.usercode)).toOption.flatMap(_.get(profile.usercode)).map(_ =>
+                    Ok(Json.toJson(API.Success(data = Json.obj(
+                      "results" -> toJson(profile)
+                    ))))
+                  )
+                ).getOrElse(
+                  Ok(Json.toJson(API.Success(data = Json.obj())))
+                )
               }
             case _ => Future.successful(Ok(Json.toJson(API.Success(data = Json.obj()))))
           }
@@ -53,13 +61,13 @@ class ClientSearchController @Inject()(
     }
   }
 
-  private def toJson(client: Client, profile: Option[SitsProfile]) = Json.obj(
-    "name" -> client.safeFullName,
-    "department" -> profile.map(_.department.name),
-    "userType" -> profile.map(_.userType.entryName),
+  private def toJson(profile: SitsProfile) = Json.obj(
+    "name" -> profile.fullName,
+    "department" -> profile.department.name,
+    "userType" -> profile.userType.entryName,
     "type" -> "user",
-    "value" -> client.universityID.string,
-    "photo" -> profile.flatMap(_.photo)
+    "value" -> profile.universityID.string,
+    "photo" -> profile.photo
   )
 
 }

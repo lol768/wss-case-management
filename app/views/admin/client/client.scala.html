@@ -20,7 +20,7 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("Client profile") {
-  <h2>@profile.map(_.fullName).getOrElse(universityID.string)</h2>
+  <h2>@profile.map(p => s"${p.fullName}, ${p.universityID.string}").getOrElse(universityID.string)</h2>
 
   @if(form.hasErrors) {
     <div class="alert alert-danger">

@@ -10,14 +10,12 @@
 @b3.vertical.formCSRF(controllers.admin.routes.AppointmentController.addNote(appointment.key)) { implicit ifc =>
   <div class="panel panel-default panel-form">
     <div class="panel-heading">
-      <h3 class="panel-title">Add an appointment note</h3>
+      <button type="submit" class="btn btn-primary">Save</button>
+      <label class="control-label">Add an appointment note</label>
     </div>
     <div class="panel-body">
       @b3.validatedHidden(noteForm, "version")
       @b3.textarea(noteForm("text"), 'rows -> 5)
-    </div>
-    <div class="panel-footer">
-      <button type="submit" class="btn btn-primary">Save</button>
     </div>
   </div>
 }
