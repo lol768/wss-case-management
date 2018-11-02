@@ -5,7 +5,6 @@
 @(
   appointment: Appointment,
   form: Form[AppointmentFormData],
-  relatedCases: Set[Case],
   availableRooms: Seq[Room],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
@@ -18,7 +17,7 @@
   ) { implicit ifc =>
     @b3.validatedHidden(form, "version")
 
-    @views.html.admin.appointments.appointmentFields(form, relatedCases, availableRooms)
+    @views.html.admin.appointments.appointmentFields(form, availableRooms)
 
     @tags.submitOrCancel("Update", controllers.admin.routes.AppointmentController.view(appointment.key))
   }
