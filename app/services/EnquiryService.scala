@@ -65,7 +65,7 @@ trait EnquiryService {
 
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
 
-  def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]]
+  def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
 
   def findEnquiriesNeedingReply(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]]
   def countEnquiriesNeedingReply(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
@@ -288,7 +288,7 @@ class EnquiryServiceImpl @Inject() (
   override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]] =
     ownerService.getEnquiryOwners(ids)
 
-  override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]] =
+  override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] =
     ownerService.setEnquiryOwners(id, owners)
 
   override def findEnquiriesNeedingReply(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]] =

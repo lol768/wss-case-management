@@ -5,6 +5,7 @@ import java.util.UUID
 import controllers.BaseController
 import controllers.refiners.{AnyTeamActionRefiner, ValidUniversityIDActionFilter}
 import domain._
+import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.CaseDao.CaseListRender
 import helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
@@ -15,6 +16,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import services._
 import services.tabula.ProfileService
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 import warwick.sso._
 
@@ -29,6 +31,7 @@ class ClientController @Inject()(
   permissionService: PermissionService,
   enquiryService: EnquiryService,
   caseService: CaseService,
+  appointmentService: AppointmentService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
   validUniversityIDActionFilter: ValidUniversityIDActionFilter
 )(implicit executionContext: ExecutionContext) extends BaseController {
@@ -45,38 +48,39 @@ class ClientController @Inject()(
     "reasonable-adjustments" -> set(ReasonableAdjustment.formField)
   )(ClientSummarySave.apply)(ClientSummarySave.unapply))
 
-  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], Seq[EnquiryListRender], Seq[CaseListRender], Map[UUID, Set[Member]])]] = {
+  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], Seq[EnquiryListRender], Seq[CaseListRender], Seq[AppointmentRender], Map[UUID, Set[Member]])]] = {
     zip(
       profileService.getProfile(universityID).map(_.value),
       registrationService.get(universityID),
       clientSummaryService.get(universityID),
       enquiryService.listEnquiriesForClient(universityID),
       caseService.listForClient(universityID),
-    ).successFlatMapTo { case (profile, registration, clientSummary, enquiries, cases) =>
+      appointmentService.findForSearch(AppointmentSearchQuery(client = Some(universityID), startAfter = Some(JavaTime.localDate), states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended))),
+    ).successFlatMapTo { case (profile, registration, clientSummary, enquiries, cases, appointments) =>
       zip(
         enquiryService.getOwners(enquiries.map(_.enquiry.id.get).toSet),
         caseService.getOwners(cases.map(_.clientCase.id.get).toSet),
       ).successMapTo { case (enquiryOwners, caseOwners) =>
-        (profile, registration, clientSummary, enquiries, cases, enquiryOwners ++ caseOwners)
+        (profile, registration, clientSummary, enquiries, cases, appointments, enquiryOwners ++ caseOwners)
       }
     }
   }
 
   def client(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.andThen(ValidUniversityIDRequired(universityID)).async { implicit request =>
-    clientInformation(universityID).successMap { case (profile, registration, clientSummary, enquiries, cases, owners) =>
+    clientInformation(universityID).successMap { case (profile, registration, clientSummary, enquiries, cases, appointments, owners) =>
       val f = clientSummary match {
         case Some(cs) => form.fill(cs.toSave)
         case _ => form
       }
 
-      Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, enquiries, cases, owners, f, inMentalHealthTeam))
+      Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, enquiries, cases, appointments, owners, f, inMentalHealthTeam))
     }
   }
 
   def updateSummary(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.andThen(ValidUniversityIDRequired(universityID)).async { implicit request =>
-    clientInformation(universityID).successFlatMap { case (profile, registration, clientSummary, enquiries, cases, owners) =>
+    clientInformation(universityID).successFlatMap { case (profile, registration, clientSummary, enquiries, cases, appointments, owners) =>
       form.bindFromRequest.fold(
-        formWithErrors => Future.successful(Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, enquiries, cases, owners, formWithErrors, inMentalHealthTeam))),
+        formWithErrors => Future.successful(Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, enquiries, cases, appointments, owners, formWithErrors, inMentalHealthTeam))),
         data => {
           val processedData = if (inMentalHealthTeam) data else data.copy(highMentalHealthRisk = clientSummary.flatMap(_.highMentalHealthRisk))
           val f =
