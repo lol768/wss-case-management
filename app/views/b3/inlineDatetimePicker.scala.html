@@ -1,8 +1,2 @@
 @(field: Field, args: (Symbol, Any)*)(implicit handler: b3.B3FieldConstructor, messages: Messages)
-
-@b3.inputFormGroup(field, withFeedback = false, withLabelFor = false, args) { fieldInfo =>
-  <div class="datetimepicker-inline no-wide-tables">
-    <input type="hidden" name="@fieldInfo.name" value="@fieldInfo.value">
-    <div id="@fieldInfo.id" @toHtmlArgs(fieldInfo.innerArgsMap)></div>
-  </div>
-}
+@b3.inlinePicker("datetimepicker-inline", field, args)(handler, messages)

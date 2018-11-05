@@ -68,7 +68,7 @@
     @b3.checkbox(form("incident.notifiedFire"), '_text -> "Fire service called")
   }
 
-  @b3.datetimeLocal(form("incident.incidentDate"),
+  @b3.datetimePicker(form("incident.incidentDate"),
     '_label -> "Date of incident"
   )
 </fieldset>
@@ -88,11 +88,11 @@
 }
 <fieldset id="dsa">
 
-  @b3.datetimeLocal(form("dsaApplication.applicationDate"),
+  @b3.datetimePicker(form("dsaApplication.applicationDate"),
     '_label -> "Date of application"
   )
 
-  @b3.datetimeLocal(form("dsaApplication.confirmationDate"),
+  @b3.datetimePicker(form("dsaApplication.confirmationDate"),
     '_label -> "Date of application decision"
   )
 
