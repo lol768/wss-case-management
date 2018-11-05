@@ -190,7 +190,9 @@ class AppointmentController @Inject()(
   def view(appointmentKey: IssueKey): Action[AnyContent] = CanViewAppointmentAction(appointmentKey).async { implicit request =>
     renderAppointment(
       appointmentKey,
-      cancelForm(request.appointment.lastUpdated).discardingErrors
+      cancelForm(request.appointment.lastUpdated)
+        .bind(JavaTime.OffsetDateTimeFormatter.unbind("version", request.appointment.lastUpdated))
+        .discardingErrors
     )
   }
 
