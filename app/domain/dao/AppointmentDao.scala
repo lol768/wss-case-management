@@ -249,6 +249,7 @@ object AppointmentDao {
     purpose: AppointmentPurpose,
     state: AppointmentState,
     cancellationReason: Option[AppointmentCancellationReason],
+    outcome: Option[AppointmentOutcome],
     created: OffsetDateTime,
     version: OffsetDateTime,
   ) extends Versioned[StoredAppointment] {
@@ -262,6 +263,7 @@ object AppointmentDao {
       purpose,
       state,
       cancellationReason,
+      outcome,
       created,
       version
     )
@@ -318,6 +320,7 @@ object AppointmentDao {
     def purpose = column[AppointmentPurpose]("appointment_purpose")
     def state = column[AppointmentState]("state")
     def cancellationReason = column[Option[AppointmentCancellationReason]]("cancellation_reason")
+    def outcome = column[Option[AppointmentOutcome]]("outcome")
     def created = column[OffsetDateTime]("created_utc")
     def version = column[OffsetDateTime]("version_utc")
   }
@@ -329,9 +332,9 @@ object AppointmentDao {
     def id = column[UUID]("id", O.PrimaryKey)
 
     override def * : ProvenShape[StoredAppointment] =
-      (id, key, start, duration, roomID, team, appointmentType, purpose, state, cancellationReason, created, version).mapTo[StoredAppointment]
+      (id, key, start, duration, roomID, team, appointmentType, purpose, state, cancellationReason, outcome, created, version).mapTo[StoredAppointment]
     def appointment =
-      (id, key, start, duration, team, appointmentType, purpose, state, cancellationReason, created, version).mapTo[Appointment]
+      (id, key, start, duration, team, appointmentType, purpose, state, cancellationReason, outcome, created, version).mapTo[Appointment]
 
     def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
     def isAccepted: Rep[Boolean] = state === (AppointmentState.Accepted: AppointmentState)
