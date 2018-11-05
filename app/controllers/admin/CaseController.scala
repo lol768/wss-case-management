@@ -6,9 +6,10 @@ import java.util.UUID
 import controllers.admin.CaseController._
 import controllers.refiners.{CanEditCaseActionRefiner, _}
 import controllers.{BaseController, UploadedFileControllerHelper}
-import domain.CaseNoteType._
 import domain._
 import domain.dao.CaseDao.Case
+import domain.CaseNoteType._
+import domain.dao.DSADao.DSAApplication
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{FormHelpers, ServiceResults}
 import javax.inject.{Inject, Singleton}
@@ -35,10 +36,19 @@ object CaseController {
     notifiedFire: Boolean,
   )
 
+  case class DSAApplicationFormData(
+    applicationDate: Option[OffsetDateTime],
+    fundingApproved: Option[Boolean],
+    confirmationDate: Option[OffsetDateTime],
+    fundingTypes: Set[DSAFundingType],
+    ineligibilityReason: Option[DSAIneligibilityReason]
+  )
+
   case class CaseFormData(
     clients: Set[UniversityID],
     subject: String,
     incident: Option[CaseIncidentFormData],
+    dsaApplication: Option[DSAApplicationFormData],
     cause: CaseCause,
     caseType: Option[CaseType],
     tags: Set[CaseTag],
@@ -73,6 +83,13 @@ object CaseController {
           "notifiedAmbulance" -> boolean,
           "notifiedFire" -> boolean,
         )(CaseIncidentFormData.apply)(CaseIncidentFormData.unapply)),
+        "dsaApplication" -> optional(mapping(
+          "applicationDate" -> optional(FormHelpers.offsetDateTime),
+          "fundingApproved" -> optional(boolean),
+          "confirmationDate" -> optional(FormHelpers.offsetDateTime),
+          "fundingTypes" -> set(DSAFundingType.formField),
+          "ineligibilityReason" ->  optional(DSAIneligibilityReason.formField)
+        )(DSAApplicationFormData.apply)(DSAApplicationFormData.unapply)),
         "cause" -> CaseCause.formField,
         "caseType" -> optional(CaseType.formField).verifying("error.caseType.invalid", t => (CaseType.valuesFor(team).isEmpty && t.isEmpty) || t.exists(CaseType.valuesFor(team).contains)),
         "tags" -> set(CaseTag.formField),
@@ -178,7 +195,10 @@ class CaseController @Inject()(
       val sectionNotes = notes.filterNot(note => generalNoteTypes.contains(note.noteType))
       val sectionNotesByType = sectionNotes.groupBy(_.noteType)
 
-      profiles.getProfiles(clients.map(_.universityID)).successMap { clientProfiles =>
+      ServiceResults.zip(
+        cases.findDSAApplication(c),
+        profiles.getProfiles(clients.map(_.universityID))
+      ).successMap { case (dsaApplication, clientProfiles) =>
         Ok(views.html.admin.cases.view(
           c,
           clients.toSeq.distinct.map(client => client -> clientProfiles.get(client.universityID)).toMap,
@@ -186,6 +206,7 @@ class CaseController @Inject()(
           owners,
           sectionNotesByType,
           originalEnquiry,
+          dsaApplication,
           history
         ))
       }
@@ -327,8 +348,20 @@ class CaseController @Inject()(
           notifiedFire = data.incident.map(_.notifiedFire),
           originalEnquiry = data.originalEnquiry,
           caseType = data.caseType,
-          cause = data.cause
+          cause = data.cause,
+          dsaApplication = None // Set by service
         )
+
+        val dsaApplication = data.dsaApplication.map(form => DSAApplicationAndTypes(
+          DSAApplication(
+            id = None,
+            applicationDate = form.applicationDate,
+            fundingApproved = form.fundingApproved,
+            confirmationDate = form.confirmationDate,
+            ineligibilityReason = form.ineligibilityReason,
+            version = JavaTime.offsetDateTime
+          ), form.fundingTypes
+        ))
 
         val clients = data.clients.filter(_.string.nonEmpty)
 
@@ -341,7 +374,7 @@ class CaseController @Inject()(
         }.getOrElse(Future.successful(Right(None)))
 
         ServiceResults.zip(
-          cases.create(c, clients, data.tags),
+          cases.create(c, clients, data.tags, dsaApplication),
           updateOriginalEnquiry
         ).successFlatMap { case (createdCase, originalEnquiry) =>
           val setOwners: Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
@@ -370,9 +403,10 @@ class CaseController @Inject()(
     val clientCase = caseRequest.`case`
 
     ServiceResults.zip(
+      cases.findDSAApplication(clientCase),
       cases.getClients(clientCase.id.get),
       cases.getCaseTags(clientCase.id.get)
-    ).successMap { case (clients, tags) =>
+    ).successMap { case (dsaApplication, clients, tags) =>
       Ok(
         views.html.admin.cases.edit(
           clientCase,
@@ -389,6 +423,15 @@ class CaseController @Inject()(
                   clientCase.notifiedFire.get,
                 )
               },
+              dsaApplication.map { a =>
+                DSAApplicationFormData(
+                  a.application.applicationDate,
+                  a.application.fundingApproved,
+                  a.application.confirmationDate,
+                  a.fundingTypes,
+                  a.application.ineligibilityReason
+                )
+              },
               clientCase.cause,
               clientCase.caseType,
               tags,
@@ -402,7 +445,6 @@ class CaseController @Inject()(
 
   def edit(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     val clientCase = caseRequest.`case`
-
     cases.getClients(clientCase.id.get).successFlatMap(clients =>
       form(clientCase.team, profiles, enquiries, clients, Some(clientCase.version)).bindFromRequest().fold(
         formWithErrors => Future.successful(
@@ -429,12 +471,24 @@ class CaseController @Inject()(
             notifiedFire = data.incident.map(_.notifiedFire),
             originalEnquiry = data.originalEnquiry,
             caseType = data.caseType,
-            cause = data.cause
+            cause = data.cause,
+            dsaApplication = clientCase.dsaApplication
           )
+
+          val dsaApplication = data.dsaApplication.map(form => DSAApplicationAndTypes(
+            DSAApplication(
+              id = clientCase.dsaApplication,
+              applicationDate = form.applicationDate,
+              fundingApproved = form.fundingApproved,
+              confirmationDate = form.confirmationDate,
+              ineligibilityReason = form.ineligibilityReason,
+              version = JavaTime.offsetDateTime
+            ), form.fundingTypes
+          ))
 
           val clients = data.clients.filter(_.string.nonEmpty)
 
-          cases.update(c, clients, data.tags, clientCase.version).successMap { updated =>
+          cases.update(c, clients, data.tags, dsaApplication, clientCase.version).successMap { updated =>
             Redirect(controllers.admin.routes.CaseController.view(updated.key.get))
               .flashing("success" -> Messages("flash.case.updated"))
           }

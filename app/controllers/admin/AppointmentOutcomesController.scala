@@ -40,7 +40,6 @@ object AppointmentOutcomesController {
             "state" -> AppointmentState.formField.verifying("error.required", s => s == AppointmentState.Attended || s == AppointmentState.Cancelled),
             "cancellationReason" -> optional(AppointmentCancellationReason.formField),
           )(AppointmentClientAttendanceFormData.apply)(AppointmentClientAttendanceFormData.unapply)
-            .verifying("error.required", attendance => attendance.state == AppointmentState.Attended || attendance.cancellationReason.nonEmpty)
         ),
         "outcome" -> optional(AppointmentOutcome.formField).verifying("error.required", o => o.nonEmpty),
         "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == a.appointment.lastUpdated)

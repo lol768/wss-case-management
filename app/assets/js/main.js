@@ -126,7 +126,7 @@ function bindTo($scope) {
 
   $('input[type="checkbox"][data-toggle="optional-subform"][data-target]', $scope).each((i, el) => {
     const $checkbox = $(el);
-    const $target = $($checkbox.data('target'));
+    const $target = $($checkbox.data('target'), $scope);
 
     const update = () => {
       if ($checkbox.is(':checked')) {
@@ -142,7 +142,7 @@ function bindTo($scope) {
 
   $('input[type="radio"][data-toggle="optional-subform"][data-target]', $scope).each((i, el) => {
     const $radio = $(el);
-    const $target = $($radio.data('target'));
+    const $target = $($radio.data('target'), $scope);
 
     const update = () => {
       if ($radio.val() === $radio.data('toggle-value')) {
@@ -154,6 +154,20 @@ function bindTo($scope) {
 
     $radio.on('input change', update);
     if ($radio.is(':checked')) update();
+  });
+
+  $('select[data-toggle="optional-subform"][data-targets]', $scope).each((i, el) => {
+    const $select = $(el);
+    const $targets = $($select.data('targets'), $scope);
+
+    const update = () => {
+      const $selected = $($select.find('option:selected').data('target'), $scope);
+      $targets.hide().find(':input').prop('disabled', true);
+      $selected.show().find(':input').prop('disabled', false);
+    };
+
+    $select.on('change', update);
+    update();
   });
 
   $('details[data-toggle="load"][data-href][data-target]', $scope).on('toggle', function load() {
