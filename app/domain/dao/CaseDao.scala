@@ -320,7 +320,7 @@ object CaseDao {
     originalEnquiry: Option[UUID],
     caseType: Option[CaseType],
     cause: CaseCause,
-    dsaApplication: Option[UUID],
+    dsaApplication: Option[UUID] = None,
   ) extends Versioned[Case] with Issue {
     override def atVersion(at: OffsetDateTime): Case = copy(version = at)
     override def storedVersion[B <: StoredVersion[Case]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
