@@ -99,6 +99,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       studentProfile.dualNationality mustBe None
       studentProfile.tier4VisaRequired mustBe Some(false)
       studentProfile.disability mustBe Some(SitsDisability("I","Unclassified disability","Condition not listed"))
+      studentProfile.disabilityFundingStatus mustBe Some("Not in receipt of DSA")
       studentProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/842cfad8a90147436f7a7dfeb2d42800/1234567")
       studentProfile.userType mustBe UserType.Student
       studentProfile.personalTutors mustBe Nil
@@ -138,6 +139,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       applicantProfile.dualNationality mustBe Some("Zimbabwean")
       applicantProfile.tier4VisaRequired mustBe None
       applicantProfile.disability mustBe Some(SitsDisability("E","Long standing condition","You have a long standing illness or condition"))
+      applicantProfile.disabilityFundingStatus mustBe Some("Pending")
       applicantProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/3bba35c1a0c436780cefa97fecac9c5e/1812345")
       applicantProfile.userType mustBe UserType.Applicant
     }

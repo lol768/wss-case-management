@@ -72,6 +72,9 @@
         }
         <p>DoB @JavaTime.dateFullNoDayFormatter.format(profile.dateOfBirth)</p>
         <p>@profile.disability.map(_.description).getOrElse("No disabilities")</p>
+        @profile.disabilityFundingStatus.map { fs =>
+          <p>DSA funding status: @fs</p>
+        }
         @profile.nationality.map { n =>
           <p>@n</p>
         }
