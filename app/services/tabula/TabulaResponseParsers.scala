@@ -101,6 +101,7 @@ object TabulaResponseParsers {
       nationality: Option[String],
       secondNationality: Option[String],
       disability: Option[SitsDisability],
+      disabilityFundingStatus: Option[String],
       residence: Option[String],
       address: Option[Address],
       studentCourseDetails: Option[Seq[StudentCourseDetails]],
@@ -145,6 +146,7 @@ object TabulaResponseParsers {
                 dualNationality = None,
                 tier4VisaRequired = None,
                 disability = None,
+                disabilityFundingStatus = None,
                 photo = None,
                 personalTutors = Nil,
                 researchSupervisors = Nil,
@@ -177,6 +179,7 @@ object TabulaResponseParsers {
           dualNationality = secondNationality,
           tier4VisaRequired = tier4VisaRequirement,
           disability = disability,
+          disabilityFundingStatus = disabilityFundingStatus,
           photo = None,
           personalTutors = currentAgents("tutor"),
           researchSupervisors = currentAgents("supervisor"),
@@ -197,6 +200,7 @@ object TabulaResponseParsers {
       (__ \ "member" \ "nationality").readNullable[String] and
       (__ \ "member" \ "secondNationality").readNullable[String] and
       (__ \ "member" \ "disability").readNullable[SitsDisability](disabilityReads) and
+      (__ \ "member" \ "disabilityFundingStatus").readNullable[Option[String]]((__ \ "description").readNullable[String]).map(_.flatten) and
       (__ \ "member" \ "termtimeAddress").readNullable[Option[String]]((__ \ "line2").readNullable[String]).map(_.flatten) and
       (__ \ "member" \ "currentAddress").readNullable[Address](addressReads) and
       (__ \ "member" \ "studentCourseDetails").readNullable[Seq[StudentCourseDetails]](Reads.seq(studentCourseDetailsReads)) and

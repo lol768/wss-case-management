@@ -34,6 +34,7 @@ case class SitsProfile(
   dualNationality: Option[String],
   tier4VisaRequired: Option[Boolean],
   disability: Option[SitsDisability],
+  disabilityFundingStatus: Option[String],
   photo: Option[String],
   personalTutors: Seq[SitsProfile],
   researchSupervisors: Seq[SitsProfile],
