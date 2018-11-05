@@ -1,6 +1,7 @@
 @import domain.CaseNoteType._
 @import domain._
 @import domain.dao.CaseDao.Case
+@import domain.DSAApplicationAndTypes
 @import play.api.libs.json.Json
 @import warwick.core.helpers.JavaTime
 
@@ -11,6 +12,7 @@
   owners: Set[Member],
   sectionNotes: Map[CaseNoteType, Seq[CaseNote]],
   originalEnquiry: Option[Enquiry],
+  dsaApplication: Option[DSAApplicationAndTypes],
   history: CaseHistory,
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
@@ -36,6 +38,17 @@
       </div>
     }
   }
+}
+
+@dsaField(label: String)(content: Html) = {
+  <div class="row">
+    <div class="col-sm-4 control-label">@label</div>
+    <div class="col-sm-8">
+      <div class="form-control-static">
+        @content
+      </div>
+    </div>
+  </div>
 }
 
 @main(s"${c.key.get.string} ${c.subject}") {
@@ -124,6 +137,73 @@
           controllers.admin.routes.OwnersController.caseSubmit(c.key.get),
           controllers.admin.routes.OwnersController.caseSubmitSelf(c.key.get),
         )
+
+        @if(dsaApplication.isDefined) {
+          @dsaApplication.map { dsa =>
+            @tags.sectioned.detail("DSA application") {
+
+              @dsaField("Date of application"){
+                <div data-field-history-field="dsaApplicationDate">
+                  @dsa.application.applicationDate.map { applicationDate =>
+                    @JavaTime.Relative(applicationDate)
+                  }.getOrElse {
+                    No application date
+                  }
+                </div>
+              }
+
+              @dsaField("Application decision") {
+                <div data-field-history-field="dsaFundingApproved">
+                  @dsa.application.fundingApproved.map { fa =>
+                    @if(fa) {Approved } else { Rejected }
+                  }.getOrElse {
+                    Pending
+                  }
+                </div>
+              }
+
+              @if(dsa.application.fundingApproved.isDefined) {
+
+                @dsaField("Date of decision") {
+                  <div data-field-history-field="dsaConfirmationDate">
+                    @dsa.application.confirmationDate.map { confirmationDate =>
+                      @JavaTime.Relative(confirmationDate)
+                    }.getOrElse {
+                      No confirmation date
+                    }
+                  </div>
+                }
+
+                @if(dsa.application.fundingApproved.get){
+                  @dsaField("Funding types") {
+                    <div data-field-history-field="dsaFundingTypes">
+                      @if(dsa.fundingTypes.nonEmpty) {
+                        @dsa.fundingTypes.toSeq.map(_.description).sorted.mkString(", ")
+                      } else {
+                        None
+                      }
+                    </div>
+                  }
+                } else {
+                  @dsaField("Ineligibility reason") {
+                    <div data-field-history-field="dsaIneligibilityReason">
+                      @dsa.application.ineligibilityReason.map { ineligibilityReason =>
+                        @ineligibilityReason.description
+                      }.getOrElse {
+                        Not specified
+                      }
+                    </div>
+                  }
+                }
+              }
+            }
+          }
+        } else if (history.dsaApplicationDate.exists(_._1.exists(_.isDefined))) {
+          @tags.sectioned.detail("DSA application") {
+            <span data-field-history-field="dsaApplicationDate">Not currently related to a DSA application</span>
+          }
+        }
+
       </div>
       <div class="col-sm-6 col-md-4">
         <div class="row form-horizontal">

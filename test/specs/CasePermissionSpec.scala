@@ -5,7 +5,7 @@ import domain.{CaseTag, Fixtures, IssueKey, Teams}
 import org.scalatest.BeforeAndAfterAll
 import play.api.test.Helpers._
 import services.{CaseService, OwnerService}
-import warwick.sso.{UniversityID, User, Usercode}
+import warwick.sso.{User, Usercode}
 
 class CasePermissionSpec extends BaseSpec with BeforeAndAfterAll {
 
@@ -49,7 +49,7 @@ class CasePermissionSpec extends BaseSpec with BeforeAndAfterAll {
     val c = Fixtures.cases.newCaseNoId()
     val clients = Set( studentCaseClient.universityId.get )
     val tags = Set.empty[CaseTag]
-    val created = caseService.create(c, clients, tags).serviceValue
+    val created = caseService.create(c, clients, tags, dsaApplication = None).serviceValue
     created.key.value mustBe firstKey
     created.team mustBe Teams.MentalHealth
 
