@@ -1,5 +1,6 @@
 @import controllers.admin.CaseController.CaseFormData
 @import domain.Team
+@import domain.Teams._
 @import domain.CaseType
 @import domain.CaseCause
 @import domain.DSAFundingType
@@ -73,57 +74,59 @@
   )
 </fieldset>
 
-@b3.free('_label -> "DSA Funding Application") {
-  <div class="checkbox">
-    <label for="dsa_fields">
-      <input type="checkbox"
-        id="dsa_fields"
-        data-toggle="optional-subform"
-        data-target="#dsa"
-        @if(form.data.keys.exists(_.startsWith("dsaApplication."))) { checked }
-      >
-      This case relates to a DSA Funding Application
-    </label>
-  </div>
-}
-<fieldset id="dsa">
-
-  @b3.datetimeLocal(form("dsaApplication.applicationDate"),
-    '_label -> "Date of application"
-  )
-
-  @b3.datetimeLocal(form("dsaApplication.confirmationDate"),
-    '_label -> "Date of application decision"
-  )
-
-  @b3.select(form("dsaApplication.fundingApproved"),
-    '_label -> "Funding application decision",
-    Symbol("data-toggle") -> "optional-subform",
-    Symbol("data-targets") -> ".dsa-outcome"
-  ) { currentValues =>
-    <option value="">Pending</option>
-    <option @if(currentValues.contains("true")){ selected } value="true" data-target=".dsa-approved">Approved</option>
-    <option @if(currentValues.contains("false")){ selected } value="false" data-target=".dsa-rejected">Rejected</option>
+@* Only show DSA fields for Disability or MentalHealth cases *@
+@if(Seq(Disability, MentalHealth).contains(team) || form.data.keys.exists(_.startsWith("dsaApplication."))){
+  @b3.free('_label -> "DSA Funding Application") {
+    <div class="checkbox">
+      <label for="dsa_fields">
+        <input type="checkbox"
+          id="dsa_fields"
+          data-toggle="optional-subform"
+          data-target="#dsa"
+          @if(form.data.keys.exists(_.startsWith("dsaApplication."))) { checked }
+        >
+        This case relates to a DSA Funding Application
+      </label>
+    </div>
   }
+  <fieldset id="dsa">
 
-  <fieldset class="dsa-outcome dsa-approved">
-    @b3.checkboxGroup(
-      label = "In receipt of",
-      items = DSAFundingType.values,
-      form = form,
-      field = "dsaApplication.fundingTypes",
-      idPrefix = "fundingType"
+    @b3.datetimeLocal(form("dsaApplication.applicationDate"),
+      '_label -> "Date of application"
     )
-  </fieldset>
 
-  <fieldset class="dsa-outcome dsa-rejected">
-    @b3.select(form("dsaApplication.ineligibilityReason"),
-      options = ("", "") +: DSAIneligibilityReason.values.map { c => c.entryName -> c.description },
-      '_label -> "Ineligibility Reason"
+    @b3.datetimeLocal(form("dsaApplication.confirmationDate"),
+      '_label -> "Date of application decision"
     )
-  </fieldset>
 
-</fieldset>
+    @b3.select(form("dsaApplication.fundingApproved"),
+      '_label -> "Funding application decision",
+      Symbol("data-toggle") -> "optional-subform",
+      Symbol("data-targets") -> ".dsa-outcome"
+    ) { currentValues =>
+      <option value="">Pending</option>
+      <option @if(currentValues.contains("true")){ selected } value="true" data-target=".dsa-approved">Approved</option>
+      <option @if(currentValues.contains("false")){ selected } value="false" data-target=".dsa-rejected">Rejected</option>
+    }
+
+    <fieldset class="dsa-outcome dsa-approved">
+      @b3.checkboxGroup(
+        label = "In receipt of",
+        items = DSAFundingType.values,
+        form = form,
+        field = "dsaApplication.fundingTypes",
+        idPrefix = "fundingType"
+      )
+    </fieldset>
+
+    <fieldset class="dsa-outcome dsa-rejected">
+      @b3.select(form("dsaApplication.ineligibilityReason"),
+        options = ("", "") +: DSAIneligibilityReason.values.map { c => c.entryName -> c.description },
+        '_label -> "Ineligibility Reason"
+      )
+    </fieldset>
+  </fieldset>
+}
 
 @b3.checkboxGroup(
   label = "Case tags",
