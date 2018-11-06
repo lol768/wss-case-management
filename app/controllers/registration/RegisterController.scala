@@ -1,25 +1,25 @@
 package controllers.registration
 
 import controllers.BaseController
+import controllers.refiners.HasRegistrationInviteActionRefiner
 import domain._
 import helpers.FormHelpers
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.{I18nSupport, Messages}
-import play.api.mvc.{Action, AnyContent, Result}
-import services.{RegistrationService, SecurityService}
-import warwick.sso.AuthenticatedRequest
+import play.api.mvc.{Action, AnyContent}
+import services.RegistrationService
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class RegisterController @Inject()(
-  securityService: SecurityService,
-  registrationService: RegistrationService
+  registrationService: RegistrationService,
+  hasRegistrationInviteActionRefiner: HasRegistrationInviteActionRefiner
 )(implicit executionContext: ExecutionContext) extends BaseController with I18nSupport {
 
-  import securityService._
+  import hasRegistrationInviteActionRefiner._
 
   private val registerForm = Form(mapping(
     "gp" -> nonEmptyText,
@@ -34,39 +34,25 @@ class RegisterController @Inject()(
     "consent-privacy-statement" -> optional(boolean).verifying("error.privacyStatementConsent.required", _.contains(true))
   )(RegistrationData.apply)(RegistrationData.unapply))
 
-  def form: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
-    withOptionalRegistration {
-      case Some(registration) =>
-        Future.successful(Ok(views.html.registration(registerForm.fill(registration.data.copy(consentPrivacyStatement = None)), Some(registration))))
+  def form: Action[AnyContent] = HasRegistrationInviteAction.async { implicit request =>
+    request.registration.data match {
+      case Some(data) =>
+        Future.successful(Ok(views.html.registration(registerForm.fill(data.copy(consentPrivacyStatement = None)), Some(data))))
       case _ =>
         Future.successful(Ok(views.html.registration(registerForm, None)))
     }
   }
 
-  def submit: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
-    val universityID = request.context.user.get.universityId.get
+  def submit: Action[AnyContent] = HasRegistrationInviteAction.async { implicit request =>
     registerForm.bindFromRequest.fold(
-      formWithErrors => {
-        withOptionalRegistration { option =>
-          Future.successful(Ok(views.html.registration(formWithErrors, option)))
-        }
-      },
+      formWithErrors => Future.successful(Ok(views.html.registration(formWithErrors, request.registration.data))),
       data => {
-        withOptionalRegistration {
-          case Some(existing) =>
-            registrationService.update(universityID, data, existing.updatedDate).successMap { _ =>
-              Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.registration.updated"))
-            }
-          case _ =>
-            registrationService.save(universityID, data).successMap { _ =>
-              Redirect(controllers.routes.IndexController.home()).flashing("success" -> Messages("flash.registration.complete"))
-            }
-        }
+        registrationService.register(currentUser().universityId.get, data, request.registration.updatedDate).successMap(_ =>
+          Redirect(controllers.routes.IndexController.home())
+            .flashing("success" -> Messages(request.registration.data.map(_ => "flash.registration.updated").getOrElse("flash.registration.complete")))
+        )
       }
     )
   }
-
-  private def withOptionalRegistration(f: Option[Registration] => Future[Result])(implicit request: AuthenticatedRequest[AnyContent]): Future[Result] =
-    registrationService.get(request.context.user.get.universityId.get).successFlatMap(f)
 
 }
