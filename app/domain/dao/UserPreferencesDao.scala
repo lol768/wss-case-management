@@ -21,6 +21,7 @@ import scala.language.higherKinds
 @ImplementedBy(classOf[UserPreferencesDaoImpl])
 trait UserPreferencesDao {
   def find(usercode: Usercode): DBIO[Option[StoredUserPreferences]]
+  def find(usercodes: Set[Usercode]): DBIO[Seq[StoredUserPreferences]]
   def upsert(preferences: StoredUserPreferences)(implicit ac: AuditLogContext): DBIO[StoredUserPreferences]
 }
 
@@ -31,6 +32,9 @@ class UserPreferencesDaoImpl @Inject()(
 
   override def find(usercode: Usercode): DBIO[Option[StoredUserPreferences]] =
     userPreferences.table.filter(_.usercode === usercode).take(1).result.headOption
+
+  override def find(usercodes: Set[Usercode]): DBIO[Seq[StoredUserPreferences]] =
+    userPreferences.table.filter(_.usercode.inSet(usercodes)).result
 
   override def upsert(p: StoredUserPreferences)(implicit ac: AuditLogContext): DBIO[StoredUserPreferences] =
     // We avoid doing a native upsert as it makes the versioning table tricky (does the versioning table get an insert or an update?)

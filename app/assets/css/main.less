@@ -5,12 +5,7 @@
 
 @import "eonasdan-bootstrap-datetimepicker/src/less/_bootstrap-datetimepicker.less";
 
-@id7-image-root-dir: './lib/id7/images';
-@icon-font-path: './lib/id7/fonts';
-@fa-font-path: './lib/id7/fonts';
-
 @import "id7/less/id7-no-fa";
-@id7-ignore-id6-legacy: true;
 @import "id7/less/font-awesome-pro";
 @import "id7-theme";
 @import "sysadmin-notices";
@@ -18,11 +13,14 @@
 @import "flexi-picker";
 @import "icons";
 @import "calendars";
+@import "bootstrap-labels.less";
 
+@id7-ignore-id6-legacy: true;
+@id7-image-root-dir: './lib/id7/images';
+@icon-font-path: './lib/id7/fonts';
 @fa-font-path: './lib/id7/fonts';
 @brand-colour: #a14418;
 @nav-link-padding: 10px 15px;
-
 @gray-light: lighten(@gray-base, 45%); // #737373, ARIA
 
 // Always scrollbar to avoid horizontal dancing
@@ -129,13 +127,32 @@ section.indent {
   margin-left: @grid-gutter-width;
 }
 
-.panel-form {
-  .panel-body .form-group {
-    margin-bottom: 0;
+.panel.panel-default.panel-form {
+  border: 0;
+
+  .panel-heading, .panel-body {
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    .clearfix();
   }
 
-  .panel-footer.spaced-buttons {
-    margin-top: 0;
+  .panel-heading {
+    .btn {
+      .pull-right();
+    }
+    label.control-label {
+      padding-top: 0;
+    }
+  }
+
+  .panel-body {
+    .form-group {
+      margin-bottom: 0;
+    }
+    textarea {
+      background-color: #fffef8;
+    }
   }
 }
 
@@ -261,12 +278,17 @@ section.indent {
         }
       }
     }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
   }
 }
 
 .panel-group.message-threads .panel-body {
   max-height: ~"calc(100vh - 300px)";
   overflow-y: auto;
+  background-color: transparent !important;
 }
 
 .inline-form { // *twitch*
@@ -430,6 +452,24 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
         }
         padding-left: @grid-gutter-width / 2;
       }
+    }
+  }
+
+  .panel {
+    .panel-heading {
+      background-color: #f0f0f0;
+      .btn-link {
+        border: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        line-height: 1.1;
+        i {
+          font-size: 16px;
+        }
+      }
+    }
+    .panel-body {
+      background-color: #fffef8;
     }
   }
 }

@@ -11,30 +11,30 @@
 
 <div class="panel panel-default">
   <div class="panel-heading">
-    <h3 class="panel-title clearfix">
+    <h3 class="panel-title">
       <span class="date pull-right">
+        @note.teamMember.safeFullName,
         @JavaTime.Relative(note.created)
         @if(note.lastUpdated != note.created) {
           (last updated @JavaTime.Relative(note.lastUpdated))
         }
       </span>
+      @if(context.user.exists(_.usercode == note.teamMember.usercode)) {
+        <a class="btn btn-xs btn-link" href="@controllers.admin.routes.AppointmentController.editNoteForm(appointment.key, note.id)" aria-label="Edit appointment note">
+          @tags.icons.noteEdit()
+        </a>
+        @defining(AppointmentController.deleteForm(note.lastUpdated).fill(note.lastUpdated)) { form: Form[OffsetDateTime] =>
+          @b3.inline.formCSRF(controllers.admin.routes.AppointmentController.deleteNote(appointment.key, note.id), 'class -> "inline-form") { implicit ifc =>
+            @b3.validatedHidden(form, "version")
+            <button type="submit" class="btn btn-xs btn-link" data-toggle="confirm-submit" data-message="Are you sure you want to delete this appointment note?" aria-label="Delete appointment note">
+              @tags.icons.noteDelete()
+            </button>
+          }
+        }
+      }
     </h3>
   </div>
   <div class="panel-body">
     @views.utils.nl2br(note.text)
-  </div>
-  <div class="panel-footer">
-    @if(context.user.exists(_.usercode == note.teamMember.usercode)) {
-      <div class="pull-right">
-        <a class="btn btn-default btn-xs" href="@controllers.admin.routes.AppointmentController.editNoteForm(appointment.key, note.id)">Edit</a>
-        @defining(AppointmentController.deleteForm(note.lastUpdated).fill(note.lastUpdated)) { form: Form[OffsetDateTime] =>
-          @b3.inline.formCSRF(controllers.admin.routes.AppointmentController.deleteNote(appointment.key, note.id), 'class -> "inline-form") { implicit ifc =>
-            @b3.validatedHidden(form, "version")
-            <button type="submit" class="btn btn-default btn-xs" data-toggle="confirm-submit" data-message="Are you sure you want to delete this appointment note?">Delete</button>
-          }
-        }
-      </div>
-    }
-    <div class="author">@note.teamMember.safeFullName</div>
   </div>
 </div>

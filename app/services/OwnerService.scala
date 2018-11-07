@@ -3,7 +3,7 @@ package services
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
-import domain.ExtendedPostgresProfile.api._
+import domain.CustomJdbcTypes._
 import domain._
 import domain.dao.MemberDao.StoredMember
 import domain.dao.MemberDao.StoredMember.Members
@@ -17,16 +17,18 @@ import warwick.core.timing.TimingContext
 import warwick.sso.Usercode
 
 import scala.concurrent.{ExecutionContext, Future}
+import ExtendedPostgresProfile.api._
 
 @ImplementedBy(classOf[OwnerServiceImpl])
 trait OwnerService {
   def getCaseOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
-  def setCaseOwners(caseId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]]
+  def setCaseOwners(caseId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
   def getCaseOwnerHistory(caseId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[OwnerVersion]]]
   def getEnquiryOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
-  def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]]
-  def getAppointmentOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
-  def setAppointmentOwners(appointmentId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]]
+  def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
+  def getAppointmentOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[AppointmentTeamMember]]]]
+  def setAppointmentOwners(appointmentId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
+  def setAppointmentOutlookId(appointmentId: UUID, owner: Usercode, outlookId: String)(implicit ac: AuditLogContext): Future[ServiceResult[Owner]]
 }
 
 @Singleton
@@ -45,8 +47,10 @@ class OwnerServiceImpl @Inject()(
     getOwners(ownerDao.findEnquiryOwnersQuery(ids).withMember)
   }
 
-  override def getAppointmentOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]] = {
-    getOwners(ownerDao.findAppointmentOwnersQuery(ids).withMember)
+  override def getAppointmentOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[AppointmentTeamMember]]]] = {
+    daoRunner.run(ownerDao.findAppointmentOwnersQuery(ids).withMember.result)
+      .map(_.groupBy { case (o, _) => o.entityId }.mapValues(_.map { case (o, m) => AppointmentTeamMember(m.asMember, o.outlookId) }.toSet))
+      .map(Right.apply)
   }
 
   private def getOwners(daoQuery: Query[(Owner.Owners, Members), (Owner, StoredMember), Seq])(implicit t: TimingContext) = {
@@ -57,7 +61,7 @@ class OwnerServiceImpl @Inject()(
       .map(Right.apply)
   }
 
-  override def setCaseOwners(caseId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]] = {
+  override def setCaseOwners(caseId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
     val now = JavaTime.offsetDateTime
     auditService.audit('CaseSetOwners, caseId.toString, 'Case, Json.arr(owners.map(o => JsString(o.string)))) {
       setOwners(
@@ -73,7 +77,7 @@ class OwnerServiceImpl @Inject()(
     }
   }
 
-  override def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]] = {
+  override def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
     auditService.audit('EnquirySetOwners, enquiryId.toString, 'Enquiry, Json.arr(owners.map(o => JsString(o.string)))) {
       val now = JavaTime.offsetDateTime
       setOwners(
@@ -89,7 +93,7 @@ class OwnerServiceImpl @Inject()(
     }
   }
 
-  override def setAppointmentOwners(appointmentID: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Set[Member]]] = {
+  override def setAppointmentOwners(appointmentID: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
     auditService.audit('AppointmentSetOwners, appointmentID.toString, 'Appointment, Json.arr(owners.map(o => JsString(o.string)))) {
       val now = JavaTime.offsetDateTime
       setOwners(
@@ -105,8 +109,15 @@ class OwnerServiceImpl @Inject()(
     }
   }
 
+  override def setAppointmentOutlookId(appointmentId: UUID, owner: Usercode, outlookId: String)(implicit ac: AuditLogContext): Future[ServiceResult[Owner]] = {
+    daoRunner.run(for {
+      owners <- ownerDao.findAppointmentOwnersQuery(Set(appointmentId)).filter(o => o.userId === owner).result
+      updated <- ownerDao.update(owners.head.copy(outlookId = Some(outlookId)), owners.head.version)
+    } yield Right(updated))
+  }
+
   private def setOwners(owners: Set[Usercode], existingQuery: Query[Owner.Owners, Owner, Seq], entityId: UUID, builder: Usercode => Owner)(implicit ac: AuditLogContext) = {
-    memberService.getOrAddMembers(owners).successFlatMapTo { members =>
+    memberService.getOrAddMembers(owners).successFlatMapTo { _ =>
       daoRunner.run(for {
         result <- updateDifferencesDBIO[Owner, Usercode](
           owners,
@@ -117,7 +128,7 @@ class OwnerServiceImpl @Inject()(
           ownerDao.delete
         )
       } yield {
-        Right(result.all.map(o => members.find(_.usercode == o.userId).get).toSet)
+        Right(result)
       })
     }
   }

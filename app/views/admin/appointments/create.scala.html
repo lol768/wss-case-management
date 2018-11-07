@@ -5,7 +5,6 @@
 @(
   team: Team,
   form: Form[AppointmentFormData],
-  relatedCases: Set[Case],
   availableRooms: Seq[Room],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
@@ -16,7 +15,7 @@
     Symbol("data-freebusy") -> controllers.admin.routes.AppointmentController.freeBusy().url,
     Symbol("data-freebusyresources") -> controllers.admin.routes.AppointmentController.freeBusyResources().url
   ) { implicit ifc =>
-    @views.html.admin.appointments.appointmentFields(form, relatedCases, availableRooms)
+    @views.html.admin.appointments.appointmentFields(form, availableRooms)
 
     @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id).withFragment("appointments"))
   }

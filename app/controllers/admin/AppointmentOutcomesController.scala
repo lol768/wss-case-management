@@ -26,7 +26,7 @@ object AppointmentOutcomesController {
 
   case class AppointmentOutcomesFormData(
     attendance: Seq[AppointmentClientAttendanceFormData],
-    text: String,
+    outcome: Option[AppointmentOutcome],
     version: OffsetDateTime,
   )
 
@@ -40,9 +40,8 @@ object AppointmentOutcomesController {
             "state" -> AppointmentState.formField.verifying("error.required", s => s == AppointmentState.Attended || s == AppointmentState.Cancelled),
             "cancellationReason" -> optional(AppointmentCancellationReason.formField),
           )(AppointmentClientAttendanceFormData.apply)(AppointmentClientAttendanceFormData.unapply)
-            .verifying("error.required", attendance => attendance.state == AppointmentState.Attended || attendance.cancellationReason.nonEmpty)
         ),
-        "text" -> nonEmptyText,
+        "outcome" -> optional(AppointmentOutcome.formField).verifying("error.required", o => o.nonEmpty),
         "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == a.appointment.lastUpdated)
       )(AppointmentOutcomesFormData.apply)(AppointmentOutcomesFormData.unapply)
     )
@@ -64,7 +63,7 @@ class AppointmentOutcomesController @Inject()(
           a.clients.toSeq.sortBy(_.client.universityID.string).map { client =>
             AppointmentClientAttendanceFormData(client.client.universityID, client.state, client.cancellationReason)
           },
-          "",
+          a.appointment.outcome,
           a.appointment.lastUpdated
         ))
       ))
@@ -83,7 +82,7 @@ class AppointmentOutcomesController @Inject()(
         data => appointments.recordOutcomes(
           a.appointment.id,
           data.attendance.map { d => (d.client, (d.state, d.cancellationReason)) }.toMap,
-          AppointmentNoteSave(data.text, currentUser().usercode),
+          data.outcome.get,
           data.version
         ).successMap { updated =>
           Redirect(controllers.admin.routes.AppointmentController.view(updated.key))

@@ -41,7 +41,7 @@ class CaseHistoryTest extends PlaySpec with MockitoSugar with ScalaFutures with 
           StoredCaseTagVersion(caseID, CaseTag.Bullying, now.minusMinutes(4), DatabaseOperation.Insert, now.minusMinutes(4), Some(Usercode("cusfal"))),
           StoredCaseTagVersion(caseID, CaseTag.Alcohol, now.minusMinutes(5), DatabaseOperation.Insert, now.minusMinutes(5), Some(Usercode("cusfal")))
         )
-        val result = CaseHistory.apply(Seq(), history, Seq(), Seq(), userLookupService, clientService).futureValue.right.get
+        val result = CaseHistory.apply(Seq(), history, Seq(), Seq(), Seq(), Seq(), userLookupService, clientService).futureValue.right.get
         result.tags.head._1 mustBe Set(CaseTag.Accommodation, CaseTag.Alcohol, CaseTag.Antisocial, CaseTag.Bullying)
         result.tags.head._2 mustBe now
         result.tags(1)._1 mustBe Set(CaseTag.Alcohol, CaseTag.Antisocial, CaseTag.Bullying)

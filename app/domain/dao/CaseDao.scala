@@ -302,6 +302,8 @@ object CaseDao {
   val caseDocuments: VersionedTableQuery[StoredCaseDocument, StoredCaseDocumentVersion, CaseDocuments, CaseDocumentVersions] =
     VersionedTableQuery(TableQuery[CaseDocuments], TableQuery[CaseDocumentVersions])
 
+
+
   case class Case(
     id: Option[UUID],
     key: Option[IssueKey],
@@ -317,7 +319,8 @@ object CaseDao {
     notifiedFire: Option[Boolean],
     originalEnquiry: Option[UUID],
     caseType: Option[CaseType],
-    cause: CaseCause
+    cause: CaseCause,
+    dsaApplication: Option[UUID] = None,
   ) extends Versioned[Case] with Issue {
     override def atVersion(at: OffsetDateTime): Case = copy(version = at)
     override def storedVersion[B <: StoredVersion[Case]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
@@ -337,6 +340,7 @@ object CaseDao {
         originalEnquiry,
         caseType,
         cause,
+        dsaApplication,
         operation,
         timestamp,
         ac.usercode
@@ -395,6 +399,7 @@ object CaseDao {
     originalEnquiry: Option[UUID],
     caseType: Option[CaseType],
     cause: CaseCause,
+    dsaApplication: Option[UUID],
 
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
@@ -418,6 +423,7 @@ object CaseDao {
     def originalEnquiry = column[Option[UUID]]("enquiry_id")
     def caseType = column[Option[CaseType]]("case_type")
     def cause = column[CaseCause]("cause")
+    def dsaApplication = column[Option[UUID]]("dsa_application")
   }
 
   class Cases(tag: Tag) extends Table[Case](tag, "client_case")
@@ -430,7 +436,7 @@ object CaseDao {
     def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 
     override def * : ProvenShape[Case] =
-      (id.?, key.?, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause).mapTo[Case]
+      (id.?, key.?, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication).mapTo[Case]
     def idx = index("idx_client_case_key", key, unique = true)
   }
 
@@ -443,7 +449,7 @@ object CaseDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[CaseVersion] =
-      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, operation, timestamp, auditUser).mapTo[CaseVersion]
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, operation, timestamp, auditUser).mapTo[CaseVersion]
   }
 
   implicit class CaseExtensions[C[_]](val q: Query[Cases, Case, C]) extends AnyVal {
@@ -904,4 +910,7 @@ object CaseDao {
     caseNotes.table
       .groupBy(_.caseId)
       .map { case (id, n) => (id, n.map(_.created).max) }
+
+
+
 }

@@ -20,14 +20,12 @@
   @b3.vertical.formCSRF(controllers.admin.routes.CaseController.addNote(c.key.get)) { implicit ifc =>
     <div class="panel panel-default panel-form">
       <div class="panel-heading">
-        <h3 class="panel-title">Add a case note</h3>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <label class="control-label">Add a case note</label>
       </div>
       <div class="panel-body">
         @b3.validatedHidden(noteForm, "version")
         @b3.textarea(noteForm("text"), 'rows -> 5, Symbol("aria-label") -> "Add a case note")
-      </div>
-      <div class="panel-footer">
-        <button type="submit" class="btn btn-primary">Save</button>
       </div>
     </div>
   }

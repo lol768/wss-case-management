@@ -18,6 +18,10 @@
       "definition": "Long standing condition",
       "sitsDefinition": "You have a long standing illness or condition"
     },
+    "disabilityFundingStatus": {
+      "code": "9",
+      "description": "Pending"
+    },
     "email": "reynard.fox@outlook.com",
     "firstName": "Reynard",
     "fullName": "Reynard Fox",

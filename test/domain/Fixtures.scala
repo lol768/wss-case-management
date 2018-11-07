@@ -5,6 +5,7 @@ import java.util.UUID
 
 import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
 import domain.dao.CaseDao.Case
+import domain.dao.DSADao.DSAApplication
 import domain.dao.LocationDao.{StoredBuilding, StoredRoom}
 import domain.dao._
 import warwick.core.helpers.JavaTime
@@ -80,6 +81,7 @@ object Fixtures {
       dualNationality = None,
       tier4VisaRequired = None,
       disability = None,
+      disabilityFundingStatus = None,
       photo = None,
       personalTutors = Nil,
       researchSupervisors = Nil,
@@ -110,6 +112,7 @@ object Fixtures {
       dualNationality = None,
       tier4VisaRequired = None,
       disability = None,
+      disabilityFundingStatus = None,
       photo = None,
       personalTutors = Nil,
       researchSupervisors = Nil,
@@ -159,12 +162,26 @@ object Fixtures {
       None,
       None,
       Some(CaseType.MentalHealthAssessment),
-      CaseCause.New
+      CaseCause.New,
+      None
     )
 
-    def newCase(issueKey: Int = 1234): Case = newCaseNoId.copy(
+    def newCase(issueKey: Int = 1234): Case = newCaseNoId().copy(
       id = Some(UUID.randomUUID()),
-      key = Some(IssueKey(IssueKeyType.Case, issueKey))
+      key = Some(IssueKey(IssueKeyType.Case, issueKey)),
+      dsaApplication = None
+    )
+
+    def newDSAApplicationNoId() = DSAApplicationAndTypes(
+      application = DSAApplication(
+        id = None,
+        applicationDate = None,
+        fundingApproved = None,
+        confirmationDate = None,
+        ineligibilityReason = None,
+        version = JavaTime.offsetDateTime
+      ),
+      fundingTypes = Set()
     )
   }
 
@@ -180,6 +197,7 @@ object Fixtures {
       AppointmentType.FaceToFace,
       AppointmentPurpose.Consultation,
       AppointmentState.Provisional,
+      None,
       None,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,

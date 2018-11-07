@@ -40,6 +40,13 @@
       <div class="panel-footer">
         @if(issueRender.issue.state != IssueState.Closed) {
           @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), f, supportedMimeTypes, issueRender.issue.id.get, context.user.get.universityId.get)
+        } else {
+          <p>
+            We think this enquiry is now resolved, so we've marked it as closed.
+            But if there's anything else you want to ask us about this or any other subject,
+            you can always do so just by sending us a
+            <a href="@controllers.enquiries.routes.EnquiryController.form()">new enquiry</a>.
+          </p>
         }
       </div>
     </div>

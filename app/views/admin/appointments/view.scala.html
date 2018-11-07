@@ -47,7 +47,7 @@
         }
 
         @tags.sectioned.detail("Team") {
-          @a.appointment.team.name team
+          @a.appointment.team.name
         }
 
         @tags.sectioned.detail("Appointment type") {
@@ -116,6 +116,12 @@
         @a.appointment.cancellationReason.map { reason =>
           @tags.sectioned.detail("Cancellation reason") {
             @reason.description
+          }
+        }
+
+        @a.appointment.outcome.map { outcome =>
+          @tags.sectioned.detail("Outcome") {
+            @outcome.description
           }
         }
       </div>

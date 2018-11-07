@@ -22,6 +22,7 @@ case class Appointment(
   purpose: AppointmentPurpose,
   state: AppointmentState,
   cancellationReason: Option[AppointmentCancellationReason],
+  outcome: Option[AppointmentOutcome],
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
 ) {
@@ -134,7 +135,8 @@ case class AppointmentClient(
 )
 
 case class AppointmentTeamMember(
-  member: Member
+  member: Member,
+  outlookId: Option[String]
 )
 
 sealed abstract class AppointmentType(val description: String) extends EnumEntry
@@ -208,3 +210,34 @@ case class AppointmentNoteSave(
   text: String,
   teamMember: Usercode
 )
+
+sealed abstract class AppointmentOutcome(val description: String) extends EnumEntry
+object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
+  case object Careers extends AppointmentOutcome("Advised to contact Careers")
+  case object Chaplaincy extends AppointmentOutcome("Advised to contact Chaplaincy")
+  case object IAPT extends AppointmentOutcome("Advised to contact IAPT")
+  case object Relate extends AppointmentOutcome("Advised to contact Relate")
+  case object PersonalTutor extends AppointmentOutcome("Advised to contact Personal Tutor/Senior Tutor")
+  case object BACP extends AppointmentOutcome("Advised to contact BACP (private)")
+  case object UKCP extends AppointmentOutcome("Advised to contact UKCP / BPS")
+  case object EatingDisorderClinic extends AppointmentOutcome("Advised to contact Eating Disorder Clinic")
+  case object UniversityDean extends AppointmentOutcome("Advised to contact University Dean of Students")
+  case object GP extends AppointmentOutcome("Advised to contact GP/Statutory services")
+  case object SocialServices extends AppointmentOutcome("Advised to contact Social Services")
+  case object StudentFunding extends AppointmentOutcome("Advised to contact Student Funding team")
+  case object StudentUnion extends AppointmentOutcome("Advised to contact Student Union Advice Centre")
+  case object Funding extends AppointmentOutcome("Advised to contact funding body")
+  case object SupportWorker extends AppointmentOutcome("Agreed provision of support worker - bank 1 or 2")
+  case object StudySkills extends AppointmentOutcome("Agreed provision of 1-1 study skills")
+  case object AcademicMentoring extends AppointmentOutcome("Agreed provision of 1-1 academic mentoring")
+  case object MentalHealth extends AppointmentOutcome("Agreed provision of 1-1 mental health mentoring")
+  case object Additional extends AppointmentOutcome("Additional appointment/session booked")
+  case object Further extends AppointmentOutcome("Further investigation")
+  case object Disciplinary extends AppointmentOutcome("Disciplinary")
+  case object Fitness extends AppointmentOutcome("Fitness to attend")
+  case object NoFurtherAction extends AppointmentOutcome("No further action required")
+  case object Closed extends AppointmentOutcome("Case closed")
+  case object Other extends AppointmentOutcome("Other")
+
+  override def values: immutable.IndexedSeq[AppointmentOutcome] = findValues
+}

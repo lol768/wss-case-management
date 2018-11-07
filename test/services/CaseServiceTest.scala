@@ -33,13 +33,16 @@ class CaseServiceTest extends AbstractDaoTest {
 
   "CaseServiceTest" should {
     "create" in withData(new CaseFixture()) { _ =>
-      val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty).serviceValue
+      val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty, None).serviceValue
       created.id must not be 'empty
       created.key.map(_.string) mustBe Some("CAS-1000")
 
-      val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness)).serviceValue
+      val dsaApplication = Fixtures.cases.newDSAApplicationNoId()
+      val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness), Some(dsaApplication)).serviceValue
       created2.id must not be 'empty
       created2.key.map(_.string) mustBe Some("CAS-1001")
+      created2.dsaApplication.isDefined mustBe true
+      service.findDSAApplication(created2).serviceValue.isDefined mustBe true
     }
 
     "find" in withData(new CaseFixture()) { case1 =>
@@ -51,8 +54,8 @@ class CaseServiceTest extends AbstractDaoTest {
     "find by client" in withData(new CaseFixture()) { _ =>
       val definedAuditLogContext: AuditLogContext = AuditLogContext(Some(Usercode("cusfal")), timingData = TimingContext.none.timingData)
 
-      val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty)(definedAuditLogContext).serviceValue
-      val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness))(definedAuditLogContext).serviceValue
+      val created = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty, None)(definedAuditLogContext).serviceValue
+      val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness), None)(definedAuditLogContext).serviceValue
 
       service.findAllForClient(UniversityID("0672089")).serviceValue.map(_.clientCase) mustBe Seq(created2, created)
       service.findAllForClient(UniversityID("0672088")).serviceValue.map(_.clientCase) mustBe Seq(created2)
@@ -90,8 +93,8 @@ class CaseServiceTest extends AbstractDaoTest {
     }
 
     "get and set links" in withData(new CaseFixture()) { c1 =>
-      val c2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty).serviceValue
-      val c3 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set.empty).serviceValue
+      val c2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089")), Set.empty, None).serviceValue
+      val c3 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set.empty, None).serviceValue
 
       service.getLinks(c1.id.get).serviceValue mustBe ((Nil, Nil))
 
@@ -150,7 +153,7 @@ class CaseServiceTest extends AbstractDaoTest {
       service.getCaseTags(c1.id.get).serviceValue mustBe 'empty
 
       // Just add some clients and tags, it's all the same except with a new version
-      val c2 = service.update(c1, Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Accommodation, CaseTag.DomesticViolence), c1.version).serviceValue
+      val c2 = service.update(c1, Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Accommodation, CaseTag.DomesticViolence), None, c1.version).serviceValue
       c2 mustBe c1.copy(version = c2.version)
 
       service.getClients(c1.id.get).serviceValue.exists(_.universityID == UniversityID("0672089")) mustBe true
@@ -158,7 +161,7 @@ class CaseServiceTest extends AbstractDaoTest {
       service.getCaseTags(c1.id.get).serviceValue mustBe Set(CaseTag.Accommodation, CaseTag.DomesticViolence)
 
       // Replace a client and a tag and update the subject
-      val c3 = service.update(c2.copy(subject = "Here's an updated subject"), Set(UniversityID("0672089"), UniversityID("1234567")), Set(CaseTag.Accommodation, CaseTag.HomeSickness), c2.version).serviceValue
+      val c3 = service.update(c2.copy(subject = "Here's an updated subject"), Set(UniversityID("0672089"), UniversityID("1234567")), Set(CaseTag.Accommodation, CaseTag.HomeSickness), None, c2.version).serviceValue
       c3.subject mustBe "Here's an updated subject"
       c3 mustBe c2.copy(version = c3.version, subject = c3.subject)
 

@@ -548,12 +548,14 @@ class DataGenerationJob @Inject()(
                   if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
                   else None
                 },
-                cause = randomEnum(CaseCause)
+                cause = randomEnum(CaseCause),
+                dsaApplication = None
               ),
               Set(enquiry.client.universityID),
               (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
                 randomEnum(CaseTag)
-              }.toSet
+              }.toSet,
+              None
             ).serviceValue
 
             // Close the enquiry
@@ -612,12 +614,14 @@ class DataGenerationJob @Inject()(
                 if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
                 else None
               },
-              cause = randomEnum(CaseCause)
+              cause = randomEnum(CaseCause),
+              None
             ),
             clients,
             (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
               randomEnum(CaseTag)
-            }.toSet
+            }.toSet,
+            None
           ).serviceValue
 
           val owners: Set[Usercode] = Random.nextInt(4) match {
@@ -886,7 +890,7 @@ class DataGenerationJob @Inject()(
             appointments.recordOutcomes(
               appointment.id,
               attendance,
-              AppointmentNoteSave(dummyWords(Random.nextInt(50)), teamMember),
+              randomEnum(AppointmentOutcome),
               appointment.lastUpdated,
             ).serviceValue -> clients
           }
