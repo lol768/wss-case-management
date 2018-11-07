@@ -16,7 +16,7 @@ import EnquirySearch from './enquiry-search';
 import AppointmentSearch from './appointment-search';
 import AppointmentCalendar from './appointment-calendar';
 import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
-import { DateTimePicker, InlineDateTimePicker } from './date-time-picker';
+import * as dateTimePicker from './date-time-picker';
 import PaginatingTable from './paginating-table';
 
 function closePopover($popover) {
@@ -90,12 +90,20 @@ function bindTo($scope) {
     AppointmentFreeBusyForm(container);
   });
 
+  $('.datepicker', $scope).each((i, container) => {
+    dateTimePicker.DatePicker(container);
+  });
+
   $('.datetimepicker', $scope).each((i, container) => {
-    DateTimePicker(container);
+    dateTimePicker.DateTimePicker(container);
+  });
+
+  $('.datepicker-inline', $scope).each((i, container) => {
+    dateTimePicker.InlineDatePicker(container);
   });
 
   $('.datetimepicker-inline', $scope).each((i, container) => {
-    InlineDateTimePicker(container);
+    dateTimePicker.InlineDateTimePicker(container);
   });
 
 
