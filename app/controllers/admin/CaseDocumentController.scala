@@ -62,7 +62,7 @@ class CaseDocumentController @Inject()(
       formData =>
         caseRequest.body.file("file").map { file =>
           cases.addDocument(
-            caseID = caseRequest.`case`.id.get,
+            caseID = caseRequest.`case`.id,
             document = CaseDocumentSave(
               formData.documentType,
               caseRequest.context.user.get.usercode
@@ -88,7 +88,7 @@ class CaseDocumentController @Inject()(
           showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
         ),
         version =>
-          cases.deleteDocument(caseRequest.`case`.id.get, doc.id, version).successMap { _ =>
+          cases.deleteDocument(caseRequest.`case`.id, doc.id, version).successMap { _ =>
             Redirect(controllers.admin.routes.CaseController.view(caseKey))
               .flashing("success" -> Messages("flash.case.documentDeleted"))
           }
@@ -97,7 +97,7 @@ class CaseDocumentController @Inject()(
   }
 
   private def withCaseDocument(id: UUID)(f: CaseDocument => Future[Result])(implicit caseRequest: CaseSpecificRequest[AnyContent]): Future[Result] =
-    cases.getDocuments(caseRequest.`case`.id.get).successFlatMap { docs =>
+    cases.getDocuments(caseRequest.`case`.id).successFlatMap { docs =>
       docs.find(_.id == id).map(f)
         .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
     }

@@ -1,8 +1,7 @@
 @import java.time.OffsetDateTime
 
 @import controllers.admin.CaseDocumentController
-@import domain.{CaseDocument, EntityAndCreator}
-@import domain.dao.CaseDao.Case
+@import domain.{Case, CaseDocument, EntityAndCreator}
 @import warwick.core.helpers.JavaTime
 
 @(
@@ -14,11 +13,11 @@
   <ul class="list-unstyled">
   @documents.map { doc =>
     <li>
-      <a href="@controllers.admin.routes.CaseDocumentController.download(c.key.get, doc.entity.id)">@doc.entity.file.fileName</a>,
+      <a href="@controllers.admin.routes.CaseDocumentController.download(c.key, doc.entity.id)">@doc.entity.file.fileName</a>,
       @doc.entity.documentType.description,
       added @JavaTime.Relative(doc.entity.created, lowercaseToday = true) by @tags.creatorAndTeam(doc.creator)
       @defining(CaseDocumentController.deleteForm(doc.entity.lastUpdated).fill(doc.entity.lastUpdated)) { form: Form[OffsetDateTime] =>
-        @b3.inline.formCSRF(controllers.admin.routes.CaseDocumentController.delete(c.key.get, doc.entity.id), 'class -> "inline-form") { implicit ifc =>
+        @b3.inline.formCSRF(controllers.admin.routes.CaseDocumentController.delete(c.key, doc.entity.id), 'class -> "inline-form") { implicit ifc =>
           @b3.validatedHidden(form, "version")
           <button type="submit" class="btn-link" data-toggle="confirm-submit" data-message="Are you sure you want to delete this document?" aria-label="Delete document">
             <i class="fas fa-times-circle"></i>

@@ -4,7 +4,6 @@ import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import domain._
-import domain.dao.CaseDao.Case
 import helpers.ServiceResults
 import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
@@ -129,7 +128,7 @@ class NotificationServiceImpl @Inject()(
     if (sender == MessageSender.Client) {
       enquiryMessageToTeam(enquiry)
     } else {
-      messageToClient(enquiry.client.universityID, enquiry.team, enquiry.id.get)
+      messageToClient(enquiry.client.universityID, enquiry.team, enquiry.id)
     }
 
   private def enquiryMessageToTeam(enquiry: Enquiry)(implicit ac: AuditLogContext) = {
@@ -172,15 +171,15 @@ class NotificationServiceImpl @Inject()(
     if (sender == MessageSender.Client)
       caseMessageToTeam(c)
     else {
-      messageToClient(client, c.team, c.id.get)
+      messageToClient(client, c.team, c.id)
     }
 
   private def caseMessageToTeam(c: Case)(implicit ac: AuditLogContext) = {
     withTeamUsers(c.team) { users =>
-      val url = controllers.admin.routes.CaseController.view(c.key.get).build
+      val url = controllers.admin.routes.CaseController.view(c.key).build
 
       queueEmailAndSendActivity(
-        subject = s"$teamSubjectPrefix ${c.key.get.string} - Case message from client received",
+        subject = s"$teamSubjectPrefix ${c.key.string} - Case message from client received",
         body = views.txt.emails.casemessagefromclient(url),
         recipients = users,
         activity = buildActivity(
@@ -215,10 +214,10 @@ class NotificationServiceImpl @Inject()(
       Future.successful(Right(new Activity()))
     } else {
       withUsers(newOwners) { users =>
-        val url = controllers.admin.routes.CaseController.view(clientCase.key.get).build
+        val url = controllers.admin.routes.CaseController.view(clientCase.key).build
 
         queueEmailAndSendActivity(
-          subject = s"$teamSubjectPrefix ${clientCase.key.get.string} - New case owner",
+          subject = s"$teamSubjectPrefix ${clientCase.key.string} - New case owner",
           body = views.txt.emails.newcaseowner(url),
           recipients = users.toSeq,
           activity = buildActivity(
@@ -233,10 +232,10 @@ class NotificationServiceImpl @Inject()(
 
   override def caseReassign(clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
     withTeamUsers(clientCase.team) { users =>
-      val url = controllers.admin.routes.CaseController.view(clientCase.key.get).build
+      val url = controllers.admin.routes.CaseController.view(clientCase.key).build
 
       queueEmailAndSendActivity(
-        subject = s"$teamSubjectPrefix ${clientCase.key.get.string} - Case assigned",
+        subject = s"$teamSubjectPrefix ${clientCase.key.string} - Case assigned",
         body = views.txt.emails.casereassigned(url),
         recipients = users,
         activity = buildActivity(

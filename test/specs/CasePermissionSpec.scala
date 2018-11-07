@@ -1,7 +1,7 @@
 package specs
 
 import domain.Fixtures.users._
-import domain.{CaseTag, Fixtures, IssueKey, Teams}
+import domain._
 import org.scalatest.BeforeAndAfterAll
 import play.api.test.Helpers._
 import services.{CaseService, OwnerService}
@@ -46,14 +46,13 @@ class CasePermissionSpec extends BaseSpec with BeforeAndAfterAll {
 
   // Create data
   override protected def beforeAll(): Unit = {
-    val c = Fixtures.cases.newCaseNoId()
-    val clients = Set( studentCaseClient.universityId.get )
+    val clients = Set(studentCaseClient.universityId.get )
     val tags = Set.empty[CaseTag]
-    val created = caseService.create(c, clients, tags, dsaApplication = None).serviceValue
-    created.key.value mustBe firstKey
+    val created = caseService.create(CaseSave("Mental health assessment", None, None, CaseCause.New), clients, tags, Teams.MentalHealth, None, None).serviceValue
+    created.key mustBe firstKey
     created.team mustBe Teams.MentalHealth
 
-    ownerService.setCaseOwners(created.id.get, Set[Usercode](
+    ownerService.setCaseOwners(created.id, Set[Usercode](
       Usercode("mh1"), // Mental Health member
       Usercode("ss1"), // Wellbeing member
       studentNewVisitor.usercode // Some nobody

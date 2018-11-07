@@ -13,7 +13,7 @@ import domain.dao.EnquiryDao.{Enquiries, EnquirySearchQuery, StoredEnquiry, Stor
 import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{DaoRunner, EnquiryDao, MessageDao}
-import domain.{Page, _}
+import domain._
 import helpers.ServiceResults
 import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
@@ -140,10 +140,10 @@ class EnquiryServiceImpl @Inject() (
   }
 
   override def addMessage(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(MessageData, Seq[UploadedFile])]] = {
-    auditService.audit('EnquiryAddMessage, enquiry.id.get.toString, 'Enquiry, Json.obj()) {
+    auditService.audit('EnquiryAddMessage, enquiry.id.toString, 'Enquiry, Json.obj()) {
       memberService.getOrAddMember(message.teamMember).successFlatMapTo(member =>
         daoRunner.run(for {
-          (m, f) <- addMessageDBIO(enquiry.client.universityID, enquiry.team, enquiry.id.get, message, files)
+          (m, f) <- addMessageDBIO(enquiry.client.universityID, enquiry.team, enquiry.id, message, files)
         } yield (m, f)).flatMap { case (m, f) =>
           notificationService.enquiryMessage(enquiry, m.sender).map(_.map(_ =>
             (m.asMessageData(member), f)
@@ -236,7 +236,7 @@ class EnquiryServiceImpl @Inject() (
     daoRunner.run(enquiryDao.findByIDsQuery(ids.toSet).withClient.result)
       .map(_.map { case (e, c) => e.asEnquiry(c.asClient) })
       .map { enquiries =>
-        val lookup = enquiries.groupBy(_.id.get).mapValues(_.head)
+        val lookup = enquiries.groupBy(_.id).mapValues(_.head)
 
       if (ids.forall(lookup.contains))
         Right(ids.map(lookup.apply))
@@ -265,7 +265,7 @@ class EnquiryServiceImpl @Inject() (
     }
 
   override def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]] =
-    auditService.audit[EnquiryRender]('EnquiryView, (r: EnquiryRender) => r.enquiry.id.get.toString, 'Enquiry, Json.obj()) {
+    auditService.audit[EnquiryRender]('EnquiryView, (r: EnquiryRender) => r.enquiry.id.toString, 'Enquiry, Json.obj()) {
       val action = getWithClientAndMessagesAndNotes(enquiryDao.findByKeyQuery(enquiryKey))
 
       daoRunner.run(action).map { case (withMessages, notes) =>
@@ -416,7 +416,7 @@ object EnquiryService {
       EnquiryRender(
         e,
         m,
-        notesByEnquiry(e.id.get)
+        notesByEnquiry(e.id)
       )
     })
   }

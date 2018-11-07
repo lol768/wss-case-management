@@ -62,7 +62,7 @@
           @tags.sectioned.detail("Cases") {
             <ul class="list-unstyled">
               @a.clientCases.map { clientCase =>
-                <li><a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">@clientCase.key.get.string @clientCase.subject</a></li>
+                <li><a href="@controllers.admin.routes.CaseController.view(clientCase.key)">@clientCase.key.string @clientCase.subject</a></li>
               }
             </ul>
           }

@@ -5,10 +5,8 @@ import java.time.{Clock, DayOfWeek, OffsetDateTime}
 
 import com.google.common.io.{ByteSource, CharSource}
 import controllers.BaseController
-import controllers.admin.CaseController.CaseIncidentFormData
 import controllers.sysadmin.DataGenerationController._
 import domain._
-import domain.dao.CaseDao.Case
 import enumeratum.{Enum, EnumEntry}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
@@ -389,11 +387,11 @@ class DataGenerationJob @Inject()(
           val note = EnquiryNoteSave(dummyWords(Random.nextInt(50)), teamMember)
 
           if ((options.EnquiryCounsellingRate / Random.nextDouble()).toInt > 0) {
-            enquiries.reassign(enquiry.id.get, Teams.Counselling, note, enquiry.lastUpdated).serviceValue
+            enquiries.reassign(enquiry.id, Teams.Counselling, note, enquiry.lastUpdated).serviceValue
           } else if ((options.EnquiryDisabilityRate / Random.nextDouble()).toInt > 0) {
-            enquiries.reassign(enquiry.id.get, Teams.Disability, note, enquiry.lastUpdated).serviceValue
+            enquiries.reassign(enquiry.id, Teams.Disability, note, enquiry.lastUpdated).serviceValue
           } else if ((options.EnquiryMentalHealthRate / Random.nextDouble()).toInt > 0) {
-            enquiries.reassign(enquiry.id.get, Teams.MentalHealth, note, enquiry.lastUpdated).serviceValue
+            enquiries.reassign(enquiry.id, Teams.MentalHealth, note, enquiry.lastUpdated).serviceValue
           } else {
             enquiry
           }
@@ -412,7 +410,7 @@ class DataGenerationJob @Inject()(
           }
 
           if (owners.nonEmpty) {
-            enquiries.setOwners(enquiry.id.get, owners).serviceValue
+            enquiries.setOwners(enquiry.id, owners).serviceValue
           }
         }
       }
@@ -517,9 +515,9 @@ class DataGenerationJob @Inject()(
           withMockDateTime(randomFutureDateTime(base = enquiry.lastUpdated)) { _ =>
             implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(enquiry.team))
 
-            val incident: Option[CaseIncidentFormData] =
+            val incident: Option[CaseIncident] =
               if ((options.CaseIncidentRate / Random.nextDouble()).toInt > 0)
-                Some(CaseIncidentFormData(
+                Some(CaseIncident(
                   incidentDate = randomPastDateTime(maximumDaysInPast = 7),
                   onCampus = Random.nextBoolean(),
                   notifiedPolice = Random.nextBoolean(),
@@ -529,42 +527,32 @@ class DataGenerationJob @Inject()(
               else None
 
             val c = cases.create(
-              Case(
-                id = None, // Set by service
-                key = None, // Set by service
+              CaseSave(
                 subject = dummyWords(Random.nextInt(5) + 3),
-                created = JavaTime.offsetDateTime,
-                team = enquiry.team,
-                version = JavaTime.offsetDateTime,
-                state = IssueState.Open,
-                incidentDate = incident.map(_.incidentDate),
-                onCampus = incident.map(_.onCampus),
-                notifiedPolice = incident.map(_.notifiedPolice),
-                notifiedAmbulance = incident.map(_.notifiedAmbulance),
-                notifiedFire = incident.map(_.notifiedFire),
-                originalEnquiry = enquiry.id,
+                incident = incident,
                 caseType = {
                   val typesForTeam = CaseType.valuesFor(enquiry.team)
                   if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
                   else None
                 },
                 cause = randomEnum(CaseCause),
-                dsaApplication = None
               ),
               Set(enquiry.client.universityID),
               (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
                 randomEnum(CaseTag)
               }.toSet,
+              enquiry.team,
+              Some(enquiry.id),
               None
             ).serviceValue
 
             // Close the enquiry
-            enquiries.updateState(enquiry.id.get, IssueState.Closed, enquiry.lastUpdated).serviceValue
+            enquiries.updateState(enquiry.id, IssueState.Closed, enquiry.lastUpdated).serviceValue
 
             // Copy enquiry owners to case owners
             cases.setOwners(
-              c.id.get,
-              enquiries.getOwners(enquiry.id.toSet).serviceValue.values.toSet.flatten.map(_.usercode)
+              c.id,
+              enquiries.getOwners(Set(enquiry.id)).serviceValue.values.toSet.flatten.map(_.usercode)
             ).serviceValue
 
             c -> Set(enquiry.client.universityID)
@@ -583,9 +571,9 @@ class DataGenerationJob @Inject()(
               randomClient()
             }.toSet
 
-          val incident: Option[CaseIncidentFormData] =
+          val incident: Option[CaseIncident] =
             if ((options.CaseIncidentRate / Random.nextDouble()).toInt > 0)
-              Some(CaseIncidentFormData(
+              Some(CaseIncident(
                 incidentDate = randomPastDateTime(maximumDaysInPast = 7),
                 onCampus = Random.nextBoolean(),
                 notifiedPolice = Random.nextBoolean(),
@@ -595,32 +583,22 @@ class DataGenerationJob @Inject()(
             else None
 
           val c = cases.create(
-            Case(
-              id = None, // Set by service
-              key = None, // Set by service
+            CaseSave(
               subject = dummyWords(Random.nextInt(5) + 3),
-              created = JavaTime.offsetDateTime,
-              team = team,
-              version = JavaTime.offsetDateTime,
-              state = IssueState.Open,
-              incidentDate = incident.map(_.incidentDate),
-              onCampus = incident.map(_.onCampus),
-              notifiedPolice = incident.map(_.notifiedPolice),
-              notifiedAmbulance = incident.map(_.notifiedAmbulance),
-              notifiedFire = incident.map(_.notifiedFire),
-              originalEnquiry = None,
+              incident = incident,
               caseType = {
                 val typesForTeam = CaseType.valuesFor(team)
                 if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
                 else None
               },
               cause = randomEnum(CaseCause),
-              None
             ),
             clients,
             (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
               randomEnum(CaseTag)
             }.toSet,
+            team,
+            None,
             None
           ).serviceValue
 
@@ -632,7 +610,7 @@ class DataGenerationJob @Inject()(
           }
 
           if (owners.nonEmpty) {
-            cases.setOwners(c.id.get, owners).serviceValue
+            cases.setOwners(c.id, owners).serviceValue
           }
 
           c -> clients
@@ -660,7 +638,7 @@ class DataGenerationJob @Inject()(
                 else None
               },
               note,
-              c.version
+              c.lastUpdated
             ).serviceValue -> clients
           } else c -> clients
         }
@@ -676,7 +654,7 @@ class DataGenerationJob @Inject()(
           if (other != c && (options.CaseLinkRate / Random.nextDouble()).toInt > 0) {
             val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
 
-            cases.addLink(CaseLinkType.Related, c.id.get, other.id.get, note).serviceValue
+            cases.addLink(CaseLinkType.Related, c.id, other.id, note).serviceValue
           }
 
           c -> clients
@@ -694,7 +672,7 @@ class DataGenerationJob @Inject()(
             val attachment = randomAttachment()
             val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
 
-            cases.addDocument(c.id.get, document, attachment._1, attachment._2, note).serviceValue
+            cases.addDocument(c.id, document, attachment._1, attachment._2, note).serviceValue
           }
         }
       }
@@ -729,7 +707,7 @@ class DataGenerationJob @Inject()(
 
             val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
 
-            cases.addGeneralNote(c.id.get, note).serviceValue
+            cases.addGeneralNote(c.id, note).serviceValue
           }
         }
       }
@@ -760,8 +738,8 @@ class DataGenerationJob @Inject()(
 
             val caseIDs =
               (1 to (options.MultipleCaseAppointmentRate / Random.nextDouble()).toInt).map { _ =>
-                generatedCases(Random.nextInt(generatedCases.size))._1.id.get
-              }.toSet + c.id.get
+                generatedCases(Random.nextInt(generatedCases.size))._1.id
+              }.toSet + c.id
 
             appointments.create(appointment, clients, teamMembers, c.team, caseIDs).serviceValue -> clients
           }
@@ -847,7 +825,7 @@ class DataGenerationJob @Inject()(
             appointments.update(
               appointment.id,
               changes,
-              a.clientCases.map(_.id.get),
+              a.clientCases.map(_.id),
               a.clients.map(_.client.universityID),
               a.teamMembers.map(_.member.usercode),
               a.appointment.lastUpdated

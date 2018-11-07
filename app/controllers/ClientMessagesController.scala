@@ -6,7 +6,6 @@ import controllers.ClientMessagesController._
 import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.refiners.{ClientIssueActionFilters, IssueSpecificRequest}
 import domain._
-import domain.dao.CaseDao.Case
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -38,8 +37,8 @@ class ClientMessagesController @Inject()(
   private def renderMessages(issue: Issue, f: Form[String])(implicit request: IssueSpecificRequest[_]): Future[Result] =
     matchIssue(
       issue,
-      _ => enquiryService.getForRender(issue.id.get).map(_.map(_.toIssue)),
-      _ => caseService.findForClient(issue.id.get, currentUser.universityId.get).map(_.map(_.toIssue))
+      _ => enquiryService.getForRender(issue.id).map(_.map(_.toIssue)),
+      _ => caseService.findForClient(issue.id, currentUser.universityId.get).map(_.map(_.toIssue))
     ).successMap(issueRender =>
       Ok(views.html.clientMessages(
         issueRender,
@@ -94,7 +93,7 @@ class ClientMessagesController @Inject()(
   def auditView(id: java.util.UUID): Action[AnyContent] = CanClientViewIssueAction(id).async { implicit request =>
     audit.audit(
       matchIssue(request.issue, _ => 'EnquiryView, _ => 'CaseView),
-      request.issue.id.get.toString,
+      request.issue.id.toString,
       matchIssue(request.issue, _ => 'Enquiry, _ => 'Case),
       Json.obj()
     ) {
@@ -112,8 +111,8 @@ class ClientMessagesController @Inject()(
   def download(id: java.util.UUID, fileId: UUID): Action[AnyContent] = CanClientViewIssueAction(id).async { implicit request =>
     matchIssue(
       request.issue,
-      _ => enquiryService.getForRender(request.issue.id.get).map(_.map(_.messages)),
-      _ => caseService.findForClient(request.issue.id.get, currentUser.universityId.get).map(_.map(_.messages))
+      _ => enquiryService.getForRender(request.issue.id).map(_.map(_.messages)),
+      _ => caseService.findForClient(request.issue.id, currentUser.universityId.get).map(_.map(_.messages))
     ).successFlatMap { messages =>
       messages.flatMap(_.files).find(_.id == fileId)
         .map(uploadedFileControllerHelper.serveFile)

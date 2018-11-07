@@ -18,7 +18,7 @@ class CanEditEnquiryActionRefiner @Inject()(
   private implicit val implicitEnquiryService: EnquiryService = enquiryService
 
   private val CanEditEnquiry = PermissionsFilter[EnquirySpecificRequest] { implicit request =>
-    permissionService.canEditEnquiry(request.context.user.get.usercode, request.enquiry.id.get)
+    permissionService.canEditEnquiry(request.context.user.get.usercode, request.enquiry.id)
   }
 
   def CanEditEnquiryAction(enquiryKey: IssueKey): ActionBuilder[EnquirySpecificRequest, AnyContent] =

@@ -7,12 +7,12 @@ import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
-import domain._
 import domain.dao.AppointmentDao.{AppointmentCase, AppointmentSearchQuery, Appointments, NoteAndAppointment, StoredAppointment, StoredAppointmentClient, StoredAppointmentNote}
-import domain.dao.CaseDao.Case
+import domain.dao.CaseDao.StoredCase
 import domain.dao.ClientDao.StoredClient
 import domain.dao.MemberDao.StoredMember
 import domain.dao.{AppointmentDao, DaoRunner}
+import domain.{Case, _}
 import helpers.ServiceResults
 import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
@@ -656,7 +656,7 @@ object AppointmentService {
   def groupTuples(
     withClients: Seq[(StoredAppointment, StoredAppointmentClient, StoredClient)],
     withRoom: Seq[(StoredAppointment, Room)],
-    withCase: Seq[(StoredAppointment, Case)],
+    withCase: Seq[(StoredAppointment, StoredCase)],
     teamMembers: Map[UUID, Set[AppointmentTeamMember]],
     notes: Seq[(StoredAppointmentNote, StoredMember)]
   ): Seq[AppointmentRender] = {
@@ -664,7 +664,7 @@ object AppointmentService {
       case (a, ac, c) => (a.asAppointment, ac.asAppointmentClient(c.asClient))
     })(Ordering.by[AppointmentClient, String](_.client.universityID.string))
     val roomByAppointment = withRoom.map { case (a, r) => a.id -> r }.toMap
-    val appointmentAndCases = OneToMany.join(withCase.map { case (a, c) => (a.id, c) })(Case.dateOrdering).toMap
+    val appointmentAndCases = OneToMany.join(withCase.map { case (a, c) => (a.id, c.asCase) })(Case.dateOrdering).toMap
     val notesByAppointment = notes.groupBy { case (n, _) => n.appointmentId }
       .mapValues(_.map { case (n, m) => n.asAppointmentNote(m.asMember) }.sorted(AppointmentNote.dateOrdering))
       .withDefaultValue(Seq())

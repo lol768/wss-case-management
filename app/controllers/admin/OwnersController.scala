@@ -32,33 +32,33 @@ class OwnersController @Inject()(
   import canEditEnquiryActionRefiner._
 
   def enquiryForm(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
-    enquiryService.getOwners(Set(request.enquiry.id.get)).successMap(owners =>
+    enquiryService.getOwners(Set(request.enquiry.id)).successMap(owners =>
       Ok(views.html.admin.enquiry.owners(
-        ownersForm.fill(owners.getOrElse(request.enquiry.id.get, Set()).map(_.usercode).toSeq.sortBy(_.string)),
+        ownersForm.fill(owners.getOrElse(request.enquiry.id, Set()).map(_.usercode).toSeq.sortBy(_.string)),
         request.enquiry
       ))
     )
   }
 
   def caseForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit request =>
-    caseService.getOwners(Set(request.`case`.id.get)).successMap(owners =>
+    caseService.getOwners(Set(request.`case`.id)).successMap(owners =>
       Ok(views.html.admin.cases.owners(
-        ownersForm.fill(owners.getOrElse(request.`case`.id.get, Set()).map(_.usercode).toSeq.sortBy(_.string)),
+        ownersForm.fill(owners.getOrElse(request.`case`.id, Set()).map(_.usercode).toSeq.sortBy(_.string)),
         request.`case`
       ))
     )
   }
 
   def enquirySubmit(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
-    enquiryService.getOwners(Set(request.enquiry.id.get)).successFlatMap(previousOwners =>
-      bindAndVerifyOwners(previousOwners.getOrElse(request.enquiry.id.get, Set()), allowEmpty = true).fold(
+    enquiryService.getOwners(Set(request.enquiry.id)).successFlatMap(previousOwners =>
+      bindAndVerifyOwners(previousOwners.getOrElse(request.enquiry.id, Set()), allowEmpty = true).fold(
         errors => Future.successful(showErrors(errors)),
         form => form.fold(
           formWithErrors => {
             Future.successful(Ok(views.html.admin.enquiry.owners(formWithErrors, request.enquiry)))
           },
           data => {
-            enquiryService.setOwners(request.enquiry.id.get, data.toSet).successMap(_ =>
+            enquiryService.setOwners(request.enquiry.id, data.toSet).successMap(_ =>
               Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key))
                 .flashing("success" -> Messages("flash.enquiry.owners.updated"))
             )
@@ -69,12 +69,12 @@ class OwnersController @Inject()(
   }
 
   def enquirySubmitSelf(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
-    enquiryService.getOwners(Set(request.enquiry.id.get)).successFlatMap { ownerMap =>
-      val currentOwners = ownerMap.getOrElse(request.enquiry.id.get, Set())
+    enquiryService.getOwners(Set(request.enquiry.id)).successFlatMap { ownerMap =>
+      val currentOwners = ownerMap.getOrElse(request.enquiry.id, Set())
       if (currentOwners.map(_.usercode).contains(currentUser.usercode)) {
         Future.successful(Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key)))
       } else {
-        enquiryService.setOwners(request.enquiry.id.get, currentOwners.map(_.usercode) + currentUser.usercode).successMap(_ =>
+        enquiryService.setOwners(request.enquiry.id, currentOwners.map(_.usercode) + currentUser.usercode).successMap(_ =>
           Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key))
             .flashing("success" -> Messages("flash.enquiry.owners.updated"))
         )
@@ -83,17 +83,17 @@ class OwnersController @Inject()(
   }
 
   def caseSubmit(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit request =>
-    caseService.getOwners(Set(request.`case`.id.get)).successFlatMap(previousOwners =>
-      bindAndVerifyOwners(previousOwners.getOrElse(request.`case`.id.get, Set()), allowEmpty = false).fold(
+    caseService.getOwners(Set(request.`case`.id)).successFlatMap(previousOwners =>
+      bindAndVerifyOwners(previousOwners.getOrElse(request.`case`.id, Set()), allowEmpty = false).fold(
         errors => Future.successful(showErrors(errors)),
         form => form.fold(
           formWithErrors => {
             Future.successful(Ok(views.html.admin.cases.owners(formWithErrors, request.`case`)))
           },
           data => {
-            caseService.setOwners(request.`case`.id.get, data.toSet).successFlatMap { setOwnersResult =>
+            caseService.setOwners(request.`case`.id, data.toSet).successFlatMap { setOwnersResult =>
               notificationService.newCaseOwner(setOwnersResult.added.map(_.userId).toSet, request.`case`).successMap(_ =>
-                Redirect(controllers.admin.routes.CaseController.view(request.`case`.key.get))
+                Redirect(controllers.admin.routes.CaseController.view(request.`case`.key))
                   .flashing("success" -> Messages("flash.case.owners.updated"))
               )
             }
@@ -104,13 +104,13 @@ class OwnersController @Inject()(
   }
 
   def caseSubmitSelf(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit request =>
-    caseService.getOwners(Set(request.`case`.id.get)).successFlatMap { ownerMap =>
-      val currentOwners = ownerMap.getOrElse(request.`case`.id.get, Set())
+    caseService.getOwners(Set(request.`case`.id)).successFlatMap { ownerMap =>
+      val currentOwners = ownerMap.getOrElse(request.`case`.id, Set())
       if (currentOwners.map(_.usercode).contains(currentUser.usercode)) {
         Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(request.`case`.team.id).withFragment("cases")))
       } else {
-        caseService.setOwners(request.`case`.id.get, currentOwners.map(_.usercode) + currentUser.usercode).successMap { _ =>
-          Redirect(controllers.admin.routes.CaseController.view(request.`case`.key.get))
+        caseService.setOwners(request.`case`.id, currentOwners.map(_.usercode) + currentUser.usercode).successMap { _ =>
+          Redirect(controllers.admin.routes.CaseController.view(request.`case`.key))
             .flashing("success" -> Messages("flash.case.owners.updated"))
         }
       }

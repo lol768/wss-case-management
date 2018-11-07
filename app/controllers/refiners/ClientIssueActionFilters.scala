@@ -2,8 +2,7 @@ package controllers.refiners
 
 import java.util.UUID
 
-import domain.Enquiry
-import domain.dao.CaseDao.Case
+import domain.{Case, Enquiry}
 import javax.inject.{Inject, Singleton}
 import play.api.mvc._
 import services.{CaseService, EnquiryService, PermissionService, SecurityService}
@@ -25,9 +24,9 @@ class ClientIssueActionFilters @Inject()(
   private val CanClientViewIssue = PermissionsFilter[IssueSpecificRequest] { implicit request =>
     request.issue match {
       case enquiry: Enquiry =>
-        permissionService.canClientViewEnquiry(request.context.user.get, enquiry.id.get)
+        permissionService.canClientViewEnquiry(request.context.user.get, enquiry.id)
       case clientCase: Case =>
-        permissionService.canClientViewCase(request.context.user.get, clientCase.id.get)
+        permissionService.canClientViewCase(request.context.user.get, clientCase.id)
     }
   }
 
@@ -37,9 +36,9 @@ class ClientIssueActionFilters @Inject()(
   private val CanAddClientMessage = PermissionsFilter[IssueSpecificRequest] { implicit request =>
     request.issue match {
       case enquiry: Enquiry =>
-        permissionService.canAddClientMessageToEnquiry(request.context.user.get, enquiry.id.get)
+        permissionService.canAddClientMessageToEnquiry(request.context.user.get, enquiry.id)
       case clientCase: Case =>
-        permissionService.canAddClientMessageToCase(request.context.user.get, clientCase.id.get)
+        permissionService.canAddClientMessageToCase(request.context.user.get, clientCase.id)
     }
   }
 

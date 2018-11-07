@@ -50,19 +50,19 @@ class OwnerServiceTest extends AbstractDaoTest {
         val now = ZonedDateTime.of(2018, 1, 1, 11, 0, 0, 0, JavaTime.timeZone).toInstant
 
         DateTimeUtils.useMockDateTime(before, () => {
-          ownerService.setEnquiryOwners(enquiry.id.get, Set(owner1, owner2)).serviceValue
+          ownerService.setEnquiryOwners(enquiry.id, Set(owner1, owner2)).serviceValue
         })
 
-        val initialOwners = ownerService.getEnquiryOwners(Set(enquiry.id.get)).serviceValue(enquiry.id.get)
+        val initialOwners = ownerService.getEnquiryOwners(Set(enquiry.id)).serviceValue(enquiry.id)
         initialOwners.size mustBe 2
         initialOwners.contains(Member(owner1, None, OffsetDateTime.ofInstant(before, JavaTime.timeZone))) mustBe true
         initialOwners.contains(Member(owner2, None, OffsetDateTime.ofInstant(before, JavaTime.timeZone))) mustBe true
 
         DateTimeUtils.useMockDateTime(now, () => {
-          ownerService.setEnquiryOwners(enquiry.id.get, Set(owner2, owner3)).serviceValue
+          ownerService.setEnquiryOwners(enquiry.id, Set(owner2, owner3)).serviceValue
         })
 
-        val updatedOwners = ownerService.getEnquiryOwners(Set(enquiry.id.get)).serviceValue(enquiry.id.get)
+        val updatedOwners = ownerService.getEnquiryOwners(Set(enquiry.id)).serviceValue(enquiry.id)
         updatedOwners.size mustBe 2
         updatedOwners.contains(Member(owner1, None, OffsetDateTime.ofInstant(before, JavaTime.timeZone))) mustBe false
         updatedOwners.contains(Member(owner2, None, OffsetDateTime.ofInstant(before, JavaTime.timeZone))) mustBe true

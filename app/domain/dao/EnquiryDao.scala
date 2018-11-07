@@ -184,7 +184,7 @@ object EnquiryDao {
       ).asInstanceOf[B]
 
     def asEnquiry(client: Client) = Enquiry(
-      id = Some(id),
+      id = id,
       key = key,
       client = client,
       subject = subject,

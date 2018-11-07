@@ -18,7 +18,7 @@ class CanViewEnquiryActionRefiner @Inject()(
   private implicit val implicitEnquiryService: EnquiryService = enquiryService
 
   private val CanViewEnquiry = PermissionsFilter[EnquirySpecificRequest] { implicit request =>
-    permissionService.canViewEnquiry(request.context.user.get, request.enquiry.id.get)
+    permissionService.canViewEnquiry(request.context.user.get, request.enquiry.id)
   }
 
   def CanViewEnquiryAction(enquiryKey: IssueKey): ActionBuilder[EnquirySpecificRequest, AnyContent] =

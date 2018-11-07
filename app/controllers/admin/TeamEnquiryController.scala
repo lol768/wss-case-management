@@ -64,15 +64,15 @@ class TeamEnquiryController @Inject()(
 
   private def renderMessages(enquiry: Enquiry, stateChangeForm: Form[OffsetDateTime], messageForm: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
     ServiceResults.zip(
-      service.getForRender(enquiry.id.get),
+      service.getForRender(enquiry.id),
       profiles.getProfile(enquiry.client.universityID).map(_.value),
-      service.getOwners(Set(enquiry.id.get)),
+      service.getOwners(Set(enquiry.id)),
       permissionService.canViewTeamFuture(currentUser.usercode, enquiry.team),
-      caseService.findFromOriginalEnquiry(enquiry.id.get)
+      caseService.findFromOriginalEnquiry(enquiry.id)
     ).successFlatMap { case (render, profile, ownersMap, canViewTeam, linkedCases) =>
 
       val getClientLastRead: Future[ServiceResult[Option[OffsetDateTime]]] =
-        profile.map { p => service.findLastViewDate(enquiry.id.get, p.usercode) }
+        profile.map { p => service.findLastViewDate(enquiry.id, p.usercode) }
           .getOrElse(Future.successful(Right(None)))
 
       getClientLastRead.successMap { clientLastRead =>
@@ -142,7 +142,7 @@ class TeamEnquiryController @Inject()(
   }
 
   def download(enquiryKey: IssueKey, fileId: UUID): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
-    service.getForRender(request.enquiry.id.get).successFlatMap { render =>
+    service.getForRender(request.enquiry.id).successFlatMap { render =>
       render.messages.flatMap(_.files).find(_.id == fileId)
         .map(uploadedFileControllerHelper.serveFile)
         .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
@@ -165,7 +165,7 @@ class TeamEnquiryController @Inject()(
         messageForm
       ),
       version =>
-        service.updateState(request.enquiry.id.get, newState, version).successMap { enquiry =>
+        service.updateState(request.enquiry.id, newState, version).successMap { enquiry =>
           Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiry.key))
             .flashing("success" -> Messages(s"flash.enquiry.$newState"))
         }
@@ -200,7 +200,7 @@ class TeamEnquiryController @Inject()(
             request.context.user.get.usercode
           )
 
-          service.reassign(request.enquiry.id.get, data.team, note, data.version).successMap { _ =>
+          service.reassign(request.enquiry.id, data.team, note, data.version).successMap { _ =>
             Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
               .flashing("success" -> Messages("flash.enquiry.reassigned", data.team.name))
           }

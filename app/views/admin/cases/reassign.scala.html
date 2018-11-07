@@ -1,10 +1,5 @@
-@import domain.Team
-@import domain.Enquiry
-@import domain.Teams
-@import controllers.admin.TeamEnquiryController.ReassignEnquiryData
-@import domain.dao.CaseDao.Case
 @import controllers.admin.CaseController.ReassignCaseData
-@import domain.CaseType
+@import domain.{Case, CaseType, Teams}
 @import helper.Implicits.toAttributePair
 
 @(
@@ -13,9 +8,9 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 
-@main(s"Reassign ${clientCase.key.get.string}") {
+@main(s"Reassign ${clientCase.key.string}") {
 
-  @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.CaseController.reassign(clientCase.key.get)) { implicit fc =>
+  @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.CaseController.reassign(clientCase.key)) { implicit fc =>
     @b3.validatedHidden(form, "version")
 
     @b3.radio(form("team"),

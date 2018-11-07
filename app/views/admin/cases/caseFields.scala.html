@@ -1,12 +1,7 @@
 @import controllers.admin.CaseController.CaseFormData
-@import domain.Team
-@import domain.CaseType
-@import domain.CaseCause
-@import domain.DSAFundingType
+@import domain.{CaseCause, CaseTag, CaseType, DSAFundingType, DSAIneligibilityReason, Team}
 @import views.html.b3.B3FieldConstructor
 
-@import domain.CaseTag
-@import domain.DSAIneligibilityReason
 @(
   team: Team,
   form: Form[CaseFormData]
@@ -14,7 +9,7 @@
 
 @b3.validatedHidden(form, "originalEnquiry")
 
-@b3.text(form("subject"),
+@b3.text(form("case.subject"),
   '_label -> "Subject",
   'autocomplete -> "off",
 )
@@ -28,7 +23,7 @@
 }
 
 @if(CaseType.valuesFor(team).nonEmpty) {
-  @b3.select(form("caseType"),
+  @b3.select(form("case.caseType"),
     options = CaseType.valuesFor(team).map { t => t.entryName -> t.description },
     '_label -> "Case type",
     '_default -> "",
@@ -36,7 +31,7 @@
   )
 }
 
-@b3.select(form("cause"),
+@b3.select(form("case.cause"),
   options = ("", "") +: CaseCause.values.map { c => c.entryName -> c.description },
   '_label -> "Cause"
 )
@@ -48,27 +43,25 @@
              id="incident_fields"
              data-toggle="optional-subform"
              data-target="#incident"
-        @if(form.data.keys.exists(_.startsWith("incident."))) {
-             checked
-        }
+        @if(form.data.keys.exists(_.startsWith("case.incident."))) { checked }
       >
       This case relates to an incident
     </label>
   </div>
 }
 <fieldset id="incident">
-  @b3.radio(form("incident.onCampus"),
+  @b3.radio(form("case.incident.onCampus"),
     options = Seq("true" -> "On-campus", "false" -> "Off-campus"),
     '_label -> "Where did the incident occur?"
   )
 
   @b3.free('_label -> "Additional services required for incident") {
-    @b3.checkbox(form("incident.notifiedPolice"), '_text -> "Police notified")
-    @b3.checkbox(form("incident.notifiedAmbulance"), '_text -> "Ambulance called")
-    @b3.checkbox(form("incident.notifiedFire"), '_text -> "Fire service called")
+    @b3.checkbox(form("case.incident.notifiedPolice"), '_text -> "Police notified")
+    @b3.checkbox(form("case.incident.notifiedAmbulance"), '_text -> "Ambulance called")
+    @b3.checkbox(form("case.incident.notifiedFire"), '_text -> "Fire service called")
   }
 
-  @b3.datetimePicker(form("incident.incidentDate"),
+  @b3.datetimePicker(form("case.incident.incidentDate"),
     '_label -> "Date of incident"
   )
 </fieldset>

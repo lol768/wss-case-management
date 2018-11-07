@@ -49,10 +49,10 @@ class AppointmentServiceTest extends AbstractDaoTest {
       created.duration mustBe Duration.ofMinutes(15)
 
       // Create a case to link to
-      val c = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase()))
-      val c2 = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase(1235)))
+      val c = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newStoredCase()))
+      val c2 = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newStoredCase(1235)))
 
-      val created2 = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(10), None, AppointmentType.Skype, AppointmentPurpose.InitialAssessment), Set(UniversityID("0672089"), UniversityID("0672088")), Set(Usercode("u1234444")), Teams.WellbeingSupport, Set(c.id.get, c2.id.get)).serviceValue
+      val created2 = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(10), None, AppointmentType.Skype, AppointmentPurpose.InitialAssessment), Set(UniversityID("0672089"), UniversityID("0672088")), Set(Usercode("u1234444")), Teams.WellbeingSupport, Set(c.id, c2.id)).serviceValue
       created2.id must not be created.id
       created2.key.string mustBe "APP-1001"
     }
@@ -93,11 +93,11 @@ class AppointmentServiceTest extends AbstractDaoTest {
       })
 
       // Create cases to link to
-      val c = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase()))
-      val c2 = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase(1235)))
+      val c = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newStoredCase()))
+      val c2 = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newStoredCase(1235)))
 
       DateTimeUtils.useMockDateTime(now.toInstant, () => {
-        val multipleClientsMultipleTeamMembersWithCases = service.create(AppointmentSave(now, Duration.ofMinutes(10), None, AppointmentType.Skype, AppointmentPurpose.FollowUp), Set(UniversityID("0672089"), UniversityID("0672088")), Set(Usercode("u1234444"), Usercode("u1234555")), Teams.WellbeingSupport, Set(c.id.get, c2.id.get)).serviceValue
+        val multipleClientsMultipleTeamMembersWithCases = service.create(AppointmentSave(now, Duration.ofMinutes(10), None, AppointmentType.Skype, AppointmentPurpose.FollowUp), Set(UniversityID("0672089"), UniversityID("0672088")), Set(Usercode("u1234444"), Usercode("u1234555")), Teams.WellbeingSupport, Set(c.id, c2.id)).serviceValue
 
         // Add some notes
         val note1 = service.addNote(multipleClientsMultipleTeamMembersWithCases.id, AppointmentNoteSave("Note 1 test", Usercode("cusfal"))).serviceValue
@@ -114,7 +114,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
             AppointmentTeamMember(Member(Usercode("u1234555"), None, now), None)
           ),
           None,
-          Set(c, c2),
+          Set(c.asCase, c2.asCase),
           Seq(note2, note1)
         )
       })
@@ -135,12 +135,12 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
     "update cases" in withData(new AppointmentFixture) { a =>
       // Create a case to link to
-      val c = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase()))
-      val c2 = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase(1235)))
-      val c3 = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newCase(1236)))
+      val c = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newStoredCase())).asCase
+      val c2 = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newStoredCase(1235))).asCase
+      val c3 = execWithCommit(CaseDao.cases.insert(Fixtures.cases.newStoredCase(1236))).asCase
 
-      val before = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(10), None, AppointmentType.Skype, AppointmentPurpose.Consultation), Set(), Set(Usercode("u1234444")), Teams.WellbeingSupport, Set(c.id.get, c2.id.get)).serviceValue
-      val after = service.update(before.id, AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(10), None, AppointmentType.Skype, AppointmentPurpose.Consultation), Set(c.id.get, c3.id.get), Set(UniversityID("0672089"), UniversityID("0672088")), Set(Usercode("u1234555")), before.lastUpdated).serviceValue
+      val before = service.create(AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(10), None, AppointmentType.Skype, AppointmentPurpose.Consultation), Set(), Set(Usercode("u1234444")), Teams.WellbeingSupport, Set(c.id, c2.id)).serviceValue
+      val after = service.update(before.id, AppointmentSave(JavaTime.offsetDateTime, Duration.ofMinutes(10), None, AppointmentType.Skype, AppointmentPurpose.Consultation), Set(c.id, c3.id), Set(UniversityID("0672089"), UniversityID("0672088")), Set(Usercode("u1234555")), before.lastUpdated).serviceValue
 
       service.findForRender(after.key).serviceValue.clientCases mustBe Set(c, c3)
     }

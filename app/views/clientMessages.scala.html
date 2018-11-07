@@ -1,5 +1,4 @@
-@import domain.dao.CaseDao.Case
-@import domain.{Enquiry, IssueRender, IssueState, MessageSender}
+@import domain.{Case, Enquiry, IssueRender, IssueState, MessageSender}
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
 
@@ -34,12 +33,12 @@
             files = message.files,
             clientName = "You",
             teamName = message.message.team.getOrElse(issueRender.issue.team).name,
-            attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id.get, f.id))
+            attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id, f.id))
         }
       </div>
       <div class="panel-footer">
         @if(issueRender.issue.state != IssueState.Closed) {
-          @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), f, supportedMimeTypes, issueRender.issue.id.get, context.user.get.universityId.get)
+          @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), f, supportedMimeTypes, issueRender.issue.id, context.user.get.universityId.get)
         } else {
           <p>
             We think this enquiry is now resolved, so we've marked it as closed.

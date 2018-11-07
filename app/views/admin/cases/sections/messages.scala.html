@@ -1,5 +1,4 @@
-@import domain.{Client, IssueState, MessageRender, SitsProfile}
-@import domain.dao.CaseDao.{Case, CaseMessages}
+@import domain.{Case, CaseMessages, Client, IssueState, MessageRender, SitsProfile}
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
 
@@ -58,7 +57,7 @@
                   "Client",
                   render.message.teamMember.map { member => s"${member.safeFullName}, ${render.message.team.getOrElse(c.team).name}" }
                       .getOrElse(render.message.team.getOrElse(c.team).name),
-                  f => controllers.admin.routes.CaseMessageController.download(c.key.get, f.id),
+                  f => controllers.admin.routes.CaseMessageController.download(c.key, f.id),
                   // TODO last view date for cases
                   None
                 )
@@ -67,7 +66,7 @@
           }
           <div class="panel-footer">
           @if(c.state != IssueState.Closed) {
-            @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.key.get, client.universityID), messageForm, supportedMimeTypes, c.id.get, client.universityID)
+            @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.key, client.universityID), messageForm, supportedMimeTypes, c.id, client.universityID)
           }
           </div>
         </div>

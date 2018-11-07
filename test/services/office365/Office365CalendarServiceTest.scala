@@ -5,7 +5,7 @@ import java.util.UUID
 import domain.Owner.EntityType
 import domain.{AppointmentTeamMember, Member, Owner}
 import org.mockito.Matchers
-import org.mockito.Mockito.{RETURNS_SMART_NULLS, _}
+import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.quartz._
 import org.scalatest.BeforeAndAfter

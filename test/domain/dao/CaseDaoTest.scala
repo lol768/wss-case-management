@@ -2,7 +2,7 @@ package domain.dao
 
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.CaseDao.{Case, Cases}
+import domain.dao.CaseDao.{Cases, StoredCase}
 import domain.dao.MemberDao.StoredMember
 import helpers.DataFixture
 import warwick.core.helpers.JavaTime
@@ -12,18 +12,18 @@ class CaseDaoTest extends AbstractDaoTest {
 
   private val dao = get[CaseDao]
 
-  class CasesFixture extends DataFixture[Seq[Case]] {
-    override def setup(): Seq[Case] = {
+  class CasesFixture extends DataFixture[Seq[StoredCase]] {
+    override def setup(): Seq[StoredCase] = {
 
-      val case1 = Fixtures.cases.newCase(1)
-      val case2 = Fixtures.cases.newCase(2).copy(state = IssueState.Closed)
-      val case3 = Fixtures.cases.newCase(3).copy(team = Teams.WellbeingSupport)
-      val case4 = Fixtures.cases.newCase(4).copy(team = Teams.WellbeingSupport, state = IssueState.Closed)
+      val case1 = Fixtures.cases.newStoredCase(1)
+      val case2 = Fixtures.cases.newStoredCase(2).copy(state = IssueState.Closed)
+      val case3 = Fixtures.cases.newStoredCase(3).copy(team = Teams.WellbeingSupport)
+      val case4 = Fixtures.cases.newStoredCase(4).copy(team = Teams.WellbeingSupport, state = IssueState.Closed)
 
-      val case5 = Fixtures.cases.newCase(5)
-      val case6 = Fixtures.cases.newCase(6).copy(state = IssueState.Closed)
-      val case7 = Fixtures.cases.newCase(7).copy(team = Teams.WellbeingSupport)
-      val case8 = Fixtures.cases.newCase(8).copy(team = Teams.WellbeingSupport, state = IssueState.Closed)
+      val case5 = Fixtures.cases.newStoredCase(5)
+      val case6 = Fixtures.cases.newStoredCase(6).copy(state = IssueState.Closed)
+      val case7 = Fixtures.cases.newStoredCase(7).copy(team = Teams.WellbeingSupport)
+      val case8 = Fixtures.cases.newStoredCase(8).copy(team = Teams.WellbeingSupport, state = IssueState.Closed)
 
       val cases = execWithCommit(
         CaseDao.cases.insertAll(Seq(case1, case2, case3, case4, case5, case6, case7, case8))
@@ -35,7 +35,7 @@ class CaseDaoTest extends AbstractDaoTest {
 
       execWithCommit(
         DBIO.sequence(cases.drop(4).map(`case` =>
-          Owner.owners.insert(CaseOwner(`case`.id.get, Usercode("u1234567")))
+          Owner.owners.insert(CaseOwner(`case`.id, Usercode("u1234567")))
         ))
       )
 
@@ -59,8 +59,8 @@ class CaseDaoTest extends AbstractDaoTest {
 
   "CaseDaoTest" should {
     "list cases that match specified filters" in withData(new CasesFixture()) { cases =>
-      implicit class QueryTestHelper(query: Query[Cases, Case, Seq]) {
-        def toKeys: Seq[Int] = exec(query.result).map(_.key.get.number)
+      implicit class QueryTestHelper(query: Query[Cases, StoredCase, Seq]) {
+        def toKeys: Seq[Int] = exec(query.result).map(_.key.number)
       }
 
       dao.listQuery(None, None, IssueStateFilter.All).toKeys.length mustBe 8
