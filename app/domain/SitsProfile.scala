@@ -34,7 +34,8 @@ case class SitsProfile(
   dualNationality: Option[String],
   tier4VisaRequired: Option[Boolean],
   disability: Option[SitsDisability],
-  disabilityFundingStatus: Option[String],
+  disabilityFundingStatus: Option[SitsDisabilityFundingStatus],
+  jobTitle: Option[String],
   photo: Option[String],
   personalTutors: Seq[SitsProfile],
   researchSupervisors: Seq[SitsProfile],
@@ -124,20 +125,25 @@ case class YearOfStudy(
   level: String
 )
 
-case class EnrolmentStatus (
+case class EnrolmentStatus(
   code: String,
   description: String
 )
 
-case class CourseStatus (
+case class CourseStatus(
   code: String,
   description: String
 )
 
-case class SitsDisability (
+case class SitsDisability(
   code: String,
   description: String,
   sitsDefinition: String,
+)
+
+case class SitsDisabilityFundingStatus(
+  code: String,
+  description: String,
 )
 
 case class Address (
