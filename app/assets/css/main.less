@@ -13,7 +13,7 @@
 @import "flexi-picker";
 @import "icons";
 @import "calendars";
-@import "bootstrap-labels.less";
+@import "bootstrap-labels";
 
 @id7-ignore-id6-legacy: true;
 @id7-image-root-dir: './lib/id7/images';
@@ -640,4 +640,19 @@ i.fa-comment-edit.awaiting {
 s {
   color: @gray-light;
   text-decoration-color: black;
+}
+
+// Tighter spacing between fields on the client profile page
+.client-profile--fields, .client-profile--registration--fields {
+  .form-horizontal {
+    .control-label, .form-control-static {
+      padding: 0;
+      min-height: 0;
+    }
+  }
+}
+
+// Make labels slightly larger, 85% not 75%
+.label {
+  font-size: 85%;
 }
