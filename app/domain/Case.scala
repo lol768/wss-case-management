@@ -103,7 +103,6 @@ case class CaseLink(
 sealed abstract class CaseLinkType(val outwardDescription: String, val inwardDescription: String) extends EnumEntry
 object CaseLinkType extends PlayEnum[CaseLinkType] {
   case object Related extends CaseLinkType("is related to", "is related to")
-  case object Merge extends CaseLinkType("merged to", "merged from")
 
   override def values: immutable.IndexedSeq[CaseLinkType] = findValues
 }
