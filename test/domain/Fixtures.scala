@@ -161,7 +161,7 @@ object Fixtures {
       None,
       None,
       None,
-      Some(CaseType.MentalHealthAssessment),
+      None,
       CaseCause.New,
       None
     )

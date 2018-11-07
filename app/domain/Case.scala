@@ -38,12 +38,9 @@ object CaseTag extends PlayEnum[CaseTag] {
 }
 
 sealed abstract class CaseType(val description: String, val applicableTo: Seq[Team]) extends EnumEntry
-abstract class MentalHealthCaseType(description: String) extends CaseType(description, Seq(Teams.MentalHealth))
 object CaseType extends PlayEnum[CaseType] {
-  case object MentalHealthAssessment extends MentalHealthCaseType("Mental Health Assessment")
-  case object MentalHealthCrisis extends MentalHealthCaseType("Mental Health Crisis")
-  case object MentalHealthWellbeing extends MentalHealthCaseType("Mental Health Mentoring")
-  case object MentalHealthMentoring extends MentalHealthCaseType("Mental Health Wellbeing")
+
+  // Not currently any, but you never know if some may come back
 
   override def values: immutable.IndexedSeq[CaseType] = findValues
 
