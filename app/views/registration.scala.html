@@ -3,7 +3,7 @@
 @import domain.Medications
 @import domain.RegistrationReferrals
 @import warwick.sso.AuthenticatedRequest
-@(form: Form[RegistrationData], existing: Option[domain.Registration])(implicit context: RequestContext, request: AuthenticatedRequest[_], messagesProvider: MessagesProvider)
+@(form: Form[RegistrationData], existing: Option[RegistrationData])(implicit context: RequestContext, request: AuthenticatedRequest[_], messagesProvider: MessagesProvider)
 
 @main("Register for Wellbeing Support Services") {
 
