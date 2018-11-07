@@ -1,0 +1,13 @@
+@(pickerType: String, field: Field, args: Seq[(Symbol, Any)])(implicit handler: b3.B3FieldConstructor, messages: Messages)
+
+@b3.inputFormGroup(field, withFeedback = false, withLabelFor = true, bs.Args.withDefault(args, 'class -> "form-control")) { fieldInfo =>
+  <div class="@pickerType">
+    <input type="hidden" name="@fieldInfo.name" value="@fieldInfo.value">
+    <div class="input-group">
+      <span class="input-group-addon">
+        <span class="fal fa-calendar-alt"></span>
+      </span>
+      <input type="text" autocomplete="off" id="@fieldInfo.id" @toHtmlArgs(fieldInfo.innerArgsMap)>
+    </div>
+  </div>
+}
