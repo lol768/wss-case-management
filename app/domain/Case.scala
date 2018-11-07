@@ -163,21 +163,19 @@ case class CaseDocumentSave(
 
 sealed abstract class CaseDocumentType(val description: String) extends EnumEntry
 object CaseDocumentType extends PlayEnum[CaseDocumentType] {
-  case object DisabilityNeedsAssessmentReport extends CaseDocumentType("Disability Needs Assessment Report")
   case object DSAEntitlementLetter extends CaseDocumentType("DSA Entitlement Letter")
-  case object MedicalEvidenceDocuments extends CaseDocumentType("Medical Evidence Documents")
-  case object MitigatingCircumstancesForm extends CaseDocumentType("Mitigating Circumstances Form")
-  case object SelectedEmails extends CaseDocumentType("Selected Emails")
-  case object StudentSupportInternalDocuments extends CaseDocumentType("Student Support Internal Documents")
-  case object SecurityReport extends CaseDocumentType("Security Report")
-  case object UIRForm extends CaseDocumentType("UIR Form")
-  case object PoliceIncidentDocument extends CaseDocumentType("Police Incident Document")
-  case object SpecificLearningDifficultyDocument extends CaseDocumentType("Specific Learning Difficulty Document")
-  case object StudentSupportInformationForm extends CaseDocumentType("Student Support Information Form")
-  case object MentalHealthServicesOther extends CaseDocumentType("Mental Health Services - Other Documents")
-  case object ReleaseOfInformationConsentForm extends CaseDocumentType("Release Of Information Consent Form")
-  case object Photos extends CaseDocumentType("Photos")
   case object KeyLog extends CaseDocumentType("Key Log")
+  case object MedicalEvidenceDocuments extends CaseDocumentType("Medical Evidence Documents")
+  case object MentalHealthServicesOther extends CaseDocumentType("Mental Health Services - Other Documents")
+  case object MitigatingCircumstancesForm extends CaseDocumentType("Mitigating Circumstances Form")
+  case object Photos extends CaseDocumentType("Photos")
+  case object PoliceIncidentDocument extends CaseDocumentType("Police Incident Document")
+  case object ReleaseOfInformationConsentForm extends CaseDocumentType("Release Of Information Consent Form")
+  case object SecurityReport extends CaseDocumentType("Security Report")
+  case object SpecificLearningDifficultyDocument extends CaseDocumentType("Specific Learning Difficulty Document")
+  case object WellbeingSupportInformationForm extends CaseDocumentType("Wellbeing Support Information Form")
+  case object UIRForm extends CaseDocumentType("UIR Form")
+  case object Other extends CaseDocumentType("Other")
 
   override def values: immutable.IndexedSeq[CaseDocumentType] = findValues
 }
