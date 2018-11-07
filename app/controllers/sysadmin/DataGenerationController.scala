@@ -502,10 +502,10 @@ class DataGenerationJob @Inject()(
 
             registrations.get(client).serviceValue match {
               case Some(existing) =>
-                registrations.update(client, registration, existing.updatedDate).serviceValue
-
+                registrations.register(client, registration, existing.updatedDate).serviceValue
               case _ =>
-                registrations.save(client, registration).serviceValue
+                val newRegistration = registrations.invite(client).serviceValue
+                registrations.register(client, registration, newRegistration.updatedDate).serviceValue
             }
           }
         } else None

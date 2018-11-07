@@ -27,7 +27,6 @@ class ClientController @Inject()(
   profileService: ProfileService,
   registrationService: RegistrationService,
   clientSummaryService: ClientSummaryService,
-  notificationService: NotificationService,
   permissionService: PermissionService,
   enquiryService: EnquiryService,
   caseService: CaseService,
@@ -97,7 +96,7 @@ class ClientController @Inject()(
   }
 
   def invite(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.andThen(ValidUniversityIDRequired(universityID)).async { implicit request =>
-    notificationService.registrationInvite(universityID).successMap { _ =>
+    registrationService.invite(universityID).successMap { _ =>
       Redirect(routes.ClientController.client(universityID)).flashing("success" -> Messages("flash.client.registration.invited"))
     }
   }

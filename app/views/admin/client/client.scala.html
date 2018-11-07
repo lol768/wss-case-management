@@ -108,25 +108,30 @@
 
   <section class="indent">
 
-    @registration.map { registration =>
+    @registration.flatMap(_.data).map { registrationData =>
       <dl class="dl-horizontal field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(universityID)">
         <dt>Registered</dt>
-        <dd>@JavaTime.Relative(registration.updatedDate)</dd>
+        <dd>@JavaTime.Relative(registration.get.updatedDate)</dd>
         <dt data-field-history-field="gp">GP</dt>
-        <dd>@registration.data.gp</dd>
+        <dd>@registrationData.gp</dd>
         <dt data-field-history-field="tutor">Tutor</dt>
-        <dd>@registration.data.tutor</dd>
+        <dd>@registrationData.tutor</dd>
         <dt data-field-history-field="disabilities">Disabilities</dt>
-        <dd>@registration.data.disabilities.map(_.description).mkString(", ")</dd>
+        <dd>@registrationData.disabilities.map(_.description).mkString(", ")</dd>
         <dt data-field-history-field="medications">Medication</dt>
-        <dd>@registration.data.medications.map(_.description).mkString(", ")</dd>
+        <dd>@registrationData.medications.map(_.description).mkString(", ")</dd>
         <dt data-field-history-field="appointmentAdjustments">Appointment adjustments</dt>
-        <dd>@views.utils.nl2br(registration.data.appointmentAdjustments)</dd>
+        <dd>@views.utils.nl2br(registrationData.appointmentAdjustments)</dd>
         <dt data-field-history-field="referrals">Referrals</dt>
-        <dd>@registration.data.referrals.map(_.description).mkString(", ")</dd>
+        <dd>@registrationData.referrals.map(_.description).mkString(", ")</dd>
       </dl>
     }.getOrElse {
-      <em>Client is not currently registered</em>
+      <em>
+        Client is not currently registered
+        @registration.map { r =>
+          (last invited @JavaTime.Relative(r.lastInvited, lowercaseToday = true))
+        }
+      </em>
       @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(universityID)) { implicit ifc =>
         @b3.submit('class -> "btn btn-default") {
           Invite to register
