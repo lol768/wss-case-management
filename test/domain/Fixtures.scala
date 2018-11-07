@@ -271,6 +271,8 @@ object Fixtures {
       LocationDao.rooms.versionsTable.delete andThen
       LocationDao.buildings.table.delete andThen
       LocationDao.buildings.versionsTable.delete andThen
+      RegistrationDao.Registration.registrations.table.delete andThen
+      RegistrationDao.Registration.registrations.versionsTable.delete andThen
       sql"ALTER SEQUENCE SEQ_CASE_ID RESTART WITH 1000".asUpdate andThen
       sql"ALTER SEQUENCE SEQ_APPOINTMENT_KEY RESTART WITH 1000".asUpdate andThen
       sql"ALTER SEQUENCE SEQ_ENQUIRY_KEY RESTART WITH 1000".asUpdate

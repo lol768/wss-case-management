@@ -8,17 +8,18 @@ import domain.{Registration, RegistrationData, RegistrationDataHistory}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
+import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 import warwick.sso.UniversityID
-
+import helpers.ServiceResults.Implicits._
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[RegistrationServiceImpl])
 trait RegistrationService {
 
-  def save(universityID: UniversityID, data: domain.RegistrationData)(implicit ac: AuditLogContext): Future[ServiceResult[domain.Registration]]
+  def invite(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[domain.Registration]]
 
-  def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[domain.Registration]]
+  def register(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[domain.Registration]]
 
   def get(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[domain.Registration]]]
 
@@ -34,28 +35,49 @@ class RegistrationServiceImpl @Inject()(
   notificationService: NotificationService
 )(implicit executionContext: ExecutionContext) extends RegistrationService {
 
-  override def save(universityID: UniversityID, data: RegistrationData)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
+  override def invite(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
     auditService.audit(
-      'SaveRegistration,
+      'InviteToRegister,
       universityID.string,
       'Registration,
-      Json.toJson(data)(RegistrationData.formatter)
+      Json.obj()
     ) {
-      daoRunner.run(dao.insert(universityID, data)).map(_.parsed).map(Right.apply)
+      get(universityID).successFlatMapTo { existing =>
+        val action = existing.map(r => dao.update(universityID, r.data, JavaTime.offsetDateTime, r.updatedDate)).getOrElse(dao.invite(universityID))
+        daoRunner.run(action).map(_.parsed).map(Right.apply)
+      }
     }.flatMap(_.fold(
       errors => Future.successful(Left(errors)),
-      registration => notificationService.newRegistration(universityID).map(_.right.map(_ => registration))
+      registration => notificationService.registrationInvite(universityID).map(_.right.map(_ => registration))
     ))
 
-  override def update(universityID: UniversityID, data: RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
-    auditService.audit(
-      'UpdateRegistration,
-      universityID.string,
-      'Registration,
-      Json.toJson(data)(RegistrationData.formatter)
-    ) {
-      daoRunner.run(dao.update(universityID, data, version)).map(_.parsed).map(Right.apply)
-    }
+  override def register(universityID: UniversityID, data: RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
+    get(universityID).successFlatMapTo(_.map(existing =>
+      if (existing.data.isEmpty) {
+        auditService.audit(
+          'SaveRegistration,
+          universityID.string,
+          'Registration,
+          Json.toJson(data)(RegistrationData.formatter)
+        ) {
+          daoRunner.run(dao.update(universityID, Some(data), existing.lastInvited, version)).map(_.parsed).map(Right.apply)
+        }.flatMap(_.fold(
+          errors => Future.successful(Left(errors)),
+          registration => notificationService.newRegistration(universityID).map(_.right.map(_ => registration))
+        ))
+      } else {
+        auditService.audit(
+          'UpdateRegistration,
+          universityID.string,
+          'Registration,
+          Json.toJson(data)(RegistrationData.formatter)
+        ) {
+          daoRunner.run(dao.update(universityID, Some(data), existing.lastInvited, version)).map(_.parsed).map(Right.apply)
+        }
+      }
+    ).getOrElse(throw new IllegalArgumentException(s"${universityID.string} attempted to register without an invite"))
+  )
+
 
   override def get(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[domain.Registration]]] =
     daoRunner.run(dao.get(universityID)).map(_.map(_.parsed)).map(Right.apply)

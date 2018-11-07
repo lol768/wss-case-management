@@ -8,7 +8,8 @@ import warwick.sso.UniversityID
 case class Registration(
   universityID: UniversityID,
   updatedDate: OffsetDateTime,
-  data: RegistrationData
+  data: Option[RegistrationData],
+  lastInvited: OffsetDateTime
 )
 
 object RegistrationData {
