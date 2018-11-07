@@ -101,7 +101,8 @@ object TabulaResponseParsers {
       nationality: Option[String],
       secondNationality: Option[String],
       disability: Option[SitsDisability],
-      disabilityFundingStatus: Option[String],
+      disabilityFundingStatus: Option[SitsDisabilityFundingStatus],
+      jobTitle: Option[String],
       residence: Option[String],
       address: Option[Address],
       studentCourseDetails: Option[Seq[StudentCourseDetails]],
@@ -150,6 +151,7 @@ object TabulaResponseParsers {
                 photo = None,
                 personalTutors = Nil,
                 researchSupervisors = Nil,
+                jobTitle = None,
                 userType = UserType.withName(agent.userType)
               )
             }
@@ -167,7 +169,7 @@ object TabulaResponseParsers {
           residence = residence.flatMap(Residence.withNameOption),
           department = SitsDepartment(department.code, department.name),
           course = latestScd.map(_.course),
-          route= latestScd.map(_.route),
+          route = latestScd.map(_.route),
           courseStatus = latestScd.map(_.courseStatus),
           enrolmentStatus = latestScyd.map(_.enrolmentStatus),
           attendance = latestScyd.map(_.modeOfAttendance).flatMap(Attendance.withNameOption),
@@ -180,6 +182,7 @@ object TabulaResponseParsers {
           tier4VisaRequired = tier4VisaRequirement,
           disability = disability,
           disabilityFundingStatus = disabilityFundingStatus,
+          jobTitle = jobTitle,
           photo = None,
           personalTutors = currentAgents("tutor"),
           researchSupervisors = currentAgents("supervisor"),
@@ -200,7 +203,8 @@ object TabulaResponseParsers {
       (__ \ "member" \ "nationality").readNullable[String] and
       (__ \ "member" \ "secondNationality").readNullable[String] and
       (__ \ "member" \ "disability").readNullable[SitsDisability](disabilityReads) and
-      (__ \ "member" \ "disabilityFundingStatus").readNullable[Option[String]]((__ \ "description").readNullable[String]).map(_.flatten) and
+      (__ \ "member" \ "disabilityFundingStatus").readNullable[SitsDisabilityFundingStatus](disabilityFundingStatusReads) and
+      (__ \ "member" \ "jobTitle").readNullable[String] and
       (__ \ "member" \ "termtimeAddress").readNullable[Option[String]]((__ \ "line2").readNullable[String]).map(_.flatten) and
       (__ \ "member" \ "currentAddress").readNullable[Address](addressReads) and
       (__ \ "member" \ "studentCourseDetails").readNullable[Seq[StudentCourseDetails]](Reads.seq(studentCourseDetailsReads)) and
@@ -221,6 +225,11 @@ object TabulaResponseParsers {
     (__ \ "definition").read[String] and
     (__ \ "sitsDefinition").read[String]
   )(SitsDisability.apply _)
+
+  val disabilityFundingStatusReads: Reads[SitsDisabilityFundingStatus] = (
+    (__ \ "code").read[String] and
+    (__ \ "description").read[String]
+  )(SitsDisabilityFundingStatus.apply _)
 
   val addressReads: Reads[Address] = (
     (__ \ "line1").readNullable[String] and
