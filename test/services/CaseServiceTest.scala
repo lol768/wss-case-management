@@ -36,7 +36,7 @@ class CaseServiceTest extends AbstractDaoTest {
       val created = service.create(CaseSave(reference), Set(UniversityID("0672089")), Set.empty, Teams.MentalHealth, None, None).serviceValue
       created.key.string mustBe "CAS-1000"
 
-      val dsaApplication = Fixtures.cases.newDSAApplicationNoId()
+      val dsaApplication = Fixtures.cases.newDSAApplicationSave()
       val created2 = service.create(CaseSave(reference), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness), Teams.MentalHealth, None, Some(dsaApplication)).serviceValue
       created2.key.string mustBe "CAS-1001"
       created2.dsaApplication.isDefined mustBe true

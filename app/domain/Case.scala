@@ -6,7 +6,7 @@ import java.util.UUID
 import domain.CaseHistory.FieldHistory
 import domain.DatabaseOperation.Delete
 import domain.dao.CaseDao._
-import domain.dao.DSADao.{DSAApplication, DSAApplicationVersion, StoredDSAFundingType, StoredDSAFundingTypeVersion}
+import domain.dao.DSADao.{StoredDSAApplication, StoredDSAApplicationVersion, StoredDSAFundingType, StoredDSAFundingTypeVersion}
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.ServiceResults.ServiceResult
 import play.api.libs.json.{JsValue, Json, Writes}
@@ -139,35 +139,6 @@ object CaseCause extends PlayEnum[CaseCause] {
   override def values: immutable.IndexedSeq[CaseCause] = findValues
 }
 
-case class DSAApplicationAndTypes(
-  application: DSAApplication,
-  fundingTypes: Set[DSAFundingType]
-)
-
-sealed abstract class DSAFundingType(val description: String) extends EnumEntry with IdAndDescription {
-  override val id: String = entryName
-}
-
-object DSAFundingType extends PlayEnum[DSAFundingType] {
-  case object AssistiveTechnology extends DSAFundingType("Assistive technology")
-  case object NmhBand12 extends DSAFundingType("NMH Band 1 & 2")
-  case object NmhBand34 extends DSAFundingType("NMH Band 3 & 4")
-  case object GeneralAllowance extends DSAFundingType("General allowance")
-  case object TravelCosts extends DSAFundingType("Taxi/travel costs")
-
-  override def values: immutable.IndexedSeq[DSAFundingType] = findValues
-}
-
-sealed abstract class DSAIneligibilityReason(val description: String) extends EnumEntry
-object DSAIneligibilityReason extends PlayEnum[DSAIneligibilityReason] {
-  case object EUStudent extends DSAIneligibilityReason("EU student")
-  case object InternationalStudent extends DSAIneligibilityReason("International student")
-  case object HomeStudent extends DSAIneligibilityReason("Home student")
-  case object NoApplication extends DSAIneligibilityReason("Decided not to apply")
-  case object InsufficientEvidence extends DSAIneligibilityReason("Insufficient evidence")
-
-  override def values: immutable.IndexedSeq[DSAIneligibilityReason] = findValues
-}
 
 case class CaseLink(
   id: UUID,
@@ -300,7 +271,7 @@ object CaseHistory {
     rawTagHistory: Seq[StoredCaseTagVersion],
     rawOwnerHistory: Seq[OwnerVersion],
     rawClientHistory: Seq[StoredCaseClientVersion],
-    rawDSAHistory: Seq[DSAApplicationVersion],
+    rawDSAHistory: Seq[StoredDSAApplicationVersion],
     rawDSAFundingTypeHistory: Seq[StoredDSAFundingTypeVersion],
     userLookupService: UserLookupService,
     clientService: ClientService
@@ -314,7 +285,7 @@ object CaseHistory {
         case (c,v,u) => (c, v, u.map(toUsercodeOrUser))
       }
 
-    def dsaFieldHistory[A](getValue: DSAApplicationVersion => A): FieldHistory[Option[A]] = {
+    def dsaFieldHistory[A](getValue: StoredDSAApplicationVersion => A): FieldHistory[Option[A]] = {
       val history = rawDSAHistory.map(dsa => {
         val value = if(dsa.operation == Delete) None else Some(getValue(dsa))
         (value, dsa.version, dsa.auditUser)

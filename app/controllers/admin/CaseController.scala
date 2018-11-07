@@ -8,7 +8,6 @@ import controllers.refiners._
 import controllers.{BaseController, UploadedFileControllerHelper}
 import domain.CaseNoteType._
 import domain._
-import domain.dao.DSADao.DSAApplication
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{FormHelpers, ServiceResults}
 import javax.inject.{Inject, Singleton}
@@ -27,18 +26,9 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Try
 
 object CaseController {
-  case class DSAApplicationFormData(
-    applicationDate: Option[OffsetDateTime],
-    fundingApproved: Option[Boolean],
-    confirmationDate: Option[OffsetDateTime],
-    fundingTypes: Set[DSAFundingType],
-    ineligibilityReason: Option[DSAIneligibilityReason]
-  )
-
   case class CaseFormData(
     clients: Set[UniversityID],
     `case`: CaseSave,
-    dsaApplication: Option[DSAApplicationFormData],
     tags: Set[CaseTag],
     originalEnquiry: Option[UUID],
     version: Option[OffsetDateTime]
@@ -75,19 +65,24 @@ object CaseController {
           "caseType" -> optional(CaseType.formField).verifying("error.caseType.invalid", t => (CaseType.valuesFor(team).isEmpty && t.isEmpty) || t.exists(CaseType.valuesFor(team).contains)),
           "cause" -> CaseCause.formField,
         )(CaseSave.apply)(CaseSave.unapply),
-        "dsaApplication" -> optional(mapping(
-          "applicationDate" -> optional(FormHelpers.offsetDateTime),
-          "fundingApproved" -> optional(boolean),
-          "confirmationDate" -> optional(FormHelpers.offsetDateTime),
-          "fundingTypes" -> set(DSAFundingType.formField),
-          "ineligibilityReason" ->  optional(DSAIneligibilityReason.formField)
-        )(DSAApplicationFormData.apply)(DSAApplicationFormData.unapply)),
         "tags" -> set(CaseTag.formField),
         "originalEnquiry" -> optional(uuid.verifying("error.required", id => isValidEnquiry(id))),
         "version" -> optional(JavaTime.offsetDateTimeFormField).verifying("error.optimisticLocking", _ == existingVersion)
       )(CaseFormData.apply)(CaseFormData.unapply)
     )
   }
+
+  val dsaForm: Form[Option[DSAApplicationSave]] = Form(
+    single("dsaApplication" -> optional(
+      mapping(
+        "applicationDate" -> optional(FormHelpers.offsetDateTime),
+        "fundingApproved" -> optional(boolean),
+        "confirmationDate" -> optional(FormHelpers.offsetDateTime),
+        "fundingTypes" -> set(DSAFundingType.formField),
+        "ineligibilityReason" ->  optional(DSAIneligibilityReason.formField)
+      )(DSAApplicationSave.apply)(DSAApplicationSave.unapply)
+    ))
+  )
 
   case class CaseLinkFormData(
     linkType: CaseLinkType,
@@ -298,7 +293,8 @@ class CaseController @Inject()(
           baseForm.bind(Map(
             "clients[0]" -> enquiry.client.universityID.string,
             "originalEnquiry" -> enquiry.id.toString
-          )).discardingErrors
+          )).discardingErrors,
+          dsaForm
         ))
       }
 
@@ -307,12 +303,13 @@ class CaseController @Inject()(
           teamRequest.team,
           baseForm.bind(Map(
             "clients[0]" -> universityID.string
-          )).discardingErrors
+          )).discardingErrors,
+          dsaForm
         ))
       )
 
       case _ => Future.successful(
-        Ok(views.html.admin.cases.create(teamRequest.team, baseForm))
+        Ok(views.html.admin.cases.create(teamRequest.team, baseForm, dsaForm))
       )
     }
   }
@@ -320,20 +317,14 @@ class CaseController @Inject()(
   def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     form(teamRequest.team, profiles, enquiries, Set()).bindFromRequest().fold(
       formWithErrors => Future.successful(
-        Ok(views.html.admin.cases.create(teamRequest.team, formWithErrors))
+        Ok(views.html.admin.cases.create(teamRequest.team, formWithErrors, dsaForm.bindFromRequest()))
       ),
       data => {
-        val dsaApplication = data.dsaApplication.map(form => DSAApplicationAndTypes(
-          DSAApplication(
-            id = None,
-            applicationDate = form.applicationDate,
-            fundingApproved = form.fundingApproved,
-            confirmationDate = form.confirmationDate,
-            ineligibilityReason = form.ineligibilityReason,
-            version = JavaTime.offsetDateTime
-          ), form.fundingTypes
-        ))
-
+        val dsaApplication = if (DSAApplication.DSATeams.contains(teamRequest.team)) {
+          dsaForm.bindFromRequest().value.flatten
+        } else {
+          None
+        }
         val clients = data.clients.filter(_.string.nonEmpty)
 
         val updateOriginalEnquiry: Future[ServiceResult[Option[Enquiry]]] = data.originalEnquiry.map { enquiryId =>
@@ -385,19 +376,11 @@ class CaseController @Inject()(
             .fill(CaseFormData(
               clients.map(_.universityID),
               CaseSave(clientCase),
-              dsaApplication.map { a =>
-                DSAApplicationFormData(
-                  a.application.applicationDate,
-                  a.application.fundingApproved,
-                  a.application.confirmationDate,
-                  a.fundingTypes,
-                  a.application.ineligibilityReason
-                )
-              },
               tags,
               clientCase.originalEnquiry,
               Some(clientCase.lastUpdated)
-            ))
+            )),
+            dsaForm.fill(dsaApplication.map(DSAApplicationSave.apply))
         )
       )
     }
@@ -405,28 +388,26 @@ class CaseController @Inject()(
 
   def edit(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     val clientCase = caseRequest.`case`
-    cases.getClients(clientCase.id).successFlatMap(clients =>
+    ServiceResults.zip(
+      cases.getClients(clientCase.id),
+      cases.findDSAApplication(clientCase)
+    ).successFlatMap { case (clients, existingDsa) =>
       form(clientCase.team, profiles, enquiries, clients, Some(clientCase.lastUpdated)).bindFromRequest().fold(
         formWithErrors => Future.successful(
           Ok(
             views.html.admin.cases.edit(
               clientCase,
-              formWithErrors
+              formWithErrors,
+              dsaForm.bindFromRequest()
             )
           )
         ),
         data => {
-          val dsaApplication = data.dsaApplication.map(form => DSAApplicationAndTypes(
-            DSAApplication(
-              id = clientCase.dsaApplication,
-              applicationDate = form.applicationDate,
-              fundingApproved = form.fundingApproved,
-              confirmationDate = form.confirmationDate,
-              ineligibilityReason = form.ineligibilityReason,
-              version = JavaTime.offsetDateTime
-            ), form.fundingTypes
-          ))
-
+          val dsaApplication = if (DSAApplication.DSATeams.contains(clientCase.team)) {
+            dsaForm.bindFromRequest().value.flatten
+          } else {
+            existingDsa.map(DSAApplicationSave.apply)
+          }
           val clients = data.clients.filter(_.string.nonEmpty)
 
           cases.update(clientCase.id, data.`case`, clients, data.tags, dsaApplication, clientCase.lastUpdated).successMap { updated =>
@@ -435,7 +416,7 @@ class CaseController @Inject()(
           }
         }
       )
-    )
+    }
   }
 
   def linkForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>

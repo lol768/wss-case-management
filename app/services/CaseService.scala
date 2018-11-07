@@ -10,12 +10,12 @@ import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain.Pagination._
 import domain.QueryHelpers._
-import domain._
 import domain.dao.CaseDao._
-import domain.dao.DSADao.{DSAApplication, StoredDSAFundingType}
+import domain.dao.DSADao.{StoredDSAApplication, StoredDSAFundingType}
 import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao._
+import domain.{Page, _}
 import helpers.ServiceResults
 import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
@@ -31,7 +31,7 @@ import scala.language.higherKinds
 
 @ImplementedBy(classOf[CaseServiceImpl])
 trait CaseService {
-  def create(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team, originalEnquiry: Option[UUID], dsaApplication: Option[DSAApplicationAndTypes])(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
+  def create(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team, originalEnquiry: Option[UUID], dsaApplication: Option[DSAApplicationSave])(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
 
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
@@ -44,7 +44,7 @@ trait CaseService {
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
 
-  def update(caseID: UUID, c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], dsaApplication: Option[DSAApplicationAndTypes], caseVersion: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
+  def update(caseID: UUID, c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], dsaApplication: Option[DSAApplicationSave], caseVersion: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def updateState(caseID: UUID, targetState: IssueState, version: OffsetDateTime, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
 
   def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]]
@@ -96,7 +96,7 @@ trait CaseService {
 
   def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]]
 
-  def findDSAApplication(`case`: Case)(implicit t: TimingContext): Future[ServiceResult[Option[DSAApplicationAndTypes]]]
+  def findDSAApplication(`case`: Case)(implicit t: TimingContext): Future[ServiceResult[Option[DSAApplication]]]
 }
 
 @Singleton
@@ -136,16 +136,15 @@ class CaseServiceImpl @Inject() (
       dsaApplication = dsaApplication,
     )
 
-  override def create(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team, originalEnquiry: Option[UUID], application: Option[DSAApplicationAndTypes])(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
+  override def create(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team, originalEnquiry: Option[UUID], application: Option[DSAApplicationSave])(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
     val id = UUID.randomUUID()
-    val applicationId = application.map(_ => UUID.randomUUID())
 
     auditService.audit('CaseSave, id.toString, 'Case, Json.obj()) {
       clientService.getOrAddClients(clients).successFlatMapTo { _ =>
         val now = JavaTime.offsetDateTime
 
-        val dsaInsert: DBIO[Option[DSAApplication]] =
-          application.map(a => dsaDao.insert(a.application.copy(id = applicationId), now).map(Some.apply)).getOrElse(DBIO.successful(None))
+        val dsaInsert: DBIO[Option[StoredDSAApplication]] =
+          application.map(a => dsaDao.insert(a.asStoredApplication(UUID.randomUUID(), now)).map(Some.apply)).getOrElse(DBIO.successful(None))
 
         def fundingTypesInsert(newApplication: Option[UUID]): DBIO[Seq[StoredDSAFundingType]] = (for {
           a <- application
@@ -155,8 +154,8 @@ class CaseServiceImpl @Inject() (
         daoRunner.run(for {
           nextId <- sql"SELECT nextval('SEQ_CASE_ID')".as[Int].head
           dsa <- dsaInsert
-          _ <- fundingTypesInsert(dsa.flatMap(_.id))
-          inserted <- dao.insert(createStoredCase(id, IssueKey(IssueKeyType.Case, nextId), c, team, originalEnquiry, applicationId))
+          _ <- fundingTypesInsert(dsa.map(_.id))
+          inserted <- dao.insert(createStoredCase(id, IssueKey(IssueKeyType.Case, nextId), c, team, originalEnquiry, dsa.map(_.id)))
           _ <- dao.insertClients(clients.map { universityId => StoredCaseClient(id, universityId, now) })
           _ <- dao.insertTags(tags.map { t => StoredCaseTag(id, t, now) })
         } yield inserted).map { sc => Right(sc.asCase) }
@@ -203,7 +202,7 @@ class CaseServiceImpl @Inject() (
         .withLastUpdated
         .sortBy { case (_, lu) => lu.desc }
         .result
-    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) })}
+    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
   }
 
   override def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]] = {
@@ -217,7 +216,8 @@ class CaseServiceImpl @Inject() (
       withMessages <- query.withMessages
         .map { case (c, mf) => (c,
           mf.filter { case (m, _, _) => m.client === universityID }
-        ) }
+        )
+        }
         .result
       notes <- dao.findNotesQuery(withMessages.map { case (c, _) => c.id }.toSet).withMember.result
     } yield (withMessages, notes)).map { case (withMessages, notes) =>
@@ -234,7 +234,7 @@ class CaseServiceImpl @Inject() (
   override def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
     daoRunner.run(dao.searchQuery(query).take(limit).result).map { sc => Right(sc.map(_.asCase)) }
 
-  override def update(caseID: UUID, c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], application: Option[DSAApplicationAndTypes], caseVersion: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
+  override def update(caseID: UUID, c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], application: Option[DSAApplicationSave], caseVersion: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
     auditService.audit('CaseUpdate, caseID.toString, 'Case, Json.obj()) {
       clientService.getOrAddClients(clients).successFlatMapTo { _ =>
         val now = JavaTime.offsetDateTime
@@ -246,9 +246,9 @@ class CaseServiceImpl @Inject() (
             case _ => DBIO.successful(None)
           }
           dsa <- (application, existingDSA) match {
-            case (Some(a), Some(e)) => dsaDao.update(a.application, e.application.version).map(Some.apply)
-            case (Some(a), None) =>  dsaDao.insert(a.application.copy(id = Some(UUID.randomUUID())), now).map(Some.apply) // create a new DSA application
-            case (None, Some(e)) => dsaDao.delete(e.application).map(_ => None) // delete the existing DSA application
+            case (Some(a), Some(e)) => dsaDao.update(a.asStoredApplication(existing.dsaApplication.get, e.lastUpdated)).map(Some.apply)
+            case (Some(a), None) => dsaDao.insert(a.asStoredApplication(UUID.randomUUID(), now)).map(Some.apply) // create a new DSA application
+            case (None, Some(e)) => dsaDao.delete(e.asStoredApplication(existing.dsaApplication.get)).map(_ => None) // delete the existing DSA application
             case _ => DBIO.successful(None)
           }
           updated <- dao.update(
@@ -269,7 +269,7 @@ class CaseServiceImpl @Inject() (
               originalEnquiry = existing.originalEnquiry,
               caseType = c.caseType,
               cause = c.cause,
-              dsaApplication = dsa.flatMap(_.id),
+              dsaApplication = dsa.map(_.id),
             ),
             caseVersion
           )
@@ -283,9 +283,9 @@ class CaseServiceImpl @Inject() (
           )
           _ <- updateDifferencesDBIO[StoredDSAFundingType, DSAFundingType](
             application.map(_.fundingTypes).getOrElse(Set()),
-            dsaDao.findFundingTypesQuery(existingDSA.flatMap(_.application.id).orElse(application.flatMap(_.application.id)).toSet),
+            dsaDao.findFundingTypesQuery(existing.dsaApplication.orElse(dsa.map(_.id)).toSet),
             _.fundingType,
-            ft => StoredDSAFundingType(dsa.flatMap(_.id).get, ft, now),
+            ft => StoredDSAFundingType(dsa.get.id, ft, now),
             dsaDao.insertFundingTypes,
             dsaDao.deleteFundingTypes
           )
@@ -435,7 +435,7 @@ class CaseServiceImpl @Inject() (
         .sortBy { case (_, lu) => lu.desc }
         .paginate(page)
         .result
-    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) })}
+    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
 
   override def countOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
@@ -449,7 +449,7 @@ class CaseServiceImpl @Inject() (
         .sortBy { case (_, lu) => lu.desc }
         .paginate(page)
         .result
-    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) })}
+    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
 
   override def countOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
@@ -463,7 +463,7 @@ class CaseServiceImpl @Inject() (
         .sortBy { case (_, lu) => lu.desc }
         .paginate(page)
         .result
-    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) })}
+    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
 
   override def countClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
@@ -477,7 +477,7 @@ class CaseServiceImpl @Inject() (
         .sortBy { case (_, lu) => lu.desc }
         .paginate(page)
         .result
-    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) })}
+    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
 
   override def countClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
@@ -506,7 +506,7 @@ class CaseServiceImpl @Inject() (
 
   override def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Client]]]] = {
     daoRunner.run(dao.findClientsQuery(ids).result)
-      .map(_.groupBy { case (c , _) => c.caseId }.mapValues(_.map { case (_, c) => c.asClient }.toSet))
+      .map(_.groupBy { case (c, _) => c.caseId }.mapValues(_.map { case (_, c) => c.asClient }.toSet))
       .map(Right.apply)
   }
 
@@ -585,11 +585,16 @@ class CaseServiceImpl @Inject() (
       (_, messages) <- dao.findByIDQuery(id).withMessages
         .sortBy { case (_, mf) => mf.map(_._1.created) }
         .result
-        .map { results => MessageData.groupOwnerAndMessage[Case](results.map { case (c, m) => (
-          c.asCase,
-          m.map { case (msg, f, member) => (msg.asMessageData(member.map(_.asMember)), f) }
-        ) }) }
-        .map { _.head }
+        .map { results =>
+          MessageData.groupOwnerAndMessage[Case](results.map { case (c, m) => (
+            c.asCase,
+            m.map { case (msg, f, member) => (msg.asMessageData(member.map(_.asMember)), f) }
+          )
+          })
+        }
+        .map {
+          _.head
+        }
     } yield {
       Right(CaseMessages(messages))
     })
@@ -646,19 +651,20 @@ class CaseServiceImpl @Inject() (
   override def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]] =
     daoRunner.run(dao.getLastUpdatedForClients(clients)).map(r => Right(r.toMap.withDefaultValue(None)))
 
-  override def findDSAApplication(`case`: Case)(implicit t: TimingContext): Future[ServiceResult[Option[DSAApplicationAndTypes]]] = {
+  override def findDSAApplication(`case`: Case)(implicit t: TimingContext): Future[ServiceResult[Option[DSAApplication]]] = {
     `case`.dsaApplication.map(dsaId =>
       daoRunner.run(findDSAApplicationDBIO(dsaId).map(Some.apply))
-    ).getOrElse(Future.successful(None)).map(Right(_)).recover[ServiceResult[Option[DSAApplicationAndTypes]]] {
-      case _: NoSuchElementException => ServiceResults.error[Option[DSAApplicationAndTypes]](s"Could not find a DSA application with ID ${`case`.dsaApplication.get}")
+    ).getOrElse(Future.successful(None)).map(Right(_)).recover[ServiceResult[Option[DSAApplication]]] {
+      case _: NoSuchElementException => ServiceResults.error[Option[DSAApplication]](s"Could not find a DSA application with ID ${`case`.dsaApplication.get}")
     }
   }
 
-  private def findDSAApplicationDBIO(dsaID: UUID): DBIO[DSAApplicationAndTypes] =
+  private def findDSAApplicationDBIO(dsaID: UUID): DBIO[DSAApplication] =
     for {
       application <- dsaDao.findDSAApplication(dsaID)
       fundingTypes <- dsaDao.findFundingTypesQuery(Set(dsaID)).result
-    } yield DSAApplicationAndTypes(application, fundingTypes.map(_.fundingType).toSet)
+    } yield DSAApplication(application, fundingTypes.map(_.fundingType).toSet)
+
 }
 
 object CaseService {

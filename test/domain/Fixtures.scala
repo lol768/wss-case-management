@@ -5,7 +5,6 @@ import java.util.UUID
 
 import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
 import domain.dao.CaseDao.StoredCase
-import domain.dao.DSADao.DSAApplication
 import domain.dao.LocationDao.{StoredBuilding, StoredRoom}
 import domain.dao._
 import warwick.core.helpers.JavaTime
@@ -169,16 +168,12 @@ object Fixtures {
         None
       )
 
-    def newDSAApplicationNoId() = DSAApplicationAndTypes(
-      application = DSAApplication(
-        id = None,
-        applicationDate = None,
-        fundingApproved = None,
-        confirmationDate = None,
-        ineligibilityReason = None,
-        version = JavaTime.offsetDateTime
-      ),
-      fundingTypes = Set()
+    def newDSAApplicationSave() = DSAApplicationSave(
+      applicationDate = None,
+      fundingApproved = None,
+      confirmationDate = None,
+      ineligibilityReason = None,
+      fundingTypes = Set(),
     )
   }
 
