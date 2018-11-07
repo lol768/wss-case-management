@@ -1,16 +1,17 @@
-@import controllers.admin.CaseController.CaseFormData
+@import controllers.admin.CaseController.{CaseFormData, DSAApplicationFormData}
 @import domain.dao.CaseDao.Case
 
 @(
   clientCase: Case,
-  form: Form[CaseFormData]
+  form: Form[CaseFormData],
+  dsaForm: Form[Option[DSAApplicationFormData]]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Edit case ${clientCase.key.get.string}") {
   @b3.vertical.formCSRF(controllers.admin.routes.CaseController.edit(clientCase.key.get)) { implicit ifc =>
     @b3.validatedHidden(form, "version")
 
-    @views.html.admin.cases.caseFields(clientCase.team, form)
+    @views.html.admin.cases.caseFields(clientCase.team, form, dsaForm)
 
     @tags.submitOrCancel("Update", controllers.admin.routes.CaseController.view(clientCase.key.get))
   }

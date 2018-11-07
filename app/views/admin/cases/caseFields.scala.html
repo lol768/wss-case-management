@@ -1,6 +1,6 @@
-@import controllers.admin.CaseController.CaseFormData
+@import controllers.admin.CaseController.{CaseFormData, DSAApplicationFormData}
 @import domain.Team
-@import domain.Teams._
+@import domain.DSAApplication
 @import domain.CaseType
 @import domain.CaseCause
 @import domain.DSAFundingType
@@ -10,7 +10,8 @@
 @import domain.DSAIneligibilityReason
 @(
   team: Team,
-  form: Form[CaseFormData]
+  form: Form[CaseFormData],
+  dsaForm: Form[Option[DSAApplicationFormData]]
 )(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor, request: RequestHeader)
 
 @b3.validatedHidden(form, "originalEnquiry")
@@ -75,7 +76,7 @@
 </fieldset>
 
 @* Only show DSA fields for Disability or MentalHealth cases *@
-@if(Seq(Disability, MentalHealth).contains(team) || form.data.keys.exists(_.startsWith("dsaApplication."))){
+@if(DSAApplication.DSATeams.contains(team)){
   @b3.free('_label -> "DSA Funding Application") {
     <div class="checkbox">
       <label for="dsa_fields">
@@ -83,7 +84,7 @@
           id="dsa_fields"
           data-toggle="optional-subform"
           data-target="#dsa"
-          @if(form.data.keys.exists(_.startsWith("dsaApplication."))) { checked }
+          @if(dsaForm.data.keys.exists(_.startsWith("dsaApplication."))) { checked }
         >
         This case relates to a DSA Funding Application
       </label>
@@ -91,15 +92,15 @@
   }
   <fieldset id="dsa">
 
-    @b3.datetimeLocal(form("dsaApplication.applicationDate"),
+    @b3.datetimeLocal(dsaForm("dsaApplication.applicationDate"),
       '_label -> "Date of application"
     )
 
-    @b3.datetimeLocal(form("dsaApplication.confirmationDate"),
+    @b3.datetimeLocal(dsaForm("dsaApplication.confirmationDate"),
       '_label -> "Date of application decision"
     )
 
-    @b3.select(form("dsaApplication.fundingApproved"),
+    @b3.select(dsaForm("dsaApplication.fundingApproved"),
       '_label -> "Funding application decision",
       Symbol("data-toggle") -> "optional-subform",
       Symbol("data-targets") -> ".dsa-outcome"
@@ -113,14 +114,14 @@
       @b3.checkboxGroup(
         label = "In receipt of",
         items = DSAFundingType.values,
-        form = form,
+        form = dsaForm,
         field = "dsaApplication.fundingTypes",
         idPrefix = "fundingType"
       )
     </fieldset>
 
     <fieldset class="dsa-outcome dsa-rejected">
-      @b3.select(form("dsaApplication.ineligibilityReason"),
+      @b3.select(dsaForm("dsaApplication.ineligibilityReason"),
         options = ("", "") +: DSAIneligibilityReason.values.map { c => c.entryName -> c.description },
         '_label -> "Ineligibility Reason"
       )

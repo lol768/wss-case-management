@@ -1,14 +1,15 @@
-@import controllers.admin.CaseController.CaseFormData
+@import controllers.admin.CaseController.{CaseFormData, DSAApplicationFormData}
 @import domain.Team
 
 @(
   team: Team,
-  form: Form[CaseFormData]
+  form: Form[CaseFormData],
+  dsaForm: Form[Option[DSAApplicationFormData]]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Create a ${team.name} case") {
   @b3.vertical.formCSRF(controllers.admin.routes.CaseController.create(team.id)) { implicit ifc =>
-    @views.html.admin.cases.caseFields(team, form)
+    @views.html.admin.cases.caseFields(team, form, dsaForm)
 
     @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id).withFragment("cases"))
   }

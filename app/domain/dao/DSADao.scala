@@ -26,11 +26,11 @@ import scala.language.higherKinds
 
 @ImplementedBy(classOf[DSADaoImpl])
 trait DSADao {
-  def insert(dsaApplication: DSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[DSAApplication]
-  def update(dsaApplication: DSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[DSAApplication]
-  def delete(dsaApplication: DSAApplication)(implicit ac: AuditLogContext): DBIO[Done]
-  def findDSAApplication(id: UUID): DBIO[DSAApplication]
-  def getDSAHistory(caseID: UUID): DBIO[Seq[DSAApplicationVersion]]
+  def insert(dsaApplication: StoredDSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication]
+  def update(dsaApplication: StoredDSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication]
+  def delete(dsaApplication: StoredDSAApplication)(implicit ac: AuditLogContext): DBIO[Done]
+  def findDSAApplication(id: UUID): DBIO[StoredDSAApplication]
+  def getDSAHistory(caseID: UUID): DBIO[Seq[StoredDSAApplicationVersion]]
   def insertFundingTypes(tags: Set[StoredDSAFundingType])(implicit ac: AuditLogContext): DBIO[Seq[StoredDSAFundingType]]
   def deleteFundingTypes(tags: Set[StoredDSAFundingType])(implicit ac: AuditLogContext): DBIO[Done]
   def findFundingTypesQuery(dsaApplicationIds: Set[UUID]): Query[DSAFundingTypes, StoredDSAFundingType, Seq]
@@ -42,23 +42,23 @@ class DSADaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) extends DSADao with HasDatabaseConfigProvider[JdbcProfile] {
 
-  override def insert(dsaApplication: DSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[DSAApplication] = {
+  override def insert(dsaApplication: StoredDSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication] = {
     dsaApplications.insert(dsaApplication.copy(version = version))
   }
 
-  override def update(dsaApplication: DSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[DSAApplication] = {
+  override def update(dsaApplication: StoredDSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication] = {
     dsaApplications.update(dsaApplication.copy(version = version))
   }
 
-  override def delete(dsaApplication: DSAApplication)(implicit ac: AuditLogContext): DBIO[Done] = {
+  override def delete(dsaApplication: StoredDSAApplication)(implicit ac: AuditLogContext): DBIO[Done] = {
     dsaApplications.delete(dsaApplication)
   }
 
-  override def findDSAApplication(id: UUID): DBIO[DSAApplication] = {
+  override def findDSAApplication(id: UUID): DBIO[StoredDSAApplication] = {
     dsaApplications.table.filter(_.id === id).result.head
   }
 
-  override def getDSAHistory(caseID: UUID): DBIO[Seq[DSAApplicationVersion]] = {
+  override def getDSAHistory(caseID: UUID): DBIO[Seq[StoredDSAApplicationVersion]] = {
     val dsaIds = cases.versionsTable.filter(c => c.id === caseID).map(_.dsaApplication)
     dsaApplications.versionsTable.filter(_.id.? in dsaIds).sortBy(_.timestamp).result
   }
@@ -81,25 +81,25 @@ class DSADaoImpl @Inject()(
 
 object DSADao {
 
-  val dsaApplications: VersionedTableQuery[DSAApplication, DSAApplicationVersion, DSAApplications, DSAApplicationVersions] =
+  val dsaApplications: VersionedTableQuery[StoredDSAApplication, StoredDSAApplicationVersion, DSAApplications, DSAApplicationVersions] =
     VersionedTableQuery(TableQuery[DSAApplications], TableQuery[DSAApplicationVersions])
 
   val dsaFundingTypes: VersionedTableQuery[StoredDSAFundingType, StoredDSAFundingTypeVersion, DSAFundingTypes, DSAFundingTypeVersions] =
     VersionedTableQuery(TableQuery[DSAFundingTypes], TableQuery[DSAFundingTypeVersions])
 
-  case class DSAApplication (
+  case class StoredDSAApplication (
     id: Option[UUID],
     applicationDate: Option[OffsetDateTime],
     fundingApproved: Option[Boolean],
     confirmationDate: Option[OffsetDateTime],
     ineligibilityReason: Option[DSAIneligibilityReason],
     version: OffsetDateTime = JavaTime.offsetDateTime
-  ) extends Versioned[DSAApplication] {
+  ) extends Versioned[StoredDSAApplication] {
 
-    override def atVersion(at: OffsetDateTime): DSAApplication = copy(version = at)
+    override def atVersion(at: OffsetDateTime): StoredDSAApplication = copy(version = at)
 
-    override def storedVersion[B <: StoredVersion[DSAApplication]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
-      DSAApplicationVersion(
+    override def storedVersion[B <: StoredVersion[StoredDSAApplication]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
+      StoredDSAApplicationVersion(
         id.get,
         applicationDate,
         fundingApproved,
@@ -112,7 +112,7 @@ object DSADao {
       ).asInstanceOf[B]
   }
 
-  case class DSAApplicationVersion(
+  case class StoredDSAApplicationVersion(
     id: UUID,
     applicationDate: Option[OffsetDateTime],
     fundingApproved: Option[Boolean],
@@ -122,9 +122,9 @@ object DSADao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[DSAApplication] {
+  ) extends StoredVersion[StoredDSAApplication] {
 
-    def asApplication = DSAApplication(
+    def asApplication = StoredDSAApplication(
       Some(id),
       applicationDate,
       fundingApproved,
@@ -142,22 +142,22 @@ object DSADao {
     def version = column[OffsetDateTime]("version_utc")
   }
 
-  class DSAApplications(tag: Tag) extends Table[DSAApplication](tag, "dsa_application")
-    with VersionedTable[DSAApplication]
+  class DSAApplications(tag: Tag) extends Table[StoredDSAApplication](tag, "dsa_application")
+    with VersionedTable[StoredDSAApplication]
     with CommonDSAApplicationProperties {
 
     def id: Rep[UUID] = column[UUID]("id", O.PrimaryKey)
 
-    override def matchesPrimaryKey(other: DSAApplication): Rep[Boolean] = id === other.id.orNull
+    override def matchesPrimaryKey(other: StoredDSAApplication): Rep[Boolean] = id === other.id.orNull
 
-    override def * : ProvenShape[DSAApplication] =
-      (id.?, applicationDate, fundingApproved, confirmationDate, ineligibilityReason, version).mapTo[DSAApplication]
+    override def * : ProvenShape[StoredDSAApplication] =
+      (id.?, applicationDate, fundingApproved, confirmationDate, ineligibilityReason, version).mapTo[StoredDSAApplication]
 
     def fk = foreignKey("fk_dsa_application", id, cases.table)(_.id)
   }
 
-  class DSAApplicationVersions(tag: Tag) extends Table[DSAApplicationVersion](tag, "dsa_application_version")
-    with StoredVersionTable[DSAApplication]
+  class DSAApplicationVersions(tag: Tag) extends Table[StoredDSAApplicationVersion](tag, "dsa_application_version")
+    with StoredVersionTable[StoredDSAApplication]
     with CommonDSAApplicationProperties {
 
     def id: Rep[UUID] = column[UUID]("id")
@@ -165,7 +165,7 @@ object DSADao {
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
     def auditUser = column[Option[Usercode]]("version_user")
 
-    override def * : ProvenShape[DSAApplicationVersion] = (id, applicationDate, fundingApproved, confirmationDate, ineligibilityReason, version, operation, timestamp, auditUser).mapTo[DSAApplicationVersion]
+    override def * : ProvenShape[StoredDSAApplicationVersion] = (id, applicationDate, fundingApproved, confirmationDate, ineligibilityReason, version, operation, timestamp, auditUser).mapTo[StoredDSAApplicationVersion]
 
     def pk: PrimaryKey = primaryKey("pk_version_dsa_application", (id, timestamp))
     def idx: Index = index("idx_dsa_application_version", (id, version))
