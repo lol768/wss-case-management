@@ -15,34 +15,18 @@ class RegistrationDaoTest extends AbstractDaoTest {
 
   "RegistrationDao" should {
 
-    "save registration" in {
+    "invite" in {
       val now = ZonedDateTime.of(2018, 1, 1, 10, 0, 0, 0, JavaTime.timeZone).toInstant
       DateTimeUtils.useMockDateTime(now, () => {
         val uniID = UniversityID("1234567")
 
-        val data = RegistrationData(
-          gp = "Some guy",
-          tutor = "Someone else",
-          disabilities = Set(Disabilities.Deaf, Disabilities.Blind),
-          medications = Set(Medications.Antidepressant),
-          appointmentAdjustments = "None",
-          referrals = Set(RegistrationReferrals.GP),
-          consentPrivacyStatement = Some(true)
-        )
-
         val test = for {
-          exists <- dao.get(uniID)
-          result <- dao.insert(uniID, data)
+          result <- dao.invite(uniID)
           _ <- DBIO.from(Future {
-            exists.isEmpty mustBe true
             result.universityID mustBe uniID
+            result.lastInvited.toInstant.equals(now) mustBe true
+            result.parsed.data.isEmpty mustBe true
             result.version.toInstant.equals(now) mustBe true
-            result.parsed.data.gp mustBe data.gp
-            result.parsed.data.tutor mustBe data.tutor
-            result.parsed.data.disabilities mustBe data.disabilities
-            result.parsed.data.medications mustBe data.medications
-            result.parsed.data.appointmentAdjustments mustBe data.appointmentAdjustments
-            result.parsed.data.referrals mustBe data.referrals
           })
         } yield result
 
@@ -79,20 +63,21 @@ class RegistrationDaoTest extends AbstractDaoTest {
         _ <- DBIO.from(Future {
           DateTimeUtils.CLOCK_IMPLEMENTATION = Clock.fixed(earlier, ZoneId.systemDefault)
         })
-        inserted <- dao.insert(uniID, data)
+        inserted <- dao.invite(uniID)
         _ <- DBIO.from(Future {
           DateTimeUtils.CLOCK_IMPLEMENTATION = Clock.fixed(now, ZoneId.systemDefault)
         })
-        updated <- dao.update(uniID, updatedData, inserted.version)
+        updated <- dao.update(uniID, Some(updatedData), inserted.lastInvited, inserted.version)
         _ <- DBIO.from(Future {
           updated.universityID mustBe uniID
+          updated.lastInvited.equals(inserted.lastInvited) mustBe true
           updated.version.toInstant.equals(now) mustBe true
-          updated.parsed.data.gp mustBe updatedData.gp
-          updated.parsed.data.tutor mustBe updatedData.tutor
-          updated.parsed.data.disabilities mustBe updatedData.disabilities
-          updated.parsed.data.medications mustBe updatedData.medications
-          updated.parsed.data.appointmentAdjustments mustBe updatedData.appointmentAdjustments
-          updated.parsed.data.referrals mustBe updatedData.referrals
+          updated.parsed.data.get.gp mustBe updatedData.gp
+          updated.parsed.data.get.tutor mustBe updatedData.tutor
+          updated.parsed.data.get.disabilities mustBe updatedData.disabilities
+          updated.parsed.data.get.medications mustBe updatedData.medications
+          updated.parsed.data.get.appointmentAdjustments mustBe updatedData.appointmentAdjustments
+          updated.parsed.data.get.referrals mustBe updatedData.referrals
         })
       } yield updated
 

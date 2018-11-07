@@ -17,19 +17,19 @@ const icons = {
 };
 
 const dateTimeHiddenFieldFormat = 'YYYY-MM-DDTHH:mm';
+const dateTextFieldFormat = 'Do MMM YYYY';
 const dateTimeTextFieldFormat = 'Do MMM YYYY, HH:mm';
 const dayAndDateTimeTextFieldFormat = 'ddd Do MMM YYYY, HH:mm';
 
 const commonOptions = {
   locale: 'en-gb',
-  format: dateTimeTextFieldFormat,
   icons,
   sideBySide: true,
   stepping: 1,
   useCurrent: true,
 };
 
-export function DateTimePicker(container) {
+function PopupDatePicker(container, format) {
   const hiddenField = $(container).find('input[type=hidden]');
   const inputGroup = $(container).find('.input-group');
   const textField = inputGroup.find('input');
@@ -43,13 +43,22 @@ export function DateTimePicker(container) {
 
   inputGroup.datetimepicker({
     ...commonOptions,
+    format,
     date: currentDate,
     allowInputToggle: true,
     ...options,
-  }).on('dp.change', ({ date }) => hiddenField.val(moment(date, dateTimeTextFieldFormat).format(dateTimeHiddenFieldFormat)));
+  }).on('dp.change', ({ date }) => hiddenField.val(moment(date, format).format(dateTimeHiddenFieldFormat)));
 }
 
-export function InlineDateTimePicker(container) {
+export function DatePicker(container) {
+  PopupDatePicker(container, dateTextFieldFormat);
+}
+
+export function DateTimePicker(container) {
+  PopupDatePicker(container, dateTimeTextFieldFormat);
+}
+
+function InlinePicker(container, format) {
   const hiddenField = $(container).find('input[type=hidden]');
   const label = $(container).closest('.form-group').find('label.control-label');
   const div = hiddenField.next('div');
@@ -72,14 +81,23 @@ export function InlineDateTimePicker(container) {
 
   div.datetimepicker({
     ...commonOptions,
+    format,
     date: currentDate,
     inline: true,
     ...options,
   }).on('dp.change', ({ date }) => {
-    const d = moment(date, dateTimeTextFieldFormat);
+    const d = moment(date, format);
     hiddenField.val(d.format(dateTimeHiddenFieldFormat));
     updateLabel(d);
   }).trigger('init.datetimepicker');
 
   updateLabel(div.data('DateTimePicker').viewDate());
+}
+
+export function InlineDatePicker(container) {
+  InlinePicker(container, dateTextFieldFormat);
+}
+
+export function InlineDateTimePicker(container) {
+  InlinePicker(container, dateTimeTextFieldFormat);
 }

@@ -10,13 +10,17 @@
 
 @main(s"Link ${c.key.get.string} to another case") {
   @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.CaseController.link(c.key.get)) { implicit fc =>
-    @b3.select(form("linkType"),
-      options = CaseLinkType.values.map { t => t.entryName -> t.outwardDescription },
-      '_colClass -> "col-md-6",
-      '_label -> "This case",
-      '_default -> "",
-      'required -> true
-    )
+    @if(CaseLinkType.values.size > 1) {
+      @b3.select(form("linkType"),
+        options = CaseLinkType.values.map { t => t.entryName -> t.outwardDescription },
+        '_colClass -> "col-md-6",
+        '_label -> "This case",
+        '_default -> "",
+        'required -> true
+      )
+    } else {
+      @b3.hidden(form("linkType"), 'value -> CaseLinkType.values.headOption.map(_.entryName))
+    }
 
     @b3.text(form("targetID"),
       '_colClass -> "col-md-6",

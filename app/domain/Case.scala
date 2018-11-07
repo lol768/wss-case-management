@@ -38,12 +38,9 @@ object CaseTag extends PlayEnum[CaseTag] {
 }
 
 sealed abstract class CaseType(val description: String, val applicableTo: Seq[Team]) extends EnumEntry
-abstract class MentalHealthCaseType(description: String) extends CaseType(description, Seq(Teams.MentalHealth))
 object CaseType extends PlayEnum[CaseType] {
-  case object MentalHealthAssessment extends MentalHealthCaseType("Mental Health Assessment")
-  case object MentalHealthCrisis extends MentalHealthCaseType("Mental Health Crisis")
-  case object MentalHealthWellbeing extends MentalHealthCaseType("Mental Health Mentoring")
-  case object MentalHealthMentoring extends MentalHealthCaseType("Mental Health Wellbeing")
+
+  // Not currently any, but you never know if some may come back
 
   override def values: immutable.IndexedSeq[CaseType] = findValues
 
@@ -77,7 +74,6 @@ case class CaseLink(
 sealed abstract class CaseLinkType(val outwardDescription: String, val inwardDescription: String) extends EnumEntry
 object CaseLinkType extends PlayEnum[CaseLinkType] {
   case object Related extends CaseLinkType("is related to", "is related to")
-  case object Merge extends CaseLinkType("merged to", "merged from")
 
   override def values: immutable.IndexedSeq[CaseLinkType] = findValues
 }
@@ -137,21 +133,19 @@ case class CaseDocumentSave(
 
 sealed abstract class CaseDocumentType(val description: String) extends EnumEntry
 object CaseDocumentType extends PlayEnum[CaseDocumentType] {
-  case object DisabilityNeedsAssessmentReport extends CaseDocumentType("Disability Needs Assessment Report")
   case object DSAEntitlementLetter extends CaseDocumentType("DSA Entitlement Letter")
-  case object MedicalEvidenceDocuments extends CaseDocumentType("Medical Evidence Documents")
-  case object MitigatingCircumstancesForm extends CaseDocumentType("Mitigating Circumstances Form")
-  case object SelectedEmails extends CaseDocumentType("Selected Emails")
-  case object StudentSupportInternalDocuments extends CaseDocumentType("Student Support Internal Documents")
-  case object SecurityReport extends CaseDocumentType("Security Report")
-  case object UIRForm extends CaseDocumentType("UIR Form")
-  case object PoliceIncidentDocument extends CaseDocumentType("Police Incident Document")
-  case object SpecificLearningDifficultyDocument extends CaseDocumentType("Specific Learning Difficulty Document")
-  case object StudentSupportInformationForm extends CaseDocumentType("Student Support Information Form")
-  case object MentalHealthServicesOther extends CaseDocumentType("Mental Health Services - Other Documents")
-  case object ReleaseOfInformationConsentForm extends CaseDocumentType("Release Of Information Consent Form")
-  case object Photos extends CaseDocumentType("Photos")
   case object KeyLog extends CaseDocumentType("Key Log")
+  case object MedicalEvidenceDocuments extends CaseDocumentType("Medical Evidence Documents")
+  case object MentalHealthServicesOther extends CaseDocumentType("Mental Health Services - Other Documents")
+  case object MitigatingCircumstancesForm extends CaseDocumentType("Mitigating Circumstances Form")
+  case object Photos extends CaseDocumentType("Photos")
+  case object PoliceIncidentDocument extends CaseDocumentType("Police Incident Document")
+  case object ReleaseOfInformationConsentForm extends CaseDocumentType("Release Of Information Consent Form")
+  case object SecurityReport extends CaseDocumentType("Security Report")
+  case object SpecificLearningDifficultyDocument extends CaseDocumentType("Specific Learning Difficulty Document")
+  case object WellbeingSupportInformationForm extends CaseDocumentType("Wellbeing Support Information Form")
+  case object UIRForm extends CaseDocumentType("UIR Form")
+  case object Other extends CaseDocumentType("Other")
 
   override def values: immutable.IndexedSeq[CaseDocumentType] = findValues
 }

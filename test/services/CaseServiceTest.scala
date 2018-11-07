@@ -99,26 +99,26 @@ class CaseServiceTest extends AbstractDaoTest {
       service.getLinks(c1.id.get).serviceValue mustBe ((Nil, Nil))
 
       service.addLink(CaseLinkType.Related, c1.id.get, c2.id.get, CaseNoteSave("c1 is related to c2", Usercode("cuscav"))).serviceValue
-      service.addLink(CaseLinkType.Merge, c1.id.get, c3.id.get, CaseNoteSave("c1 merged to c3", Usercode("cuscav"))).serviceValue
-      service.addLink(CaseLinkType.Merge, c2.id.get, c3.id.get, CaseNoteSave("c2 merged to c2", Usercode("cuscav"))).serviceValue
+      service.addLink(CaseLinkType.Related, c1.id.get, c3.id.get, CaseNoteSave("c1 merged to c3", Usercode("cuscav"))).serviceValue
+      service.addLink(CaseLinkType.Related, c2.id.get, c3.id.get, CaseNoteSave("c2 merged to c2", Usercode("cuscav"))).serviceValue
 
       val (c1Outgoing, c1Incoming) = service.getLinks(c1.id.get).serviceValue
       c1Outgoing.size mustBe 2
       c1Outgoing.exists { l => l.linkType == CaseLinkType.Related && l.outgoing == c1 && l.incoming == c2 } mustBe true
-      c1Outgoing.exists { l => l.linkType == CaseLinkType.Merge && l.outgoing == c1 && l.incoming == c3 } mustBe true
+      c1Outgoing.exists { l => l.linkType == CaseLinkType.Related && l.outgoing == c1 && l.incoming == c3 } mustBe true
       c1Incoming mustBe 'empty
 
       val (c2Outgoing, c2Incoming) = service.getLinks(c2.id.get).serviceValue
       c2Outgoing.size mustBe 1
-      c2Outgoing.exists { l => l.linkType == CaseLinkType.Merge && l.outgoing == c2 && l.incoming == c3 } mustBe true
+      c2Outgoing.exists { l => l.linkType == CaseLinkType.Related && l.outgoing == c2 && l.incoming == c3 } mustBe true
       c2Incoming.size mustBe 1
       c2Incoming.exists { l => l.linkType == CaseLinkType.Related && l.outgoing == c1 && l.incoming == c2 } mustBe true
 
       val (c3Outgoing, c3Incoming) = service.getLinks(c3.id.get).serviceValue
       c3Outgoing mustBe 'empty
       c3Incoming.size mustBe 2
-      c3Incoming.exists { l => l.linkType == CaseLinkType.Merge && l.outgoing == c1 && l.incoming == c3 } mustBe true
-      c3Incoming.exists { l => l.linkType == CaseLinkType.Merge && l.outgoing == c2 && l.incoming == c3 } mustBe true
+      c3Incoming.exists { l => l.linkType == CaseLinkType.Related && l.outgoing == c1 && l.incoming == c3 } mustBe true
+      c3Incoming.exists { l => l.linkType == CaseLinkType.Related && l.outgoing == c2 && l.incoming == c3 } mustBe true
     }
 
     "get and set case notes" in withData(new CaseFixture()) { c =>

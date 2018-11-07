@@ -25,7 +25,7 @@
   (form.errors("clients") ++ form("clients").indexes.flatMap(i => form.errors(s"clients[$i]"))).headOption
 }
 @b3.free('_label -> "Clients", '_class -> hasClientError.map(_ => "has-error")) {
-  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for users", multiple = true, universityId = true)
+  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for users", multiple = true, universityId = true, selectOnBlur = false)
   @b3.indexedFieldErrors(form, "clients")
 }
 
@@ -70,7 +70,7 @@
     @b3.checkbox(form("incident.notifiedFire"), '_text -> "Fire service called")
   }
 
-  @b3.datetimeLocal(form("incident.incidentDate"),
+  @b3.datetimePicker(form("incident.incidentDate"),
     '_label -> "Date of incident"
   )
 </fieldset>
@@ -92,13 +92,13 @@
   }
   <fieldset id="dsa">
 
-    @b3.datetimeLocal(dsaForm("dsaApplication.applicationDate"),
-      '_label -> "Date of application"
-    )
+  @b3.datePicker(dsaForm("dsaApplication.applicationDate"),
+    '_label -> "Date of application"
+  )
 
-    @b3.datetimeLocal(dsaForm("dsaApplication.confirmationDate"),
-      '_label -> "Date of application decision"
-    )
+  @b3.datePicker(dsaForm("dsaApplication.confirmationDate"),
+    '_label -> "Date of application decision"
+  )
 
     @b3.select(dsaForm("dsaApplication.fundingApproved"),
       '_label -> "Funding application decision",
