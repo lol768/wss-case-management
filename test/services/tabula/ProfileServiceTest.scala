@@ -99,7 +99,8 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       studentProfile.dualNationality mustBe None
       studentProfile.tier4VisaRequired mustBe Some(false)
       studentProfile.disability mustBe Some(SitsDisability("I","Unclassified disability","Condition not listed"))
-      studentProfile.disabilityFundingStatus mustBe Some("Not in receipt of DSA")
+      studentProfile.disabilityFundingStatus mustBe Some(SitsDisabilityFundingStatus("5", "Not in receipt of DSA"))
+      studentProfile.jobTitle mustBe None
       studentProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/842cfad8a90147436f7a7dfeb2d42800/1234567")
       studentProfile.userType mustBe UserType.Student
       studentProfile.personalTutors mustBe Nil
@@ -139,7 +140,8 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       applicantProfile.dualNationality mustBe Some("Zimbabwean")
       applicantProfile.tier4VisaRequired mustBe None
       applicantProfile.disability mustBe Some(SitsDisability("E","Long standing condition","You have a long standing illness or condition"))
-      applicantProfile.disabilityFundingStatus mustBe Some("Pending")
+      applicantProfile.disabilityFundingStatus mustBe Some(SitsDisabilityFundingStatus("9", "Pending"))
+      applicantProfile.jobTitle mustBe Some("Applicant")
       applicantProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/3bba35c1a0c436780cefa97fecac9c5e/1812345")
       applicantProfile.userType mustBe UserType.Applicant
     }
@@ -168,6 +170,8 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       staffProfile.dualNationality mustBe None
       staffProfile.tier4VisaRequired mustBe None
       staffProfile.disability mustBe None
+      staffProfile.disabilityFundingStatus mustBe None
+      staffProfile.jobTitle mustBe Some("Senior Web Developer")
       staffProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/d462b29afd79000c21bcea89ecea9d71/1170836")
       staffProfile.userType mustBe UserType.Staff
     }
