@@ -37,7 +37,7 @@ class CaseServiceTest extends AbstractDaoTest {
       created.id must not be 'empty
       created.key.map(_.string) mustBe Some("CAS-1000")
 
-      val dsaApplication = Fixtures.cases.newDSAApplicationNoId()
+      val dsaApplication = Fixtures.cases.newDSAApplicationSave()
       val created2 = service.create(Fixtures.cases.newCase().copy(id = None, key = None), Set(UniversityID("0672089"), UniversityID("0672088")), Set(CaseTag.Drugs, CaseTag.HomeSickness), Some(dsaApplication)).serviceValue
       created2.id must not be 'empty
       created2.key.map(_.string) mustBe Some("CAS-1001")

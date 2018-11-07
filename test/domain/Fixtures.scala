@@ -171,14 +171,12 @@ object Fixtures {
       dsaApplication = None
     )
 
-    def newDSAApplicationNoId() = DSAApplication(
-      id = None,
+    def newDSAApplicationSave() = DSAApplicationSave(
       applicationDate = None,
       fundingApproved = None,
       confirmationDate = None,
       ineligibilityReason = None,
       fundingTypes = Set(),
-      version = JavaTime.offsetDateTime
     )
   }
 
