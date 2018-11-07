@@ -5,22 +5,52 @@ import java.util.UUID
 
 import domain.dao.DSADao.StoredDSAApplication
 import enumeratum.{EnumEntry, PlayEnum}
-import warwick.core.helpers.JavaTime
-
 import scala.collection.immutable
 
-
-
 case class DSAApplication (
-  id: Option[UUID],
   applicationDate: Option[OffsetDateTime],
   fundingApproved: Option[Boolean],
   confirmationDate: Option[OffsetDateTime],
   ineligibilityReason: Option[DSAIneligibilityReason],
   fundingTypes: Set[DSAFundingType],
-  version: OffsetDateTime = JavaTime.offsetDateTime
+  lastUpdated: OffsetDateTime
 ) {
-  def asStoredApplication: StoredDSAApplication = {
+  def asStoredApplication(id: UUID): StoredDSAApplication = {
+    StoredDSAApplication(
+      id = id,
+      applicationDate = applicationDate,
+      fundingApproved = fundingApproved,
+      confirmationDate = confirmationDate,
+      ineligibilityReason = ineligibilityReason,
+      version = lastUpdated
+    )
+  }
+}
+
+object DSAApplication {
+  final val DSATeams: Seq[Team] = Seq(Teams.Disability, Teams.MentalHealth)
+
+  def apply(storedApplication: StoredDSAApplication, fundingTypes: Set[DSAFundingType]): DSAApplication = {
+    DSAApplication(
+      applicationDate = storedApplication.applicationDate,
+      fundingApproved = storedApplication.fundingApproved,
+      confirmationDate = storedApplication.confirmationDate,
+      ineligibilityReason = storedApplication.ineligibilityReason,
+      fundingTypes = fundingTypes,
+      lastUpdated = storedApplication.version
+    )
+  }
+}
+
+case class DSAApplicationSave (
+  applicationDate: Option[OffsetDateTime],
+  fundingApproved: Option[Boolean],
+  confirmationDate: Option[OffsetDateTime],
+  fundingTypes: Set[DSAFundingType],
+  ineligibilityReason: Option[DSAIneligibilityReason]
+) {
+
+  def asStoredApplication(id: UUID, version: OffsetDateTime): StoredDSAApplication = {
     StoredDSAApplication(
       id = id,
       applicationDate = applicationDate,
@@ -32,18 +62,14 @@ case class DSAApplication (
   }
 }
 
-object DSAApplication {
-  final val DSATeams: Seq[Team] = Seq(Teams.Disability, Teams.MentalHealth)
-
-  def apply(storedApplication: StoredDSAApplication, fundingTypes: Set[DSAFundingType]): DSAApplication = {
-    DSAApplication(
-      id = storedApplication.id,
-      applicationDate = storedApplication.applicationDate,
-      fundingApproved = storedApplication.fundingApproved,
-      confirmationDate = storedApplication.confirmationDate,
-      ineligibilityReason = storedApplication.ineligibilityReason,
-      fundingTypes = fundingTypes,
-      version = storedApplication.version
+object DSAApplicationSave {
+  def apply(dsa: DSAApplication): DSAApplicationSave = {
+    DSAApplicationSave(
+      dsa.applicationDate,
+      dsa.fundingApproved,
+      dsa.confirmationDate,
+      dsa.fundingTypes,
+      dsa.ineligibilityReason
     )
   }
 }

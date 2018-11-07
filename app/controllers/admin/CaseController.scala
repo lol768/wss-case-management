@@ -35,26 +35,6 @@ object CaseController {
     notifiedFire: Boolean,
   )
 
-  case class DSAApplicationFormData(
-    applicationDate: Option[OffsetDateTime],
-    fundingApproved: Option[Boolean],
-    confirmationDate: Option[OffsetDateTime],
-    fundingTypes: Set[DSAFundingType],
-    ineligibilityReason: Option[DSAIneligibilityReason]
-  ) {
-    def toDSAApplication(id: Option[UUID]): DSAApplication = {
-      DSAApplication(
-        id = id,
-        applicationDate = applicationDate,
-        fundingApproved = fundingApproved,
-        confirmationDate = confirmationDate,
-        ineligibilityReason = ineligibilityReason,
-        fundingTypes = fundingTypes,
-        version = JavaTime.offsetDateTime
-      )
-    }
-  }
-
   case class CaseFormData(
     clients: Set[UniversityID],
     subject: String,
@@ -102,7 +82,7 @@ object CaseController {
     )
   }
 
-  val dsaForm: Form[Option[DSAApplicationFormData]] = Form(
+  val dsaForm: Form[Option[DSAApplicationSave]] = Form(
     single("dsaApplication" -> optional(
       mapping(
         "applicationDate" -> optional(FormHelpers.offsetDateTime),
@@ -110,7 +90,7 @@ object CaseController {
         "confirmationDate" -> optional(FormHelpers.offsetDateTime),
         "fundingTypes" -> set(DSAFundingType.formField),
         "ineligibilityReason" ->  optional(DSAIneligibilityReason.formField)
-      )(DSAApplicationFormData.apply)(DSAApplicationFormData.unapply)
+      )(DSAApplicationSave.apply)(DSAApplicationSave.unapply)
     ))
   )
 
@@ -370,7 +350,7 @@ class CaseController @Inject()(
         )
 
         val dsaApplication = if (DSAApplication.DSATeams.contains(teamRequest.team)) {
-          dsaForm.bindFromRequest().value.flatten.map(form => form.toDSAApplication(None))
+          dsaForm.bindFromRequest().value.flatten
         } else {
           None
         }
@@ -440,15 +420,7 @@ class CaseController @Inject()(
               clientCase.originalEnquiry,
               Some(clientCase.version)
             )),
-            dsaForm.fill(dsaApplication.map { a =>
-              DSAApplicationFormData(
-                a.applicationDate,
-                a.fundingApproved,
-                a.confirmationDate,
-                a.fundingTypes,
-                a.ineligibilityReason
-              )
-            })
+            dsaForm.fill(dsaApplication.map(DSAApplicationSave.apply))
         )
       )
     }
@@ -491,9 +463,9 @@ class CaseController @Inject()(
           )
 
           val dsaApplication = if (DSAApplication.DSATeams.contains(clientCase.team)) {
-            dsaForm.bindFromRequest().value.flatten.map(form => form.toDSAApplication(clientCase.dsaApplication))
+            dsaForm.bindFromRequest().value.flatten
           } else {
-            existingDsa
+            existingDsa.map(DSAApplicationSave.apply)
           }
           val clients = data.clients.filter(_.string.nonEmpty)
 

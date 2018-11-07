@@ -26,8 +26,8 @@ import scala.language.higherKinds
 
 @ImplementedBy(classOf[DSADaoImpl])
 trait DSADao {
-  def insert(dsaApplication: StoredDSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication]
-  def update(dsaApplication: StoredDSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication]
+  def insert(dsaApplication: StoredDSAApplication)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication]
+  def update(dsaApplication: StoredDSAApplication)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication]
   def delete(dsaApplication: StoredDSAApplication)(implicit ac: AuditLogContext): DBIO[Done]
   def findDSAApplication(id: UUID): DBIO[StoredDSAApplication]
   def getDSAHistory(caseID: UUID): DBIO[Seq[StoredDSAApplicationVersion]]
@@ -42,12 +42,12 @@ class DSADaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) extends DSADao with HasDatabaseConfigProvider[JdbcProfile] {
 
-  override def insert(dsaApplication: StoredDSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication] = {
-    dsaApplications.insert(dsaApplication.copy(version = version))
+  override def insert(dsaApplication: StoredDSAApplication)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication] = {
+    dsaApplications.insert(dsaApplication)
   }
 
-  override def update(dsaApplication: StoredDSAApplication, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication] = {
-    dsaApplications.update(dsaApplication.copy(version = version))
+  override def update(dsaApplication: StoredDSAApplication)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication] = {
+    dsaApplications.update(dsaApplication)
   }
 
   override def delete(dsaApplication: StoredDSAApplication)(implicit ac: AuditLogContext): DBIO[Done] = {
@@ -88,7 +88,7 @@ object DSADao {
     VersionedTableQuery(TableQuery[DSAFundingTypes], TableQuery[DSAFundingTypeVersions])
 
   case class StoredDSAApplication (
-    id: Option[UUID],
+    id: UUID,
     applicationDate: Option[OffsetDateTime],
     fundingApproved: Option[Boolean],
     confirmationDate: Option[OffsetDateTime],
@@ -100,7 +100,7 @@ object DSADao {
 
     override def storedVersion[B <: StoredVersion[StoredDSAApplication]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredDSAApplicationVersion(
-        id.get,
+        id,
         applicationDate,
         fundingApproved,
         confirmationDate,
@@ -125,7 +125,7 @@ object DSADao {
   ) extends StoredVersion[StoredDSAApplication] {
 
     def asApplication = StoredDSAApplication(
-      Some(id),
+      id,
       applicationDate,
       fundingApproved,
       confirmationDate,
@@ -148,10 +148,10 @@ object DSADao {
 
     def id: Rep[UUID] = column[UUID]("id", O.PrimaryKey)
 
-    override def matchesPrimaryKey(other: StoredDSAApplication): Rep[Boolean] = id === other.id.orNull
+    override def matchesPrimaryKey(other: StoredDSAApplication): Rep[Boolean] = id === other.id
 
     override def * : ProvenShape[StoredDSAApplication] =
-      (id.?, applicationDate, fundingApproved, confirmationDate, ineligibilityReason, version).mapTo[StoredDSAApplication]
+      (id, applicationDate, fundingApproved, confirmationDate, ineligibilityReason, version).mapTo[StoredDSAApplication]
 
     def fk = foreignKey("fk_dsa_application", id, cases.table)(_.id)
   }

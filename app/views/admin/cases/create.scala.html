@@ -1,10 +1,10 @@
-@import controllers.admin.CaseController.{CaseFormData, DSAApplicationFormData}
-@import domain.Team
+@import controllers.admin.CaseController.CaseFormData
+@import domain.{DSAApplicationSave, Team}
 
 @(
   team: Team,
   form: Form[CaseFormData],
-  dsaForm: Form[Option[DSAApplicationFormData]]
+  dsaForm: Form[Option[DSAApplicationSave]]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Create a ${team.name} case") {

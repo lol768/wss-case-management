@@ -31,7 +31,7 @@ import scala.language.higherKinds
 
 @ImplementedBy(classOf[CaseServiceImpl])
 trait CaseService {
-  def create(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], dsaApplication: Option[DSAApplication])(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
+  def create(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], dsaApplication: Option[DSAApplicationSave])(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
 
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
@@ -44,7 +44,7 @@ trait CaseService {
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
 
-  def update(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], dsaApplication: Option[DSAApplication], caseVersion: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
+  def update(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], dsaApplication: Option[DSAApplicationSave], caseVersion: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def updateState(caseID: UUID, targetState: IssueState, version: OffsetDateTime, caseNote: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
 
   def getCaseTags(caseIds: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[CaseTag]]]]
@@ -117,7 +117,7 @@ class CaseServiceImpl @Inject() (
 )(implicit ec: ExecutionContext) extends CaseService {
 
 
-  override def create(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], application: Option[DSAApplication])(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
+  override def create(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], application: Option[DSAApplicationSave])(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
     require(c.id.isEmpty, "Case must not have an existing ID before being saved")
     require(c.key.isEmpty, "Case must not have an existing key before being saved")
 
@@ -127,7 +127,7 @@ class CaseServiceImpl @Inject() (
         val now = JavaTime.offsetDateTime
 
         val dsaInsert: DBIO[Option[StoredDSAApplication]] =
-          application.map(a => dsaDao.insert(a.asStoredApplication.copy(id = Some(UUID.randomUUID())), now).map(Some.apply)).getOrElse(DBIO.successful(None))
+          application.map(a => dsaDao.insert(a.asStoredApplication(UUID.randomUUID(), now)).map(Some.apply)).getOrElse(DBIO.successful(None))
 
         def fundingTypesInsert(newApplication: Option[UUID]): DBIO[Seq[StoredDSAFundingType]] = (for {
           a <- application
@@ -137,8 +137,8 @@ class CaseServiceImpl @Inject() (
         daoRunner.run(for {
           nextId <- sql"SELECT nextval('SEQ_CASE_ID')".as[Int].head
           dsa <- dsaInsert
-          _ <- fundingTypesInsert(dsa.flatMap(_.id))
-          inserted <- dao.insert(c.copy(id = Some(id), key = Some(IssueKey(IssueKeyType.Case, nextId)), dsaApplication = dsa.flatMap(_.id)))
+          _ <- fundingTypesInsert(dsa.map(_.id))
+          inserted <- dao.insert(c.copy(id = Some(id), key = Some(IssueKey(IssueKeyType.Case, nextId)), dsaApplication = dsa.map(_.id)))
           _ <- dao.insertClients(clients.map { universityId => StoredCaseClient(id, universityId, now) })
           _ <- dao.insertTags(tags.map { t => StoredCaseTag(id, t, now) })
         } yield inserted).map(Right.apply)
@@ -216,7 +216,7 @@ class CaseServiceImpl @Inject() (
   override def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]] =
     daoRunner.run(dao.searchQuery(query).take(limit).result).map(Right.apply)
 
-  override def update(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], application: Option[DSAApplication], caseVersion: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
+  override def update(c: Case, clients: Set[UniversityID], tags: Set[CaseTag], application: Option[DSAApplicationSave], caseVersion: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
     auditService.audit('CaseUpdate, c.id.get.toString, 'Case, Json.obj()) {
 
       findDSAApplication(c).successFlatMapTo { existingDsa =>
@@ -225,15 +225,15 @@ class CaseServiceImpl @Inject() (
           val now = JavaTime.offsetDateTime
 
           val dsaAction: DBIO[Option[StoredDSAApplication]] = (application, existingDsa) match {
-            case (Some(a), Some(e)) => dsaDao.update(a.asStoredApplication, e.asStoredApplication.version).map(Some.apply)
-            case (Some(a), None) =>  dsaDao.insert(a.asStoredApplication.copy(id = Some(UUID.randomUUID())), now).map(Some.apply) // create a new DSA application
-            case (None, Some(e)) => dsaDao.delete(e.asStoredApplication).map(_ => None) // delete the existing DSA application
+            case (Some(a), Some(e)) => dsaDao.update(a.asStoredApplication(c.dsaApplication.get, e.lastUpdated)).map(Some.apply)
+            case (Some(a), None) =>  dsaDao.insert(a.asStoredApplication(UUID.randomUUID(), now)).map(Some.apply) // create a new DSA application
+            case (None, Some(e)) => dsaDao.delete(e.asStoredApplication(c.dsaApplication.get)).map(_ => None) // delete the existing DSA application
             case _ => DBIO.successful(None)
           }
 
           daoRunner.run(for {
             dsa <- dsaAction
-            updated <- dao.update(c.copy(dsaApplication = dsa.flatMap(_.id)), caseVersion)
+            updated <- dao.update(c.copy(dsaApplication = dsa.map(_.id)), caseVersion)
             _ <- updateDifferencesDBIO[StoredCaseClient, UniversityID](
               clients,
               dao.findClientsQuery(Set(c.id.get)).map { case (client, _) => client },
@@ -244,9 +244,9 @@ class CaseServiceImpl @Inject() (
             )
             _ <- updateDifferencesDBIO[StoredDSAFundingType, DSAFundingType](
               application.map(_.fundingTypes).getOrElse(Set()),
-              dsaDao.findFundingTypesQuery(existingDsa.flatMap(_.asStoredApplication.id).orElse(application.flatMap(_.asStoredApplication.id)).toSet),
+              dsaDao.findFundingTypesQuery(c.dsaApplication.orElse(dsa.map(_.id)).toSet),
               _.fundingType,
-              ft => StoredDSAFundingType(dsa.flatMap(_.id).get, ft, now),
+              ft => StoredDSAFundingType(dsa.get.id, ft, now),
               dsaDao.insertFundingTypes,
               dsaDao.deleteFundingTypes
             )
