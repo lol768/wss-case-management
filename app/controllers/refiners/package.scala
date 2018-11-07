@@ -5,9 +5,9 @@ import java.util.UUID
 import domain.{IssueKey, Teams}
 import helpers.ServiceResults.ServiceResult
 import play.api.mvc._
-import services.{AppointmentService, CaseService, EnquiryService}
+import services.{AppointmentService, CaseService, EnquiryService, RegistrationService}
 import system.Roles
-import warwick.sso.AuthenticatedRequest
+import warwick.sso.{AuthenticatedRequest, UniversityID}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.higherKinds
@@ -132,6 +132,22 @@ package object refiners {
         Future.successful {
           Try(Teams.fromId(teamId)).toOption.map(t => Right(new TeamSpecificRequest[A](t, request)))
             .getOrElse(Left(Results.NotFound(views.html.errors.notFound())))
+        }
+      }
+
+      override protected def executionContext: ExecutionContext = ec
+    }
+
+  def WithRegistration(implicit registrationService: RegistrationService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, RegistrationSpecificRequest] =
+    new ActionRefiner[AuthenticatedRequest, RegistrationSpecificRequest] {
+      override protected def refine[A](request: AuthenticatedRequest[A]): Future[Either[Result, RegistrationSpecificRequest[A]]] = {
+        implicit val requestContext: RequestContext = requestContextBuilder(request)
+
+        registrationService.get(request.user.get.universityId.get).map {
+          case Right(Some(registration)) =>
+            Right(new RegistrationSpecificRequest[A](registration, request))
+          case _ =>
+            Left(Results.NotFound(views.html.errors.notFound()))
         }
       }
 

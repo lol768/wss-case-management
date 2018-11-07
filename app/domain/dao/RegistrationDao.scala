@@ -21,6 +21,7 @@ object RegistrationDao {
   case class Registration(
     universityID: UniversityID,
     data: JsValue,
+    lastInvited: OffsetDateTime,
     version: OffsetDateTime = JavaTime.offsetDateTime
   ) extends Versioned[Registration] {
 
@@ -30,6 +31,7 @@ object RegistrationDao {
       RegistrationVersion(
         universityID,
         data,
+        lastInvited,
         version,
         operation,
         timestamp,
@@ -39,13 +41,15 @@ object RegistrationDao {
     def parsed = domain.Registration(
       universityID = this.universityID,
       updatedDate = this.version,
-      data = this.data.validate[domain.RegistrationData](domain.RegistrationData.formatter).get
+      data = this.data.validateOpt[domain.RegistrationData](domain.RegistrationData.formatter).getOrElse(None),
+      lastInvited = this.lastInvited
     )
   }
 
   case class RegistrationVersion(
     universityId: UniversityID,
     data: JsValue,
+    lastInvited: OffsetDateTime,
     version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
@@ -53,10 +57,11 @@ object RegistrationDao {
   ) extends StoredVersion[Registration]
 
   object Registration extends Versioning {
-    def tupled: ((UniversityID, JsValue, OffsetDateTime)) => Registration = (Registration.apply _).tupled
+    def tupled: ((UniversityID, JsValue, OffsetDateTime, OffsetDateTime)) => Registration = (Registration.apply _).tupled
 
     sealed trait CommonProperties { self: Table[_] =>
       def data = column[JsValue]("data")
+      def lastInvited = column[OffsetDateTime]("last_invited_utc")
       def version = column[OffsetDateTime]("version_utc")
     }
 
@@ -65,7 +70,7 @@ object RegistrationDao {
 
       def universityID = column[UniversityID]("university_id", O.PrimaryKey)
 
-      def * = (universityID, data, version).mapTo[Registration]
+      def * = (universityID, data, lastInvited, version).mapTo[Registration]
     }
 
     class RegistrationVersions(tag: Tag) extends Table[RegistrationVersion](tag, "user_registration_version") with StoredVersionTable[Registration] with CommonProperties {
@@ -74,7 +79,7 @@ object RegistrationDao {
       def timestamp = column[OffsetDateTime]("version_timestamp_utc")
       def auditUser = column[Option[Usercode]]("version_user")
 
-      def * = (universityID, data, version, operation, timestamp, auditUser).mapTo[RegistrationVersion]
+      def * = (universityID, data, lastInvited, version, operation, timestamp, auditUser).mapTo[RegistrationVersion]
       def pk = primaryKey("pk_user_registration_versions", (universityID, timestamp))
       def idx = index("idx_user_registration_versions", (universityID, version))
     }
@@ -88,9 +93,9 @@ object RegistrationDao {
 @ImplementedBy(classOf[RegistrationDaoImpl])
 trait RegistrationDao {
 
-  def insert(universityID: UniversityID, data: domain.RegistrationData)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration]
+  def invite(universityID: UniversityID)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration]
 
-  def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration]
+  def update(universityID: UniversityID, data: Option[domain.RegistrationData], lastInvited: OffsetDateTime, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration]
 
   def get(universityID: UniversityID): DBIO[Option[RegistrationDao.Registration]]
 
@@ -106,16 +111,18 @@ class RegistrationDaoImpl @Inject()(
 
   import dbConfig.profile.api._
 
-  override def insert(universityID: UniversityID, data: domain.RegistrationData)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration] =
+  override def invite(universityID: UniversityID)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration] =
     RegistrationDao.Registration.registrations.insert(RegistrationDao.Registration(
       universityID,
-      Json.toJson(data)(domain.RegistrationData.formatter)
+      Json.obj(),
+      JavaTime.offsetDateTime
     ))
 
-  override def update(universityID: UniversityID, data: domain.RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration] =
+  override def update(universityID: UniversityID, data: Option[domain.RegistrationData], lastInvited: OffsetDateTime, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[RegistrationDao.Registration] =
     RegistrationDao.Registration.registrations.update(RegistrationDao.Registration(
       universityID,
-      Json.toJson(data)(domain.RegistrationData.formatter),
+      data.map(Json.toJson(_)(domain.RegistrationData.formatter)).getOrElse(Json.obj()),
+      lastInvited,
       version
     ))
 

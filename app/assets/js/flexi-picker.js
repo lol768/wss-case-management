@@ -22,6 +22,7 @@ export default class FlexiPicker {
     prefixGroups = '',
     universityId = false,
     team = '',
+    selectOnBlur = true,
   } = {}) {
     const self = this;
     const $element = $(input);
@@ -83,6 +84,7 @@ export default class FlexiPicker {
       },
       highlighter: html => html,
       changeInputOnMove: false,
+      selectOnBlur,
       afterSelect: (item) => {
         const description = (
           typeof (item.description) !== 'undefined' ? ` (${_.escape(item.description)})` : ''
@@ -164,6 +166,7 @@ $.fn.flexiPicker = function initFlexiPicker(options = {}) {
       prefixGroups: $this.data('prefix-groups') || '',
       universityId: $this.data('universityid'),
       team: $this.data('team') || '',
+      selectOnBlur: $this.data('select-on-blur') !== false,
     };
     $.extend(allOptions, options);
     $this.data('flexi-picker', new FlexiPicker(element, allOptions));
