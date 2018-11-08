@@ -2,22 +2,23 @@ package controllers.admin
 
 import java.time.OffsetDateTime
 
-import controllers.refiners.CanViewTeamActionRefiner
+import controllers.refiners.{AnyTeamActionRefiner, CanViewTeamActionRefiner}
 import controllers.{API, BaseController}
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc._
 import services._
 import warwick.sso.UserLookupService
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AdminController @Inject()(
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
+  anyTeamActionRefiner: AnyTeamActionRefiner,
   enquiryService: EnquiryService,
   caseService: CaseService,
   clientSummaryService: ClientSummaryService,
@@ -26,6 +27,7 @@ class AdminController @Inject()(
   userPreferences: UserPreferencesService,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
+  import anyTeamActionRefiner._
   import canViewTeamActionRefiner._
 
   def teamHome(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
@@ -139,19 +141,26 @@ class AdminController @Inject()(
     )
   }
 
-  def appointments(teamId: String, start: Option[OffsetDateTime], end: Option[OffsetDateTime]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+  private def appointments(start: Option[OffsetDateTime], end: Option[OffsetDateTime], team: Option[Team], redirect: Call)(implicit request: RequestHeader): Future[Result] =
     appointments.findForSearch(AppointmentSearchQuery(
       startAfter = start.map(_.toLocalDate),
       startBefore = end.map(_.toLocalDate),
-      team = Some(teamRequest.team),
+      team = team,
     )).successMap { appointments =>
       render {
         case Accepts.Json() =>
           Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(appointments)(Writes.seq(AppointmentRender.writer)))))
         case _ =>
-          Redirect(controllers.admin.routes.AdminController.teamHome(teamId).withFragment("appointments"))
+          Redirect(redirect)
       }
     }
+
+  def appointmentsAllTeams(start: Option[OffsetDateTime], end: Option[OffsetDateTime]): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    appointments(start, end, None, controllers.routes.IndexController.home().withFragment("appointments"))
+  }
+
+  def appointments(teamId: String, start: Option[OffsetDateTime], end: Option[OffsetDateTime]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+    appointments(start, end, Some(teamRequest.team), controllers.admin.routes.AdminController.teamHome(teamId).withFragment("appointments"))
   }
 
 }

@@ -2,6 +2,7 @@
 
 @(
   eventsRoute: Call,
+  allTeamsEventsRoute: Option[Call],
   createRoute: Call,
   searchScope: String,
   searchScopeValue: String,
@@ -22,4 +23,4 @@
 
 <p><a href="@createRoute" class="btn btn-default">Create a new appointment</a></p>
 
-<div class="appointment-calendar no-wide-tables" data-events="@eventsRoute" data-create="@createRoute" data-default-view="@{preferences.calendarView}"></div>
+<div class="appointment-calendar no-wide-tables" data-events="@eventsRoute" data-events-all="@allTeamsEventsRoute" data-create="@createRoute" data-default-view="@{preferences.calendarView}"></div>

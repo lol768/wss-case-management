@@ -31,6 +31,7 @@
     <div role="tabpanel" class="tab-pane" id="appointments">
       @views.html.admin.appointmentsTab(
         controllers.admin.routes.AdminController.appointments(team.id),
+        Some(controllers.admin.routes.AdminController.appointmentsAllTeams()),
         controllers.admin.routes.AppointmentController.createForm(team.id),
         "team",
         team.id,
