@@ -1,7 +1,6 @@
 @import java.time.OffsetDateTime
 
-@import domain.dao.CaseDao.Case
-@import domain.{Enquiry, EnquiryNote, EnquiryNoteType, IssueState, Member, MessageRender, MessageSender, SitsProfile}
+@import domain.{Case, Enquiry, EnquiryNote, EnquiryNoteType, IssueState, Member, MessageRender, MessageSender, SitsProfile}
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
 
@@ -126,8 +125,8 @@
             <div class="col-sm-9 form-control-static">
               @linkedCases.map { clientCase =>
                 <div class="clearfix">
-                  <a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">
-                    @clientCase.key.get.string @clientCase.subject
+                  <a href="@controllers.admin.routes.CaseController.view(clientCase.key)">
+                    @clientCase.key.string @clientCase.subject
                   </a>
                 </div>
               }
@@ -204,7 +203,7 @@
         </div>
         @if(enquiry.state != IssueState.Closed) {
           <div class="panel-footer">
-            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key), messageForm, supportedMimeTypes, enquiry.id.get, enquiry.client.universityID)
+            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key), messageForm, supportedMimeTypes, enquiry.id, enquiry.client.universityID)
           </div>
         }
       </div>

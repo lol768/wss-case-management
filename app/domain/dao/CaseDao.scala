@@ -8,13 +8,13 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain.QueryHelpers._
-import domain._
-import domain.dao.CaseDao.{Cases, _}
+import domain.{Case, _}
+import domain.dao.CaseDao._
 import domain.dao.ClientDao.StoredClient
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import services.{AuditLogContext, CaseService}
+import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.core.helpers.JavaTime
@@ -25,17 +25,17 @@ import scala.language.higherKinds
 
 @ImplementedBy(classOf[CaseDaoImpl])
 trait CaseDao {
-  def insert(c: Case)(implicit ac: AuditLogContext): DBIO[Case]
-  def find(id: UUID): DBIO[Case]
-  def find(ids: Set[UUID]): DBIO[Seq[Case]]
-  def find(key: IssueKey): DBIO[Case]
-  def findAll(ids: Set[UUID]): DBIO[Seq[Case]]
-  def findByIDQuery(id: UUID): Query[Cases, Case, Seq]
-  def findByIDsQuery(ids: Set[UUID]): Query[Cases, Case, Seq]
-  def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq]
-  def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq]
-  def searchQuery(query: CaseSearchQuery): Query[Cases, Case, Seq]
-  def update(c: Case, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Case]
+  def insert(c: StoredCase)(implicit ac: AuditLogContext): DBIO[StoredCase]
+  def find(id: UUID): DBIO[StoredCase]
+  def find(ids: Set[UUID]): DBIO[Seq[StoredCase]]
+  def find(key: IssueKey): DBIO[StoredCase]
+  def findAll(ids: Set[UUID]): DBIO[Seq[StoredCase]]
+  def findByIDQuery(id: UUID): Query[Cases, StoredCase, Seq]
+  def findByIDsQuery(ids: Set[UUID]): Query[Cases, StoredCase, Seq]
+  def findByKeyQuery(key: IssueKey): Query[Cases, StoredCase, Seq]
+  def findByClientQuery(universityID: UniversityID): Query[Cases, StoredCase, Seq]
+  def searchQuery(query: CaseSearchQuery): Query[Cases, StoredCase, Seq]
+  def update(c: StoredCase, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredCase]
   def insertTags(tags: Set[StoredCaseTag])(implicit ac: AuditLogContext): DBIO[Seq[StoredCaseTag]]
   def insertTag(tag: StoredCaseTag)(implicit ac: AuditLogContext): DBIO[StoredCaseTag]
   def deleteTags(tags: Set[StoredCaseTag])(implicit ac: AuditLogContext): DBIO[Done]
@@ -58,11 +58,11 @@ trait CaseDao {
   def insertDocument(document: StoredCaseDocument)(implicit ac: AuditLogContext): DBIO[StoredCaseDocument]
   def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq]
-  def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, Case, Seq]
-  def getHistory(id: UUID): DBIO[Seq[CaseVersion]]
+  def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, StoredCase, Seq]
+  def getHistory(id: UUID): DBIO[Seq[StoredCaseVersion]]
   def getTagHistory(caseID: UUID): DBIO[Seq[StoredCaseTagVersion]]
   def getClientHistory(caseID: UUID): DBIO[Seq[StoredCaseClientVersion]]
-  def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, Case, Seq]
+  def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, StoredCase, Seq]
   def getLastUpdatedForClients(clients: Set[UniversityID]): DBIO[Seq[(UniversityID, Option[OffsetDateTime])]]
 }
 
@@ -71,37 +71,37 @@ class CaseDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) extends CaseDao with HasDatabaseConfigProvider[JdbcProfile] {
 
-  override def insert(c: Case)(implicit ac: AuditLogContext): DBIO[Case] =
+  override def insert(c: StoredCase)(implicit ac: AuditLogContext): DBIO[StoredCase] =
     cases.insert(c)
 
-  override def find(id: UUID): DBIO[Case] =
+  override def find(id: UUID): DBIO[StoredCase] =
     findByIDQuery(id).result.head
 
-  override def find(ids: Set[UUID]): DBIO[Seq[Case]] =
+  override def find(ids: Set[UUID]): DBIO[Seq[StoredCase]] =
     findByIDsQuery(ids).result
 
-  override def find(key: IssueKey): DBIO[Case] =
+  override def find(key: IssueKey): DBIO[StoredCase] =
     findByKeyQuery(key).result.head
 
-  override def findAll(ids: Set[UUID]): DBIO[Seq[Case]] =
+  override def findAll(ids: Set[UUID]): DBIO[Seq[StoredCase]] =
     findByIDsQuery(ids).result
 
-  override def findByIDQuery(id: UUID): Query[Cases, Case, Seq] =
+  override def findByIDQuery(id: UUID): Query[Cases, StoredCase, Seq] =
     cases.table.filter(_.id === id)
 
-  override def findByIDsQuery(ids: Set[UUID]): Query[Cases, Case, Seq] =
+  override def findByIDsQuery(ids: Set[UUID]): Query[Cases, StoredCase, Seq] =
     cases.table.filter(_.id.inSet(ids))
 
-  override def findByKeyQuery(key: IssueKey): Query[Cases, Case, Seq] =
+  override def findByKeyQuery(key: IssueKey): Query[Cases, StoredCase, Seq] =
     cases.table.filter(_.key === key)
 
-  override def findByClientQuery(universityID: UniversityID): Query[Cases, Case, Seq] =
+  override def findByClientQuery(universityID: UniversityID): Query[Cases, StoredCase, Seq] =
     cases.table
       .withClients
       .filter { case (_, client, _) => client.universityID === universityID }
       .map { case (c, _, _) => c }
 
-  override def searchQuery(q: CaseSearchQuery): Query[Cases, Case, Seq] = {
+  override def searchQuery(q: CaseSearchQuery): Query[Cases, StoredCase, Seq] = {
     def queries(c: Cases, n: Rep[Option[CaseNotes]], o: Rep[Option[Owner.Owners]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
@@ -135,7 +135,7 @@ class CaseDaoImpl @Inject()(
       .map { case (c, _) => c }
   }
 
-  override def update(c: Case, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Case] =
+  override def update(c: StoredCase, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[StoredCase] =
     cases.update(c.copy(version = version))
 
   override def insertTags(tags: Set[StoredCaseTag])(implicit ac: AuditLogContext): DBIO[Seq[StoredCaseTag]] =
@@ -187,7 +187,7 @@ class CaseDaoImpl @Inject()(
       .on { case ((n, _), c) => n.caseId === c.id }
       .flattenJoin
       .result.head
-      .map { case (n, m, c) => NoteAndCase(n.asCaseNote(m.asMember), c)}
+      .map { case (n, m, c) => NoteAndCase(n.asCaseNote(m.asMember), c.asCase)}
 
   override def insertNote(note: StoredCaseNote)(implicit ac: AuditLogContext): DBIO[StoredCaseNote] =
     caseNotes.insert(note)
@@ -213,7 +213,7 @@ class CaseDaoImpl @Inject()(
   override def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq] =
     caseDocuments.table.filter(_.caseId === caseID)
 
-  override def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, Case, Seq] = {
+  override def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, StoredCase, Seq] = {
     owner.fold(cases.table.subquery)(u =>
       cases.table
         .join(Owner.owners.table)
@@ -231,7 +231,7 @@ class CaseDaoImpl @Inject()(
     })
   }
 
-  override def getHistory(id: UUID): DBIO[Seq[CaseVersion]] = {
+  override def getHistory(id: UUID): DBIO[Seq[StoredCaseVersion]] = {
     cases.versionsTable
       .filter(c =>
         c.id === id && (
@@ -251,7 +251,7 @@ class CaseDaoImpl @Inject()(
     caseClients.versionsTable.filter(c => c.caseId === caseID).result
   }
 
-  override def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, Case, Seq] = {
+  override def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, StoredCase, Seq] = {
     cases.table.filter(c => c.originalEnquiry.map(_ === enquiryId))
   }
 
@@ -284,7 +284,7 @@ class CaseDaoImpl @Inject()(
 
 object CaseDao {
 
-  val cases: VersionedTableQuery[Case, CaseVersion, Cases, CaseVersions] =
+  val cases: VersionedTableQuery[StoredCase, StoredCaseVersion, Cases, CaseVersions] =
     VersionedTableQuery(TableQuery[Cases], TableQuery[CaseVersions])
 
   val caseTags: VersionedTableQuery[StoredCaseTag, StoredCaseTagVersion, CaseTags, CaseTagVersions] =
@@ -302,11 +302,9 @@ object CaseDao {
   val caseDocuments: VersionedTableQuery[StoredCaseDocument, StoredCaseDocumentVersion, CaseDocuments, CaseDocumentVersions] =
     VersionedTableQuery(TableQuery[CaseDocuments], TableQuery[CaseDocumentVersions])
 
-
-
-  case class Case(
-    id: Option[UUID],
-    key: Option[IssueKey],
+  case class StoredCase(
+    id: UUID,
+    key: IssueKey,
     subject: String,
     created: OffsetDateTime,
     team: Team,
@@ -320,13 +318,37 @@ object CaseDao {
     originalEnquiry: Option[UUID],
     caseType: Option[CaseType],
     cause: CaseCause,
-    dsaApplication: Option[UUID] = None,
-  ) extends Versioned[Case] with Issue {
-    override def atVersion(at: OffsetDateTime): Case = copy(version = at)
-    override def storedVersion[B <: StoredVersion[Case]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
-      CaseVersion(
-        id.get,
-        key.get,
+    dsaApplication: Option[UUID],
+  ) extends Versioned[StoredCase] {
+    def asCase: Case =
+      Case(
+        id = id,
+        key = key,
+        subject = subject,
+        team = team,
+        state = state,
+        incident = incidentDate.map { d =>
+          CaseIncident(
+            incidentDate = d,
+            onCampus = onCampus.get,
+            notifiedPolice = notifiedPolice.get,
+            notifiedAmbulance = notifiedAmbulance.get,
+            notifiedFire = notifiedFire.get,
+          )
+        },
+        originalEnquiry = originalEnquiry,
+        caseType = caseType,
+        cause = cause,
+        dsaApplication = dsaApplication,
+        created = created,
+        lastUpdated = version,
+      )
+
+    override def atVersion(at: OffsetDateTime): StoredCase = copy(version = at)
+    override def storedVersion[B <: StoredVersion[StoredCase]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
+      StoredCaseVersion(
+        id,
+        key,
         subject,
         created,
         team,
@@ -347,43 +369,7 @@ object CaseDao {
       ).asInstanceOf[B]
   }
 
-  case class CaseRender(
-    clientCase: Case,
-    messages: Seq[MessageRender],
-    notes: Seq[CaseNote]
-  ) {
-    def toIssue = IssueRender(
-      clientCase,
-      messages,
-      CaseService.lastModified(this)
-    )
-  }
-
-  case class CaseListRender(
-    clientCase: Case,
-    lastUpdated: OffsetDateTime
-  )
-
-  case class NoteAndCase(
-    note: CaseNote,
-    clientCase: Case
-  )
-
-  object Case {
-    def tupled = (apply _).tupled
-
-    val SubjectMaxLength = 200
-
-    // oldest first
-    val dateOrdering: Ordering[Case] = Ordering.by[Case, OffsetDateTime](_.created)(JavaTime.dateTimeOrdering)
-  }
-
-  case class CaseMessages(data: Seq[MessageRender]) {
-    lazy val byClient: Map[UniversityID, Seq[MessageRender]] = data.groupBy(_.message.client)
-    lazy val length: Int = data.length
-  }
-
-  case class CaseVersion(
+  case class StoredCaseVersion(
     id: UUID,
     key: IssueKey,
     subject: String,
@@ -404,7 +390,7 @@ object CaseDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[Case]
+  ) extends StoredVersion[StoredCase]
 
   trait CommonProperties { self: Table[_] =>
     def key = column[IssueKey]("case_key")
@@ -426,34 +412,34 @@ object CaseDao {
     def dsaApplication = column[Option[UUID]]("dsa_application")
   }
 
-  class Cases(tag: Tag) extends Table[Case](tag, "client_case")
-    with VersionedTable[Case]
+  class Cases(tag: Tag) extends Table[StoredCase](tag, "client_case")
+    with VersionedTable[StoredCase]
     with CommonProperties {
-    override def matchesPrimaryKey(other: Case): Rep[Boolean] = id === other.id.orNull
+    override def matchesPrimaryKey(other: StoredCase): Rep[Boolean] = id === other.id
     def id = column[UUID]("id", O.PrimaryKey)
     def searchableId = toTsVector(id.asColumnOf[String], Some("english"))
 
     def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 
-    override def * : ProvenShape[Case] =
-      (id.?, key.?, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication).mapTo[Case]
+    override def * : ProvenShape[StoredCase] =
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication).mapTo[StoredCase]
     def idx = index("idx_client_case_key", key, unique = true)
   }
 
-  class CaseVersions(tag: Tag) extends Table[CaseVersion](tag, "client_case_version")
-    with StoredVersionTable[Case]
+  class CaseVersions(tag: Tag) extends Table[StoredCaseVersion](tag, "client_case_version")
+    with StoredVersionTable[StoredCase]
     with CommonProperties {
     def id = column[UUID]("id")
     def operation = column[DatabaseOperation]("version_operation")
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
     def auditUser = column[Option[Usercode]]("version_user")
 
-    override def * : ProvenShape[CaseVersion] =
-      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, operation, timestamp, auditUser).mapTo[CaseVersion]
+    override def * : ProvenShape[StoredCaseVersion] =
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, operation, timestamp, auditUser).mapTo[StoredCaseVersion]
   }
 
-  implicit class CaseExtensions[C[_]](val q: Query[Cases, Case, C]) extends AnyVal {
-    def withClients: Query[(Cases, CaseClients, StoredClient.Clients), (Case, StoredCaseClient, StoredClient), C] = q
+  implicit class CaseExtensions[C[_]](val q: Query[Cases, StoredCase, C]) extends AnyVal {
+    def withClients: Query[(Cases, CaseClients, StoredClient.Clients), (StoredCase, StoredCaseClient, StoredClient), C] = q
       .join(caseClients.table)
       .on(_.id === _.caseId)
       .join(ClientDao.clients.table)

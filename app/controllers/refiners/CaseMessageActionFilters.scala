@@ -20,11 +20,11 @@ class CaseMessageActionFilters @Inject()(
   // gasp, two filters in one class
 
   private val CanPostAsTeam = PermissionsFilter[CaseSpecificRequest] { implicit request =>
-    permissionService.canAddTeamMessageToCase(request.context.user.get, request.`case`.id.get)
+    permissionService.canAddTeamMessageToCase(request.context.user.get, request.`case`.id)
   }
 
   private val CanPostAsClient = PermissionsFilter[CaseSpecificRequest] { implicit request =>
-    permissionService.canAddClientMessageToCase(request.context.user.get, request.`case`.id.get)
+    permissionService.canAddClientMessageToCase(request.context.user.get, request.`case`.id)
   }
 
   private def CaseAction(caseKey: IssueKey) =

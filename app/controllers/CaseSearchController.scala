@@ -3,8 +3,8 @@ package controllers
 import controllers.API.Response._
 import controllers.CaseSearchController._
 import controllers.refiners.{AnyTeamActionRefiner, CanViewCaseActionRefiner}
-import domain.dao.CaseDao.{Case, CaseSearchQuery}
-import domain.{CaseType, IssueStateFilter, Teams}
+import domain.dao.CaseDao.CaseSearchQuery
+import domain.{Case, CaseType, IssueStateFilter, Teams}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -69,8 +69,8 @@ class CaseSearchController @Inject()(
   }
 
   private def toJson(c: Case, category: Option[String] = None): JsObject = Json.obj(
-    "id" -> c.id.get,
-    "key" -> c.key.get.string,
+    "id" -> c.id,
+    "key" -> c.key.string,
     "subject" -> c.subject,
     "team" -> c.team.name,
     "caseType" -> c.caseType.map(_.description),

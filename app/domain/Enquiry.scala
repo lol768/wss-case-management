@@ -30,7 +30,7 @@ object Enquiry {
 }
 
 case class Enquiry(
-  id: Option[UUID],
+  id: UUID,
   key: IssueKey,
   client: Client,
   subject: String,

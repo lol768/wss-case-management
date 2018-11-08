@@ -11,7 +11,7 @@ class EnquiryServiceObjectTest extends PlaySpec {
   import services.EnquiryService._
 
   private val client = Fixtures.users.studentNewVisitor
-  val enquiryToday = Enquiry(id = Some(UUID.randomUUID()), key = IssueKey(IssueKeyType.Enquiry, 1234), client = Client(client.universityId.get, client.name.full, JavaTime.offsetDateTime), subject = "Enquiry", team = null, state = null, lastUpdated = JavaTime.offsetDateTime, created = null)
+  val enquiryToday = Enquiry(id = UUID.randomUUID(), key = IssueKey(IssueKeyType.Enquiry, 1234), client = Client(client.universityId.get, client.name.full, JavaTime.offsetDateTime), subject = "Enquiry", team = null, state = null, lastUpdated = JavaTime.offsetDateTime, created = null)
   private val enquiryLastWeek = enquiryToday.copy(lastUpdated = JavaTime.offsetDateTime.minusWeeks(1))
 
   val messageTomorrow = MessageData("hello", MessageSender.Client, client.universityId.get, JavaTime.offsetDateTime.plusDays(1), None, None)

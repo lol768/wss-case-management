@@ -5,7 +5,6 @@ import java.time.OffsetDateTime
 import controllers.refiners.AnyTeamActionRefiner
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
-import domain.dao.CaseDao.Case
 import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json, Writes}
@@ -106,7 +105,7 @@ class IndexController @Inject()(
       caseService.countClosedCases(usercode)
     ).successFlatMap { case (open, openCases, closedCases) =>
       val pagination = Pagination(open, 0, controllers.routes.IndexController.openCases())
-      caseService.getClients(openCases.flatMap(_.clientCase.id).toSet).successMap { caseClients =>
+      caseService.getClients(openCases.map(_.clientCase.id).toSet).successMap { caseClients =>
         Ok(views.html.admin.casesTab(
           openCases,
           pagination,
@@ -129,7 +128,7 @@ class IndexController @Inject()(
       caseService.listOpenCases(usercode, Pagination.asPage(page))
     ).successFlatMap { case (open, openCases) =>
       val pagination = Pagination(open, page, controllers.routes.IndexController.openCases())
-      caseService.getClients(openCases.flatMap(_.clientCase.id).toSet).successMap { clients =>
+      caseService.getClients(openCases.map(_.clientCase.id).toSet).successMap { clients =>
         Ok(views.html.admin.openCases(openCases, clients, pagination))
       }
     }
@@ -142,7 +141,7 @@ class IndexController @Inject()(
       caseService.listClosedCases(usercode, Pagination.asPage(page))
     ).successFlatMap { case (closed, closedCases) =>
       val pagination = Pagination(closed, page, controllers.routes.IndexController.closedCases())
-      caseService.getClients(closedCases.flatMap(_.clientCase.id).toSet).successMap { clients =>
+      caseService.getClients(closedCases.map(_.clientCase.id).toSet).successMap { clients =>
         Ok(views.html.admin.closedCases(closedCases, clients, pagination))
       }
     }
@@ -188,8 +187,8 @@ class IndexController @Inject()(
 
       // Record an EnquiryView or CaseView event for the first issue
       issues.headOption.map(issue => issue.issue match {
-        case e: Enquiry => audit.audit('EnquiryView, e.id.get.toString, 'Enquiry, Json.obj())(result)
-        case c: Case => audit.audit('CaseView, c.id.get.toString, 'Case, Json.obj())(result)
+        case e: Enquiry => audit.audit('EnquiryView, e.id.toString, 'Enquiry, Json.obj())(result)
+        case c: Case => audit.audit('CaseView, c.id.toString, 'Case, Json.obj())(result)
         case _ => result
       }).getOrElse(result)
     }.successMap(r => r)

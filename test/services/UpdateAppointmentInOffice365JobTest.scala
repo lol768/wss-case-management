@@ -9,7 +9,7 @@ import domain.Teams.WellbeingSupport
 import domain._
 import helpers.ServiceResults
 import org.mockito.Matchers
-import org.mockito.Mockito.{RETURNS_SMART_NULLS, _}
+import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.quartz._
 import org.scalatest.BeforeAndAfter

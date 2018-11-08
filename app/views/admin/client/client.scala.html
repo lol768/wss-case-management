@@ -1,7 +1,6 @@
 @import java.util.UUID
 
 @import domain._
-@import domain.dao.CaseDao.CaseListRender
 @import warwick.core.helpers.JavaTime
 @import warwick.sso.UniversityID
 
@@ -283,9 +282,9 @@
                   @defining(cases.filter(_.clientCase.state != IssueState.Closed )) { open: Seq[CaseListRender] =>
                     @open.map { caseListRender: CaseListRender =>
                       <tr>
-                        <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key.get)" target="_blank">@caseListRender.clientCase.key.get.string</a></td>
-                        <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key.get)" target="_blank">@caseListRender.clientCase.subject</a></td>
-                        <td>@owners.get(caseListRender.clientCase.id.get).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
+                        <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key)" target="_blank">@caseListRender.clientCase.key.string</a></td>
+                        <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key)" target="_blank">@caseListRender.clientCase.subject</a></td>
+                        <td>@owners.get(caseListRender.clientCase.id).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
                         <td>@caseListRender.clientCase.team.name</td>
                         <td>@JavaTime.Relative(caseListRender.lastUpdated.toLocalDate).capitalize</td>
                       </tr>
@@ -310,11 +309,11 @@
                 @defining(cases.filter(_.clientCase.state == IssueState.Closed )) { closed: Seq[CaseListRender] =>
                   @closed.map { caseListRender: CaseListRender =>
                     <tr>
-                      <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key.get)" target="_blank">@caseListRender.clientCase.key.get.string</a></td>
-                      <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key.get)" target="_blank">@caseListRender.clientCase.subject</a></td>
-                      <td>@owners.get(caseListRender.clientCase.id.get).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
+                      <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key)" target="_blank">@caseListRender.clientCase.key.string</a></td>
+                      <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key)" target="_blank">@caseListRender.clientCase.subject</a></td>
+                      <td>@owners.get(caseListRender.clientCase.id).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
                       <td>@caseListRender.clientCase.team.name</td>
-                      <td>@JavaTime.Relative(caseListRender.clientCase.version.toLocalDate).capitalize</td>
+                      <td>@JavaTime.Relative(caseListRender.clientCase.lastUpdated.toLocalDate).capitalize</td>
                     </tr>
                   }
                 }
@@ -425,7 +424,7 @@
                       <tr>
                         <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.key.string</a></td>
                         <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.subject</a></td>
-                        <td>@owners.get(render.enquiry.id.get).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
+                        <td>@owners.get(render.enquiry.id).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
                         <td>@render.enquiry.team.name</td>
                         <td>@JavaTime.Relative(render.lastUpdated.toLocalDate).capitalize</td>
                       </tr>
@@ -452,7 +451,7 @@
                     <tr>
                       <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.key.string</a></td>
                       <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.subject</a></td>
-                      <td>@owners.get(render.enquiry.id.get).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
+                      <td>@owners.get(render.enquiry.id).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
                       <td>@render.enquiry.team.name</td>
                       <td>@JavaTime.Relative(render.enquiry.lastUpdated.toLocalDate).capitalize</td>
                     </tr>

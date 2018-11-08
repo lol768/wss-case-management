@@ -6,7 +6,6 @@ import controllers.BaseController
 import controllers.refiners.{AnyTeamActionRefiner, ValidUniversityIDActionFilter}
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
-import domain.dao.CaseDao.CaseListRender
 import helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -57,8 +56,8 @@ class ClientController @Inject()(
       appointmentService.findForSearch(AppointmentSearchQuery(client = Some(universityID), startAfter = Some(JavaTime.localDate), states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended))),
     ).successFlatMapTo { case (profile, registration, clientSummary, enquiries, cases, appointments) =>
       zip(
-        enquiryService.getOwners(enquiries.map(_.enquiry.id.get).toSet),
-        caseService.getOwners(cases.map(_.clientCase.id.get).toSet),
+        enquiryService.getOwners(enquiries.map(_.enquiry.id).toSet),
+        caseService.getOwners(cases.map(_.clientCase.id).toSet),
       ).successMapTo { case (enquiryOwners, caseOwners) =>
         (profile, registration, clientSummary, enquiries, cases, appointments, enquiryOwners ++ caseOwners)
       }

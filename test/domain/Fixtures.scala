@@ -4,7 +4,7 @@ import java.time.{Duration, LocalDate}
 import java.util.UUID
 
 import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
-import domain.dao.CaseDao.Case
+import domain.dao.CaseDao.StoredCase
 import domain.dao.LocationDao.{StoredBuilding, StoredRoom}
 import domain.dao._
 import warwick.core.helpers.JavaTime
@@ -148,30 +148,25 @@ object Fixtures {
   }
 
   object cases {
-    def newCaseNoId(): Case = Case(
-      None,
-      None,
-      "Mental health assessment",
-      JavaTime.offsetDateTime,
-      Teams.MentalHealth,
-      JavaTime.offsetDateTime,
-      IssueState.Open,
-      None,
-      None,
-      None,
-      None,
-      None,
-      None,
-      None,
-      CaseCause.New,
-      None
-    )
-
-    def newCase(issueKey: Int = 1234): Case = newCaseNoId().copy(
-      id = Some(UUID.randomUUID()),
-      key = Some(IssueKey(IssueKeyType.Case, issueKey)),
-      dsaApplication = None
-    )
+    def newStoredCase(issueKey: Int = 1234): StoredCase =
+      StoredCase(
+        UUID.randomUUID(),
+        IssueKey(IssueKeyType.Case, issueKey),
+        "Mental health assessment",
+        JavaTime.offsetDateTime,
+        Teams.MentalHealth,
+        JavaTime.offsetDateTime,
+        IssueState.Open,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        CaseCause.New,
+        None
+      )
 
     def newDSAApplicationSave() = DSAApplicationSave(
       applicationDate = None,

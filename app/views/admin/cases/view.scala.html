@@ -1,7 +1,5 @@
 @import domain.CaseNoteType._
-@import domain._
-@import domain.dao.CaseDao.Case
-@import domain.DSAApplication
+@import domain.{DSAApplication, _}
 @import play.api.libs.json.Json
 @import warwick.core.helpers.JavaTime
 
@@ -51,7 +49,7 @@
   </div>
 }
 
-@main(s"${c.key.get.string} ${c.subject}") {
+@main(s"${c.key.string} ${c.subject}") {
   <div class="case-details">
     <div class="case-details--header">
       @profiles.keySet.toSeq.sorted.map { client =>
@@ -76,30 +74,32 @@
 
         @tags.sectioned.detail("State"){ <div data-field-history-field="state">@c.state</div> }
 
-        @if(c.incidentDate.nonEmpty) {
+        @if(c.incident.nonEmpty) {
           @* If currently related to an incident... *@
-          @tags.sectioned.detail("Incident") {
-            <div class="case-details--incident">
-              <span data-field-history-field="incidentDate">@JavaTime.Relative(c.incidentDate.get)</span>
-              <span data-field-history-field="onCampus">@if(c.onCampus.contains(true)) {On-campus} else {Off-campus}</span>
-              @if(c.notifiedPolice.contains(true)) {
-                <span data-field-history-field="notifiedPolice">Police notified</span>
-              } else if (history.notifiedPolice.exists(_._1.contains(true))) {
-                <span data-field-history-field="notifiedPolice"><s>Police notified</s></span>
-              }
+          @c.incident.map { incident =>
+            @tags.sectioned.detail("Incident") {
+              <div class="case-details--incident">
+                <span data-field-history-field="incidentDate">@JavaTime.Relative(incident.incidentDate)</span>
+                <span data-field-history-field="onCampus">@if(incident.onCampus) {On-campus} else {Off-campus}</span>
+                @if(incident.notifiedPolice) {
+                  <span data-field-history-field="notifiedPolice">Police notified</span>
+                } else if (history.notifiedPolice.exists(_._1.contains(true))) {
+                  <span data-field-history-field="notifiedPolice"><s>Police notified</s></span>
+                }
 
-              @if(c.notifiedAmbulance.contains(true)) {
-                <span data-field-history-field="notifiedAmbulance">Ambulance called</span>
-              } else if (history.notifiedAmbulance.exists(_._1.contains(true))) {
-                <span data-field-history-field="notifiedAmbulance"><s>Ambulance called</s></span>
-              }
+                @if(incident.notifiedAmbulance) {
+                  <span data-field-history-field="notifiedAmbulance">Ambulance called</span>
+                } else if (history.notifiedAmbulance.exists(_._1.contains(true))) {
+                  <span data-field-history-field="notifiedAmbulance"><s>Ambulance called</s></span>
+                }
 
-              @if(c.notifiedFire.contains(true)) {
-                <span data-field-history-field="notifiedFire">Fire service called</span>
-              } else if (history.notifiedFire.exists(_._1.contains(true))) {
-                <span data-field-history-field="notifiedFire"><s>Fire service called</s></span>
-              }
-            </div>
+                @if(incident.notifiedFire) {
+                  <span data-field-history-field="notifiedFire">Fire service called</span>
+                } else if (history.notifiedFire.exists(_._1.contains(true))) {
+                  <span data-field-history-field="notifiedFire"><s>Fire service called</s></span>
+                }
+              </div>
+            }
           }
         } else if(history.incidentDate.exists(_._1.nonEmpty)) {
           @* If not currently related to an incident but was previously... *@
@@ -134,8 +134,8 @@
 
         @tags.manageOwners(
           owners,
-          controllers.admin.routes.OwnersController.caseSubmit(c.key.get),
-          controllers.admin.routes.OwnersController.caseSubmitSelf(c.key.get),
+          controllers.admin.routes.OwnersController.caseSubmit(c.key),
+          controllers.admin.routes.OwnersController.caseSubmitSelf(c.key),
         )
 
         @* Only show DSA fields for Disability or MentalHealth cases *@
@@ -216,40 +216,40 @@
           <div class="col-sm-8">
             <p>
               @if(c.state != IssueState.Closed) {
-                <a href="@controllers.admin.routes.CaseController.closeForm(c.key.get)" class="btn btn-primary btn-block">Close case</a>
+                <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Close case</a>
               } else {
-                <a href="@controllers.admin.routes.CaseController.closeForm(c.key.get)" class="btn btn-primary btn-block">Reopen case</a>
+                <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Reopen case</a>
               }
             </p>
             <p>
-              <a href="@controllers.admin.routes.CaseController.editForm(c.key.get)" class="btn btn-default btn-block">Edit case</a>
+              <a href="@controllers.admin.routes.CaseController.editForm(c.key)" class="btn btn-default btn-block">Edit case</a>
             </p>
             <p>
-              <a href="@controllers.admin.routes.CaseDocumentController.addDocumentForm(c.key.get)" class="btn btn-default btn-block">Add a document</a>
+              <a href="@controllers.admin.routes.CaseDocumentController.addDocumentForm(c.key)" class="btn btn-default btn-block">Add a document</a>
             </p>
             <p>
-              <a href="@controllers.admin.routes.AppointmentController.createForm(c.team.id, forCase = Some(c.key.get))" class="btn btn-default btn-block">Create an appointment</a>
+              <a href="@controllers.admin.routes.AppointmentController.createForm(c.team.id, forCase = Some(c.key))" class="btn btn-default btn-block">Create an appointment</a>
             </p>
             <p>
-              <a href="@controllers.admin.routes.CaseController.linkForm(c.key.get)" class="btn btn-default btn-block">Link to another case</a>
+              <a href="@controllers.admin.routes.CaseController.linkForm(c.key)" class="btn btn-default btn-block">Link to another case</a>
             </p>
             <p>
-              <a href="@controllers.admin.routes.CaseController.reassign(c.key.get)" class="btn btn-default btn-block">Assign to a different team</a>
+              <a href="@controllers.admin.routes.CaseController.reassign(c.key)" class="btn btn-default btn-block">Assign to a different team</a>
             </p>
           </div>
         </div>
       </div>
     </div>
 
-    @tags.sectioned.sectionAsync("case", "Case links", isCollapsible = true, url = controllers.admin.routes.CaseController.links(c.key.get), isOpen = true)
+    @tags.sectioned.sectionAsync("case", "Case links", isCollapsible = true, url = controllers.admin.routes.CaseController.links(c.key), isOpen = true)
 
-    @tags.sectioned.sectionAsync("case", "Documents", isCollapsible = true, url = controllers.admin.routes.CaseController.documents(c.key.get), isOpen = true)
+    @tags.sectioned.sectionAsync("case", "Documents", isCollapsible = true, url = controllers.admin.routes.CaseController.documents(c.key), isOpen = true)
 
-    @tags.sectioned.sectionAsync("case", "Appointments", isCollapsible = true, url = controllers.admin.routes.CaseController.appointments(c.key.get), isOpen = true)
+    @tags.sectioned.sectionAsync("case", "Appointments", isCollapsible = true, url = controllers.admin.routes.CaseController.appointments(c.key), isOpen = true)
 
-    @tags.sectioned.sectionAsync("case", "Case notes", isCollapsible = true, url = controllers.admin.routes.CaseController.notes(c.key.get), showCount = true)
+    @tags.sectioned.sectionAsync("case", "Case notes", isCollapsible = true, url = controllers.admin.routes.CaseController.notes(c.key), showCount = true)
 
-    @tags.sectioned.sectionAsync("case", "Messages", isCollapsible = profiles.size == 1, url = controllers.admin.routes.CaseController.messages(c.key.get), showCount = true)
+    @tags.sectioned.sectionAsync("case", "Messages", isCollapsible = profiles.size == 1, url = controllers.admin.routes.CaseController.messages(c.key), showCount = true)
 
   </div>
 }

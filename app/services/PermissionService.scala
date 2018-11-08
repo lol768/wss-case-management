@@ -156,7 +156,7 @@ class PermissionServiceImpl @Inject() (
 
   override def canEditCaseNote(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] = {
     caseService.getNote(id).successFlatMapTo(noteAndCase => {
-      canEditCase(user, noteAndCase.clientCase.id.get).successMapTo(canEditNote => {
+      canEditCase(user, noteAndCase.clientCase.id).successMapTo(canEditNote => {
         canEditNote && noteAndCase.note.teamMember.usercode == user
       })
     })

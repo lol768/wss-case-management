@@ -85,7 +85,7 @@ class EnquirySearchController @Inject()(
   }
 
   private def toJson(e: Enquiry, category: Option[String] = None): JsObject = Json.obj(
-    "id" -> e.id.get,
+    "id" -> e.id,
     "key" -> e.key.string,
     "subject" -> e.subject,
     "team" -> e.team.name,

@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 trait Issue {
-  def id: Option[UUID]
+  def id: UUID
   def state: IssueState
   def team: Team
 }

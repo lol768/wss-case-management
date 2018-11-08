@@ -18,7 +18,7 @@ class CanEditCaseActionRefiner @Inject()(
   private implicit val implicitCaseService: CaseService = caseService
 
   private val CanEditCase = PermissionsFilter[CaseSpecificRequest] { implicit request =>
-    permissionService.canEditCase(request.context.user.get.usercode, request.`case`.id.get)
+    permissionService.canEditCase(request.context.user.get.usercode, request.`case`.id)
   }
 
   def CanEditCaseAction(caseKey: IssueKey): ActionBuilder[CaseSpecificRequest, AnyContent] =

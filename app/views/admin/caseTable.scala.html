@@ -1,8 +1,7 @@
 @import java.time.OffsetDateTime
 @import java.util.UUID
 
-@import domain.dao.CaseDao.{Case, CaseListRender}
-@import domain.{Client, Pagination}
+@import domain.{Case, CaseListRender, Client, Pagination}
 @import warwick.core.helpers.JavaTime
 
 @(
@@ -16,7 +15,7 @@
 @caseRow(clientCase: Case, lastUpdated: OffsetDateTime) = {
   <tr>
     <td>
-      @clients.get(clientCase.id.get).map { caseClients =>
+      @clients.get(clientCase.id).map { caseClients =>
         <ul class="list-unstyled">
           @caseClients.toSeq.sorted.map { client =>
             <li><a href="@controllers.admin.routes.ClientController.client(client.universityID)">@client.safeFullName</a></li>
@@ -25,7 +24,7 @@
       }
     </td>
     <td>
-      <a href="@controllers.admin.routes.CaseController.view(clientCase.key.get)">@clientCase.key.get.string @clientCase.subject</a>
+      <a href="@controllers.admin.routes.CaseController.view(clientCase.key)">@clientCase.key.string @clientCase.subject</a>
     </td>
     <td>@JavaTime.Relative(lastUpdated)</td>
   </tr>

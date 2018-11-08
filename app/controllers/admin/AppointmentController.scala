@@ -219,10 +219,10 @@ class AppointmentController @Inject()(
         forCase.map { caseKey =>
           cases.find(caseKey).flatMap(_.fold(
             _ => Future.successful(Map.empty[String, String]),
-            clientCase => cases.getClients(clientCase.id.get).map(_.fold(
-              _ => Map("cases[0]" -> clientCase.id.get.toString),
+            clientCase => cases.getClients(clientCase.id).map(_.fold(
+              _ => Map("cases[0]" -> clientCase.id.toString),
               clients => Map(
-                "cases[0]" -> clientCase.id.get.toString
+                "cases[0]" -> clientCase.id.toString
               ) ++ clients.toSeq.zipWithIndex.map { case (c, index) =>
                 s"clients[$index]" -> c.universityID.string
               }.toMap
@@ -285,7 +285,7 @@ class AppointmentController @Inject()(
             .fill(AppointmentFormData(
               a.clients.map(_.client.universityID),
               a.teamMembers.map(_.member.usercode),
-              a.clientCases.flatMap(_.id),
+              a.clientCases.map(_.id),
               AppointmentSave(
                 a.appointment.start,
                 a.appointment.duration,

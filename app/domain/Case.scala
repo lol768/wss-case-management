@@ -10,12 +10,91 @@ import domain.dao.DSADao.{StoredDSAApplication, StoredDSAApplicationVersion, Sto
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.ServiceResults.ServiceResult
 import play.api.libs.json.{JsValue, Json, Writes}
-import services.{AuditLogContext, ClientService}
+import services.{AuditLogContext, CaseService, ClientService}
 import warwick.core.helpers.JavaTime
-import warwick.sso.{User, UserLookupService, Usercode}
+import warwick.sso.{UniversityID, User, UserLookupService, Usercode}
 
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
+
+case class Case(
+  id: UUID,
+  key: IssueKey,
+  subject: String,
+  team: Team,
+  state: IssueState,
+  incident: Option[CaseIncident],
+  originalEnquiry: Option[UUID],
+  caseType: Option[CaseType],
+  cause: CaseCause,
+  dsaApplication: Option[UUID],
+  created: OffsetDateTime,
+  lastUpdated: OffsetDateTime,
+) extends Issue
+
+case class CaseIncident(
+  incidentDate: OffsetDateTime,
+  onCampus: Boolean,
+  notifiedPolice: Boolean,
+  notifiedAmbulance: Boolean,
+  notifiedFire: Boolean,
+)
+
+object Case {
+  def tupled = (apply _).tupled
+
+  val SubjectMaxLength = 200
+
+  // oldest first
+  val dateOrdering: Ordering[Case] = Ordering.by[Case, OffsetDateTime](_.created)(JavaTime.dateTimeOrdering)
+}
+
+/**
+  * Just enough information to save or update a Case
+  */
+case class CaseSave(
+  subject: String,
+  incident: Option[CaseIncident],
+  caseType: Option[CaseType],
+  cause: CaseCause,
+)
+
+object CaseSave {
+  def apply(c: Case): CaseSave =
+    CaseSave(
+      c.subject,
+      c.incident,
+      c.caseType,
+      c.cause
+    )
+}
+
+case class CaseRender(
+  clientCase: Case,
+  messages: Seq[MessageRender],
+  notes: Seq[CaseNote]
+) {
+  def toIssue = IssueRender(
+    clientCase,
+    messages,
+    CaseService.lastModified(this)
+  )
+}
+
+case class CaseListRender(
+  clientCase: Case,
+  lastUpdated: OffsetDateTime
+)
+
+case class NoteAndCase(
+  note: CaseNote,
+  clientCase: Case
+)
+
+case class CaseMessages(data: Seq[MessageRender]) {
+  lazy val byClient: Map[UniversityID, Seq[MessageRender]] = data.groupBy(_.message.client)
+  lazy val length: Int = data.length
+}
 
 sealed abstract class CaseTag(val description: String) extends EnumEntry with IdAndDescription {
   override val id: String = entryName
@@ -188,7 +267,7 @@ object CaseHistory {
     )
 
   def apply(
-    history: Seq[CaseVersion],
+    history: Seq[StoredCaseVersion],
     rawTagHistory: Seq[StoredCaseTagVersion],
     rawOwnerHistory: Seq[OwnerVersion],
     rawClientHistory: Seq[StoredCaseClientVersion],
@@ -201,7 +280,7 @@ object CaseHistory {
     val usersByUsercode = userLookupService.getUsers(usercodes.distinct).toOption.getOrElse(Map())
     def toUsercodeOrUser(u: Usercode): Either[Usercode, User] = usersByUsercode.get(u).map(Right.apply).getOrElse(Left(u))
 
-    def simpleFieldHistory[A](getValue: CaseVersion => A): FieldHistory[A] =
+    def simpleFieldHistory[A](getValue: StoredCaseVersion => A): FieldHistory[A] =
       flatten(history.map(c => (getValue(c), c.version, c.auditUser))).map {
         case (c,v,u) => (c, v, u.map(toUsercodeOrUser))
       }

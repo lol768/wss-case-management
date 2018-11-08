@@ -1,9 +1,7 @@
-@import domain.{Enquiry, IssueRender, MessageSender, Registration}
-@import domain.dao.CaseDao.Case
+@import domain.{Case, Enquiry, IssueRender, IssueState, MessageSender, Registration}
 @import org.apache.tika.mime.MediaType
 @import play.api.data.Forms._
 @import warwick.core.helpers.JavaTime
-@import domain.IssueState
 
 @(issues: Seq[IssueRender], registration: Option[Registration], supportedMimeTypes: Seq[MediaType])(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
@@ -35,9 +33,9 @@
   @issues.map { issueRender: IssueRender =>
     <div class="panel panel-default thread thread--client state-@issueRender.issue.state.entryName">
 
-      <div class="panel-heading" role="tab" id="heading-@issueRender.issue.id.get.toString">
+      <div class="panel-heading" role="tab" id="heading-@issueRender.issue.id.toString">
         <h4 class="panel-title">
-          <a class="@if(issues.head.issue != issueRender.issue){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@issueRender.issue.id.get.toString" aria-expanded="true" aria-controls="collapse-@issueRender.issue.id.get.toString">
+          <a class="@if(issues.head.issue != issueRender.issue){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@issueRender.issue.id.toString" aria-expanded="true" aria-controls="collapse-@issueRender.issue.id.toString">
             <div class="pull-right">
               @JavaTime.Relative(issueRender.lastUpdatedDate)
               <i class="fas fa-fw fa-angle-down"></i>
@@ -57,7 +55,7 @@
         </h4>
       </div>
 
-      <div id="collapse-@issueRender.issue.id.get.toString" class="panel-collapse collapse @if(issues.head.issue == issueRender.issue){in}" role="tabpanel" aria-labelledby="heading-@issueRender.issue.id.get.toString" data-ping="@controllers.routes.ClientMessagesController.auditView(issueRender.issue.id.get)">
+      <div id="collapse-@issueRender.issue.id.toString" class="panel-collapse collapse @if(issues.head.issue == issueRender.issue){in}" role="tabpanel" aria-labelledby="heading-@issueRender.issue.id.toString" data-ping="@controllers.routes.ClientMessagesController.auditView(issueRender.issue.id)">
         <div class="panel-body">
           @issueRender.messages.map { render =>
             @views.html.tags.messages.message(
@@ -65,13 +63,13 @@
               files = render.files,
               clientName = "You",
               teamName = render.message.team.getOrElse(issueRender.issue.team).name,
-              attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id.get, f.id))
+              attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id, f.id))
           }
           </div>
         <div class="panel-footer">
           @if(issueRender.issue.state != IssueState.Closed) {
             @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
-              @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id.get), form, supportedMimeTypes, issueRender.issue.id.get, context.user.get.universityId.get)
+              @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), form, supportedMimeTypes, issueRender.issue.id, context.user.get.universityId.get)
             }
           } else {
             <p>

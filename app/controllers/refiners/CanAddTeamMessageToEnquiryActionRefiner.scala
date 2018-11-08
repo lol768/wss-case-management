@@ -18,7 +18,7 @@ class CanAddTeamMessageToEnquiryActionRefiner @Inject()(
   private implicit val implicitEnquiryService: EnquiryService = enquiryService
 
   private val CanAddTeamMessage = PermissionsFilter[EnquirySpecificRequest] { implicit request =>
-    permissionService.canAddTeamMessageToEnquiry(request.context.user.get, request.enquiry.id.get)
+    permissionService.canAddTeamMessageToEnquiry(request.context.user.get, request.enquiry.id)
   }
 
   def CanAddTeamMessageToEnquiryAction(enquiryKey: IssueKey): ActionBuilder[EnquirySpecificRequest, AnyContent] =

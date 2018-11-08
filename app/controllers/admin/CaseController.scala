@@ -4,11 +4,10 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import controllers.admin.CaseController._
-import controllers.refiners.{CanEditCaseActionRefiner, _}
+import controllers.refiners._
 import controllers.{BaseController, UploadedFileControllerHelper}
-import domain._
-import domain.dao.CaseDao.Case
 import domain.CaseNoteType._
+import domain._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import helpers.{FormHelpers, ServiceResults}
 import javax.inject.{Inject, Singleton}
@@ -27,20 +26,9 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Try
 
 object CaseController {
-  case class CaseIncidentFormData(
-    incidentDate: OffsetDateTime,
-    onCampus: Boolean,
-    notifiedPolice: Boolean,
-    notifiedAmbulance: Boolean,
-    notifiedFire: Boolean,
-  )
-
   case class CaseFormData(
     clients: Set[UniversityID],
-    subject: String,
-    incident: Option[CaseIncidentFormData],
-    cause: CaseCause,
-    caseType: Option[CaseType],
+    `case`: CaseSave,
     tags: Set[CaseTag],
     originalEnquiry: Option[UUID],
     version: Option[OffsetDateTime]
@@ -65,16 +53,18 @@ object CaseController {
     Form(
       mapping(
         "clients" -> set(text.transform[UniversityID](UniversityID.apply, _.string).verifying("error.client.invalid", u => u.string.isEmpty || isValid(u, existingClients))).verifying("error.required", _.exists(_.string.nonEmpty)),
-        "subject" -> nonEmptyText(maxLength = Case.SubjectMaxLength),
-        "incident" -> optional(mapping(
-          "incidentDate" -> FormHelpers.offsetDateTime,
-          "onCampus" -> boolean,
-          "notifiedPolice" -> boolean,
-          "notifiedAmbulance" -> boolean,
-          "notifiedFire" -> boolean,
-        )(CaseIncidentFormData.apply)(CaseIncidentFormData.unapply)),
-        "cause" -> CaseCause.formField,
-        "caseType" -> optional(CaseType.formField).verifying("error.caseType.invalid", t => (CaseType.valuesFor(team).isEmpty && t.isEmpty) || t.exists(CaseType.valuesFor(team).contains)),
+        "case" -> mapping(
+          "subject" -> nonEmptyText(maxLength = Case.SubjectMaxLength),
+          "incident" -> optional(mapping(
+            "incidentDate" -> FormHelpers.offsetDateTime,
+            "onCampus" -> boolean,
+            "notifiedPolice" -> boolean,
+            "notifiedAmbulance" -> boolean,
+            "notifiedFire" -> boolean,
+          )(CaseIncident.apply)(CaseIncident.unapply)),
+          "caseType" -> optional(CaseType.formField).verifying("error.caseType.invalid", t => (CaseType.valuesFor(team).isEmpty && t.isEmpty) || t.exists(CaseType.valuesFor(team).contains)),
+          "cause" -> CaseCause.formField,
+        )(CaseSave.apply)(CaseSave.unapply),
         "tags" -> set(CaseTag.formField),
         "originalEnquiry" -> optional(uuid.verifying("error.required", id => isValidEnquiry(id))),
         "version" -> optional(JavaTime.offsetDateTimeFormField).verifying("error.optimisticLocking", _ == existingVersion)
@@ -112,7 +102,7 @@ object CaseController {
     )(CaseLinkFormData.apply)(CaseLinkFormData.unapply))
   }
 
-  val generalNoteTypes = Seq(GeneralNote, CaseClosed, CaseReopened)
+  val generalNoteTypes: Seq[CaseNoteType] = Seq(GeneralNote, CaseClosed, CaseReopened)
 
   case class CaseNoteFormData(
     text: String,
@@ -142,7 +132,7 @@ object CaseController {
     mapping(
       "team" -> Teams.formField,
       "caseType" -> optional(CaseType.formField),
-      "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == clientCase.version),
+      "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == clientCase.lastUpdated),
       "message" -> nonEmptyText
     )(ReassignCaseData.apply)(ReassignCaseData.unapply)
   )
@@ -180,12 +170,12 @@ class CaseController @Inject()(
 
     ServiceResults.zip(
       cases.findForView(caseKey),
-      cases.getClients(request.`case`.id.get),
-      cases.getCaseTags(request.`case`.id.get),
-      cases.getNotes(request.`case`.id.get),
-      cases.getOwners(Set(request.`case`.id.get)).map(_.right.map(_.getOrElse(request.`case`.id.get, Set.empty))),
+      cases.getClients(request.`case`.id),
+      cases.getCaseTags(request.`case`.id),
+      cases.getNotes(request.`case`.id),
+      cases.getOwners(Set(request.`case`.id)).map(_.right.map(_.getOrElse(request.`case`.id, Set.empty))),
       fetchOriginalEnquiry,
-      cases.getHistory(request.`case`.id.get)
+      cases.getHistory(request.`case`.id)
     ).successFlatMap { case (c, clients, tags, notes, owners, originalEnquiry, history) =>
       val sectionNotes = notes.filterNot(note => generalNoteTypes.contains(note.noteType))
       val sectionNotesByType = sectionNotes.groupBy(_.noteType)
@@ -211,7 +201,7 @@ class CaseController @Inject()(
   private def renderCase()(implicit request: CaseSpecificRequest[_]): Future[Result] = {
     import request.{`case` => c}
     renderCase(
-      c.key.get,
+      c.key,
       messageForm
     )
   }
@@ -221,7 +211,7 @@ class CaseController @Inject()(
   }
 
   def links(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
-    cases.getLinks(caseRequest.`case`.id.get).successMap { case (outgoing, incoming) =>
+    cases.getLinks(caseRequest.`case`.id).successMap { case (outgoing, incoming) =>
       ServiceResults.sequence(outgoing.map(c => EntityAndCreator(c, permissions))).flatMap(o =>
         ServiceResults.sequence(incoming.map(c => EntityAndCreator(c, permissions))).map(i => (o, i))
       ).fold(
@@ -239,7 +229,7 @@ class CaseController @Inject()(
   }
 
   def documents(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
-    cases.getDocuments(caseRequest.`case`.id.get).successMap(documents =>
+    cases.getDocuments(caseRequest.`case`.id).successMap(documents =>
       ServiceResults.sequence(documents.map(c => EntityAndCreator(c, permissions))).fold(
         errors => showErrors(errors),
         docs => Ok(views.html.admin.cases.sections.documents(caseRequest.`case`, docs))
@@ -248,25 +238,25 @@ class CaseController @Inject()(
   }
 
   def appointments(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
-    appointments.findForCase(caseRequest.`case`.id.get).successMap(a =>
+    appointments.findForCase(caseRequest.`case`.id).successMap(a =>
       Ok(views.html.admin.cases.sections.appointments(a))
     )
   }
 
   def notes(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
-    cases.getNotes(caseRequest.`case`.id.get).successMap(notes =>
+    cases.getNotes(caseRequest.`case`.id).successMap(notes =>
       Ok(views.html.admin.cases.sections.notes(
         caseRequest.`case`,
         notes.filter(note => generalNoteTypes.contains(note.noteType)),
-        caseNoteFormPrefilled(caseRequest.`case`.version)
+        caseNoteFormPrefilled(caseRequest.`case`.lastUpdated)
       ))
     )
   }
 
   def messages(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
-    cases.getClients(caseRequest.`case`.id.get).successFlatMap(caseClients =>
+    cases.getClients(caseRequest.`case`.id).successFlatMap(caseClients =>
       ServiceResults.zip(
-        cases.getCaseMessages(caseRequest.`case`.id.get),
+        cases.getCaseMessages(caseRequest.`case`.id),
         profiles.getProfiles(caseClients.map(_.universityID))
       ).successMap { case (messages, p) =>
         Ok(views.html.admin.cases.sections.messages(
@@ -302,7 +292,7 @@ class CaseController @Inject()(
           teamRequest.team,
           baseForm.bind(Map(
             "clients[0]" -> enquiry.client.universityID.string,
-            "originalEnquiry" -> enquiry.id.get.toString
+            "originalEnquiry" -> enquiry.id.toString
           )).discardingErrors,
           dsaForm
         ))
@@ -330,25 +320,6 @@ class CaseController @Inject()(
         Ok(views.html.admin.cases.create(teamRequest.team, formWithErrors, dsaForm.bindFromRequest()))
       ),
       data => {
-        val c = Case(
-          id = None, // Set by service
-          key = None, // Set by service
-          subject = data.subject,
-          created = JavaTime.offsetDateTime,
-          team = teamRequest.team,
-          version = JavaTime.offsetDateTime,
-          state = IssueState.Open,
-          incidentDate = data.incident.map(_.incidentDate),
-          onCampus = data.incident.map(_.onCampus),
-          notifiedPolice = data.incident.map(_.notifiedPolice),
-          notifiedAmbulance = data.incident.map(_.notifiedAmbulance),
-          notifiedFire = data.incident.map(_.notifiedFire),
-          originalEnquiry = data.originalEnquiry,
-          caseType = data.caseType,
-          cause = data.cause,
-          dsaApplication = None // Set by service
-        )
-
         val dsaApplication = if (DSAApplication.DSATeams.contains(teamRequest.team)) {
           dsaForm.bindFromRequest().value.flatten
         } else {
@@ -365,25 +336,25 @@ class CaseController @Inject()(
         }.getOrElse(Future.successful(Right(None)))
 
         ServiceResults.zip(
-          cases.create(c, clients, data.tags, dsaApplication),
+          cases.create(data.`case`, clients, data.tags, teamRequest.team, data.originalEnquiry, dsaApplication),
           updateOriginalEnquiry
         ).successFlatMap { case (createdCase, originalEnquiry) =>
           val setOwners: Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
             // Get the original enquiry owner usercodes (if any)
             val enquiryOwners = originalEnquiry
-              .map(e => enquiries.getOwners(Set(e.id.get)))
+              .map(e => enquiries.getOwners(Set(e.id)))
               .getOrElse(Future.successful(Right(Map())))
               .map(_.map(_.values.flatMap(_.toSeq.map(_.usercode)).toSet))
 
             // Always include the current user
             enquiryOwners.map(_.map(_ + teamRequest.context.user.get.usercode)).successFlatMapTo(owners =>
-              cases.setOwners(createdCase.id.get, owners)
+              cases.setOwners(createdCase.id, owners)
             )
           }
 
           setOwners.successMap { _ =>
-            Redirect(controllers.admin.routes.CaseController.view(createdCase.key.get))
-              .flashing("success" -> Messages("flash.case.created", createdCase.key.get.string))
+            Redirect(controllers.admin.routes.CaseController.view(createdCase.key))
+              .flashing("success" -> Messages("flash.case.created", createdCase.key.string))
           }
         }
       }
@@ -395,30 +366,19 @@ class CaseController @Inject()(
 
     ServiceResults.zip(
       cases.findDSAApplication(clientCase),
-      cases.getClients(clientCase.id.get),
-      cases.getCaseTags(clientCase.id.get)
+      cases.getClients(clientCase.id),
+      cases.getCaseTags(clientCase.id)
     ).successMap { case (dsaApplication, clients, tags) =>
       Ok(
         views.html.admin.cases.edit(
           clientCase,
-          form(clientCase.team, profiles, enquiries, clients, Some(clientCase.version))
+          form(clientCase.team, profiles, enquiries, clients, Some(clientCase.lastUpdated))
             .fill(CaseFormData(
               clients.map(_.universityID),
-              clientCase.subject,
-              clientCase.incidentDate.map { incidentDate =>
-                CaseIncidentFormData(
-                  incidentDate,
-                  clientCase.onCampus.get,
-                  clientCase.notifiedPolice.get,
-                  clientCase.notifiedAmbulance.get,
-                  clientCase.notifiedFire.get,
-                )
-              },
-              clientCase.cause,
-              clientCase.caseType,
+              CaseSave(clientCase),
               tags,
               clientCase.originalEnquiry,
-              Some(clientCase.version)
+              Some(clientCase.lastUpdated)
             )),
             dsaForm.fill(dsaApplication.map(DSAApplicationSave.apply))
         )
@@ -429,10 +389,10 @@ class CaseController @Inject()(
   def edit(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
     val clientCase = caseRequest.`case`
     ServiceResults.zip(
-      cases.getClients(clientCase.id.get),
+      cases.getClients(clientCase.id),
       cases.findDSAApplication(clientCase)
     ).successFlatMap { case (clients, existingDsa) =>
-      form(clientCase.team, profiles, enquiries, clients, Some(clientCase.version)).bindFromRequest().fold(
+      form(clientCase.team, profiles, enquiries, clients, Some(clientCase.lastUpdated)).bindFromRequest().fold(
         formWithErrors => Future.successful(
           Ok(
             views.html.admin.cases.edit(
@@ -443,25 +403,6 @@ class CaseController @Inject()(
           )
         ),
         data => {
-          val c = Case(
-            id = clientCase.id,
-            key = clientCase.key,
-            subject = data.subject,
-            created = clientCase.created,
-            team = clientCase.team,
-            version = JavaTime.offsetDateTime,
-            state = clientCase.state,
-            incidentDate = data.incident.map(_.incidentDate),
-            onCampus = data.incident.map(_.onCampus),
-            notifiedPolice = data.incident.map(_.notifiedPolice),
-            notifiedAmbulance = data.incident.map(_.notifiedAmbulance),
-            notifiedFire = data.incident.map(_.notifiedFire),
-            originalEnquiry = data.originalEnquiry,
-            caseType = data.caseType,
-            cause = data.cause,
-            dsaApplication = clientCase.dsaApplication
-          )
-
           val dsaApplication = if (DSAApplication.DSATeams.contains(clientCase.team)) {
             dsaForm.bindFromRequest().value.flatten
           } else {
@@ -469,8 +410,8 @@ class CaseController @Inject()(
           }
           val clients = data.clients.filter(_.string.nonEmpty)
 
-          cases.update(c, clients, data.tags, dsaApplication, clientCase.version).successMap { updated =>
-            Redirect(controllers.admin.routes.CaseController.view(updated.key.get))
+          cases.update(clientCase.id, data.`case`, clients, data.tags, dsaApplication, clientCase.lastUpdated).successMap { updated =>
+            Redirect(controllers.admin.routes.CaseController.view(updated.key))
               .flashing("success" -> Messages("flash.case.updated"))
           }
         }
@@ -479,18 +420,18 @@ class CaseController @Inject()(
   }
 
   def linkForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
-    Ok(views.html.admin.cases.link(caseRequest.`case`, caseLinkForm(caseRequest.`case`.id.get, cases)))
+    Ok(views.html.admin.cases.link(caseRequest.`case`, caseLinkForm(caseRequest.`case`.id, cases)))
   }
 
   def link(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    caseLinkForm(caseRequest.`case`.id.get, cases).bindFromRequest().fold(
+    caseLinkForm(caseRequest.`case`.id, cases).bindFromRequest().fold(
       formWithErrors => Future.successful(
         Ok(views.html.admin.cases.link(caseRequest.`case`, formWithErrors))
       ),
       data => cases.find(data.targetID).successFlatMap { targetCase =>
         val caseNote = CaseNoteSave(data.message, caseRequest.context.user.get.usercode)
 
-        cases.addLink(data.linkType, caseRequest.`case`.id.get, targetCase.id.get, caseNote).successMap { _ =>
+        cases.addLink(data.linkType, caseRequest.`case`.id, targetCase.id, caseNote).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.linked"))
         }
@@ -506,7 +447,7 @@ class CaseController @Inject()(
           showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
         ),
         version =>
-          cases.deleteLink(caseRequest.`case`.id.get, linkId, version).successMap { _ =>
+          cases.deleteLink(caseRequest.`case`.id, linkId, version).successMap { _ =>
             Redirect(controllers.admin.routes.CaseController.view(caseKey))
               .flashing("success" -> Messages("flash.case.linkDeleted"))
           }
@@ -515,17 +456,17 @@ class CaseController @Inject()(
   }
 
   private def withCaseLink(id: UUID)(f: CaseLink => Future[Result])(implicit caseRequest: CaseSpecificRequest[AnyContent]): Future[Result] =
-    cases.getLinks(caseRequest.`case`.id.get).successFlatMap { case (outgoing, incoming) =>
+    cases.getLinks(caseRequest.`case`.id).successFlatMap { case (outgoing, incoming) =>
       (outgoing ++ incoming).find(_.id == id).map(f)
         .getOrElse(Future.successful(NotFound(views.html.errors.notFound())))
     }
 
   def addNote(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
+    caseNoteForm(caseRequest.`case`.lastUpdated).bindFromRequest().fold(
       formWithErrors => Future.successful(BadRequest(formWithErrors.errors.mkString(", "))),
       data =>
         // We don't do anything with data.version here, it's validated but we don't lock the case when adding a general note
-        cases.addGeneralNote(caseRequest.`case`.id.get, CaseNoteSave(data.text, caseRequest.context.user.get.usercode)).successMap { _ =>
+        cases.addGeneralNote(caseRequest.`case`.id, CaseNoteSave(data.text, caseRequest.context.user.get.usercode)).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.noteAdded"))
         }
@@ -533,18 +474,18 @@ class CaseController @Inject()(
   }
 
   def closeForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
-    Ok(views.html.admin.cases.close(caseRequest.`case`, caseNoteForm(caseRequest.`case`.version).fill(CaseNoteFormData("", caseRequest.`case`.version))))
+    Ok(views.html.admin.cases.close(caseRequest.`case`, caseNoteForm(caseRequest.`case`.lastUpdated).fill(CaseNoteFormData("", caseRequest.`case`.lastUpdated))))
   }
 
   def close(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
+    caseNoteForm(caseRequest.`case`.lastUpdated).bindFromRequest().fold(
       formWithErrors => Future.successful(
         Ok(views.html.admin.cases.close(caseRequest.`case`, formWithErrors))
       ),
       data => {
         val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
 
-        cases.updateState(caseRequest.`case`.id.get, IssueState.Closed, data.version, caseNote).successMap { _ =>
+        cases.updateState(caseRequest.`case`.id, IssueState.Closed, data.version, caseNote).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.closed"))
         }
@@ -553,12 +494,12 @@ class CaseController @Inject()(
   }
 
   def reopen(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
-    caseNoteForm(caseRequest.`case`.version).bindFromRequest().fold(
+    caseNoteForm(caseRequest.`case`.lastUpdated).bindFromRequest().fold(
       formWithErrors => Future.successful(BadRequest(formWithErrors.errors.mkString(", "))),
       data => {
         val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
 
-        cases.updateState(caseRequest.`case`.id.get, IssueState.Reopened, data.version, caseNote).successMap { _ =>
+        cases.updateState(caseRequest.`case`.id, IssueState.Reopened, data.version, caseNote).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.reopened"))
         }
@@ -591,7 +532,7 @@ class CaseController @Inject()(
         )
       ),
       data =>
-        cases.updateNote(noteRequest.`case`.id.get, noteRequest.note.id, CaseNoteSave(data.text, noteRequest.context.user.get.usercode), data.version).successMap { _ =>
+        cases.updateNote(noteRequest.`case`.id, noteRequest.note.id, CaseNoteSave(data.text, noteRequest.context.user.get.usercode), data.version).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.noteUpdated"))
         }
@@ -605,7 +546,7 @@ class CaseController @Inject()(
         showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
       ),
       version =>
-        cases.deleteNote(noteRequest.`case`.id.get, noteRequest.note.id, version).successMap { _ =>
+        cases.deleteNote(noteRequest.`case`.id, noteRequest.note.id, version).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.noteDeleted"))
         }
@@ -616,7 +557,7 @@ class CaseController @Inject()(
     Ok(views.html.admin.cases.reassign(caseRequest.`case`, caseReassignForm(caseRequest.`case`).fill(ReassignCaseData(
       team = caseRequest.`case`.team,
       caseType = caseRequest.`case`.caseType,
-      version = caseRequest.`case`.version,
+      version = caseRequest.`case`.lastUpdated,
       message = null
     ))))
   }

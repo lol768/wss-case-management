@@ -1,15 +1,13 @@
 @import controllers.admin.CaseController.CaseLinkFormData
-@import domain.dao.CaseDao.Case
-@import domain.CaseLink
-@import domain.CaseLinkType
+@import domain.{Case, CaseLinkType}
 
 @(
   c: Case,
   form: Form[CaseLinkFormData]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@main(s"Link ${c.key.get.string} to another case") {
-  @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.CaseController.link(c.key.get)) { implicit fc =>
+@main(s"Link ${c.key.string} to another case") {
+  @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.CaseController.link(c.key)) { implicit fc =>
     @if(CaseLinkType.values.size > 1) {
       @b3.select(form("linkType"),
         options = CaseLinkType.values.map { t => t.entryName -> t.outwardDescription },
@@ -38,6 +36,6 @@
       'helpOnTop -> true
     )
 
-    @tags.submitOrCancel("Link", controllers.admin.routes.CaseController.view(c.key.get))
+    @tags.submitOrCancel("Link", controllers.admin.routes.CaseController.view(c.key))
   }
 }

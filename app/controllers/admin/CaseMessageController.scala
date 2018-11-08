@@ -45,7 +45,7 @@ class CaseMessageController @Inject() (
           case _ =>
             import request.{`case` => c}
             caseController.renderCase(
-              c.key.get,
+              c.key,
               formWithErrors
             )
         }
@@ -64,7 +64,7 @@ class CaseMessageController @Inject() (
                 "message" -> views.html.tags.messages.message(messageData, f, "Client", teamName, f => routes.CaseMessageController.download(caseKey, f.id)).toString()
               ))))
             case _ =>
-              Redirect(controllers.admin.routes.CaseController.view(request.`case`.key.get).withFragment(s"thread-heading-${client.string}"))
+              Redirect(controllers.admin.routes.CaseController.view(request.`case`.key).withFragment(s"thread-heading-${client.string}"))
           }
         }
       }
@@ -72,7 +72,7 @@ class CaseMessageController @Inject() (
   }
 
   def download(caseKey: IssueKey, fileId: UUID): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit request =>
-    caseService.getCaseMessages(request.`case`.id.get).successFlatMapTo(messages =>
+    caseService.getCaseMessages(request.`case`.id).successFlatMapTo(messages =>
       messages.data.flatMap(_.files).find(_.id == fileId)
         .map(f => auditService.audit('CaseDocumentDownload, fileId.toString, 'CaseDocument, Json.obj()) {
           uploadedFileControllerHelper.serveFile(f).map(Right.apply)

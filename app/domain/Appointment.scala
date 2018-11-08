@@ -3,7 +3,6 @@ package domain
 import java.time.{Duration, OffsetDateTime}
 import java.util.UUID
 
-import domain.dao.CaseDao.Case
 import enumeratum.{EnumEntry, PlayEnum}
 import play.api.libs.json.{Json, Writes}
 import uk.ac.warwick.util.termdates.AcademicYear
@@ -46,7 +45,7 @@ case class Appointment(
 object Appointment {
   def tupled = (apply _).tupled
 
-  val DurationOptions = Seq(
+  val DurationOptions: Seq[(String, Duration)] = Seq(
     ("10 minutes", Duration.ofMinutes(10)),
     ("15 minutes", Duration.ofMinutes(15)),
     ("20 minutes", Duration.ofMinutes(20)),
@@ -109,7 +108,7 @@ object AppointmentRender {
     "cases" -> o.clientCases.map { clientCase =>
       Json.obj(
         "id" -> clientCase.id,
-        "key" -> clientCase.key.map(_.string),
+        "key" -> clientCase.key.string,
         "subject" -> clientCase.subject,
       )
     },

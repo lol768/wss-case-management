@@ -1,11 +1,10 @@
-@import domain.Owner
-@import domain.Enquiry
-@import domain.dao.CaseDao.Case
+@import domain.Case
 @import warwick.sso.Usercode
+
 @(form: Form[Seq[Usercode]], clientCase: Case)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("Edit owners") {
-  @b3.vertical.formCSRF(controllers.admin.routes.OwnersController.caseSubmit(clientCase.key.get)) { implicit ifc =>
+  @b3.vertical.formCSRF(controllers.admin.routes.OwnersController.caseSubmit(clientCase.key)) { implicit ifc =>
 
     @if(form.hasErrors) {
       <div class="alert alert-danger">
@@ -21,7 +20,7 @@
 
     @b3.free('_class -> "spaced-buttons") {
       @if(!form.value.exists(_.contains(context.user.get.usercode))) {
-        <button type="submit" class="btn btn-primary" formaction="@controllers.admin.routes.OwnersController.caseSubmitSelf(clientCase.key.get)">Add me</button>
+        <button type="submit" class="btn btn-primary" formaction="@controllers.admin.routes.OwnersController.caseSubmitSelf(clientCase.key)">Add me</button>
       }
       <button type="submit" class="btn btn-primary">Save</button>
       <a href="@controllers.admin.routes.AdminController.teamHome(clientCase.team.id)" class="btn btn-default">Cancel</a>
