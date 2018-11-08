@@ -1,5 +1,16 @@
 @import (inline) "fullcalendar/dist/fullcalendar.css";
 
+@event-wellbeing: #f2e4d2;
+@event-counselling: #e0d7ca;
+@event-mentalhealth: #f2ca99;
+@event-disability: #e5b8a3;
+
+@event-header-cancelled: #4d1309;
+@event-header-accepted: #224c2f;
+@event-header-provisional: #5e5e5f;
+@event-header-attended-with-outcomes: #202020;
+@event-header-attended-no-outcomes: #202020;
+
 .fc {
   body & { font-size: inherit; } // Undo crimes
 
@@ -21,7 +32,27 @@
   }
 
   .fc-event, .fc-event-dot {
-    &.Provisional, &.Tentative {
+    &.wellbeing {
+      background-color: @event-wellbeing;
+      border-color: darken(@event-wellbeing, 30%);
+    }
+
+    &.counselling {
+      background-color: @event-counselling;
+      border-color: darken(@event-counselling, 30%);
+    }
+
+    &.mentalhealth {
+      background-color: @event-mentalhealth;
+      border-color: darken(@event-mentalhealth, 30%);
+    }
+
+    &.disability {
+      background-color: @event-disability;
+      border-color: darken(@event-disability, 30%);
+    }
+
+    &.Tentative {
       background-color: @state-info-bg;
       border-color: @state-info-text;
       opacity: 0.8;
@@ -29,17 +60,58 @@
       #gradient > .striped();
     }
 
-    &.Accepted, &.Attended, &.Busy, &.WorkingElsewhere, &.OutOfOffice {
+    &.Busy, &.WorkingElsewhere, &.OutOfOffice {
       background-color: @state-success-bg;
       border-color: @state-success-text;
     }
 
-    &.Cancelled {
-      background-color: @state-danger-bg;
-      border-color: @state-danger-text;
-      opacity: 0.6;
+    .fc-event-header {
+      font-size: @main-font-size;
 
-      #gradient > .striped();
+      .fc-icon, .fc-time {
+        display: inline-block;
+        vertical-align: middle;
+        font-size: .85em;
+      }
+
+      .fc-icon {
+        margin: 0 2px;
+
+        > .fal {
+          width: 1em; // Emulate fa-fw with the same width as icon-stack
+        }
+      }
+    }
+
+    &.fc-short {
+      .fc-event-header {
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      .fc-title {
+        vertical-align: middle;
+      }
+    }
+
+    &.Cancelled .fc-event-header {
+      color: @event-header-cancelled;
+    }
+
+    &.Accepted .fc-event-header {
+      color: @event-header-accepted;
+    }
+
+    &.Provisional .fc-event-header {
+      color: @event-header-provisional;
+    }
+
+    &.Attended .fc-event-header {
+      color: @event-header-attended-no-outcomes;
+    }
+
+    &.Attended.has-outcomes .fc-event-header {
+      color: @event-header-attended-with-outcomes;
     }
   }
 
@@ -68,23 +140,24 @@
     }
 
     .fc-table-item {
-      &.Provisional {
-        background-color: @state-info-bg;
-        border-color: @state-info-text;
-
-        #gradient > .striped();
+      &.wellbeing {
+        background-color: @event-wellbeing;
+        border-color: darken(@event-wellbeing, 30%);
       }
 
-      &.Accepted, &.Attended {
-        background-color: @state-success-bg;
-        border-color: @state-success-text;
+      &.counselling {
+        background-color: @event-counselling;
+        border-color: darken(@event-counselling, 30%);
       }
 
-      &.Cancelled {
-        background-color: @state-danger-bg;
-        border-color: @state-danger-text;
+      &.mentalhealth {
+        background-color: @event-mentalhealth;
+        border-color: darken(@event-mentalhealth, 30%);
+      }
 
-        #gradient > .striped();
+      &.disability {
+        background-color: @event-disability;
+        border-color: darken(@event-disability, 30%);
       }
 
       &.fc-has-url {
@@ -103,6 +176,10 @@
         .fc-table-item--time--end-time {
           color: @gray-light;
         }
+      }
+
+      .fc-table-item--state {
+        white-space: nowrap;
       }
     }
   }

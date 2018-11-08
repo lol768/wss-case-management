@@ -28,17 +28,16 @@ case class Appointment(
   val end: OffsetDateTime = start.plus(duration)
 
   def subject(clientsOption: Option[Set[AppointmentClient]], teamMembersOption: Option[Set[AppointmentTeamMember]]): String = Seq(
-    appointmentType.description,
-    " with ",
-    teamMembersOption.map(_.map(_.member.safeFullName).mkString(", ")).getOrElse(team.name),
-    if (clientsOption.nonEmpty) " and " else "",
     clientsOption.map(clients =>
       if (clients.size == 1) {
-        clients.head.client.safeFullName
+        s"${clients.head.client.safeFullName}, "
       } else {
-        s"${clients.size} clients"
+        s"${clients.size} clients, "
       }
-    ).getOrElse("")
+    ).getOrElse(""),
+    appointmentType.description.toLowerCase(),
+    " with ",
+    teamMembersOption.map(_.map(_.member.safeFullName).mkString(", ")).getOrElse(team.name),
   ).mkString
 }
 
@@ -105,6 +104,12 @@ object AppointmentRender {
     ),
     "state" -> o.appointment.state,
     "cancellationReason" -> o.appointment.cancellationReason,
+    "outcome" -> o.appointment.outcome.map { outcome =>
+      Json.obj(
+        "id" -> outcome,
+        "description" -> outcome.description,
+      )
+    },
     "cases" -> o.clientCases.map { clientCase =>
       Json.obj(
         "id" -> clientCase.id,

@@ -196,7 +196,37 @@ class TableEventRenderer extends EventRenderer {
       teamMembers,
       location,
       state,
+      outcome,
     } = eventDef.miscProps;
+
+    let iconHtml = '';
+
+    switch (state) {
+      case 'Accepted':
+        if (moment(end).isBefore(moment())) {
+          iconHtml = '<i class="fal fa-calendar-exclamation"></i>';
+        } else {
+          iconHtml = '<i class="fal fa-calendar-check"></i>';
+        }
+        break;
+      case 'Attended':
+        if (outcome) {
+          iconHtml = '<i class="fal fa-calendar-star"></i>';
+        } else {
+          iconHtml = '<i class="fal fa-calendar-exclamation"></i>';
+        }
+        break;
+      case 'Cancelled':
+        iconHtml = '<i class="fal fa-calendar-times"></i>';
+        break;
+      case 'Provisional': // fall-through
+      default:
+        if (moment(end).isBefore(moment())) {
+          iconHtml = '<i class="fal fa-calendar-exclamation"></i>';
+        } else {
+          iconHtml = '<span class="icon-stack icon-appointment-pending"><i class="fal fa-calendar fa-stack-2x"></i><i class="fas fa-question fa-stack-1x"></i></span>';
+        }
+    }
 
     return `<tr class="${classes.join(' ')}">
         <td class="fc-table-item--time col-sm-1">
@@ -211,15 +241,16 @@ class TableEventRenderer extends EventRenderer {
           <br />
           <span class="fc-table-item--title--key">${htmlEscape(key)}</span>
         </td>
-        <td class="fa-table-item--details col-sm-4">
+        <td class="fc-table-item--details col-sm-4">
           <span class="fc-table-item--details--type">${htmlEscape(appointmentType.description)}</span>
           <br />
           <span class="fc-table-item--details--team-member">with ${htmlEscape(_.map(teamMembers, teamMember => teamMember.fullName).join(', '))}</span>
         </td>
-        <td class="fa-table-item--location col-sm-2">
+        <td class="fc-table-item--location col-sm-2">
           ${location ? htmlEscape(location.name) : ''}
         </td>
-        <td class="fa-table-item--state col-sm-1">
+        <td class="fc-table-item--state col-sm-1">
+          ${iconHtml}
           ${htmlEscape(state)}
         </td>
       </tr>`;
@@ -298,8 +329,10 @@ export default function AppointmentCalendar(container) {
       },
     },
     events: (start, end, timezone, callback) => {
+      const apiEndpoint = $calendar.data('show-all-events') ? $calendar.data('events-all') : $calendar.data('events');
+
       fetchWithCredentials(
-        addQsToUrl($calendar.data('events'), {
+        addQsToUrl(apiEndpoint, {
           start: start.utc().toISOString(),
           end: end.utc().toISOString(),
           timezone,
@@ -326,13 +359,64 @@ export default function AppointmentCalendar(container) {
               start: event.start,
               end: event.end,
               url: event.url,
-              className: event.state,
+              className: `${event.team.id} ${event.state} ${(event.state === 'Attended' && event.outcome) ? 'has-outcome' : 'no-outcome'}`,
             })));
           } else {
             log.error(response.errors);
             callback([]);
           }
         });
+    },
+    eventRender: (event, $el) => {
+      let $icon = $('<i />').addClass('fal');
+      switch (event.state) {
+        case 'Accepted':
+          if (moment(event.end).isBefore(moment())) {
+            $icon.addClass('fa-calendar-exclamation');
+          } else {
+            $icon.addClass('fa-calendar-check');
+          }
+          break;
+        case 'Attended':
+          if (event.outcome) {
+            $icon.addClass('fa-calendar-star');
+          } else {
+            $icon.addClass('fa-calendar-exclamation');
+          }
+          break;
+        case 'Cancelled':
+          $icon.addClass('fa-calendar-times');
+          break;
+        case 'Provisional': // fall-through
+        default:
+          if (moment(event.end).isBefore(moment())) {
+            $icon.addClass('fa-calendar-exclamation');
+          } else {
+            $icon = $('<span />').addClass('icon-stack icon-appointment-pending')
+              .append($('<i />').addClass('fal fa-calendar fa-stack-2x'))
+              .append($('<i />').addClass('fas fa-question fa-stack-1x'));
+          }
+      }
+
+      const $time = $el.find('.fc-time');
+      const $header = $('<div />').addClass('fc-event-header')
+        .append($('<div />').addClass('fc-icon').append($icon));
+
+      $time.before($header);
+      $header.append($time);
+
+      // CASE-347
+      if ($el.find('.fc-title').text()) {
+        $el.tooltip({
+          container: 'body',
+          title: `${$time.data('full') || $time.text()}: ${$el.find('.fc-title').text()}`,
+          placement: 'auto top',
+          delay: {
+            show: 500,
+            hide: 100,
+          },
+        });
+      }
     },
     selectHelper: true,
     select: (start, end) => {
@@ -351,6 +435,19 @@ export default function AppointmentCalendar(container) {
         $calendar.fullCalendar('render');
         $calendar.fullCalendar('rerenderEvents');
       }
+    });
+  }
+
+  // If I have a data-events-all, add a checkbox to toggle
+  if ($calendar.data('events-all')) {
+    const $checkbox = $('<input />').attr('type', 'checkbox');
+    const $label = $('<label />').append($checkbox).append(' Show appointments for all teams');
+    const $div = $('<div />').addClass('checkbox all-events-selector').append($label);
+    $calendar.before($div);
+
+    $checkbox.on('change', () => {
+      $calendar.data('show-all-events', $checkbox.is(':checked'));
+      $calendar.fullCalendar('refetchEvents');
     });
   }
 }

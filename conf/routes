@@ -79,6 +79,7 @@ GET         /team/:teamId/cases                     @controllers.admin.AdminCont
 GET         /team/:teamId/cases/open                @controllers.admin.AdminController.openCases(teamId: String, page: Int ?= 0)
 GET         /team/:teamId/cases/closed              @controllers.admin.AdminController.closedCases(teamId: String, page: Int ?= 0)
 GET         /team/:teamId/at-risk-clients           @controllers.admin.AdminController.atRiskClients(teamId: String)
+GET         /team/all/appointments                  @controllers.admin.AdminController.appointmentsAllTeams(start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
 GET         /team/:teamId/appointments              @controllers.admin.AdminController.appointments(teamId: String, start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
 
 GET         /team/client/:universityID                          @controllers.admin.ClientController.client(universityID: warwick.sso.UniversityID)
