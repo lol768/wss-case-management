@@ -217,8 +217,10 @@ case class AppointmentNoteSave(
 
 sealed abstract class AppointmentOutcome(val description: String) extends EnumEntry
 object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
+  case object BlueSky extends AppointmentOutcome("Advised to contact BlueSky")
   case object Careers extends AppointmentOutcome("Advised to contact Careers")
   case object Chaplaincy extends AppointmentOutcome("Advised to contact Chaplaincy")
+  case object CRASAC extends AppointmentOutcome("Advised to contact CRASAC")
   case object IAPT extends AppointmentOutcome("Advised to contact IAPT")
   case object Relate extends AppointmentOutcome("Advised to contact Relate")
   case object PersonalTutor extends AppointmentOutcome("Advised to contact Personal Tutor/Senior Tutor")
