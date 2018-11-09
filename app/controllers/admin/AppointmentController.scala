@@ -266,7 +266,7 @@ class AppointmentController @Inject()(
               Ok(views.html.admin.appointments.create(teamRequest.team, formWithErrors, availableRooms))
             }
           } else {
-            appointments.create(data.appointment, clients, data.teamMembers, teamRequest.team, linkedCases).successMap { appointment =>
+            appointments.create(data.appointment, clients, data.teamMembers, teamRequest.team, linkedCases, currentUser().usercode).successMap { appointment =>
               Redirect(controllers.admin.routes.AppointmentController.view(appointment.key))
                 .flashing("success" -> Messages("flash.appointment.created", appointment.key.string))
             }
@@ -318,7 +318,7 @@ class AppointmentController @Inject()(
                 Ok(views.html.admin.appointments.edit(a.appointment, formWithErrors, availableRooms))
               }
             } else {
-              appointments.update(a.appointment.id, data.appointment, linkedCases, clients, data.teamMembers, data.version.get).successMap { updated =>
+              appointments.update(a.appointment.id, data.appointment, linkedCases, clients, data.teamMembers, currentUser().usercode, data.version.get).successMap { updated =>
                 Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
                   .flashing("success" -> Messages("flash.appointment.updated"))
               }
@@ -412,7 +412,7 @@ class AppointmentController @Inject()(
       ),
       data => {
         val note = data.message.map(CaseNoteSave(_, currentUser().usercode))
-        appointments.cancel(appointment.id, data.cancellationReason, note, data.version).successMap { updated =>
+        appointments.cancel(appointment.id, data.cancellationReason, note, currentUser().usercode, data.version).successMap { updated =>
           Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
             .flashing("success" -> Messages("flash.appointment.cancelled"))
         }

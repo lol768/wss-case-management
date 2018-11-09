@@ -47,9 +47,12 @@ trait NotificationService {
   def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseReassign(clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseMessage(`case`: Case, client: UniversityID, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
-  def newAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
-  def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
-  def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def clientNewAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def clientCancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def clientChangedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def ownerNewAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def ownerCancelledAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def ownerChangedAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def appointmentConfirmation(appointment: Appointment, teamMembers: Set[Usercode], clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def appointmentReminder(appointment: Appointment, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
 }
@@ -247,13 +250,13 @@ class NotificationServiceImpl @Inject()(
       )
     }
 
-  override def newAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+  override def clientNewAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(clients) { clientUsers =>
       val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
       queueEmailAndSendActivity(
         subject = s"$clientSubjectPrefix New appointment created",
-        body = views.txt.emails.newAppointment(url),
+        body = views.txt.emails.clientNewAppointment(url),
         recipients = clientUsers.toSeq,
         activity = buildActivity(
           clientUsers,
@@ -265,13 +268,13 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  override def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+  override def clientCancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(clients) { clientUsers =>
       val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
       queueEmailAndSendActivity(
         subject = s"$clientSubjectPrefix Appointment cancelled",
-        body = views.txt.emails.cancelledAppointment(url),
+        body = views.txt.emails.clientCancelledAppointment(url),
         recipients = clientUsers.toSeq,
         activity = buildActivity(
           clientUsers,
@@ -283,13 +286,13 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  override def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+  override def clientChangedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(clients) { clientUsers =>
       val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
       queueEmailAndSendActivity(
         subject = s"$clientSubjectPrefix Appointment updated",
-        body = views.txt.emails.changedAppointment(url),
+        body = views.txt.emails.clientChangedAppointment(url),
         recipients = clientUsers.toSeq,
         activity = buildActivity(
           clientUsers,
@@ -300,6 +303,61 @@ class NotificationServiceImpl @Inject()(
       )
     }
   }
+
+  override def ownerNewAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUsers(owners) { ownerUsers =>
+      val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
+
+      queueEmailAndSendActivity(
+        subject = s"$teamSubjectPrefix New appointment created",
+        body = views.txt.emails.ownerNewAppointment(url),
+        recipients = ownerUsers.toSeq,
+        activity = buildActivity(
+          ownerUsers,
+          "New appointment created",
+          url,
+          "appointment-created-message-owner"
+        )
+      )
+    }
+  }
+
+  override def ownerCancelledAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUsers(owners) { ownerUsers =>
+      val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
+
+      queueEmailAndSendActivity(
+        subject = s"$teamSubjectPrefix Appointment cancelled",
+        body = views.txt.emails.ownerCancelledAppointment(url),
+        recipients = ownerUsers.toSeq,
+        activity = buildActivity(
+          ownerUsers,
+          "Appointment cancelled",
+          url,
+          "appointment-cancelled-message-owner"
+        )
+      )
+    }
+  }
+
+  override def ownerChangedAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUsers(owners) { ownerUsers =>
+      val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
+
+      queueEmailAndSendActivity(
+        subject = s"$teamSubjectPrefix Appointment updated",
+        body = views.txt.emails.ownerChangedAppointment(url),
+        recipients = ownerUsers.toSeq,
+        activity = buildActivity(
+          ownerUsers,
+          "Appointment updated",
+          url,
+          "appointment-updated-message-owner"
+        )
+      )
+    }
+  }
+
 
   override def appointmentConfirmation(appointment: Appointment, teamMembers: Set[Usercode], clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(teamMembers) { teamMembers =>
