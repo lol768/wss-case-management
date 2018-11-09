@@ -50,9 +50,8 @@
       </table>
     }
 
-    @b3.select(form("outcome"), options = AppointmentOutcome.values.map(o => o.entryName -> o.description),
-      '_default -> "Select an outcome",
-      'required -> true,
+    @b3.select(form("outcome"),
+      options = ("", "") +: AppointmentOutcome.values.map(o => o.entryName -> o.description),
       '_label -> "Outcome"
     )
 

@@ -41,7 +41,7 @@ object AppointmentOutcomesController {
             "cancellationReason" -> optional(AppointmentCancellationReason.formField),
           )(AppointmentClientAttendanceFormData.apply)(AppointmentClientAttendanceFormData.unapply)
         ),
-        "outcome" -> optional(AppointmentOutcome.formField).verifying("error.required", o => o.nonEmpty),
+        "outcome" -> optional(AppointmentOutcome.formField),
         "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == a.appointment.lastUpdated)
       )(AppointmentOutcomesFormData.apply)(AppointmentOutcomesFormData.unapply)
     )
@@ -82,7 +82,7 @@ class AppointmentOutcomesController @Inject()(
         data => appointments.recordOutcomes(
           a.appointment.id,
           data.attendance.map { d => (d.client, (d.state, d.cancellationReason)) }.toMap,
-          data.outcome.get,
+          data.outcome,
           data.version
         ).successMap { updated =>
           Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
