@@ -135,7 +135,8 @@ class CaseServiceImpl @Inject() (
       caseType = save.caseType,
       cause = save.cause,
       dsaApplication = dsaApplication,
-      clientRiskTypes = save.clientRiskTypes.map(_.entryName).toList.sorted
+      clientRiskTypes = save.clientRiskTypes.map(_.entryName).toList.sorted,
+      counsellingServicesIssues = save.counsellingServicesIssues.map(_.entryName).toList.sorted
     )
 
   override def create(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team, originalEnquiry: Option[UUID], application: Option[DSAApplicationSave])(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
@@ -272,7 +273,8 @@ class CaseServiceImpl @Inject() (
               caseType = c.caseType,
               cause = c.cause,
               dsaApplication = dsa.map(_.id),
-              clientRiskTypes = c.clientRiskTypes.map(_.entryName).toList.sorted
+              clientRiskTypes = c.clientRiskTypes.map(_.entryName).toList.sorted,
+              counsellingServicesIssues = c.counsellingServicesIssues.map(_.entryName).toList.sorted
             ),
             caseVersion
           )

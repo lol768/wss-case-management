@@ -220,6 +220,18 @@
           }
         }
 
+        @if(c.counsellingServicesIssues.nonEmpty || history.counsellingServicesIssues.size > 1) {
+          @tags.sectioned.detail("Counselling services issue"){
+            <div data-field-history-field="counsellingServicesIssues">
+            @if(c.counsellingServicesIssues.nonEmpty) {
+              @c.counsellingServicesIssues.toSeq.map(_.description).sorted.mkString(", ")
+            } else {
+              None
+            }
+            </div>
+          }
+        }
+
       </div>
       <div class="col-sm-6 col-md-4">
         <div class="row form-horizontal">

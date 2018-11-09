@@ -166,6 +166,7 @@ object Fixtures {
         None,
         CaseCause.New,
         None,
+        List(),
         List()
       )
 
