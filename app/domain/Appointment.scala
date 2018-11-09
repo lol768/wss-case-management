@@ -220,5 +220,5 @@ object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
   case object Closed extends AppointmentOutcome("Case closed")
   case object Other extends AppointmentOutcome("Other")
 
-  override def values: immutable.IndexedSeq[AppointmentOutcome] = findValues
+  override def values: immutable.IndexedSeq[AppointmentOutcome] = findValues.sortBy(_.description)
 }
