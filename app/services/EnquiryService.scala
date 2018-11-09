@@ -132,10 +132,8 @@ class EnquiryServiceImpl @Inject() (
           nextId <- sql"SELECT nextval('SEQ_ENQUIRY_KEY')".as[Int].head
           e <- enquiryDao.insert(createStoredEnquiry(id, IssueKey(IssueKeyType.Enquiry, nextId), enquiry))
           _ <- addMessageDBIO(e.universityID, e.team, id, message, files)
-        } yield e).map(enquiry =>
-          // FIXME - disable/enable with a feature flag when implementing CASE-355
-          // notificationService.newEnquiry(enquiry.key).map(_.right.map(_ => enquiry.asEnquiry(clients.head)))
-          ServiceResults.success(enquiry.asEnquiry(clients.head))
+        } yield e).flatMap(enquiry =>
+          notificationService.newEnquiry(enquiry.key).map(_.right.map(_ => enquiry.asEnquiry(clients.head)))
         )
       )
     }
