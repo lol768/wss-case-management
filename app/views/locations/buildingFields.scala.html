@@ -1,0 +1,16 @@
+@import controllers.locations.LocationsController.BuildingFormData
+@import views.html.b3.B3FieldConstructor
+
+@(
+  form: Form[BuildingFormData],
+)(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
+
+@b3.text(form("building.name"),
+  '_label -> "Name",
+  'autocomplete -> "off",
+)
+
+@b3.text(form("building.wai2GoID"),
+  '_label -> "Campus map",
+  'autocomplete -> "off",
+)

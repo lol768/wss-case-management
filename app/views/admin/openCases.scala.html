@@ -1,0 +1,11 @@
+@import java.util.UUID
+
+@import domain.{CaseListRender, Client, Pagination}
+
+@(
+  cases: Seq[CaseListRender],
+  clients: Map[UUID, Set[Client]],
+  pagination: Pagination,
+)(implicit context: RequestContext)
+
+@views.html.admin.caseTable(None, cases, clients, pagination, Some("There are no open cases"))

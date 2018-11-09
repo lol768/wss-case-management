@@ -1,13 +1,662 @@
 @import (reference) "id7/less/bootstrap/variables.less";
 @import (reference) "id7/less/bootstrap/mixins.less";
-@import (reference) "id7/less/font-awesome/variables.less";
-@import (reference) "id7/less/font-awesome/mixins.less";
 @import (reference) "id7/less/variables.less";
 @import (reference) "id7/less/mixins.less";
 
+@import "eonasdan-bootstrap-datetimepicker/src/less/_bootstrap-datetimepicker.less";
+
+@import "id7/less/id7-no-fa";
+@import "id7/less/font-awesome-pro";
+@import "id7-theme";
+@import "sysadmin-notices";
+@import "error-pages";
+@import "flexi-picker";
+@import "icons";
+@import "calendars";
+@import "bootstrap-labels";
+
+@id7-ignore-id6-legacy: true;
 @id7-image-root-dir: './lib/id7/images';
 @icon-font-path: './lib/id7/fonts';
 @fa-font-path: './lib/id7/fonts';
+@brand-colour: #a14418;
+@nav-link-padding: 10px 15px;
+@gray-light: lighten(@gray-base, 45%); // #737373, ARIA
 
-@import "id7/less/id7.less";
-@import "id7-theme.less";
+// Always scrollbar to avoid horizontal dancing
+html {
+  overflow-y: scroll;
+}
+
+.pull-right:first-child {
+  & + h1, & + h2, & + h3, & + h4, & + h5, & + h6 {
+    margin-top: 0;
+  }
+}
+
+.flex {
+  display: flex;
+}
+
+@media (min-width: @grid-float-breakpoint) {
+  @dl-horizontal-offset: 220px;
+  .dl-horizontal.field-history dt {
+    width: @dl-horizontal-offset;
+  }
+  .dl-horizontal.field-history dd {
+    margin-left: @dl-horizontal-offset + @grid-gutter-width;
+  }
+}
+
+.popover button.close {
+  padding: 0 2px;
+}
+
+.client-search, .case-search, .enquiry-search, .appointment-search {
+  .make-row();
+}
+
+.client-search {
+  position: relative;
+  .dropdown-menu li {
+    margin-bottom: 5px;
+    a {
+      padding: 5px 10px 5px 5px;
+    }
+  }
+  .client-search-result {
+    .media-left img {
+      width: 60px;
+      height: 60px;
+    }
+    .media-body {
+      width: auto;
+      .title {
+        font-size: 120%;
+      }
+    }
+  }
+}
+
+.hint {
+  color: @gray-light;
+  font-size: 90%;
+}
+
+.form-horizontal .control-label {
+  font-weight: normal;
+  color: @gray-light;
+}
+
+.form-horizontal .form-vertical {
+  .form-group {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  label.control-label {
+    color: #555;
+    margin-bottom: 5px;
+  }
+}
+
+.spaced-buttons {
+  margin-top: @grid-gutter-width;
+  .btn + .btn {
+    margin-left: @grid-gutter-width;
+  }
+}
+
+.checkbox-condensed {
+  .checkbox {
+    margin: 0;
+  }
+}
+
+dt {
+  font-weight: normal;
+}
+dd {
+  font-weight: bold;
+}
+
+table caption {
+  font-weight: bold;
+}
+
+section.indent {
+  margin-left: @grid-gutter-width;
+}
+
+.panel.panel-default.panel-form {
+  border: 0;
+
+  .panel-heading, .panel-body {
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    .clearfix();
+  }
+
+  .panel-heading {
+    .btn {
+      .pull-right();
+    }
+    label.control-label {
+      padding-top: 0;
+    }
+  }
+
+  .panel-body {
+    .form-group {
+      margin-bottom: 0;
+    }
+    textarea {
+      background-color: #fffef8;
+    }
+  }
+}
+
+.panel.thread {
+  &.thread--client {
+    background: #bfcac6 url(/assets/images/messages-bg.jpg) top right no-repeat;
+    background-size: cover;
+  }
+
+  &.state-Closed {
+    opacity: 0.7;
+  }
+
+  h4 {
+    font-size: @font-size-h5;
+    .fa-angle-down {
+      display: none;
+    }
+    .collapsed {
+      .fa-angle-down {
+        display: inline-block;
+      }
+      .fa-angle-up {
+        display: none;
+      }
+    }
+    a {
+      display: block;
+      text-decoration: none;
+      color: #333333;
+      &:hover {
+        color: #666666;
+      }
+    }
+  }
+
+  .message {
+    .clearfix();
+    border-radius: 10px;
+    box-shadow: 5px 5px 10px 0 rgba(0,0,0,0.3);
+    padding: @panel-heading-padding;
+    margin-bottom: @panel-body-padding;
+    word-break: break-word;
+    .date {
+      color: #5e5e5f;
+    }
+    .message--author {
+      font-weight: bold;
+    }
+    .message--attachment {
+      font-weight: bold;
+      margin-top: (@line-height-computed / 2);
+      padding-top: (@line-height-computed / 4);
+      border-top: 1px solid @gray-light;
+    }
+    &.message-client {
+      background-color: #E5F6CF;
+      border: 1px solid #919191;
+      margin-right: 20%;
+    }
+    &.message-team {
+      background-color: #CFEFFB;
+      border: 1px solid #c0c0c0;
+      margin-left: 20%;
+    }
+    .message--read-indicator {
+      font-size: @font-size-h5;
+      color: #3E8C27;
+    }
+  }
+  .panel-footer {
+    background: rgba(191, 192, 191, 0.8);
+    padding-bottom: @panel-body-padding;
+    .form-group {
+      display: block;
+    }
+    label {
+      font-weight: normal;
+    }
+
+    textarea.form-control {
+      width: 100%;
+      border-radius: 10px;
+    }
+
+    .form-group {
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      input[type="file"] {
+        width: 0.1px;
+        height: 0.1px;
+        opacity: 0;
+        overflow: hidden;
+        position: absolute;
+        z-index: -1;
+      }
+
+      button, label.btn {
+        margin-left: @grid-gutter-width;
+        @diameter: 36px;
+        padding: 0;
+        width: @diameter;
+        height: @diameter;
+
+        border: 0;
+        border-radius: 50%;
+        i {
+          line-height: @diameter;
+          width: @diameter;
+          height: @diameter;
+          margin-left: -2px; // get the airplane points equal distances from the circle edges :awyeah:
+        }
+
+        position: relative;
+
+        .badge {
+          position: absolute;
+          top: auto;
+          bottom: -7px;
+          right: -7px;
+        }
+      }
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.panel-group.message-threads .panel-body {
+  max-height: ~"calc(100vh - 300px)";
+  overflow-y: auto;
+  background-color: transparent !important;
+}
+
+.inline-form { // *twitch*
+  display: inline-block;
+}
+
+// Default table styling CASE-108
+.table-default {
+  .table-striped;
+  border-bottom: 1px solid @table-border-color;
+
+  > caption {
+    color: @brand-colour;
+    font-size: @main-font-size;
+    font-weight: bold;
+    padding: 0;
+  }
+
+  td > .list-unstyled:last-child {
+    margin-bottom: 0;
+
+    > li:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.tab-content > .active {
+  padding-top: @grid-gutter-width;
+}
+
+.nav-tabs {
+  > li.active {
+    font-weight: bold;
+  }
+
+  @media (min-width: @screen-md-min) {
+    html.flexbox & {
+      display: flex;
+
+      > li {
+        flex: 1 1 0;
+        white-space: nowrap;
+
+        > a i {
+          margin-right: 5px;
+        }
+      }
+    }
+  }
+}
+
+summary {
+  cursor: pointer;
+  &:focus { outline: none; }
+  font-weight: bold;
+
+  details[data-toggle="load"] & { color: @brand-colour; }
+}
+
+// Headings immediately after another heading should be closer together
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  + h1, + h2, + h3, + h4, + h5, + h6, + .h1, + .h2, + .h3, + .h4, + .h5, + .h6 {
+    margin-top: 0;
+  }
+}
+
+.enquiry-details--header {
+  margin-bottom: @line-height-computed;
+}
+
+.enquiry-details--actions {
+  margin: (@line-height-computed / 2) 0;
+}
+
+.enquiry-details .panel.enquiry .message {
+  margin-bottom: (@panel-body-padding * 2);
+}
+
+.search-default {
+  .make-md-column(7);
+  .make-lg-column(5);
+  position: relative;
+  .form-control {
+    color: #000000;
+    border: 0;
+    box-shadow: none;
+    border-bottom: 1px solid #cccccc;
+    padding-left: @padding-large-horizontal * 1.5;
+    &:hover {
+      border-bottom-color: #404040;
+    }
+    &:focus {
+      border-bottom-color: #000000;
+      box-shadow: none;
+    }
+    &::placeholder {
+      color: #808080;
+    }
+  }
+  .fa-search {
+    position: absolute;
+    line-height: @input-height-large;
+  }
+}
+
+.case-details, .appointment-details {
+
+  details {
+    i.closed { display: inline-block; }
+    i.open { display: none; }
+
+    &[open] {
+      i.closed { display: none; }
+      i.open { display: inline-block; }
+    }
+
+    html.no-details &, html.no-details &[open] {
+      i.closed { display: none; }
+      i.open { display: none; }
+    }
+
+    summary {
+      &:first-of-type {
+        list-style-type: none;
+      }
+
+      &::-webkit-details-marker {
+        display:none;
+      }
+    }
+  }
+
+  &--section {
+    div.control-label, summary.control-label, .content {
+      position: relative;
+      min-height: 1px;
+      padding-right: @grid-gutter-width / 2;
+      float: left;
+
+      &.control-label {
+
+        @media (min-width: @screen-xs-min) {
+          width: percentage(2/12);
+        }
+        @media (min-width: @screen-md-min) {
+          // need to keep the labels in line with the labels in the left column of .case-details--actions
+          // the left column is col-7 with a nested row containing col-3 for the label
+          // this means the label is 7/12 * 3/12 of a page wide = 21/144 = 7/48
+          width: percentage(7/48);
+        }
+        padding-left: @grid-gutter-width;
+      }
+
+      &.content {
+        @media (min-width: @screen-xs) {
+          width: percentage(10/12);
+        }
+        @media (min-width: @screen-md) {
+          width: percentage(41/48);
+        }
+        padding-left: @grid-gutter-width / 2;
+      }
+    }
+  }
+
+  .panel {
+    .panel-heading {
+      background-color: #f0f0f0;
+      .btn-link {
+        border: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        line-height: 1.1;
+        i {
+          font-size: 16px;
+        }
+      }
+    }
+    .panel-body {
+      background-color: #fffef8;
+    }
+  }
+}
+
+.form-wellbeing {
+  margin: 0 @grid-gutter-width;
+
+  .form-group {
+    margin-bottom: 36px;
+  }
+
+  // help text next to the label (above fields) should sit directly underneath so nuke the margins
+  label + .help-block {
+    margin-top: -5px;
+  }
+
+  .control-label {
+    font-size: @font-size-h5;
+    font-weight: normal;
+    color: #404040;
+  }
+
+  .help-block {
+    color: @gray-light;
+  }
+}
+
+a[role="button"] {
+  cursor: pointer;
+
+  > i.fas, > i.far, > i.fal {
+    margin-left: 5px;
+  }
+}
+
+.map-link {
+  > i {
+    margin-right: 5px;
+  }
+}
+
+.popover {
+  &.wide {
+    max-width: 600px;
+
+    .popover-content {
+      max-height: 450px;
+    }
+  }
+}
+
+.datetimepicker-inline {
+  .bootstrap-datetimepicker-widget {
+    .link-colour(inherit);
+
+    border: 1px solid @input-border;
+    padding: @padding-base-vertical @padding-base-horizontal;
+
+    .table-condensed:not(.table) {
+      .table;
+      .table-condensed;
+      margin-bottom: 0;
+    }
+
+    .timepicker button {
+      display: block;
+      margin: 0 auto;
+    }
+
+    @media (min-width: @screen-md-min) {
+      html.flexbox & {
+        > .row {
+          display: flex;
+
+          > .col-md-6 {
+            /* Let flexbox take care of it */
+            float: none;
+            width: auto;
+            flex: 1 0 auto;
+          }
+        }
+
+        .timepicker {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+        }
+      }
+    }
+
+    table td.old, td.new {
+      color: @gray-light; // ARIA
+    }
+  }
+}
+
+#appointment-freebusy-modal {
+  .modal-body {
+    @base-other-elements-height: (@modal-inner-padding * 4) + (@line-height-computed / 2);
+
+    // 20px = .modal-dialog margin * 2 (not a variable)
+    @other-elements-height: 20px + @base-other-elements-height;
+    height: calc(100vh - @other-elements-height);
+    .appointment-freebusy-calendar {
+      // 25px = height of a <p> (can probably be replaced with variables?)
+      height: calc(100vh - @other-elements-height - 25px);
+    }
+
+    @media (min-width: @screen-sm-min) {
+      // 60px = .modal-dialog margin * 2 (not a variable)
+      @other-elements-height: 60px + @base-other-elements-height;
+      height: calc(100vh - @other-elements-height);
+
+      .appointment-freebusy-calendar {
+        // 25px = height of a <p> (can probably be replaced with variables?)
+        height: calc(100vh - @other-elements-height - 25px);
+      }
+    }
+  }
+
+  .modal-footer > p.current {
+    margin: 0;
+    font-weight: bold;
+  }
+}
+
+i.fa-comment-edit.awaiting {
+  color: @brand-colour;
+}
+
+.heartbeat {
+  animation-name: heartbeat-animation;
+  animation: heartbeat-animation 1.5s ease infinite;
+}
+
+@keyframes heartbeat-animation{
+  0%{transform:scale(1)}
+  20%{transform:scale(1.2)}
+  40%{transform:scale(1)}
+  100%{transform:scale(1)}
+}
+
+.appointment-outcomes table .form-group {
+  margin-bottom: 0;
+}
+
+.form-control-static > .list-unstyled:last-child {
+  margin-bottom: 0;
+
+  > li:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// Gets rid of the annoying outline for mouse users but preserves it for keyboard users,
+// and is ignored by browsers that don’t support :focus-visible.
+// https://twitter.com/LeaVerou/status/1045768279753666562?s=19
+:focus:not(:focus-visible) { outline: none }
+
+.case-details--incident {
+  > span:not(:last-child)::after {
+    display: inline;
+    content: ','
+  }
+}
+
+s {
+  color: @gray-light;
+  text-decoration-color: black;
+}
+
+// Tighter spacing between fields on the client profile page
+.client-profile--fields, .client-profile--registration--fields {
+  .form-horizontal {
+    .control-label, .form-control-static {
+      padding: 0;
+      min-height: 0;
+    }
+  }
+}
+
+// Make labels slightly larger, 85% not 75%
+.label {
+  font-size: 85%;
+}
+
+.well.appointments-needing-outcomes {
+  .lead { color: @brand-danger; }
+}

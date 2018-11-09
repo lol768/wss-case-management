@@ -1,15 +1,16 @@
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import UglifyWebpackPlugin from 'uglifyjs-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
-import PurifyCSSPlugin from 'purifycss-webpack';
 import Autoprefixer from 'autoprefixer';
 import CssNano from 'cssnano';
 import OptimizeCssAssetsPlugin from 'optimize-css-assets-webpack-plugin';
+import PostCssSafeParser from 'postcss-safe-parser';
 
 const autoprefix = () => ({
   loader: 'postcss-loader',
   options: {
     plugins: () => [Autoprefixer()],
+    sourceMap: true,
   },
 });
 
@@ -46,7 +47,7 @@ const copyNpmDistAssets = ({ modules, dest } = {}) => {
   const pairs = modules.map(m => ({
     from: `node_modules/${m}/dist`,
     to: `${dest}/${m}/[1]`,
-    test: new RegExp('.*/dist/(.+/[-.a-z0-9]+\\.(otf|eot|woff|woff2|ttf|js|js.map|gif|png|jpg|svg|ico))$', 'i'),
+    test: new RegExp('.*/dist/(.+/[-.a-z0-9@]+\\.(otf|eot|woff|woff2|ttf|js|js.map|gif|png|jpg|svg|ico))$', 'i'),
   }));
 
   return {
@@ -102,6 +103,7 @@ const extractCSS = ({ resolverPaths } = {}) => ({
             options: {
               paths: resolverPaths,
               relativeUrls: false,
+              sourceMap: true,
             },
           },
         ],
@@ -115,9 +117,6 @@ const extractCSS = ({ resolverPaths } = {}) => ({
   ],
 });
 
-const purifyCSS = ({ paths }) => ({
-  plugins: [new PurifyCSSPlugin({ paths })],
-});
 
 const minify = () => ({
   optimization: {
@@ -133,7 +132,7 @@ const minify = () => ({
       new OptimizeCssAssetsPlugin({
         cssProcessor: CssNano,
         cssProcessorOptions: {
-          safe: true,
+          parser: PostCssSafeParser,
           discardComments: {
             removeAll: true,
           },
@@ -145,8 +144,8 @@ const minify = () => ({
 });
 
 
-const generateSourceMaps = ({ type }) => ({
-  devtool: type,
+const generateSourceMaps = (devtool) => ({
+  devtool,
 });
 
 export {
@@ -155,7 +154,6 @@ export {
   lintJS,
   transpileJS,
   extractCSS,
-  purifyCSS,
   minify,
   generateSourceMaps,
 };

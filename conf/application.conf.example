@@ -1,17 +1,7 @@
 include "defaults"
-
-app {
-  name.uppercase = "APP_NAME"
-  name.id = "app-name"
-}
+include "local-dev"
 
 domain = "changeme.warwick.ac.uk"
-
-play.http.secret.key="changeme"
-
-play.evolutions.enabled=true
-play.evolutions.db.default.autoApply=true
-play.evolutions.db.default.autoApplyDowns=true
 
 # For testing only!
 #slick.dbs.default {
@@ -23,13 +13,32 @@ play.evolutions.db.default.autoApplyDowns=true
 #}
 
 slick.dbs.default {
-  profile = "slick.jdbc.OracleProfile$"
+  profile = "slick.jdbc.PostgresProfile$"
   db {
-    driver = "oracle.jdbc.driver.OracleDriver"
-    url = "jdbc:oracle:thin:@//racd1.warwick.ac.uk:1521/racd1.warwick.ac.uk"
-    user = "..."
-    password = "..."
+    driver = "org.postgresql.Driver"
+    url = "jdbc:postgresql://localhost:5432/casemanagement"
+    user = "casemanagement"
+    password = you should generate your own password and put it here
     numThreads = 10
+  }
+}
+
+blobStore {
+  default {
+    container = "uk.ac.warwick.wellbeing.dev"
+    encryption_key = "secret" // Generate using ./sbt newEncryptionKey
+
+    provider = "swift"
+    swift {
+      endpoint = "https://objectstorage.warwick.ac.uk/auth/v2.0"
+      username = "example"
+      password = "secret"
+    }
+
+    # Or you can use your local file system
+
+    provider = "fileSystem"
+    fileSystem.baseDir = "/www/casemanagement/encryptedobjectstore"
   }
 }
 
@@ -43,4 +52,23 @@ sso-client {
     publickey = "..."
     privatekey = "..."
   }
+}
+
+memcached.1.host: "localhost:11211"
+
+wellbeing {
+  photos {
+    appname = "wellbeingsupportservices"
+    key = "Somekey"
+  }
+}
+
+mywarwick.instances.0.baseUrl = "https://my-dev.warwick.ac.uk"
+mywarwick.instances.0.providerId = "wellbeing"
+mywarwick.instances.0.userName = "wellbeing-mywarwick-api"
+mywarwick.instances.0.password = "THE PASSWORD"
+
+play.mailer {
+  user = "..."
+  password = "..."
 }

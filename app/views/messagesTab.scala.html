@@ -1,0 +1,96 @@
+@import domain.{Case, Enquiry, IssueRender, IssueState, MessageSender, Registration}
+@import org.apache.tika.mime.MediaType
+@import play.api.data.Forms._
+@import warwick.core.helpers.JavaTime
+
+@(
+  issues: Seq[IssueRender],
+  registration: Option[Registration],
+  supportedMimeTypes: Seq[MediaType],
+  canMakeEnquiry: Boolean,
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@registration.map { r =>
+  <div class="pull-right">
+    <a href="@controllers.registration.routes.RegisterController.form()" class="btn btn-default">
+      @if(r.data.nonEmpty) {
+        View and update registration
+      } else {
+        Register
+      }
+    </a>
+  </div>
+}
+
+@if(canMakeEnquiry) {
+  <p>If you have a question or would like to arrange to speak to somebody about an issue:</p>
+  <a class="btn btn-primary" href="@controllers.enquiries.routes.EnquiryController.form()">
+    @if(issues.isEmpty) {
+      Make an enquiry
+    } else {
+      Make another enquiry
+    }
+  </a>
+} else {
+  <p>Please visit the <a href="https://warwick.ac.uk/wellbeing">Wellbeing at Warwick</a> web pages for information on how to contact Wellbeing Services.</p>
+}
+
+@if(issues.nonEmpty) {
+  <h2>Your messages</h2>
+
+  <div class="panel-group message-threads" id="enquiries-accordion" role="tablist" aria-multiselectable="true">
+  @issues.map { issueRender: IssueRender =>
+    <div class="panel panel-default thread thread--client state-@issueRender.issue.state.entryName">
+
+      <div class="panel-heading" role="tab" id="heading-@issueRender.issue.id.toString">
+        <h4 class="panel-title">
+          <a class="@if(issues.head.issue != issueRender.issue){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@issueRender.issue.id.toString" aria-expanded="true" aria-controls="collapse-@issueRender.issue.id.toString">
+            <div class="pull-right">
+              @JavaTime.Relative(issueRender.lastUpdatedDate)
+              <i class="fas fa-fw fa-angle-down"></i>
+              <i class="fas fa-fw fa-angle-up"></i>
+            </div>
+            @tags.icons.enquiryState(issueRender.issue.state, issueRender.messages.last.message, MessageSender.Client)
+            @issueRender.issue match {
+              case e: Enquiry => {
+                @e.subject
+              }
+              case c: Case => {
+                Enquiry
+              }
+              case _ => {}
+            }
+          </a>
+        </h4>
+      </div>
+
+      <div id="collapse-@issueRender.issue.id.toString" class="panel-collapse collapse @if(issues.head.issue == issueRender.issue){in}" role="tabpanel" aria-labelledby="heading-@issueRender.issue.id.toString" data-ping="@controllers.routes.ClientMessagesController.auditView(issueRender.issue.id)">
+        <div class="panel-body">
+          @issueRender.messages.map { render =>
+            @views.html.tags.messages.message(
+              message = render.message,
+              files = render.files,
+              clientName = "You",
+              teamName = render.message.team.getOrElse(issueRender.issue.team).name,
+              attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id, f.id))
+          }
+          </div>
+        <div class="panel-footer">
+          @if(issueRender.issue.state != IssueState.Closed) {
+            @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
+              @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), form, supportedMimeTypes, issueRender.issue.id, context.user.get.universityId.get)
+            }
+          } else {
+            <p>
+              We think this enquiry is now resolved, so we've marked it as closed.
+              But if there's anything else you want to ask us about this or any other subject,
+              you can always do so just by sending us a
+              <a href="@controllers.enquiries.routes.EnquiryController.form()">new enquiry</a>.
+            </p>
+          }
+        </div>
+      </div>
+    </div>
+  }
+  </div>
+}

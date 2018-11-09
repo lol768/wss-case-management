@@ -2,6 +2,7 @@ import path from 'path';
 import EventEmitter from 'events';
 import WebpackNotifierPlugin from 'webpack-notifier';
 import RemovePlugin from 'remove-files-webpack-plugin';
+import { ProvidePlugin } from 'webpack';
 
 import PlayFingerprintsPlugin from './build-tooling/PlayFingerprintsPlugin';
 import WatchEventsPlugin from './build-tooling/WatchEventsPlugin';
@@ -25,7 +26,15 @@ const commonConfig = merge([
       path: paths.ASSETS,
       publicPath: paths.PUBLIC_PATH,
     },
+    node: {
+      // Fix Webpack global CSP violation https://github.com/webpack/webpack/issues/6461
+      global: false,
+    },
     plugins: [
+      // Fix Webpack global CSP violation https://github.com/webpack/webpack/issues/6461
+      new ProvidePlugin({
+        global: require.resolve('./build-tooling/global.js'),
+      }),
       new PlayFingerprintsPlugin(),
       new RemovePlugin({
         before: {
@@ -48,6 +57,9 @@ const commonConfig = merge([
         id7: paths.ID7,
       },
     },
+    externals: {
+      jquery: 'jQuery'
+    }
   },
   tooling.lintJS(),
   tooling.transpileJS({
@@ -72,21 +84,10 @@ const commonConfig = merge([
 const productionConfig = merge([
   {
     mode: 'production',
-    optimization: {
-      splitChunks: {
-        chunks: 'initial',
-      },
-      runtimeChunk: {
-        name: 'manifest',
-      },
-    },
-    performance: {
-      hints: 'error',
-    },
   },
   tooling.transpileJS(),
   tooling.minify(),
-  tooling.generateSourceMaps('hidden-source-map'),
+  tooling.generateSourceMaps('source-map'),
 ]);
 
 const developmentConfig = merge([
@@ -97,15 +98,13 @@ const developmentConfig = merge([
       new WatchEventsPlugin({ emitter: new EventEmitter() }),
     ],
   },
-  tooling.generateSourceMaps('source-map'),
+  tooling.generateSourceMaps('cheap-module-source-map'),
 ]);
 
-module.exports = (env) => {
-  let config = merge(commonConfig, developmentConfig, { mode: env });
-
-  if (env === 'production') {
-    config = merge(commonConfig, productionConfig, { mode: env });
+module.exports = ({ production } = {}) => {
+  if (production) {
+    return merge(commonConfig, productionConfig);
+  } else {
+    return merge(commonConfig, developmentConfig);
   }
-
-  return config;
 };

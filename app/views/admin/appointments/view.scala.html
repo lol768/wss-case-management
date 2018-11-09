@@ -1,0 +1,151 @@
+@import controllers.admin.AppointmentController.CancelAppointmentData
+@import domain.{AppointmentCancellationReason, AppointmentClient, AppointmentRender, SitsProfile}
+@import warwick.core.helpers.JavaTime
+
+@(
+  a: AppointmentRender,
+  profiles: Map[AppointmentClient, Option[SitsProfile]],
+  cancelForm: Form[CancelAppointmentData],
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(
+  title = s"${a.appointment.key.string} ${a.appointment.subject(Some(a.clients), Some(a.teamMembers))}",
+  icon = tags.icons.appointmentState(a.appointment.state)
+) {
+  <div class="appointment-details">
+    <div class="appointment-details--header">
+      @a.clients.map { client =>
+        <h5>
+          <a href="@controllers.admin.routes.ClientController.client(client.client.universityID)">@client.client.safeFullName</a>,
+          @client.client.universityID.string,
+          @profiles.get(client).flatten.map { profile =>
+            @views.tags.profiles.typeAndDepartment(profile)
+          }
+          @tags.appointments.clientAppointmentState(a.appointment, client)
+        </h5>
+      }
+    </div>
+    <div class="appointment-details--actions row">
+      <div class="col-sm-6 col-md-7"> @* TODO history *@
+
+        @tags.sectioned.detail("Date/time") {
+          @JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        }
+
+        @a.room.map { room =>
+          @tags.sectioned.detail("Location") {
+            @tags.mapLink(room)
+          }
+        }
+
+        @tags.sectioned.detail(s"Team member${if (a.teamMembers.size != 1) "s" else ""}") {
+          <ul class="list-unstyled">
+            @a.teamMembers.toSeq.sortBy(_.member).map { teamMember =>
+              <li>@teamMember.member.safeFullName</li>
+            }
+          </ul>
+        }
+
+        @tags.sectioned.detail("Team") {
+          @a.appointment.team.name
+        }
+
+        @tags.sectioned.detail("Appointment type") {
+          @a.appointment.appointmentType.description
+        }
+
+        @tags.sectioned.detail("Purpose") {
+          @a.appointment.purpose.description
+        }
+
+        @if(a.clientCases.nonEmpty) {
+          @tags.sectioned.detail("Cases") {
+            <ul class="list-unstyled">
+              @a.clientCases.map { clientCase =>
+                <li><a href="@controllers.admin.routes.CaseController.view(clientCase.key)">@clientCase.key.string @clientCase.subject</a></li>
+              }
+            </ul>
+          }
+        }
+
+        @tags.sectioned.detail("State") {
+          <span class="label label-@a.appointment.state.labelType" @a.appointment.cancellationReason.map { r => title="@r.description" }>
+            @tags.icons.appointmentState(a.appointment.state)
+            @a.appointment.state
+          </span>
+
+          @if(a.appointment.state.nonTerminal) {
+            &nbsp;
+            @b3.horizontal.formCSRF(controllers.admin.routes.AppointmentController.cancel(a.appointment.key), "col-sm-3", "col-sm-9", 'class -> "inline-form") { implicit ifc =>
+              <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#cancel-modal">@tags.icons.appointmentCancel() Cancel</button>
+
+            @b3.validatedHidden(cancelForm, "version")
+
+              <div class="modal fade" id="cancel-modal" tabindex="-1" role="dialog" aria-labelledby="cancel-modal-label">
+                <div class="modal-dialog" role="document">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                      <h4 class="modal-title" id="cancel-modal-label">Cancel appointment</h4>
+                    </div>
+                    <div class="modal-body form-vertical">
+                    @b3.select(cancelForm("cancellationReason"),
+                      options = AppointmentCancellationReason.values.map { r => r.entryName -> r.description },
+                      '_label -> "Reason",
+                      '_default -> "",
+                      'required -> true
+                    )
+                    @b3.textarea(
+                      cancelForm("message"),
+                      '_label -> "Case note (optional)",
+                      '_help -> "(why is this appointment being cancelled?)",
+                      'helpOnTop -> true
+                    )
+                    </div>
+                    <div class="modal-footer spaced-buttons">
+                      <button type="submit" class="btn btn-primary">Cancel appointment</button>
+                      <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          }
+        }
+
+        @a.appointment.cancellationReason.map { reason =>
+          @tags.sectioned.detail("Cancellation reason") {
+            @reason.description
+          }
+        }
+
+        @if(a.appointment.outcome.nonEmpty) {
+          @tags.sectioned.detail("Outcome") {
+            <ul class="list-unstyled">
+              @a.appointment.outcome.map { outcome =>
+                <li>@outcome.description</li>
+              }
+            </ul>
+          }
+        }
+      </div>
+      <div class="col-sm-6 col-md-4">
+        <div class="row form-horizontal">
+          <div class="col-sm-4 control-label">
+            Actions
+          </div>
+          <div class="col-sm-8">
+            <p>
+              <a class="btn btn-default btn-block" href="@controllers.admin.routes.AppointmentController.editForm(a.appointment.key)">Edit appointment</a>
+            </p>
+            <p>
+              <a class="btn @if(a.appointment.start.isBefore(JavaTime.offsetDateTime) && a.appointment.state.nonTerminal) {btn-primary} else {btn-default} btn-block" href="@controllers.admin.routes.AppointmentOutcomesController.outcomesForm(a.appointment.key)">
+                Appointment outcomes
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}

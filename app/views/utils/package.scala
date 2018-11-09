@@ -1,6 +1,7 @@
 package views
 
 import play.api.data.Form
+import play.twirl.api._
 
 /**
   * Miscellaneous view functions, as you might imagine.
@@ -8,6 +9,9 @@ import play.api.data.Form
   * Nothing app-specific in here, just generic form handling etc.
   */
 package object utils {
+
+  private val BR: Html = html"<br />"
+
 
   /**
     * If you are using a set of checkboxes to build a seq type field, this
@@ -31,4 +35,8 @@ package object utils {
     form(fieldName).indexes.flatMap { i =>
       form(s"$fieldName[$i]").value
     }
+
+  def nl2br(text: String): Content = HtmlFormat.fill(text.split("\n").flatMap { line =>
+    Seq(HtmlFormat.escape(line), BR)
+  }.toList)
 }

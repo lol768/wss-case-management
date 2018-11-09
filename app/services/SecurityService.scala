@@ -1,37 +1,58 @@
 package services
 
 import com.google.inject.ImplementedBy
+import controllers.RequestContext
 import helpers.Json.JsonClientError
 import javax.inject.{Inject, Singleton}
+import play.api.Configuration
 import play.api.libs.json.Json
 import play.api.mvc._
-import system.ImplicitRequestContext
+import system.{CSRFPageHelperFactory, ImplicitRequestContext, Roles}
 import warwick.sso._
+
+import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[SecurityServiceImpl])
 trait SecurityService {
   type AuthActionBuilder = ActionBuilder[AuthenticatedRequest, AnyContent]
 
   def SigninAwareAction: AuthActionBuilder
+  def SigninRequiredAction: AuthActionBuilder
   def RequiredRoleAction(role: RoleName): AuthActionBuilder
   def RequiredActualUserRoleAction(role: RoleName): AuthActionBuilder
 
   def RequireSysadmin: AuthActionBuilder
+  def RequireMasquerader: AuthActionBuilder
 }
 
 @Singleton
 class SecurityServiceImpl @Inject()(
-                                     val sso: SSOClient,
-                                     parse: PlayBodyParsers
-                                   ) extends SecurityService with Results with Rendering with AcceptExtractors with ImplicitRequestContext {
+  sso: SSOClient,
+  parse: PlayBodyParsers,
+  csrfPageHelperFactory: CSRFPageHelperFactory,
+  configuration: Configuration
+)(implicit executionContext: ExecutionContext) extends SecurityService with Results with Rendering with AcceptExtractors with ImplicitRequestContext {
 
   private def defaultParser = parse.default
 
   override def SigninAwareAction: AuthActionBuilder = sso.Lenient(defaultParser)
+  override def SigninRequiredAction: AuthActionBuilder = sso.Strict(defaultParser) andThen requireCondition(_.context.user.get.universityId.nonEmpty, noUniversityIdResponse)
   override def RequiredRoleAction(role: RoleName): AuthActionBuilder = sso.RequireRole(role, forbidden)(defaultParser)
   override def RequiredActualUserRoleAction(role: RoleName): AuthActionBuilder = sso.RequireActualUserRole(role, forbidden)(defaultParser)
 
-  val RequireSysadmin: AuthActionBuilder = RequiredActualUserRoleAction(RoleName("sysadmin"))
+  val RequireSysadmin: AuthActionBuilder = RequiredActualUserRoleAction(Roles.Sysadmin)
+  val RequireMasquerader: AuthActionBuilder = RequiredActualUserRoleAction(Roles.Masquerader)
+
+  class RequireConditionActionFilter(block: AuthenticatedRequest[_] => Boolean, otherwise: AuthenticatedRequest[_] => Result)(implicit val executionContext: ExecutionContext) extends ActionFilter[AuthenticatedRequest] {
+    override protected def filter[A](request: AuthenticatedRequest[A]): Future[Option[Result]] =
+      Future.successful {
+        if (block(request)) None
+        else Some(otherwise(request))
+      }
+  }
+
+  private def requireCondition(block: AuthenticatedRequest[_] => Boolean, otherwise: AuthenticatedRequest[_] => Result) =
+    new RequireConditionActionFilter(block, otherwise)
 
   private def forbidden(request: AuthenticatedRequest[_]) = {
     render {
@@ -64,4 +85,6 @@ class SecurityServiceImpl @Inject()(
 
   private val unauthorizedResponse =
     Unauthorized(Json.toJson(JsonClientError(status = "unauthorized", errors = Seq("You are not signed in.  You may authenticate through Web Sign-On."))))
+
+  private def noUniversityIdResponse(request: AuthenticatedRequest[_]) = Forbidden(views.html.errors.noUniversityId()(RequestContext.authenticated(sso, request, Nil, csrfPageHelperFactory, configuration)))
 }

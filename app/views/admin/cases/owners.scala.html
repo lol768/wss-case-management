@@ -1,0 +1,29 @@
+@import domain.Case
+@import warwick.sso.Usercode
+
+@(form: Form[Seq[Usercode]], clientCase: Case)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main("Edit owners") {
+  @b3.vertical.formCSRF(controllers.admin.routes.OwnersController.caseSubmit(clientCase.key)) { implicit ifc =>
+
+    @if(form.hasErrors) {
+      <div class="alert alert-danger">
+        There @tags.p(form.errors.size, "is")(plural = "are", showNumber = false) @tags.p(form.errors.size, "error")()
+        that prevented the owners from being changed: <br/>
+        @form.errors.map(_.format).mkString(", ")
+      </div>
+    }
+
+    @b3.free('_label -> "Owners") {
+      @tags.memberPicker(values = form.data.values.toSeq, name = "owners[]", placeholder = "Search for a team member", multiple = true)
+    }
+
+    @b3.free('_class -> "spaced-buttons") {
+      @if(!form.value.exists(_.contains(context.user.get.usercode))) {
+        <button type="submit" class="btn btn-primary" formaction="@controllers.admin.routes.OwnersController.caseSubmitSelf(clientCase.key)">Add me</button>
+      }
+      <button type="submit" class="btn btn-primary">Save</button>
+      <a href="@controllers.admin.routes.AdminController.teamHome(clientCase.team.id)" class="btn btn-default">Cancel</a>
+    }
+  }
+}

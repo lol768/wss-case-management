@@ -1,17 +1,177 @@
+
 # Routes
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
 ->          /sso                                    sso.Routes
 
+## Misc/System ##
+
 # Map static resources from the /public folder to the /assets URL path
++notiming
 GET         /assets/*file                           @controllers.Assets.versioned(path="/public", file: Asset)
 
 # Service health check
 GET         /service/gtg                            @controllers.ServiceCheckController.gtg
-GET         /service/healthcheck                    @controllers.ServiceCheckController.healthcheck
+GET         /service/healthcheck                    @warwick.healthcheck.InjectedHealthcheckController.index
+
+# Other services
+POST        /service/flexipicker                    @controllers.FlexiPickerController.queryJson
+GET         /service/appointmentsearch              @controllers.AppointmentSearchController.search
+POST        /service/appointmentsearch              @controllers.AppointmentSearchController.search
+POST        /service/appointmentsearch/:key         @controllers.AppointmentSearchController.lookup(key: domain.IssueKey)
+GET         /service/clientsearch                   @controllers.ClientSearchController.search(query: String ?= "")
+GET         /service/membersearch/:usercode         @controllers.MemberSearchController.search(usercode: String)
+POST        /service/membersearch/:usercode         @controllers.MemberSearchController.search(usercode: String)
+GET         /service/casesearch                     @controllers.CaseSearchController.search
+POST        /service/casesearch                     @controllers.CaseSearchController.search
+POST        /service/casesearch/:keyOrId            @controllers.CaseSearchController.lookup(keyOrId: String)
+GET         /service/enquirysearch                  @controllers.EnquirySearchController.search
+POST        /service/enquirysearch                  @controllers.EnquirySearchController.search
+POST        /service/enquirysearch/:key             @controllers.EnquirySearchController.lookup(key: domain.IssueKey)
 
 GET         /                                       @controllers.IndexController.home
+GET         /my-appointments                        @controllers.appointments.AppointmentController.redirectToMyAppointments
+GET         /enquiries                              @controllers.IndexController.enquiries
+GET         /enquiries/needing-reply                @controllers.IndexController.enquiriesNeedingReply(page: Int ?= 0)
+GET         /enquiries/awaiting-client              @controllers.IndexController.enquiriesAwaitingClient(page: Int ?= 0)
+GET         /enquiries/closed                       @controllers.IndexController.closedEnquiries(page: Int ?= 0)
+GET         /cases                                  @controllers.IndexController.cases
+GET         /cases/open                             @controllers.IndexController.openCases(page: Int ?= 0)
+GET         /cases/closed                           @controllers.IndexController.closedCases(page: Int ?= 0)
+GET         /at-risk-clients                        @controllers.IndexController.atRiskClients
+GET         /appointments                           @controllers.IndexController.appointmentsTab
+GET         /appointments/list                      @controllers.IndexController.appointments(start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
+GET         /appointments/needing-outcomes          @controllers.IndexController.appointmentsNeedingOutcomes
+GET         /messages                               @controllers.IndexController.messages
+GET         /client-appointments                    @controllers.IndexController.clientAppointments
+
+GET         /user-preferences                       @controllers.UserPreferencesController.form
+POST        /user-preferences                       @controllers.UserPreferencesController.submit
+POST        /user-preferences/calendar-view         @controllers.UserPreferencesController.calendarView
+
+## Clients ##
+
+GET         /register                               @controllers.registration.RegisterController.form
+POST        /register                               @controllers.registration.RegisterController.submit
+
+GET         /messages/:id                           @controllers.ClientMessagesController.messages(id: java.util.UUID)
+POST        /messages/:id                           @controllers.ClientMessagesController.addMessage(id: java.util.UUID)
+POST        /messages/:id/view                      @controllers.ClientMessagesController.auditView(id: java.util.UUID)
+GET         /messages/:id/:fileId                   @controllers.ClientMessagesController.download(id: java.util.UUID, fileId: java.util.UUID)
+
+## Enquiries ##
+
+GET         /enquiry                                @controllers.enquiries.EnquiryController.form()
+POST        /enquiry                                @controllers.enquiries.EnquiryController.submit()
+
+## Appointments ##
+
+POST        /appointment/:appointmentKey/accept     @controllers.appointments.AppointmentController.accept(appointmentKey: domain.IssueKey)
+POST        /appointment/:appointmentKey/decline    @controllers.appointments.AppointmentController.decline(appointmentKey: domain.IssueKey)
+
+## Teams ##
+
+GET         /team/:teamId                           @controllers.admin.AdminController.teamHome(teamId: String)
+GET         /team/:teamId/enquiries                 @controllers.admin.AdminController.enquiries(teamId: String)
+GET         /team/:teamId/enquiries/needing-reply   @controllers.admin.AdminController.enquiriesNeedingReply(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/enquiries/awaiting-client @controllers.admin.AdminController.enquiriesAwaitingClient(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/enquiries/closed          @controllers.admin.AdminController.closedEnquiries(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/cases                     @controllers.admin.AdminController.cases(teamId: String)
+GET         /team/:teamId/cases/open                @controllers.admin.AdminController.openCases(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/cases/closed              @controllers.admin.AdminController.closedCases(teamId: String, page: Int ?= 0)
+GET         /team/:teamId/at-risk-clients           @controllers.admin.AdminController.atRiskClients(teamId: String)
+GET         /team/all/appointments                  @controllers.admin.AdminController.appointmentsAllTeams(start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
+GET         /team/:teamId/appointments              @controllers.admin.AdminController.appointments(teamId: String, start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
+
+GET         /team/client/:universityID                          @controllers.admin.ClientController.client(universityID: warwick.sso.UniversityID)
+POST        /team/client/:universityID                          @controllers.admin.ClientController.updateSummary(universityID: warwick.sso.UniversityID)
+POST        /team/client/:universityID/invite                   @controllers.admin.ClientController.invite(universityID: warwick.sso.UniversityID)
+GET         /team/client/:universityID/registration-history     @controllers.admin.ClientController.registrationHistory(universityID: warwick.sso.UniversityID)
+
+GET         /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.messages(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.addMessage(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/close                     @controllers.admin.TeamEnquiryController.redirectToMessages(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey/close                     @controllers.admin.TeamEnquiryController.close(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/reopen                    @controllers.admin.TeamEnquiryController.redirectToMessages(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey/reopen                    @controllers.admin.TeamEnquiryController.reopen(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/reassign                  @controllers.admin.TeamEnquiryController.reassignForm(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey/reassign                  @controllers.admin.TeamEnquiryController.reassign(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquiryForm(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquirySubmit(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey/owners/self               @controllers.admin.OwnersController.enquirySubmitSelf(enquiryKey: domain.IssueKey)
+GET         /team/enquiry/:enquiryKey/:fileId                   @controllers.admin.TeamEnquiryController.download(enquiryKey: domain.IssueKey, fileId: java.util.UUID)
+
+GET         /team/case/create                       @controllers.admin.CaseController.createSelectTeam(fromEnquiry: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
+GET         /team/case/create/:teamId               @controllers.admin.CaseController.createForm(teamId: String, fromEnquiry: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
+POST        /team/case/create/:teamId               @controllers.admin.CaseController.create(teamId: String)
+GET         /team/case/:caseKey                     @controllers.admin.CaseController.view(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/edit                @controllers.admin.CaseController.editForm(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/edit                @controllers.admin.CaseController.edit(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/links               @controllers.admin.CaseController.links(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/link                @controllers.admin.CaseController.linkForm(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/link                @controllers.admin.CaseController.link(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/link/:id/delete     @controllers.admin.CaseController.deleteLink(caseKey: domain.IssueKey, id: java.util.UUID)
+DELETE      /team/case/:caseKey/link/:id            @controllers.admin.CaseController.deleteLink(caseKey: domain.IssueKey, id: java.util.UUID)
+GET         /team/case/:caseKey/notes               @controllers.admin.CaseController.notes(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/note                @controllers.admin.CaseController.addNote(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/note/:id            @controllers.admin.CaseController.editNoteForm(caseKey: domain.IssueKey, id: java.util.UUID)
+POST        /team/case/:caseKey/note/:id            @controllers.admin.CaseController.editNote(caseKey: domain.IssueKey, id: java.util.UUID)
+POST        /team/case/:caseKey/note/:id/delete     @controllers.admin.CaseController.deleteNote(caseKey: domain.IssueKey, id: java.util.UUID)
+DELETE      /team/case/:caseKey/note/:id            @controllers.admin.CaseController.deleteNote(caseKey: domain.IssueKey, id: java.util.UUID)
+GET         /team/case/:caseKey/close               @controllers.admin.CaseController.closeForm(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/close               @controllers.admin.CaseController.close(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/reopen              @controllers.admin.CaseController.reopen(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/reassign            @controllers.admin.CaseController.reassignForm(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/reassign            @controllers.admin.CaseController.reassign(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/owners              @controllers.admin.OwnersController.caseForm(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/owners              @controllers.admin.OwnersController.caseSubmit(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/owners/self         @controllers.admin.OwnersController.caseSubmitSelf(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/documents           @controllers.admin.CaseController.documents(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/document            @controllers.admin.CaseDocumentController.addDocumentForm(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/document            @controllers.admin.CaseDocumentController.addDocument(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.download(caseKey: domain.IssueKey, id: java.util.UUID)
+POST        /team/case/:caseKey/document/:id/delete @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
+DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
+GET         /team/case/:caseKey/messages            @controllers.admin.CaseController.messages(caseKey: domain.IssueKey)
+POST        /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.addMessage(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
+GET         /team/case/:caseKey/attachments/:fileId @controllers.admin.CaseMessageController.download(caseKey: domain.IssueKey, fileId: java.util.UUID)
+GET         /team/case/:caseKey/appointments        @controllers.admin.CaseController.appointments(caseKey: domain.IssueKey)
+
+GET         /team/appointment/create                @controllers.admin.AppointmentController.createSelectTeam(forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None, start: Option[java.time.OffsetDateTime] ?= None, duration: Option[java.time.Duration] ?= None)
+GET         /team/appointment/create/:teamId        @controllers.admin.AppointmentController.createForm(teamId: String, forCase: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None, start: Option[java.time.OffsetDateTime] ?= None, duration: Option[java.time.Duration] ?= None)
+POST        /team/appointment/create/:teamId        @controllers.admin.AppointmentController.create(teamId: String)
+POST        /team/appointment/freebusy              @controllers.admin.AppointmentController.freeBusy(start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
+POST        /team/appointment/freebusy/resources    @controllers.admin.AppointmentController.freeBusyResources()
+GET         /team/appointment/:key                  @controllers.admin.AppointmentController.view(key: domain.IssueKey)
+GET         /team/appointment/:key/edit             @controllers.admin.AppointmentController.editForm(key: domain.IssueKey)
+POST        /team/appointment/:key/edit             @controllers.admin.AppointmentController.edit(key: domain.IssueKey)
+POST        /team/appointment/:key/cancel           @controllers.admin.AppointmentController.cancel(key: domain.IssueKey)
+GET         /team/appointment/:key/outcomes         @controllers.admin.AppointmentOutcomesController.outcomesForm(key: domain.IssueKey)
+POST        /team/appointment/:key/outcomes         @controllers.admin.AppointmentOutcomesController.outcomes(key: domain.IssueKey)
+
+## Admins ##
+
+GET         /admin                                  @controllers.IndexController.redirectToPath(path = "/admin/reports")
+GET         /admin/reports                          @controllers.reports.ReportsController.home
+GET         /admin/locations                        @controllers.locations.LocationsController.list
+GET         /admin/locations/building/create        @controllers.locations.LocationsController.createBuildingForm
+POST        /admin/locations/building/create        @controllers.locations.LocationsController.createBuilding
+GET         /admin/locations/building/:id           @controllers.locations.LocationsController.editBuildingForm(id: java.util.UUID)
+POST        /admin/locations/building/:id           @controllers.locations.LocationsController.editBuilding(id: java.util.UUID)
+GET         /admin/locations/room/create            @controllers.locations.LocationsController.createRoomForm
+POST        /admin/locations/room/create            @controllers.locations.LocationsController.createRoom
+GET         /admin/locations/room/:id               @controllers.locations.LocationsController.editRoomForm(id: java.util.UUID)
+POST        /admin/locations/room/:id               @controllers.locations.LocationsController.editRoom(id: java.util.UUID)
+
+## Sysadmins ##
+
+GET         /sysadmin                               @controllers.IndexController.redirectToPath(path = "/sysadmin/masquerade")
+GET         /sysadmin/masquerade                    @controllers.sysadmin.MasqueradeController.masquerade
+GET         /sysadmin/data-generation               @controllers.sysadmin.DataGenerationController.generateForm()
+POST        /sysadmin/data-generation               @controllers.sysadmin.DataGenerationController.generate()
+
+## Fallbacks ##
 
 # Handle trailing slashes in URLs
 GET         /*path/                                 @controllers.IndexController.redirectToPath(path: String)

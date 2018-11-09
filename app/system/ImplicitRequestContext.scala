@@ -1,34 +1,55 @@
 package system
 
-import com.google.inject.Inject
 import controllers.RequestContext
-import play.api.mvc.Request
+import javax.inject.Inject
+import play.api.Configuration
+import play.api.mvc.RequestHeader
 import services.{AuditLogContext, NavigationService}
 import warwick.sso.{AuthenticatedRequest, SSOClient}
 
-trait ImplicitRequestContext {
+trait ImplicitRequestContext extends LowPriorityRequestContextImplicits {
 
   @Inject
-  private[this] val navigationService: NavigationService = null
+  private[this] var navigationService: NavigationService = _
 
   @Inject
-  private[this] val ssoClient: SSOClient = null
+  private[this] var ssoClient: SSOClient = _
 
-  implicit def requestContext(implicit request: Request[_]): RequestContext = request match {
-    case req: AuthenticatedRequest[_] =>
-      RequestContext.authenticated(ssoClient, req, navigationService.getNavigation(req.context))
+  @Inject
+  private[this] var csrfPageHelperFactory: CSRFPageHelperFactory = _
 
-    case req: WrappedAuthenticatedRequest[_] =>
-      RequestContext.authenticated(ssoClient, req, navigationService.getNavigation(req.authRequest.context))
+  @Inject
+  private[this] var configuration: Configuration = _
 
-    case _ => RequestContext.anonymous(ssoClient, request, Nil)
-  }
+  implicit def requestContext(implicit request: RequestHeader): RequestContext =
+    request match {
+      case req: AuthenticatedRequest[_] =>
+        RequestContext.authenticated(ssoClient, req, navigationService.getNavigation(req.context), csrfPageHelperFactory, configuration)
+
+      case req: WrappedAuthenticatedRequest[_] =>
+        RequestContext.authenticated(ssoClient, req.authRequest, navigationService.getNavigation(req.authRequest.context), csrfPageHelperFactory, configuration)
+
+      case _ =>
+        RequestContext.authenticated(ssoClient, request, loginContext => navigationService.getNavigation(loginContext), csrfPageHelperFactory, configuration)
+    }
+
+  implicit val requestContextBuilder: RequestHeader => RequestContext =
+    request => requestContext(request)
+
+}
+
+/**
+  * Low priority implicits to avoid implicit ambiguity when a TimingContext is needed (since it could either
+  * convert to RequestContext, or it could also go on to convert that to AuditLogcontext which is also a TimingContext).
+  */
+trait LowPriorityRequestContextImplicits {
 
   implicit def requestToAuditLogContext(implicit requestContext: RequestContext): AuditLogContext =
     AuditLogContext(
       usercode = requestContext.user.map(_.usercode),
       ipAddress = Some(requestContext.ipAddress),
-      userAgent = requestContext.userAgent
+      userAgent = requestContext.userAgent,
+      timingData = requestContext.timingData
     )
 
 }

@@ -1,0 +1,45 @@
+@import controllers.RequestContext
+@import domain.{Team, UserPreferences}
+
+@(
+  team: Team,
+  preferences: UserPreferences,
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@main(team.name) {
+  <ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active">
+      <a href="#enquiries" aria-controls="enquiries" role="tab" data-toggle="tab">@tags.icons.enquiries() Enquiries</a>
+    </li>
+    <li role="presentation">
+      <a href="#cases" aria-controls="cases" role="tab" data-toggle="tab">@tags.icons.cases() Cases</a>
+    </li>
+    <li role="presentation">
+      <a href="#clients" aria-controls="clients" role="tab" data-toggle="tab">@tags.icons.clients() Clients</a>
+    </li>
+    <li role="presentation">
+      <a href="#appointments" aria-controls="appointments" role="tab" data-toggle="tab">@tags.icons.appointments() Appointments</a>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <div role="tabpanel" class="tab-pane active" id="enquiries" data-href="@controllers.admin.routes.AdminController.enquiries(team.id)"></div>
+    <div role="tabpanel" class="tab-pane" id="cases" data-href="@controllers.admin.routes.AdminController.cases(team.id)"></div>
+    <div role="tabpanel" class="tab-pane" id="clients">
+      @views.html.admin.clientsTab(controllers.admin.routes.AdminController.atRiskClients(team.id))
+    </div>
+    <div role="tabpanel" class="tab-pane" id="appointments">
+      @views.html.admin.appointmentsTab(
+        controllers.admin.routes.AdminController.appointments(team.id),
+        Some(controllers.admin.routes.AdminController.appointmentsAllTeams()),
+        0,
+        None,
+        controllers.admin.routes.AppointmentController.createForm(team.id),
+        "team",
+        team.id,
+        s" assigned to ${team.name}",
+        preferences,
+      )
+    </div>
+  </div>
+}

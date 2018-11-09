@@ -1,0 +1,212 @@
+@import java.time.OffsetDateTime
+
+@import domain.{Case, Enquiry, EnquiryNote, EnquiryNoteType, IssueState, Member, MessageRender, MessageSender, SitsProfile}
+@import org.apache.tika.mime.MediaType
+@import warwick.core.helpers.JavaTime
+
+@(
+  enquiry: Enquiry,
+  profile: Option[SitsProfile],
+  messages: Seq[MessageRender],
+  notes: Seq[EnquiryNote],
+  owners: Set[Member],
+  clientLastRead: Option[OffsetDateTime],
+  stateChangeForm: Form[OffsetDateTime],
+  messageForm: Form[String],
+  canViewEnquiryTeam: Boolean,
+  linkedCases: Seq[Case],
+  supportedMimeTypes: Seq[MediaType],
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(
+  title = s"${enquiry.key.string} ${enquiry.subject}",
+  icon = tags.icons.enquiryState(enquiry.state, messages.last.message, MessageSender.Team)
+) {
+  <div class="enquiry-details">
+    <div class="enquiry-details--header">
+      <h5>
+        <div class="pull-right">
+          @if(enquiry.lastUpdated.isAfter(messages.last.message.created)) {
+            @JavaTime.Relative(enquiry.lastUpdated)
+          } else {
+            @JavaTime.Relative(messages.last.message.created)
+          }
+        </div>
+        <a href="@controllers.admin.routes.ClientController.client(enquiry.client.universityID)">@enquiry.client.safeFullName</a>,
+        @enquiry.client.universityID.string,
+        @profile.map { p =>
+          @views.tags.profiles.typeAndDepartment(p)
+        }
+      </h5>
+      <h5>
+        @if(enquiry.state == IssueState.Closed) {
+          Closed
+        } else {
+          Open,
+          @if(messages.last.message.sender == MessageSender.Client) {
+            requires action
+          } else {
+            waiting for client
+          }
+        }
+      </h5>
+    </div>
+
+    <div class="enquiry-details--actions row">
+      <div class="col-sm-6 col-md-7">
+        <div class="row form-horizontal">
+          <div class="col-sm-3 control-label">
+            Team
+          </div>
+          <div class="col-sm-9">
+            <div class="form-control-static">
+              <div>@enquiry.team.name</div>
+
+              @defining(notes.filter(_.noteType == EnquiryNoteType.Referral).reverse) { referralNotes: Seq[EnquiryNote] =>
+                @if(referralNotes.nonEmpty) {
+                  <div>
+                    <a role="button" href="#referral-notes-modal" data-toggle="modal" data-target="#referral-notes-modal">
+                      View @tags.p(referralNotes.size, "team assignment note")()
+                    </a>
+                  </div>
+
+                  <div class="modal fade" id="referral-notes-modal" tabindex="-1" role="dialog" aria-labelledby="referral-notes-modal-label">
+                    <div class="modal-dialog modal-lg" role="document">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                          <h4 class="modal-title" id="referral-notes-modal-label">Team reassignment notes</h4>
+                        </div>
+                        <div class="modal-body">
+                          @referralNotes.map { note =>
+                            <div class="panel panel-default">
+                              <div class="panel-heading">
+                                <h3 class="panel-title clearfix">
+                                  <span class="date pull-right">
+                                    @JavaTime.Relative(note.created)
+                                    @if(note.lastUpdated != note.created) {
+                                      (last updated @JavaTime.Relative(note.lastUpdated, lowercaseToday = true))
+                                    }
+                                  </span>
+                                </h3>
+                              </div>
+                              <div class="panel-body">
+                                @views.utils.nl2br(note.text)
+                              </div>
+                              <div class="panel-footer">
+                                <div class="author">@note.teamMember.safeFullName</div>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                        <div class="modal-footer spaced-buttons">
+                          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        </div>
+
+        @tags.manageOwners(
+          owners,
+          controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key),
+          controllers.admin.routes.OwnersController.enquirySubmitSelf(enquiry.key)
+        )
+
+        @if(linkedCases.nonEmpty) {
+          <div class="row form-horizontal">
+            <div class="col-sm-3 control-label">
+              @tags.p(linkedCases.size, "Linked case")(showNumber = false)
+            </div>
+            <div class="col-sm-9 form-control-static">
+              @linkedCases.map { clientCase =>
+                <div class="clearfix">
+                  <a href="@controllers.admin.routes.CaseController.view(clientCase.key)">
+                    @clientCase.key.string @clientCase.subject
+                  </a>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+      <div class="col-sm-6 col-md-4">
+        <div class="row form-horizontal">
+          <div class="col-sm-4 control-label">
+            Actions
+          </div>
+          <div class="col-sm-8">
+            @if(enquiry.state != IssueState.Closed) {
+              @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.close(enquiry.key)) { implicit ifc =>
+                @b3.validatedHidden(stateChangeForm, "version")
+
+                <p>
+                  <button type="submit" class="btn btn-primary btn-block">
+                    Close enquiry
+                  </button>
+                </p>
+              }
+            } else {
+              @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.reopen(enquiry.key)) { implicit ifc =>
+                @b3.validatedHidden(stateChangeForm, "version")
+
+                <p>
+                  <button type="submit" class="btn btn-primary btn-block">
+                    Reopen enquiry
+                  </button>
+                </p>
+              }
+            }
+
+            <p>
+              <a class="btn btn-default btn-block" href="@controllers.admin.routes.CaseController.createForm(enquiry.team.id, Some(enquiry.key))">
+                Create case from enquiry
+              </a>
+            </p>
+
+            <p>
+              <a class="btn btn-default btn-block" href="@controllers.admin.routes.TeamEnquiryController.reassignForm(enquiry.key)">
+                Assign to a different team
+              </a>
+            </p>
+
+            @if(canViewEnquiryTeam) {
+              <p>
+                <a class="btn btn-default btn-block" href="@controllers.admin.routes.AdminController.teamHome(enquiry.team.id)">
+                  Return to enquiries list
+                </a>
+              </p>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="enquiry-details--messages message-threads">
+      <div class="thread thread--team panel">
+        <div class="panel-body">
+          @messages.map { render =>
+            @views.html.tags.messages.message(
+              render.message,
+              render.files,
+              profile.map(_.fullName).getOrElse(enquiry.client.universityID.string),
+              render.message.teamMember.map { member => s"${member.safeFullName}, ${render.message.team.getOrElse(enquiry.team).name}" }
+                .getOrElse(render.message.team.getOrElse(enquiry.team).name),
+              f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key, f.id),
+              clientLastRead.filter(_ => render.message.sender == MessageSender.Team).map(_.isAfter(render.message.created))
+            )
+          }
+        </div>
+        @if(enquiry.state != IssueState.Closed) {
+          <div class="panel-footer">
+            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key), messageForm, supportedMimeTypes, enquiry.id, enquiry.client.universityID)
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

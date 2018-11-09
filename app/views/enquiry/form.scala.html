@@ -1,0 +1,43 @@
+@import domain.Enquiry.FormData
+@import org.apache.tika.mime.MediaType
+@import play.twirl.api._
+@(
+  form: Form[FormData],
+  supportedMimeTypes: Seq[MediaType]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"Make an enquiry") {
+  @* There's a bug in play-bootstrap where b3.free labels will be the wrong
+   * size if you define more than a single column width, so just defining md *@
+  @b3.horizontal.formCSRF(
+    controllers.enquiries.routes.EnquiryController.submit(),
+    "col-sm-2", "col-sm-5",
+    'enctype -> "multipart/form-data"
+  ) { implicit ifc =>
+    @b3.free('_label -> "Name") {
+      <p class="form-control-static">@context.user.flatMap(_.name.full)</p>
+    }
+
+    @b3.text(form("subject"),
+      '_label -> "Subject",
+      'autocomplete -> "off",
+    )
+
+    @b3.textarea(form("text"),
+      '_label -> html"""Message<br /><span class="hint">(please tell us as much as you need to about your enquiry)</span>""",
+      'rows -> 10
+    )
+
+    @b3.free('_label -> "Attachment", '_class -> form.error("file").map(_ => "has-error")) {
+      <input type="file" id="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" class="form-control" aria-label="Attach a file">
+      @b3.errors(form("file"))
+    }
+
+    @b3.free() {
+      <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Privacy statement</a>
+      <span class="hint">(what will happen after I send this enquiry?)</span>
+    }
+
+    @tags.submitOrCancel("Send this enquiry", controllers.routes.IndexController.home())
+  }
+}

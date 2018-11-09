@@ -1,0 +1,5 @@
+@(url: String)
+
+@email() {
+  A new registration has been received: @url
+}

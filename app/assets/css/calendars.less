@@ -1,0 +1,208 @@
+@import (inline) "fullcalendar/dist/fullcalendar.css";
+
+@event-wellbeing: #f2e4d2;
+@event-counselling: #e0d7ca;
+@event-mentalhealth: #f2ca99;
+@event-disability: #e5b8a3;
+
+@event-header-cancelled: #4d1309;
+@event-header-accepted: #224c2f;
+@event-header-provisional: #5e5e5f;
+@event-header-attended-with-outcomes: #202020;
+@event-header-attended-no-outcomes: #202020;
+
+.fc {
+  body & { font-size: inherit; } // Undo crimes
+
+  /* Position buttons actually in the center */
+  .fc-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .fc-header-toolbar h2 {
+    font-size: @font-size-h3;
+    color: @text-color;
+    line-height: (@font-size-h3 * 1.375);
+  }
+
+  .fc-event-container {
+    .link-colour(@text-color);
+  }
+
+  .fc-event, .fc-event-dot {
+    &.wellbeing {
+      background-color: @event-wellbeing;
+      border-color: darken(@event-wellbeing, 30%);
+    }
+
+    &.counselling {
+      background-color: @event-counselling;
+      border-color: darken(@event-counselling, 30%);
+    }
+
+    &.mentalhealth {
+      background-color: @event-mentalhealth;
+      border-color: darken(@event-mentalhealth, 30%);
+    }
+
+    &.disability {
+      background-color: @event-disability;
+      border-color: darken(@event-disability, 30%);
+    }
+
+    &.Tentative {
+      background-color: @state-info-bg;
+      border-color: @state-info-text;
+      opacity: 0.8;
+
+      #gradient > .striped();
+    }
+
+    &.Busy, &.WorkingElsewhere, &.OutOfOffice {
+      background-color: @state-success-bg;
+      border-color: @state-success-text;
+    }
+
+    &.Free {
+      background-color: white;
+      border-color: @state-info-text;
+    }
+
+    .fc-event-header {
+      font-size: @main-font-size;
+
+      .fc-icon, .fc-time {
+        display: inline-block;
+        vertical-align: middle;
+        font-size: .85em;
+      }
+
+      .fc-icon {
+        margin: 0 2px;
+
+        > .fal {
+          width: 1em; // Emulate fa-fw with the same width as icon-stack
+        }
+      }
+    }
+
+    &.fc-short {
+      .fc-event-header {
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      .fc-title {
+        vertical-align: middle;
+      }
+    }
+
+    &.Cancelled .fc-event-header {
+      color: @event-header-cancelled;
+    }
+
+    &.Accepted .fc-event-header {
+      color: @event-header-accepted;
+    }
+
+    &.Provisional .fc-event-header {
+      color: @event-header-provisional;
+    }
+
+    &.Attended .fc-event-header {
+      color: @event-header-attended-no-outcomes;
+    }
+
+    &.Attended.has-outcomes .fc-event-header {
+      color: @event-header-attended-with-outcomes;
+    }
+  }
+
+  // Undo FullCalendar's horrible table styling
+  table.fc-table-table {
+    table-layout: auto;
+    font-size: inherit;
+    border-bottom: 0;
+
+    th, td {
+      border-width: 0;
+    }
+  }
+
+  // Styling for table view
+  .fc-table-table {
+    border-collapse: separate;
+    border-spacing: 8px 16px;
+
+    .fc-table-heading {
+      background-color: lighten(@brand-colour, 55%);
+
+      .fc-table-heading--week {
+        font-size: 90%;
+      }
+    }
+
+    .fc-table-item {
+      &.wellbeing {
+        background-color: @event-wellbeing;
+        border-color: darken(@event-wellbeing, 30%);
+      }
+
+      &.counselling {
+        background-color: @event-counselling;
+        border-color: darken(@event-counselling, 30%);
+      }
+
+      &.mentalhealth {
+        background-color: @event-mentalhealth;
+        border-color: darken(@event-mentalhealth, 30%);
+      }
+
+      &.disability {
+        background-color: @event-disability;
+        border-color: darken(@event-disability, 30%);
+      }
+
+      &.fc-has-url {
+        cursor: pointer;
+      }
+
+      .fc-table-item--time--end-time,
+      .fc-table-item--title--key,
+      .fc-table-item--details--team-member {
+        font-size: 90%;
+      }
+
+      .fc-table-item--time {
+        text-align: right;
+
+        .fc-table-item--time--end-time {
+          color: @gray-light;
+        }
+      }
+
+      .fc-table-item--state {
+        white-space: nowrap;
+      }
+    }
+  }
+
+  th.fc-resource-cell {
+    font-weight: normal;
+    text-align: left;
+    padding: @table-cell-padding;
+  }
+
+  .fc-today.alert-info {
+    background-color: transparent;
+  }
+
+  .fc-agendaWeek-view .fc-day-header.fc-today {
+    color: @brand-colour;
+  }
+  .fc-agendaFourWeek-view .fc-today .fc-day-number {
+    color: @brand-colour;
+  }
+}

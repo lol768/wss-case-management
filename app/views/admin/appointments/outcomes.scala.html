@@ -1,0 +1,71 @@
+@import controllers.admin.AppointmentOutcomesController.AppointmentOutcomesFormData
+@import domain.{AppointmentCancellationReason, AppointmentRender, AppointmentState}
+
+@import domain.AppointmentOutcome
+@(
+  a: AppointmentRender,
+  form: Form[AppointmentOutcomesFormData],
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"Record appointment outcomes - ${a.appointment.key.string}") {
+  @b3.vertical.formCSRF(controllers.admin.routes.AppointmentOutcomesController.outcomes(a.appointment.key), 'class -> "appointment-outcomes") { implicit fc =>
+    @b3.validatedHidden(form, "version")
+
+    @defining(b3.inline.fieldConstructorSpecific) { implicit ifc: b3.B3FieldConstructor =>
+      <table class="table table-default">
+        <caption>Attendance</caption>
+        <thead>
+          <tr>
+            <th class="col-sm-4">Client</th>
+            <th class="col-sm-4">Attended</th>
+            <th class="col-sm-4">Cancellation reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          @a.clients.toSeq.sortBy(_.client.universityID.string).zipWithIndex.map { case (client, i) =>
+            <tr>
+              <td>
+                @client.client.safeFullName
+
+                @b3.validatedHidden(form, s"attendance[$i].client")
+              </td>
+              <td>
+                @b3.select(form(s"attendance[$i].state"),
+                  options = Seq(AppointmentState.Attended.entryName -> "Attended", AppointmentState.Cancelled.entryName -> "Did not attend"),
+                  '_hiddenLabel -> s"${client.client.safeFullName} attended",
+                  '_default -> "",
+                  'required -> true
+                )
+              </td>
+              <td>
+                @b3.select(form(s"attendance[$i].cancellationReason"),
+                  options = ("", "") +: AppointmentCancellationReason.values.map { r => r.entryName -> r.description },
+                  '_hiddenLabel -> s"${client.client.safeFullName} cancellation reason",
+                )
+                @b3.errors(form(s"attendance[$i]"))
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    @b3.checkboxGroup(
+      label = "Outcomes",
+      items = AppointmentOutcome.values,
+      form = form,
+      field = "outcome",
+      idPrefix = "outcome"
+    )
+
+    @b3.textarea(
+      form("note"),
+      '_label -> "Appointment notes (optional)",
+      '_help -> "(this will be added to all linked cases)",
+      'rows -> 5,
+      'helpOnTop -> true
+    )
+
+    @tags.submitOrCancel("Record outcomes", controllers.admin.routes.AppointmentController.view(a.appointment.key))
+  }
+}

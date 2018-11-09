@@ -1,0 +1,30 @@
+@import domain.Enquiry
+@import org.apache.tika.mime.MediaType
+@import domain.Client
+@import java.util.UUID
+@import warwick.sso.UniversityID
+@(
+  action: Call,
+  messageForm: Form[_],
+  supportedMimeTypes: Seq[MediaType],
+  issueID: UUID,
+  client: UniversityID
+)(implicit messagesProvider: MessagesProvider, requestHeader: RequestHeader)
+
+@b3.vertical.formCSRF(action, 'enctype -> "multipart/form-data", 'class -> "no-double-submit-protection") { implicit ifc =>
+  @b3.free('_label -> "Add a message", '_class -> messageForm("text").error.map(_ => "has-error").getOrElse("")) {
+    <div class="flex">
+      @b3.textarea(messageForm("text"), 'rows -> 1, 'id -> s"${issueID.toString}-${client.string}-text", Symbol("aria-label") -> "Add a message")(b3.clear.fieldConstructorSpecific, messagesProvider)
+      @tags.messages.sendButton()
+      @tags.messages.attachButton(supportedMimeTypes, s"${issueID.toString}-${client.string}-file")
+    </div>
+
+    @if(messageForm("text").hasErrors) {
+      <div class="help-block">
+      @messageForm("text").errors.map { error =>
+        @error.format
+      }
+      </div>
+    }
+  }
+}

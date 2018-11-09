@@ -1,0 +1,38 @@
+@import domain.{EnquiryListRender, Pagination}
+
+@(
+  requiringAction: Seq[EnquiryListRender],
+  requiringActionPagination: Pagination,
+  awaitingClient: Seq[EnquiryListRender],
+  awaitingClientPagination: Pagination,
+  closedEnquiries: Int,
+  closedEnquiriesRoute: Call,
+  searchScope: String,
+  searchScopeValue: String,
+  placeholderSuffix: String
+)(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
+
+@b3.vertical.formCSRF(routes.EnquirySearchController.search(),
+  'class -> "enquiry-search",
+  Symbol("data-search-scope") -> searchScope,
+  Symbol("data-search-scope-value") -> searchScopeValue
+) { implicit ifc =>
+  @b3.free('_class -> "search-default") {
+    <i class="fal fa-search"></i>
+    <input type="text" class="form-control input-lg" placeholder="Search enquiries@placeholderSuffix" aria-label="Search enquiries@placeholderSuffix" />
+  }
+}
+
+@views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction, requiringActionPagination)
+@views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient, awaitingClientPagination)
+
+@if(closedEnquiries == 0) {
+  <p>No closed enquiries to show</p>
+} else {
+  <details data-toggle="load" data-href="@closedEnquiriesRoute" data-target=".content">
+    <summary>Show @tags.p(closedEnquiries, "closed enquiry")(plural = "closed enquiries")</summary>
+    <div class="content">
+      @tags.icons.loadingSpinner() Loading&hellip;
+    </div>
+  </details>
+}

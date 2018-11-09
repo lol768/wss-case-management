@@ -1,0 +1,53 @@
+@import domain.{Case, Enquiry, IssueRender, IssueState, MessageSender}
+@import org.apache.tika.mime.MediaType
+@import warwick.core.helpers.JavaTime
+
+@(
+  issueRender: IssueRender,
+  f: Form[String],
+  supportedMimeTypes: Seq[MediaType],
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@subject = @{
+  issueRender.issue match {
+    case e: Enquiry => e.subject
+    case c: Case => "Enquiry"
+    case _ => ""
+  }
+}
+
+@main(s"${issueRender.issue.team.name} enquiry") {
+  <h2>
+    <div class="pull-right">
+      @JavaTime.Relative(issueRender.lastUpdatedDate)
+    </div>
+    @tags.icons.enquiryState(issueRender.issue.state, issueRender.messages.last.message, MessageSender.Client)
+    @subject
+  </h2>
+  <div class="message-threads">
+    <div class="thread thread--client panel panel-default">
+      <div class="panel-body">
+        @issueRender.messages.map { message =>
+          @views.html.tags.messages.message(
+            message = message.message,
+            files = message.files,
+            clientName = "You",
+            teamName = message.message.team.getOrElse(issueRender.issue.team).name,
+            attachmentRoute = f => controllers.routes.ClientMessagesController.download(issueRender.issue.id, f.id))
+        }
+      </div>
+      <div class="panel-footer">
+        @if(issueRender.issue.state != IssueState.Closed) {
+          @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), f, supportedMimeTypes, issueRender.issue.id, context.user.get.universityId.get)
+        } else {
+          <p>
+            We think this enquiry is now resolved, so we've marked it as closed.
+            But if there's anything else you want to ask us about this or any other subject,
+            you can always do so just by sending us a
+            <a href="@controllers.enquiries.routes.EnquiryController.form()">new enquiry</a>.
+          </p>
+        }
+      </div>
+    </div>
+  </div>
+}

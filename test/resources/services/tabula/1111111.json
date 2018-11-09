@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "message": "API requests must be authenticated with HTTP Basic Auth or OAuth"
+    }
+  ],
+  "status": "unauthorized",
+  "success": false
+}

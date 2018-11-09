@@ -1,0 +1,41 @@
+@import java.util.UUID
+
+@import domain.{CaseListRender, Client, Pagination}
+
+@(
+  openCases: Seq[CaseListRender],
+  pagination: Pagination,
+  closedCases: Int,
+  clients: Map[UUID, Set[Client]],
+  createRoute: Call,
+  closedCasesRoute: Call,
+  searchScope: String,
+  searchScopeValue: String,
+  placeholderSuffix: String
+)(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
+
+@b3.vertical.formCSRF(routes.CaseSearchController.search(),
+  'class -> "case-search",
+  Symbol("data-search-scope") -> searchScope,
+  Symbol("data-search-scope-value") -> searchScopeValue
+) { implicit ifc =>
+  @b3.free('_class -> "search-default") {
+    <i class="fal fa-search"></i>
+    <input type="text" class="form-control input-lg" placeholder="Search cases@placeholderSuffix" aria-label="Search cases@placeholderSuffix" />
+  }
+}
+
+<p><a href="@createRoute" class="btn btn-default">Create a new case</a></p>
+
+@views.html.admin.caseTable(Some("Open cases"), openCases, clients, pagination)
+
+@if(closedCases == 0) {
+  <p>No closed cases to show</p>
+} else {
+  <details data-toggle="load" data-href="@closedCasesRoute" data-target=".content">
+    <summary>Show @tags.p(closedCases, "closed case")()</summary>
+    <div class="content">
+      @tags.icons.loadingSpinner() Loading&hellip;
+    </div>
+  </details>
+}

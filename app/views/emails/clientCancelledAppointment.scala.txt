@@ -1,0 +1,7 @@
+@(url: String)
+
+@email() {
+  An appointment with Wellbeing Support Services has been cancelled.
+
+  Follow this link to see details: @url
+}

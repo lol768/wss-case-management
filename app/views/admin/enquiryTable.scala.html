@@ -1,0 +1,47 @@
+@import domain.{EnquiryListRender, Pagination}
+@import warwick.core.helpers.JavaTime
+
+@(
+  title: Option[String],
+  enquiries: Seq[EnquiryListRender],
+  pagination: Pagination,
+  emptyMessage: Option[String] = None,
+)(implicit context: RequestContext)
+
+@enquiryRow(render: EnquiryListRender) = {
+  <tr>
+    <td>
+      <a href="@controllers.admin.routes.ClientController.client(render.enquiry.client.universityID)">@render.enquiry.client.safeFullName</a>
+    </td>
+    <td>
+      <a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)">@render.enquiry.key.string @render.enquiry.subject</a>
+    </td>
+    <td>@JavaTime.Relative(render.lastUpdated)</td>
+  </tr>
+}
+
+@if(enquiries.nonEmpty) {
+  @if(pagination.isFirst) {
+    <table class="table table-default table-paginated">
+      @title.map { t => <caption>@t</caption> }
+      <thead>
+        <tr>
+          <th class="col-sm-3">Client</th>
+          <th class="col-sm-6">Subject</th>
+          <th class="col-sm-3">Last updated</th>
+        </tr>
+      </thead>
+      <tfoot>
+        @tags.tablePagination(pagination)
+      </tfoot>
+      <tbody>
+        @enquiries.map(e => enquiryRow(e))
+      </tbody>
+    </table>
+  } else {
+    @enquiries.map(e => enquiryRow(e))
+    @tags.tablePagination(pagination)
+  }
+} else {
+  @emptyMessage.map { m => <p>@m</p> }
+}

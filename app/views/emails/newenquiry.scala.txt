@@ -1,0 +1,5 @@
+@(url: String)
+
+@email() {
+  A new enquiry has been received: @url
+}

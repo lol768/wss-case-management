@@ -1,0 +1,61 @@
+@import java.time.OffsetDateTime
+@import java.util.UUID
+
+@import domain.{Case, CaseListRender, Client, Pagination}
+@import warwick.core.helpers.JavaTime
+
+@(
+  title: Option[String],
+  cases: Seq[CaseListRender],
+  clients: Map[UUID, Set[Client]],
+  pagination: Pagination,
+  emptyMessage: Option[String] = None
+)(implicit context: RequestContext)
+
+@caseRow(clientCase: Case, lastUpdated: OffsetDateTime) = {
+  <tr>
+    <td>
+      @clients.get(clientCase.id).map { caseClients =>
+        <ul class="list-unstyled">
+          @caseClients.toSeq.sorted.map { client =>
+            <li><a href="@controllers.admin.routes.ClientController.client(client.universityID)">@client.safeFullName</a></li>
+          }
+        </ul>
+      }
+    </td>
+    <td>
+      <a href="@controllers.admin.routes.CaseController.view(clientCase.key)">@clientCase.key.string @clientCase.subject</a>
+    </td>
+    <td>@JavaTime.Relative(lastUpdated)</td>
+  </tr>
+}
+
+@if(cases.nonEmpty) {
+  @if(pagination.isFirst) {
+    <table class="table table-default table-paginated">
+      @title.map { t => <caption>@t</caption> }
+      <thead>
+        <tr>
+          <th class="col-sm-3">Clients</th>
+          <th class="col-sm-6">Subject</th>
+          <th class="col-sm-3">Last updated</th>
+        </tr>
+      </thead>
+      <tfoot>
+        @tags.tablePagination(pagination)
+      </tfoot>
+      <tbody>
+        @cases.map { r =>
+          @caseRow(r.clientCase, r.lastUpdated)
+        }
+      </tbody>
+    </table>
+  } else {
+    @cases.map { r =>
+      @caseRow(r.clientCase, r.lastUpdated)
+    }
+    @tags.tablePagination(pagination)
+  }
+} else {
+  @emptyMessage.map { m => <p>@m</p> }
+}

@@ -1,0 +1,48 @@
+@import domain.{Appointment, AppointmentClient, AppointmentRender, AppointmentTeamMember, Case, Room}
+@import warwick.core.helpers.JavaTime
+
+@(
+  title: Option[String],
+  appointments: Seq[AppointmentRender],
+  emptyMessage: Option[String] = None,
+)(implicit context: RequestContext)
+
+@appointmentRow(appointment: Appointment, clients: Set[AppointmentClient], teamMembers: Set[AppointmentTeamMember], room: Option[Room], clientCases: Set[Case]) = {
+  <tr>
+    <td>
+      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string</a>
+    </td>
+    <td>
+      <ul class="list-unstyled">
+        @clients.toSeq.sortBy(_.client).map { client =>
+          <li>
+            <a href="@controllers.admin.routes.ClientController.client(client.client.universityID)">@client.client.safeFullName</a>
+          </li>
+        }
+      </ul>
+    </td>
+    <td>
+      @JavaTime.Relative(appointment.start)
+    </td>
+  </tr>
+}
+
+@if(appointments.nonEmpty) {
+  <table class="table table-default">
+    @title.map { t => <caption>@t</caption> }
+    <thead>
+      <tr>
+        <th class="col-sm-4">Appointment</th>
+        <th class="col-sm-4">Client</th>
+        <th class="col-sm-4">Meeting date</th>
+      </tr>
+    </thead>
+    <tbody>
+      @appointments.map { a =>
+        @appointmentRow(a.appointment, a.clients, a.teamMembers, a.room, a.clientCases)
+      }
+    </tbody>
+  </table>
+} else {
+  @emptyMessage.map { m => <p>@m</p> }
+}

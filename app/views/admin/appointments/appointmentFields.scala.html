@@ -1,0 +1,106 @@
+@import controllers.admin.AppointmentController.AppointmentFormData
+@import domain.{Appointment, AppointmentPurpose, AppointmentType, Room}
+@import views.html.b3.B3FieldConstructor
+
+@(
+  form: Form[AppointmentFormData],
+  availableRooms: Seq[Room],
+)(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
+
+<div class="row">
+  <div class="col-sm-6">
+    @hasClientError = @{
+      (form.errors("clients") ++ form("clients").indexes.flatMap(i => form.errors(s"clients[$i]"))).headOption
+    }
+    @b3.free('_label -> "Clients", '_class -> hasClientError.map(_ => "has-error")) {
+      @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Add a client", multiple = true, universityId = true, potentialClientsOnly = true, selectOnBlur = false)
+      @b3.indexedFieldErrors(form, "clients")
+    }
+  </div>
+  <div class="col-sm-6">
+    @b3.free('_label -> "Cases", '_class -> form.error("cases").map(_ => "has-error")) {
+      <div class="case-picker-collection" data-automatic="true" data-containers="case-picker-container">
+        @defining(form.data.filter { case (k, v) => k.startsWith("cases[") && v.nonEmpty }.values.toSeq) { values: Seq[String] =>
+          @if(values.nonEmpty){
+            @for(value <- values) {
+              <div class="case-picker-container">
+                <input type="text" class="case-picker form-control" name="cases[]" value="@value" placeholder="Add a case" autocomplete="off" aria-label="Add a case" />
+              </div>
+            }
+          }
+          <div class="case-picker-container">
+            <input type="text" class="case-picker form-control" name="cases[]" placeholder="Add a case" autocomplete="off" aria-label="Add a case" />
+          </div>
+        }
+      </div>
+      @b3.errors(form("cases"))
+    }
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-sm-6">
+    @b3.free('_label -> "Team members", '_class -> form.error("teamMembers").map(_ => "has-error")) {
+      @tags.memberPicker(values = form.data.filter { case (k, v) => k.startsWith("teamMembers[") && v.nonEmpty }.values.toSeq, name = "teamMembers[]", placeholder = "Add a team member", multiple = true)
+      @b3.errors(form("teamMembers"))
+    }
+  </div>
+  <div class="col-sm-6">
+    @b3.select(form("appointment.roomID"),
+      options = ("", "") +: availableRooms.map { r => r.id.toString -> s"${r.name}, ${r.building.name}" },
+      '_label -> "Room"
+    )
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-sm-6">
+    @b3.select(form("appointment.appointmentType"),
+      options = AppointmentType.values.map { t => t.entryName -> t.description },
+      '_label -> "Appointment type",
+      '_default -> "",
+      'required -> true
+    )
+  </div>
+  <div class="col-sm-6">
+    @b3.select(form("appointment.purpose"),
+      options = AppointmentPurpose.values.map { p => p.entryName -> p.description },
+      '_label -> "Appointment purpose",
+      '_default -> "",
+      'required -> true
+    )
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-sm-6">
+    @b3.inlineDatetimePicker(form("appointment.start"),
+      '_label -> "Date & time",
+      '_class -> "free-busy",
+      Symbol("data-stepping") -> 5,
+    )
+
+    <div class="modal fade" id="appointment-freebusy-modal" tabindex="-1" role="dialog" aria-labelledby="appointment-freebusy-modal-label">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-body">
+            <div class="appointment-freebusy-calendar no-wide-tables"></div>
+          </div>
+          <div class="modal-footer">
+            <p class="pull-left current"></p>
+            <button type="button" class="btn btn-primary" data-toggle="select">Select this slot</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6">
+    @b3.radio(form("appointment.duration"),
+      options = Appointment.DurationOptions.map { case (s, d) => d.getSeconds.toString -> s },
+      '_label -> "Duration",
+      '_default -> "",
+      'required -> true
+    )
+  </div>
+</div>

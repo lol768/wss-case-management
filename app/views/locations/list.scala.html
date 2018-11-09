@@ -1,0 +1,63 @@
+@import domain.{Building, Room}
+
+@(
+  buildings: Seq[Building],
+  rooms: Seq[Room]
+)(implicit context: RequestContext)
+
+@main("Locations") {
+  <table class="table table-default">
+    <caption>Buildings</caption>
+    <thead>
+      <tr>
+        <th class="col-sm-4">Name</th>
+        <th class="col-sm-8"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @buildings.map { building =>
+        <tr>
+          <td>@tags.mapLinkBuilding(building)</td>
+          <td>
+            <a href="@controllers.locations.routes.LocationsController.editBuildingForm(building.id)" class="btn btn-default btn-xs">Edit</a>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <p>
+    <a href="@controllers.locations.routes.LocationsController.createBuilding()" class="btn btn-default">Create building</a>
+  </p>
+
+  <table class="table table-default">
+    <caption>Rooms</caption>
+    <thead>
+      <tr>
+        <th class="col-sm-4">Name</th>
+        <th class="col-sm-8"></th>
+      </tr>
+    </thead>
+    <tbody>
+    @rooms.map { room =>
+      <tr>
+        <td>
+          @if(room.available) {
+            @tags.icons.roomAvailable()
+          } else {
+            @tags.icons.roomUnavailable()
+          }
+          @tags.mapLink(room)
+        </td>
+        <td>
+          <a href="@controllers.locations.routes.LocationsController.editRoomForm(room.id)" class="btn btn-default btn-xs">Edit</a>
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+
+  <p>
+    <a href="@controllers.locations.routes.LocationsController.createRoom()" class="btn btn-default">Create room</a>
+  </p>
+}

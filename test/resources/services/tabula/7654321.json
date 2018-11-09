@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "message": "Item not found: org.springframework.web.method.annotation.MethodArgumentTypeMismatchException: Failed to convert value of type 'java.lang.String' to required type 'uk.ac.warwick.tabula.data.model.Member'; nested exception is org.springframework.core.convert.ConversionFailedException: Failed to convert from type [java.lang.String] to type [@org.springframework.web.bind.annotation.PathVariable uk.ac.warwick.tabula.data.model.Member] for value '1234567'; nested exception is java.lang.IllegalStateException: Parsers are not allowed to return null: uk.ac.warwick.tabula.data.convert.MemberUniversityIdConverter@52186717"
+    }
+  ],
+  "status": "not_found",
+  "success": false
+}

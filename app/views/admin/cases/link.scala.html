@@ -1,0 +1,41 @@
+@import controllers.admin.CaseController.CaseLinkFormData
+@import domain.{Case, CaseLinkType}
+
+@(
+  c: Case,
+  form: Form[CaseLinkFormData]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"Link ${c.key.string} to another case") {
+  @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.CaseController.link(c.key)) { implicit fc =>
+    @if(CaseLinkType.values.size > 1) {
+      @b3.select(form("linkType"),
+        options = CaseLinkType.values.map { t => t.entryName -> t.outwardDescription },
+        '_colClass -> "col-md-6",
+        '_label -> "This case",
+        '_default -> "",
+        'required -> true
+      )
+    } else {
+      @b3.hidden(form("linkType"), 'value -> CaseLinkType.values.headOption.map(_.entryName))
+    }
+
+    @b3.text(form("targetID"),
+      '_colClass -> "col-md-6",
+      '_label -> "Case",
+      'class -> "case-picker",
+      '_class -> "case-picker-container",
+      Symbol("aria-label") -> "Case"
+    )
+
+    @b3.textarea(
+      form("message"),
+      '_colClass -> "col-md-6",
+      '_label -> "Associated case note",
+      '_help -> "(why is this case being linked to another case?)",
+      'helpOnTop -> true
+    )
+
+    @tags.submitOrCancel("Link", controllers.admin.routes.CaseController.view(c.key))
+  }
+}

@@ -1,0 +1,268 @@
+@import domain.CaseNoteType._
+@import domain.{DSAApplication, _}
+@import play.api.libs.json.Json
+@import warwick.core.helpers.JavaTime
+
+@(
+  c: Case,
+  profiles: Map[Client, Option[SitsProfile]],
+  caseTags: Set[CaseTag],
+  owners: Set[Member],
+  sectionNotes: Map[CaseNoteType, Seq[CaseNote]],
+  originalEnquiry: Option[Enquiry],
+  dsaApplication: Option[DSAApplication],
+  history: CaseHistory,
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@viewSectionNotes(noteType: CaseNoteType, link: String) = {
+  @defining(sectionNotes.getOrElse(noteType, Nil)) { notes: Seq[CaseNote] =>
+    @if(notes.nonEmpty) {
+      <a role="button" href="#@noteType.entryName-notes-modal" data-toggle="modal" data-target="#@noteType.entryName-notes-modal">
+        View @tags.p(notes.size, link)()
+      </a>
+
+      <div class="modal fade" id="@noteType.entryName-notes-modal" tabindex="-1" role="dialog" aria-labelledby="@noteType.entryName-notes-modal-label">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+              <h4 class="modal-title" id="@noteType.entryName-notes-modal-label">@{link.capitalize}s</h4>
+            </div>
+            <div class="modal-body">
+              @notes.map(n => tags.cases.caseNote(c, n))
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  }
+}
+
+@dsaField(label: String)(content: Html) = {
+  <div class="row">
+    <div class="col-sm-4 control-label">@label</div>
+    <div class="col-sm-8">
+      <div class="form-control-static">
+        @content
+      </div>
+    </div>
+  </div>
+}
+
+@main(s"${c.key.string} ${c.subject}") {
+  <div class="case-details">
+    <div class="case-details--header">
+      @profiles.keySet.toSeq.sorted.map { client =>
+        <h5>
+          <a href="@controllers.admin.routes.ClientController.client(client.universityID)">@client.safeFullName</a>,
+          @client.universityID.string,
+          @profiles.get(client).flatten.map { profile =>
+            @views.tags.profiles.typeAndDepartment(profile)
+          }
+        </h5>
+      }
+    </div>
+    <div class="row">
+      <div class="col-sm-6 col-md-7 field-history" data-field-history="@Json.stringify(Json.toJson(history)(CaseHistory.writer))">
+        <div class="hidden" data-field-history-field="subject" data-field-history-target=".id7-page-title h1"></div>
+
+        @tags.sectioned.detail("Date raised"){ <div>@JavaTime.Relative(c.created)</div> }
+
+        @tags.sectioned.detail("Team"){
+          <div data-field-history-field="team">@c.team.name</div>
+          @viewSectionNotes(Referral, "team assignment note")
+        }
+
+        @tags.sectioned.detail("State"){ <div data-field-history-field="state">@c.state</div> }
+
+        @if(c.incident.nonEmpty) {
+          @* If currently related to an incident... *@
+          @c.incident.map { incident =>
+            @tags.sectioned.detail("Incident") {
+              <div class="case-details--incident">
+                <span data-field-history-field="incidentDate">@JavaTime.Relative(incident.incidentDate)</span>
+                <span data-field-history-field="onCampus">@if(incident.onCampus) {On-campus} else {Off-campus}</span>
+                @if(incident.notifiedPolice) {
+                  <span data-field-history-field="notifiedPolice">Police notified</span>
+                } else if (history.notifiedPolice.exists(_._1.contains(true))) {
+                  <span data-field-history-field="notifiedPolice"><s>Police notified</s></span>
+                }
+
+                @if(incident.notifiedAmbulance) {
+                  <span data-field-history-field="notifiedAmbulance">Ambulance called</span>
+                } else if (history.notifiedAmbulance.exists(_._1.contains(true))) {
+                  <span data-field-history-field="notifiedAmbulance"><s>Ambulance called</s></span>
+                }
+
+                @if(incident.notifiedFire) {
+                  <span data-field-history-field="notifiedFire">Fire service called</span>
+                } else if (history.notifiedFire.exists(_._1.contains(true))) {
+                  <span data-field-history-field="notifiedFire"><s>Fire service called</s></span>
+                }
+              </div>
+            }
+          }
+        } else if(history.incidentDate.exists(_._1.nonEmpty)) {
+          @* If not currently related to an incident but was previously... *@
+          @tags.sectioned.detail("Incident"){
+            <span data-field-history-field="incidentDate">Not currently related to an incident</span>
+          }
+        }
+
+        @originalEnquiry.map { enquiry => @tags.sectioned.detail("Original enquiry"){
+            <a href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key)">@enquiry.key.string @enquiry.subject</a>
+            -
+            @JavaTime.Relative(enquiry.created)
+        }}
+
+        @tags.sectioned.detail("Cause"){ <div data-field-history-field="cause">@c.cause.description</div> }
+
+        @c.caseType.map { caseType => @tags.sectioned.detail("Case type"){
+            <div data-field-history-field="caseType">@caseType.description</div>
+        }}
+
+        @if(caseTags.nonEmpty || history.tags.size > 1) {
+          @tags.sectioned.detail("Tags"){
+            <div data-field-history-field="tags">
+              @if(caseTags.nonEmpty) {
+                @caseTags.toSeq.map(_.description).sorted.mkString(", ")
+              } else {
+                None
+              }
+            </div>
+          }
+        }
+
+        @tags.manageOwners(
+          owners,
+          controllers.admin.routes.OwnersController.caseSubmit(c.key),
+          controllers.admin.routes.OwnersController.caseSubmitSelf(c.key),
+        )
+
+        @* Only show DSA fields for Disability or MentalHealth cases *@
+        @if(DSAApplication.DSATeams.contains(c.team)){
+          @if(dsaApplication.isDefined) {
+            @dsaApplication.map { dsa =>
+              @tags.sectioned.detail("DSA application") {
+
+                @dsaField("Date of application"){
+                  <div data-field-history-field="dsaApplicationDate">
+                    @dsa.applicationDate.map { applicationDate =>
+                      @JavaTime.Relative(applicationDate)
+                    }.getOrElse {
+                      No application date
+                    }
+                  </div>
+                }
+
+                @dsaField("Application decision") {
+                  <div data-field-history-field="dsaFundingApproved">
+                    @dsa.fundingApproved.map { fa =>
+                      @if(fa) {Approved } else { Rejected }
+                    }.getOrElse {
+                      Pending
+                    }
+                  </div>
+                }
+
+                @if(dsa.fundingApproved.isDefined) {
+
+                  @dsaField("Date of decision") {
+                    <div data-field-history-field="dsaConfirmationDate">
+                      @dsa.confirmationDate.map { confirmationDate =>
+                        @JavaTime.Relative(confirmationDate)
+                      }.getOrElse {
+                        No confirmation date
+                      }
+                    </div>
+                  }
+
+                  @if(dsa.fundingApproved.get){
+                    @dsaField("Funding types") {
+                      <div data-field-history-field="dsaFundingTypes">
+                        @if(dsa.fundingTypes.nonEmpty) {
+                          @dsa.fundingTypes.toSeq.map(_.description).sorted.mkString(", ")
+                        } else {
+                          None
+                        }
+                      </div>
+                    }
+                  } else {
+                    @dsaField("Ineligibility reason") {
+                      <div data-field-history-field="dsaIneligibilityReason">
+                        @dsa.ineligibilityReason.map { ineligibilityReason =>
+                          @ineligibilityReason.description
+                        }.getOrElse {
+                          Not specified
+                        }
+                      </div>
+                    }
+                  }
+                }
+              }
+            }
+          } else if (history.dsaApplicationDate.exists(_._1.exists(_.isDefined))) {
+            @tags.sectioned.detail("DSA application") {
+              <span data-field-history-field="dsaApplicationDate">Not currently related to a DSA application</span>
+            }
+          }
+        }
+
+        @if(c.clientRiskTypes.nonEmpty || history.clientRiskTypes.size > 1) {
+          @tags.sectioned.detail("Client risk type"){
+            <div data-field-history-field="clientRiskTypes">
+              @if(c.clientRiskTypes.nonEmpty) {
+                @c.clientRiskTypes.toSeq.map(_.description).sorted.mkString(", ")
+              } else {
+                None
+              }
+            </div>
+          }
+        }
+
+      </div>
+      <div class="col-sm-6 col-md-4">
+        <div class="row form-horizontal">
+          <div class="col-sm-4 control-label">
+            Actions
+          </div>
+          <div class="col-sm-8">
+            <p>
+              @if(c.state != IssueState.Closed) {
+                <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Close case</a>
+              } else {
+                <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Reopen case</a>
+              }
+            </p>
+            <p>
+              <a href="@controllers.admin.routes.CaseController.editForm(c.key)" class="btn btn-default btn-block">Edit case</a>
+            </p>
+            <p>
+              <a href="@controllers.admin.routes.CaseDocumentController.addDocumentForm(c.key)" class="btn btn-default btn-block">Add a document</a>
+            </p>
+            <p>
+              <a href="@controllers.admin.routes.AppointmentController.createForm(c.team.id, forCase = Some(c.key))" class="btn btn-default btn-block">Create an appointment</a>
+            </p>
+            <p>
+              <a href="@controllers.admin.routes.CaseController.linkForm(c.key)" class="btn btn-default btn-block">Link to another case</a>
+            </p>
+            <p>
+              <a href="@controllers.admin.routes.CaseController.reassign(c.key)" class="btn btn-default btn-block">Assign to a different team</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    @tags.sectioned.sectionAsync("case", "Case links", isCollapsible = true, url = controllers.admin.routes.CaseController.links(c.key), isOpen = true)
+
+    @tags.sectioned.sectionAsync("case", "Documents", isCollapsible = true, url = controllers.admin.routes.CaseController.documents(c.key), isOpen = true)
+
+    @tags.sectioned.sectionAsync("case", "Appointments", isCollapsible = true, url = controllers.admin.routes.CaseController.appointments(c.key), isOpen = true)
+
+    @tags.sectioned.sectionAsync("case", "Case notes", isCollapsible = true, url = controllers.admin.routes.CaseController.notes(c.key), showCount = true)
+
+    @tags.sectioned.sectionAsync("case", "Messages", isCollapsible = profiles.size == 1, url = controllers.admin.routes.CaseController.messages(c.key), showCount = true)
+
+  </div>
+}

@@ -1,5 +1,76 @@
-@()(implicit context: RequestContext)
+@import controllers.RequestContext
+@import domain.{Team, UserPreferences}
+@import org.apache.tika.mime.MediaType
 
-@main("Home") {
-  <p>Lorem ipsum dolor sit amet</p>
+@(
+  clientAppointmentCount: Int,
+  teams: Seq[Team],
+  supportedMimeTypes: Seq[MediaType],
+  preferences: UserPreferences,
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@if(teams.isEmpty) {
+  @main("My messages", hidePageTitle = true) {
+    <ul class="nav nav-tabs" role="tablist">
+      <li role="presentation" class="active">
+        <a href="#mymessages" aria-controls="mymessages" role="tab" data-toggle="tab">@tags.icons.myMessages() My messages</a>
+      </li>
+      <li role="presentation">
+        <a href="#myappointments" aria-controls="myappointments" role="tab" data-toggle="tab">
+          @tags.icons.myAppointments()
+          My appointments
+          @if(clientAppointmentCount > 0) {
+            <span class="badge">@clientAppointmentCount</span>
+          }
+        </a>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <div role="tabpanel" class="tab-pane active" id="mymessages" data-href="@routes.IndexController.messages()"></div>
+      <div role="tabpanel" class="tab-pane" id="myappointments" data-href="@routes.IndexController.clientAppointments()"></div>
+    </div>
+  }
+} else {
+  @main(s"${context.user.flatMap(_.name.full).get}${if(teams.size == 1) s", ${teams.head.name}" else ""}") {
+    <h4>Enquiries, cases and appointments assigned to me</h4>
+
+    <ul class="nav nav-tabs" role="tablist">
+      <li role="presentation" class="active">
+        <a href="#enquiries" aria-controls="enquiries" role="tab" data-toggle="tab">@tags.icons.enquiries() Enquiries</a>
+      </li>
+      <li role="presentation">
+        <a href="#cases" aria-controls="cases" role="tab" data-toggle="tab">@tags.icons.cases() Cases</a>
+      </li>
+      <li role="presentation">
+        <a href="#clients" aria-controls="clients" role="tab" data-toggle="tab">@tags.icons.clients() Clients</a>
+      </li>
+      <li role="presentation">
+        <a href="#appointments" aria-controls="appointments" role="tab" data-toggle="tab">@tags.icons.appointments() Appointments</a>
+      </li>
+      <li role="presentation">
+        <a href="#mymessages" aria-controls="mymessages" role="tab" data-toggle="tab">@tags.icons.myMessages() My messages</a>
+      </li>
+      <li role="presentation">
+        <a href="#myappointments" aria-controls="myappointments" role="tab" data-toggle="tab">
+          @tags.icons.myAppointments()
+          My appointments
+          @if(clientAppointmentCount > 0) {
+            <span class="badge">@clientAppointmentCount</span>
+          }
+        </a>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <div role="tabpanel" class="tab-pane active" id="enquiries" data-href="@routes.IndexController.enquiries()"></div>
+      <div role="tabpanel" class="tab-pane" id="cases" data-href="@routes.IndexController.cases()"></div>
+      <div role="tabpanel" class="tab-pane" id="clients">
+        @views.html.admin.clientsTab(routes.IndexController.atRiskClients)
+      </div>
+      <div role="tabpanel" class="tab-pane" id="appointments" data-href="@routes.IndexController.appointmentsTab()"></div>
+      <div role="tabpanel" class="tab-pane" id="mymessages" data-href="@routes.IndexController.messages()"></div>
+      <div role="tabpanel" class="tab-pane" id="myappointments" data-href="@routes.IndexController.clientAppointments()"></div>
+    </div>
+  }
 }

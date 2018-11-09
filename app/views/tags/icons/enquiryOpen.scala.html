@@ -1,0 +1,5 @@
+@import domain.MessageData
+@import domain.MessageSender
+@(lastMessage: MessageData, viewer: MessageSender)
+<i title="Enquiry open, waiting for your response" class="icon-tooltip fal fa-fw fa-comment-edit awaiting heartbeat @if(lastMessage.sender == viewer){hidden}"></i>
+<i title="Enquiry open, waiting for @if(viewer == MessageSender.Team){client} else {WSS}" class="icon-tooltip fal fa-fw fa-comment-dots @if(lastMessage.sender != viewer){hidden}"></i>

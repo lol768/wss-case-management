@@ -1,0 +1,1999 @@
+{
+  "member": {
+    "affiliatedDepartments": [
+      {
+        "code": "lf",
+        "name": "Life Sciences"
+      }
+    ],
+    "currentAddress": {
+      "line1": "HB666",
+      "line2": "Heronbank",
+      "line3": "University of Warwick",
+      "line4": "Coventry",
+      "postcode": "CV4 7ES"
+    },
+    "dateOfBirth": "1995-08-23",
+    "disability": {
+      "code": "I",
+      "definition": "Unclassified disability",
+      "sitsDefinition": "Condition not listed"
+    },
+    "disabilityFundingStatus": {
+      "code": "5",
+      "description": "Not in receipt of DSA"
+    },
+    "email": "Reiher.Gwenyn@warwick.ac.uk",
+    "firstName": "Reiher",
+    "fullFirstName": "Reiher",
+    "fullName": "Reiher Gwenyn",
+    "gender": "Male",
+    "groupName": "Postgraduate (research) FT",
+    "homeDepartment": {
+      "code": "lf",
+      "name": "Life Sciences"
+    },
+    "homeEmail": "Reiher.Gwenyn@warwick.ac.uk",
+    "inUseFlag": "Active",
+    "inactivationDate": "2019-09-30",
+    "lastName": "Gwenyn",
+    "mobileNumber": "07743766700",
+    "nationality": "British",
+    "officialName": "Mr Reiher Gwenyn",
+    "studentCourseDetails": [
+      {
+        "award": {
+          "code": "MBIO",
+          "name": "Master of Biological Sciences (with Honours)"
+        },
+        "beginDate": "2011-10-03",
+        "course": {
+          "code": "UBSA-C666",
+          "name": "Microbiology and Virology",
+          "type": "UG"
+        },
+        "courseYearLength": "3",
+        "currentRoute": {
+          "adminDepartment": {
+            "code": "lf",
+            "name": "Life Sciences"
+          },
+          "code": "c1a4",
+          "name": "Medical Microbiology and Virology"
+        },
+        "department": {
+          "code": "lf",
+          "name": "Life Sciences"
+        },
+        "endDate": "2012-09-30",
+        "expectedEndDate": "2014-06-28",
+        "levelCode": "4",
+        "moduleRegistrations": [
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "D",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs110",
+              "name": "Animal & Plant Biology"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "A",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs116",
+              "name": "Quantitative Biology"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "A",
+            "cats": 36.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs121",
+              "name": "Biological Sciences/Microbiology/Virology Laboratories & Assessed Work"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "B",
+            "cats": 24.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs125",
+              "name": "Proteins, Genes and Genetics"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "D",
+            "cats": 18.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs127",
+              "name": "Agents of Infectious Disease"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "B",
+            "cats": 6.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs128",
+              "name": "Biostatistics"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "D",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs129",
+              "name": "Physiology and Metabolism"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs131",
+              "name": "Health & the Community"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs211",
+              "name": "Immunology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs212",
+              "name": "Evolution"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "A",
+            "cats": 30.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs215",
+              "name": "Biological Sciences/Micro/Virol Laboratories"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "A",
+            "cats": 15.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs241",
+              "name": "Assessments for Biological Sciences/Microbiology/Virology/Biomedical Science"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs244",
+              "name": "Protein Structure and Function"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs255",
+              "name": "Clinical Microbiology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs262",
+              "name": "Epidemiology & Public Health"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs263",
+              "name": "Viruses & Disease"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs270",
+              "name": "Virology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs271",
+              "name": "Molecular Biology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs272",
+              "name": "Cell Biology 1"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs273",
+              "name": "Cell Biology 2"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs318",
+              "name": "Protein Targeting"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "A",
+            "cats": 24.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs341",
+              "name": "Research Project"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs347",
+              "name": "Oncology"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "A1",
+            "cats": 24.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs355",
+              "name": "Laboratories and Assessments for Microbiology/Virology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs372",
+              "name": "Infectious Diseases and Health"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "14/15",
+            "assessmentGroup": "A1",
+            "cats": 10.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs944",
+              "name": "Fundamental Principles of Drug Discovery"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf204",
+              "name": "Microbial Pathogens"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf301",
+              "name": "Bacteria: Genes to Behaviour"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf302",
+              "name": "Pathogenicity & Pathogenesis of Infection"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf303",
+              "name": "Medical Virology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "14/15",
+            "assessmentGroup": "A",
+            "cats": 30.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf904",
+              "name": "MBio Research Skills"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "14/15",
+            "assessmentGroup": "A",
+            "cats": 80.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf905",
+              "name": "MBio Research Project"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          }
+        ],
+        "mostSignificant": false,
+        "reasonForTransferCode": "CT",
+        "relationships": {},
+        "scjCode": "1234567/1",
+        "sprCode": "1234567/1",
+        "statusOnCourse": {
+          "code": "PI",
+          "name": "Permanently Withdrawn - In Year Course Transfer"
+        },
+        "statusOnRoute": {
+          "code": "P",
+          "name": "Permanently Withdrawn"
+        },
+        "studentCourseYearDetails": [
+          {
+            "academicYear": "11/12",
+            "enrolmentDepartment": {
+              "code": "lf",
+              "name": "Life Sciences"
+            },
+            "enrolmentStatus": {
+              "code": "F",
+              "name": "Fully Enrolled for this session"
+            },
+            "modeOfAttendance": {
+              "code": "F",
+              "name": "Full-time according to Funding Council definitions"
+            },
+            "route": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "c520",
+              "name": "Microbiology and Virology"
+            },
+            "sceSequenceNumber": "1",
+            "studyLevel": "1",
+            "yearOfStudy": 1
+          },
+          {
+            "academicYear": "12/13",
+            "enrolmentDepartment": {
+              "code": "lf",
+              "name": "Life Sciences"
+            },
+            "enrolmentStatus": {
+              "code": "PI",
+              "name": "Permanently Withdrawn - In Year Course Transfer"
+            },
+            "modeOfAttendance": {
+              "code": "F",
+              "name": "Full-time according to Funding Council definitions"
+            },
+            "route": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "c520",
+              "name": "Microbiology and Virology"
+            },
+            "sceSequenceNumber": "2",
+            "studyLevel": "2",
+            "yearOfStudy": 2
+          }
+        ]
+      },
+      {
+        "award": {
+          "code": "MBIO",
+          "name": "Master of Biological Sciences (with Honours)"
+        },
+        "beginDate": "2012-10-01",
+        "course": {
+          "code": "UBSA-C526",
+          "name": "Medical Microbiology and Virology",
+          "type": "UG"
+        },
+        "courseYearLength": "3",
+        "currentRoute": {
+          "adminDepartment": {
+            "code": "lf",
+            "name": "Life Sciences"
+          },
+          "code": "c1a4",
+          "name": "Medical Microbiology and Virology"
+        },
+        "department": {
+          "code": "lf",
+          "name": "Life Sciences"
+        },
+        "endDate": "2014-01-20",
+        "expectedEndDate": "2015-06-27",
+        "levelCode": "4",
+        "moduleRegistrations": [
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "D",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs110",
+              "name": "Animal & Plant Biology"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "A",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs116",
+              "name": "Quantitative Biology"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "A",
+            "cats": 36.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs121",
+              "name": "Biological Sciences/Microbiology/Virology Laboratories & Assessed Work"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "B",
+            "cats": 24.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs125",
+              "name": "Proteins, Genes and Genetics"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "D",
+            "cats": 18.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs127",
+              "name": "Agents of Infectious Disease"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "B",
+            "cats": 6.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs128",
+              "name": "Biostatistics"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "D",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs129",
+              "name": "Physiology and Metabolism"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs131",
+              "name": "Health & the Community"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs211",
+              "name": "Immunology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs212",
+              "name": "Evolution"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "A",
+            "cats": 30.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs215",
+              "name": "Biological Sciences/Micro/Virol Laboratories"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "A",
+            "cats": 15.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs241",
+              "name": "Assessments for Biological Sciences/Microbiology/Virology/Biomedical Science"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs244",
+              "name": "Protein Structure and Function"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs255",
+              "name": "Clinical Microbiology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs262",
+              "name": "Epidemiology & Public Health"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs263",
+              "name": "Viruses & Disease"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs270",
+              "name": "Virology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs271",
+              "name": "Molecular Biology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs272",
+              "name": "Cell Biology 1"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs273",
+              "name": "Cell Biology 2"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs318",
+              "name": "Protein Targeting"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "A",
+            "cats": 24.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs341",
+              "name": "Research Project"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs347",
+              "name": "Oncology"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "A1",
+            "cats": 24.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs355",
+              "name": "Laboratories and Assessments for Microbiology/Virology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs372",
+              "name": "Infectious Diseases and Health"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "14/15",
+            "assessmentGroup": "A1",
+            "cats": 10.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs944",
+              "name": "Fundamental Principles of Drug Discovery"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf204",
+              "name": "Microbial Pathogens"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf301",
+              "name": "Bacteria: Genes to Behaviour"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf302",
+              "name": "Pathogenicity & Pathogenesis of Infection"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf303",
+              "name": "Medical Virology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "14/15",
+            "assessmentGroup": "A",
+            "cats": 30.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf904",
+              "name": "MBio Research Skills"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "14/15",
+            "assessmentGroup": "A",
+            "cats": 80.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf905",
+              "name": "MBio Research Project"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          }
+        ],
+        "mostSignificant": false,
+        "reasonForTransferCode": "CT",
+        "relationships": {},
+        "scjCode": "1234567/2",
+        "sprCode": "1234567/1",
+        "statusOnCourse": {
+          "code": "PI",
+          "name": "Permanently Withdrawn - In Year Course Transfer"
+        },
+        "statusOnRoute": {
+          "code": "P",
+          "name": "Permanently Withdrawn"
+        },
+        "studentCourseYearDetails": [
+          {
+            "academicYear": "12/13",
+            "enrolmentDepartment": {
+              "code": "lf",
+              "name": "Life Sciences"
+            },
+            "enrolmentStatus": {
+              "code": "F",
+              "name": "Fully Enrolled for this session"
+            },
+            "modeOfAttendance": {
+              "code": "F",
+              "name": "Full-time according to Funding Council definitions"
+            },
+            "route": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "c526",
+              "name": "Medical Microbiology and Virology"
+            },
+            "sceSequenceNumber": "1",
+            "studyLevel": "2",
+            "yearOfStudy": 2
+          },
+          {
+            "academicYear": "13/14",
+            "casUsed": false,
+            "enrolmentDepartment": {
+              "code": "lf",
+              "name": "Life Sciences"
+            },
+            "enrolmentStatus": {
+              "code": "PI",
+              "name": "Permanently Withdrawn - In Year Course Transfer"
+            },
+            "modeOfAttendance": {
+              "code": "F",
+              "name": "Full-time according to Funding Council definitions"
+            },
+            "route": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "c526",
+              "name": "Medical Microbiology and Virology"
+            },
+            "sceSequenceNumber": "2",
+            "studyLevel": "3",
+            "tier4Visa": false,
+            "yearOfStudy": 3
+          }
+        ]
+      },
+      {
+        "award": {
+          "code": "MBIO",
+          "name": "Master of Biological Sciences (with Honours)"
+        },
+        "beginDate": "2014-01-21",
+        "course": {
+          "code": "ULFA-C1A4",
+          "name": "Medical Microbiology and Virology (MBio)",
+          "type": "UG"
+        },
+        "courseYearLength": "4",
+        "currentRoute": {
+          "adminDepartment": {
+            "code": "lf",
+            "name": "Life Sciences"
+          },
+          "code": "c1a4",
+          "name": "Medical Microbiology and Virology"
+        },
+        "department": {
+          "code": "lf",
+          "name": "Life Sciences"
+        },
+        "endDate": "2015-06-27",
+        "expectedEndDate": "2015-06-27",
+        "levelCode": "4",
+        "moduleRegistrations": [
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "D",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs110",
+              "name": "Animal & Plant Biology"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "A",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs116",
+              "name": "Quantitative Biology"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "A",
+            "cats": 36.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs121",
+              "name": "Biological Sciences/Microbiology/Virology Laboratories & Assessed Work"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "B",
+            "cats": 24.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs125",
+              "name": "Proteins, Genes and Genetics"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "D",
+            "cats": 18.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs127",
+              "name": "Agents of Infectious Disease"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "B",
+            "cats": 6.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs128",
+              "name": "Biostatistics"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "D",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs129",
+              "name": "Physiology and Metabolism"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "11/12",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs131",
+              "name": "Health & the Community"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs211",
+              "name": "Immunology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs212",
+              "name": "Evolution"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "A",
+            "cats": 30.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs215",
+              "name": "Biological Sciences/Micro/Virol Laboratories"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "A",
+            "cats": 15.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs241",
+              "name": "Assessments for Biological Sciences/Microbiology/Virology/Biomedical Science"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs244",
+              "name": "Protein Structure and Function"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs255",
+              "name": "Clinical Microbiology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs262",
+              "name": "Epidemiology & Public Health"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs263",
+              "name": "Viruses & Disease"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs270",
+              "name": "Virology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs271",
+              "name": "Molecular Biology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs272",
+              "name": "Cell Biology 1"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs273",
+              "name": "Cell Biology 2"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs318",
+              "name": "Protein Targeting"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "A",
+            "cats": 24.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs341",
+              "name": "Research Project"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs347",
+              "name": "Oncology"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "A1",
+            "cats": 24.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs355",
+              "name": "Laboratories and Assessments for Microbiology/Virology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs372",
+              "name": "Infectious Diseases and Health"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "14/15",
+            "assessmentGroup": "A1",
+            "cats": 10.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "bs944",
+              "name": "Fundamental Principles of Drug Discovery"
+            },
+            "occurrence": "A",
+            "status": "Option"
+          },
+          {
+            "academicYear": "12/13",
+            "assessmentGroup": "B",
+            "cats": 7.5,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf204",
+              "name": "Microbial Pathogens"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf301",
+              "name": "Bacteria: Genes to Behaviour"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf302",
+              "name": "Pathogenicity & Pathogenesis of Infection"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "13/14",
+            "assessmentGroup": "B",
+            "cats": 12.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf303",
+              "name": "Medical Virology"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "14/15",
+            "assessmentGroup": "A",
+            "cats": 30.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf904",
+              "name": "MBio Research Skills"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          },
+          {
+            "academicYear": "14/15",
+            "assessmentGroup": "A",
+            "cats": 80.0,
+            "module": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "lf905",
+              "name": "MBio Research Project"
+            },
+            "occurrence": "A",
+            "status": "Core"
+          }
+        ],
+        "mostSignificant": false,
+        "reasonForTransferCode": "SC",
+        "relationships": {},
+        "scjCode": "1234567/3",
+        "sprCode": "1234567/1",
+        "statusOnCourse": {
+          "code": "P",
+          "name": "Permanently Withdrawn"
+        },
+        "statusOnRoute": {
+          "code": "P",
+          "name": "Permanently Withdrawn"
+        },
+        "studentCourseYearDetails": [
+          {
+            "academicYear": "13/14",
+            "casUsed": false,
+            "enrolmentDepartment": {
+              "code": "lf",
+              "name": "Life Sciences"
+            },
+            "enrolmentStatus": {
+              "code": "F",
+              "name": "Fully Enrolled for this session"
+            },
+            "modeOfAttendance": {
+              "code": "F",
+              "name": "Full-time according to Funding Council definitions"
+            },
+            "route": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "c1a4",
+              "name": "Medical Microbiology and Virology"
+            },
+            "sceSequenceNumber": "1",
+            "studyLevel": "3",
+            "tier4Visa": false,
+            "yearOfStudy": 3
+          },
+          {
+            "academicYear": "14/15",
+            "casUsed": false,
+            "enrolmentDepartment": {
+              "code": "lf",
+              "name": "Life Sciences"
+            },
+            "enrolmentStatus": {
+              "code": "P",
+              "name": "Permanently Withdrawn"
+            },
+            "modeOfAttendance": {
+              "code": "F",
+              "name": "Full-time according to Funding Council definitions"
+            },
+            "route": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "c1a4",
+              "name": "Medical Microbiology and Virology"
+            },
+            "sceSequenceNumber": "2",
+            "studyLevel": "4",
+            "tier4Visa": false,
+            "yearOfStudy": 4
+          }
+        ]
+      },
+      {
+        "award": {
+          "code": "PHD",
+          "name": "Doctor of Philosophy"
+        },
+        "beginDate": "2015-10-05",
+        "course": {
+          "code": "RBSA-C1PH",
+          "name": "Ardea Herodias Studies",
+          "type": "PG(R)"
+        },
+        "courseYearLength": "4",
+        "currentRoute": {
+          "adminDepartment": {
+            "code": "lf",
+            "name": "Life Sciences"
+          },
+          "code": "c1ph",
+          "name": "Ardea Herodias Studies"
+        },
+        "department": {
+          "code": "lf",
+          "name": "Life Sciences"
+        },
+        "expectedEndDate": "2019-09-30",
+        "levelCode": "M2",
+        "moduleRegistrations": [],
+        "mostSignificant": true,
+        "relationships": {
+          "supervisor": [
+            {
+              "agent": {
+                "affiliatedDepartments": [
+                  {
+                    "code": "lf",
+                    "name": "Life Sciences"
+                  }
+                ],
+                "dateOfBirth": "1972-03-14",
+                "email": "garza.hegre@warwick.ac.uk",
+                "firstName": "Garza",
+                "fullFirstName": "Garza",
+                "fullName": "Garza Hegre",
+                "gender": "Female",
+                "groupName": "University Staff",
+                "homeDepartment": {
+                  "code": "lf",
+                  "name": "Life Sciences"
+                },
+                "inUseFlag": "Active",
+                "inactivationDate": "3333-03-03",
+                "jobTitle": "Reader",
+                "lastName": "Hegre",
+                "officialName": "Dr Garza Hegre",
+                "phoneNumber": "43766",
+                "title": "Dr",
+                "touchedDepartments": [
+                  {
+                    "code": "lf",
+                    "name": "Life Sciences"
+                  }
+                ],
+                "universityId": "1222222",
+                "userId": "lfhrnz",
+                "userType": "Staff"
+              },
+              "percentage": 100.0,
+              "startDate": "2017-11-02T06:24:45.501Z"
+            }
+          ]
+        },
+        "scjCode": "1234567/4",
+        "sprCode": "1234567/4",
+        "statusOnCourse": {
+          "code": "C",
+          "name": "Current Student"
+        },
+        "statusOnRoute": {
+          "code": "C",
+          "name": "Current Student"
+        },
+        "studentCourseYearDetails": [
+          {
+            "academicYear": "15/16",
+            "casUsed": false,
+            "enrolmentDepartment": {
+              "code": "lf",
+              "name": "Life Sciences"
+            },
+            "enrolmentStatus": {
+              "code": "F",
+              "name": "Fully Enrolled for this session"
+            },
+            "modeOfAttendance": {
+              "code": "F",
+              "name": "Full-time according to Funding Council definitions"
+            },
+            "route": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "c1ph",
+              "name": "Life Sciences"
+            },
+            "sceSequenceNumber": "1",
+            "studyLevel": "M2",
+            "tier4Visa": false,
+            "yearOfStudy": 1
+          },
+          {
+            "academicYear": "16/17",
+            "casUsed": false,
+            "enrolmentDepartment": {
+              "code": "lf",
+              "name": "Life Sciences"
+            },
+            "enrolmentStatus": {
+              "code": "F",
+              "name": "Fully Enrolled for this session"
+            },
+            "modeOfAttendance": {
+              "code": "F",
+              "name": "Full-time according to Funding Council definitions"
+            },
+            "route": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "c1ph",
+              "name": "Life Sciences"
+            },
+            "sceSequenceNumber": "2",
+            "studyLevel": "M2",
+            "tier4Visa": false,
+            "yearOfStudy": 2
+          },
+          {
+            "academicYear": "17/18",
+            "casUsed": false,
+            "enrolmentDepartment": {
+              "code": "lf",
+              "name": "Life Sciences"
+            },
+            "enrolmentStatus": {
+              "code": "F",
+              "name": "Fully Enrolled for this session"
+            },
+            "modeOfAttendance": {
+              "code": "F",
+              "name": "Full-time according to Funding Council definitions"
+            },
+            "route": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "c1ph",
+              "name": "Life Sciences"
+            },
+            "sceSequenceNumber": "3",
+            "studyLevel": "M2",
+            "tier4Visa": false,
+            "yearOfStudy": 3
+          },
+          {
+            "academicYear": "18/19",
+            "casUsed": false,
+            "enrolmentDepartment": {
+              "code": "lf",
+              "name": "Life Sciences"
+            },
+            "enrolmentStatus": {
+              "code": "2",
+              "name": "Not yet re-enrolled: continuing student"
+            },
+            "modeOfAttendance": {
+              "code": "F",
+              "name": "Full-time according to Funding Council definitions"
+            },
+            "route": {
+              "adminDepartment": {
+                "code": "lf",
+                "name": "Life Sciences"
+              },
+              "code": "c1ph",
+              "name": "Life Sciences"
+            },
+            "sceSequenceNumber": "4",
+            "studyLevel": "M2",
+            "tier4Visa": false,
+            "yearOfStudy": 4
+          }
+        ]
+      }
+    ],
+    "termtimeAddress": {
+      "line1": "HB666",
+      "line2": "Heronbank",
+      "line3": "University of Warwick",
+      "line4": "Coventry",
+      "postcode": "CV4 7ES"
+    },
+    "tier4VisaRequirement": false,
+    "title": "Mr",
+    "touchedDepartments": [
+      {
+        "code": "lf",
+        "name": "Life Sciences"
+      }
+    ],
+    "universityId": "1234567",
+    "userId": "lfhhrn",
+    "userType": "Student"
+  },
+  "status": "ok",
+  "success": true
+}

@@ -1,0 +1,7 @@
+@()(implicit context: RequestContext)
+
+@main("University ID not found") {
+  <p>Sorry, we couldn't find a University ID for your account, and a University ID is required to use this service.</p>
+
+  <p>You are currently logged in as <em>@context.user.get.usercode.string</em>; <a href="@context.logoutUrl">login with a different account</a>.</p>
+}

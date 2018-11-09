@@ -5,7 +5,7 @@
   path: String
 )
 
-<nav class="navbar navbar-primary @if(navigation.exists(_.isActive(path))) {hidden-xs}" role="navigation">
+<nav class="navbar navbar-primary @if(path != "/" && navigation.exists(_.isActive(path))) {hidden-xs}" role="navigation">
   <ul class="nav navbar-nav">
   @for(nav <- navigation) {
     @if(nav.dropdown && nav.children.nonEmpty) {

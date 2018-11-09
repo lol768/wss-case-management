@@ -1,0 +1,15 @@
+@(atRiskClientsRoute: Call)(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
+
+@b3.vertical.formCSRF(routes.ClientSearchController.search(), 'class -> "client-search") { implicit ifc =>
+  @b3.free('_class -> "search-default") {
+    <i class="fal fa-search"></i>
+    <input type="text" class="form-control input-lg" placeholder="Search clients" aria-label="Search clients" />
+  }
+}
+
+<details data-toggle="load" data-href="@atRiskClientsRoute" data-target=".content">
+  <summary>Show at risk clients</summary>
+  <div class="content">
+    @tags.icons.loadingSpinner() Loading&hellip;
+  </div>
+</details>

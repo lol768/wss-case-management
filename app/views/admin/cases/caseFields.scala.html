@@ -1,0 +1,138 @@
+@import controllers.admin.CaseController.CaseFormData
+@import domain._
+@import views.html.b3.B3FieldConstructor
+
+@(
+  team: Team,
+  form: Form[CaseFormData],
+  dsaForm: Form[Option[DSAApplicationSave]],
+)(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor, request: RequestHeader)
+
+@b3.validatedHidden(form, "originalEnquiry")
+
+@b3.text(form("case.subject"),
+  '_label -> "Subject",
+  'autocomplete -> "off",
+)
+
+@hasClientError = @{
+  (form.errors("clients") ++ form("clients").indexes.flatMap(i => form.errors(s"clients[$i]"))).headOption
+}
+@b3.free('_label -> "Clients", '_class -> hasClientError.map(_ => "has-error")) {
+  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for users", multiple = true, universityId = true, potentialClientsOnly = true, selectOnBlur = false)
+  @b3.indexedFieldErrors(form, "clients")
+}
+
+@if(CaseType.valuesFor(team).nonEmpty) {
+  @b3.select(form("case.caseType"),
+    options = CaseType.valuesFor(team).map { t => t.entryName -> t.description },
+    '_label -> "Case type",
+    '_default -> "",
+    'required -> true
+  )
+}
+
+@b3.select(form("case.cause"),
+  options = ("", "") +: CaseCause.values.map { c => c.entryName -> c.description },
+  '_label -> "Cause"
+)
+
+@b3.free('_label -> "Incident") {
+  <div class="checkbox">
+    <label for="incident_fields">
+      <input type="checkbox"
+             id="incident_fields"
+             data-toggle="optional-subform"
+             data-target="#incident"
+        @if(form.data.keys.exists(_.startsWith("case.incident."))) { checked }
+      >
+      This case relates to an incident
+    </label>
+  </div>
+}
+<fieldset id="incident">
+  @b3.radio(form("case.incident.onCampus"),
+    options = Seq("true" -> "On-campus", "false" -> "Off-campus"),
+    '_label -> "Where did the incident occur?"
+  )
+
+  @b3.free('_label -> "Additional services required for incident") {
+    @b3.checkbox(form("case.incident.notifiedPolice"), '_text -> "Police notified")
+    @b3.checkbox(form("case.incident.notifiedAmbulance"), '_text -> "Ambulance called")
+    @b3.checkbox(form("case.incident.notifiedFire"), '_text -> "Fire service called")
+  }
+
+  @b3.datetimePicker(form("case.incident.incidentDate"),
+    '_label -> "Date of incident"
+  )
+</fieldset>
+
+@* Only show DSA fields for Disability or MentalHealth cases *@
+@if(DSAApplication.DSATeams.contains(team)){
+  @b3.free('_label -> "DSA Funding Application") {
+    <div class="checkbox">
+      <label for="dsa_fields">
+        <input type="checkbox"
+          id="dsa_fields"
+          data-toggle="optional-subform"
+          data-target="#dsa"
+          @if(dsaForm.data.keys.exists(_.startsWith("dsaApplication."))) { checked }
+        >
+        This case relates to a DSA Funding Application
+      </label>
+    </div>
+  }
+  <fieldset id="dsa">
+
+  @b3.datePicker(dsaForm("dsaApplication.applicationDate"),
+    '_label -> "Date of application"
+  )
+
+  @b3.datePicker(dsaForm("dsaApplication.confirmationDate"),
+    '_label -> "Date of application decision"
+  )
+
+    @b3.select(dsaForm("dsaApplication.fundingApproved"),
+      '_label -> "Funding application decision",
+      Symbol("data-toggle") -> "optional-subform",
+      Symbol("data-targets") -> ".dsa-outcome"
+    ) { currentValues =>
+      <option value="">Pending</option>
+      <option @if(currentValues.contains("true")){ selected } value="true" data-target=".dsa-approved">Approved</option>
+      <option @if(currentValues.contains("false")){ selected } value="false" data-target=".dsa-rejected">Rejected</option>
+    }
+
+    <fieldset class="dsa-outcome dsa-approved">
+      @b3.checkboxGroup(
+        label = "In receipt of",
+        items = DSAFundingType.values,
+        form = dsaForm,
+        field = "dsaApplication.fundingTypes",
+        idPrefix = "fundingType"
+      )
+    </fieldset>
+
+    <fieldset class="dsa-outcome dsa-rejected">
+      @b3.select(dsaForm("dsaApplication.ineligibilityReason"),
+        options = ("", "") +: DSAIneligibilityReason.values.map { c => c.entryName -> c.description },
+        '_label -> "Ineligibility Reason"
+      )
+    </fieldset>
+  </fieldset>
+}
+
+@b3.checkboxGroup(
+  label = "Case tags",
+  items = CaseTag.values,
+  form = form,
+  field = "tags",
+  idPrefix = "tag"
+)
+
+@b3.checkboxGroup(
+  label = "Client risk type",
+  items = ClientRiskType.values,
+  form = form,
+  field = "case.clientRiskTypes",
+  idPrefix = "clientRiskType"
+)

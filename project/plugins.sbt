@@ -7,7 +7,9 @@ addSbtPlugin("uk.ac.warwick" % "play-warwick" % "0.7")
 addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.6.17")
 
 // .tgz generator
-addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.6")
+addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.10")
 
-// Code coverage
-addSbtPlugin("com.github.sbt" % "sbt-jacoco" % "3.1.0")
+// OWASP dependency scanner https://github.com/albuch/sbt-dependency-check
+addSbtPlugin("net.vonbuchholtz" % "sbt-dependency-check" % "0.2.7")
+
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.1")

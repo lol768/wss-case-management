@@ -1,0 +1,7 @@
+@import domain.Pagination
+
+@(pagination: Pagination)
+
+@if(pagination.hasNext) {
+  <tr class="pagination-row"><td colspan="3"><a class="pagination-link btn btn-default" href="@{pagination.route}?@{pagination.paginationParam}=@{pagination.currentPage+1}"><i class="fal fa-cloud-download"></i> Load more</a></td></tr>
+}

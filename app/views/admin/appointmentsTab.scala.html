@@ -1,0 +1,47 @@
+@import domain.UserPreferences
+
+@(
+  eventsRoute: Call,
+  allTeamsEventsRoute: Option[Call],
+  appointmentsNeedingOutcome: Int,
+  appointmentsNeedingOutcomeRoute: Option[Call],
+  createRoute: Call,
+  searchScope: String,
+  searchScopeValue: String,
+  placeholderSuffix: String,
+  preferences: UserPreferences,
+)(implicit context: RequestContext, request: RequestHeader, messagesProvider: MessagesProvider)
+
+@b3.vertical.formCSRF(routes.AppointmentSearchController.search(),
+  'class -> "appointment-search",
+  Symbol("data-search-scope") -> searchScope,
+  Symbol("data-search-scope-value") -> searchScopeValue
+) { implicit ifc =>
+  @b3.free('_class -> "search-default") {
+    <i class="fal fa-search"></i>
+    <input type="text" class="form-control input-lg" placeholder="Search appointments@placeholderSuffix" aria-label="Search appointments@placeholderSuffix" />
+  }
+}
+
+@if(appointmentsNeedingOutcome > 0) {
+  <div class="well appointments-needing-outcomes">
+    <div class="media">
+      <div class="media-left">
+        <p class="lead"><i class="fas fa-exclamation-triangle"></i></p>
+      </div>
+      <div class="media-body">
+        <p class="lead">You have appointments that need their outcomes recording. Please record these outcomes as soon as possible</p>
+
+        <div class="appointments-needing-outcomes-details--section async" data-href="@appointmentsNeedingOutcomeRoute">
+          <div class="content">
+            <i class="fas fa-spinner fa-pulse"></i> Loading&hellip;
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<p><a href="@createRoute" class="btn btn-default">Create a new appointment</a></p>
+
+<div class="appointment-calendar no-wide-tables" data-events="@eventsRoute" data-events-all="@allTeamsEventsRoute" data-create="@createRoute" data-default-view="@{preferences.calendarView}"></div>

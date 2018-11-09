@@ -1,0 +1,41 @@
+@import domain.AppointmentRender
+@import warwick.core.helpers.JavaTime
+
+@(appointments: Seq[AppointmentRender])(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@if(appointments.nonEmpty) {
+  <table class="table table-default">
+    <thead>
+      <tr>
+        <th class="col-sm-6">Subject</th>
+        <th class="col-sm-3">When</th>
+        <th class="col-sm-3">Staff member</th>
+      </tr>
+    </thead>
+    <tbody>
+    @appointments.map { a =>
+      <tr>
+        <td>
+          @tags.icons.appointmentState(a.appointment.state)
+          <a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)">
+            @a.appointment.key.string @a.appointment.subject(Some(a.clients), Some(a.teamMembers))
+          </a>
+        </td>
+        <td>
+          @JavaTime.Relative(a.appointment.start) &ndash;
+          @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        </td>
+        <td>
+          <ul class="list-unstyled">
+            @a.teamMembers.toSeq.sortBy(_.member).map { teamMember =>
+              <li>@teamMember.member.safeFullName</li>
+            }
+          </ul>
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+} else {
+  <p>This case has no appointments</p>
+}

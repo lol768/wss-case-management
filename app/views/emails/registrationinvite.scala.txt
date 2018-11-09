@@ -1,0 +1,7 @@
+@(user: warwick.sso.User, url: String)
+
+@email(user.name.first) {
+  You have been invited to register for Wellbeing Support Services.
+
+  Follow this link to complete your registration: @url
+}
