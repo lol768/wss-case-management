@@ -1,0 +1,7 @@
+@(url: String)
+
+@email() {
+  An appointment with you has been created.
+
+  Follow this link to see details: @url
+}

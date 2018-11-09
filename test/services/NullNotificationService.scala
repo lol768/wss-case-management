@@ -20,9 +20,12 @@ class NullNotificationService extends NotificationService {
   override def enquiryReassign(enquiry: Enquiry)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def caseReassign(clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
-  override def newAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def clientNewAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def appointmentConfirmation(appointment: Appointment, teamMembers: Set[Usercode], clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
-  override def cancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
-  override def changedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def clientCancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def clientChangedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def ownerNewAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def ownerCancelledAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def ownerChangedAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def appointmentReminder(appointment: Appointment, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
 }

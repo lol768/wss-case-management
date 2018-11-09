@@ -97,7 +97,7 @@
                     )
                     @b3.textarea(
                       cancelForm("message"),
-                      '_label -> "Appointment note (optional)",
+                      '_label -> "Case note (optional)",
                       '_help -> "(why is this appointment being cancelled?)",
                       'helpOnTop -> true
                     )
@@ -119,9 +119,13 @@
           }
         }
 
-        @a.appointment.outcome.map { outcome =>
+        @if(a.appointment.outcome.nonEmpty) {
           @tags.sectioned.detail("Outcome") {
-            @outcome.description
+            <ul class="list-unstyled">
+              @a.appointment.outcome.map { outcome =>
+                <li>@outcome.description</li>
+              }
+            </ul>
           }
         }
       </div>
@@ -143,7 +147,5 @@
         </div>
       </div>
     </div>
-
-    @tags.sectioned.sectionAsync("appointment", "Notes", isCollapsible = true, url = controllers.admin.routes.AppointmentController.notes(a.appointment.key), isOpen = true)
   </div>
 }

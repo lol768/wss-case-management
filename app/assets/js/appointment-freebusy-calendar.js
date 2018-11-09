@@ -81,15 +81,20 @@ export default function AppointmentFreeBusyForm(form) {
           header: {
             left: 'prev,next today title',
             center: '',
-            right: '',
+            right: 'agendaWeek,agendaDay',
           },
           height: 'parent',
           defaultView: 'agendaDay',
           defaultDate: dateTimePicker.date(),
           groupByResource: true,
-          agendaDay: {
-            titleFormat: 'dddd, MMM D, YYYY',
-            columnFormat: 'dddd D/MM',
+          views: {
+            agendaWeek: {
+              columnFormat: 'ddd D/MM',
+            },
+            agendaDay: {
+              titleFormat: 'dddd, MMM D, YYYY',
+              columnFormat: 'dddd D/MM',
+            },
           },
           nowIndicator: true,
           events: (start, end, timezone, callback) => {

@@ -3,6 +3,7 @@ package domain.dao
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 
+import com.github.tminglei.slickpg.TsVector
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
@@ -69,6 +70,7 @@ object MemberDao {
 
     sealed trait CommonProperties { self: Table[_] =>
       def fullName: Rep[Option[String]] = column[Option[String]]("full_name")
+      def searchableFullName: Rep[Option[TsVector]] = toTsVector(fullName, Some("english"))
       def version: Rep[OffsetDateTime] = column[OffsetDateTime]("version_utc")
     }
 
@@ -76,6 +78,7 @@ object MemberDao {
       override def matchesPrimaryKey(other: StoredMember): Rep[Boolean] = usercode === other.usercode
 
       def usercode: Rep[Usercode] = column[Usercode]("user_id", O.PrimaryKey)
+      def searchableUsercode: Rep[TsVector] = toTsVector(usercode.asColumnOf[String], Some("english"))
 
       def * : ProvenShape[StoredMember] = (usercode, fullName, version).mapTo[StoredMember]
     }

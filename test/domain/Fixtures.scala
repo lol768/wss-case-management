@@ -193,7 +193,7 @@ object Fixtures {
       AppointmentPurpose.Consultation,
       AppointmentState.Provisional,
       None,
-      None,
+      List(),
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
     )
@@ -244,8 +244,6 @@ object Fixtures {
       UploadedFileDao.uploadedFiles.table.delete andThen
       UploadedFileDao.uploadedFiles.versionsTable.delete andThen
       AuditEvent.auditEvents.delete andThen
-      AppointmentDao.appointmentNotes.table.delete andThen
-      AppointmentDao.appointmentNotes.versionsTable.delete andThen
       AppointmentDao.appointmentClients.table.delete andThen
       AppointmentDao.appointmentClients.versionsTable.delete andThen
       AppointmentDao.appointments.table.delete andThen

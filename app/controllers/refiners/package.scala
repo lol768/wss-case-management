@@ -7,7 +7,7 @@ import helpers.ServiceResults.ServiceResult
 import play.api.mvc._
 import services.{AppointmentService, CaseService, EnquiryService, RegistrationService}
 import system.Roles
-import warwick.sso.{AuthenticatedRequest, UniversityID}
+import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.higherKinds
@@ -103,23 +103,6 @@ package object refiners {
           case e =>
             Left(Results.NotFound(views.html.errors.notFound()))
         }
-      }
-
-      override protected def executionContext: ExecutionContext = ec
-    }
-
-  def WithAppointmentNote(uuid: UUID)(implicit appointmentService: AppointmentService, requestContextBuilder: RequestHeader => RequestContext, ec: ExecutionContext): ActionRefiner[AuthenticatedRequest, AppointmentNoteSpecificRequest] =
-    new ActionRefiner[AuthenticatedRequest, AppointmentNoteSpecificRequest] {
-      override protected def refine[A](request: AuthenticatedRequest[A]): Future[Either[Result, AppointmentNoteSpecificRequest[A]]] = {
-        implicit val requestContext: RequestContext = requestContextBuilder(request)
-
-        appointmentService.getNote(uuid)
-          .map {
-            case Right(n) =>
-              Right(new AppointmentNoteSpecificRequest[A](n.note, n.appointment, request))
-            case _ =>
-              Left(Results.NotFound(views.html.errors.notFound()))
-          }
       }
 
       override protected def executionContext: ExecutionContext = ec
