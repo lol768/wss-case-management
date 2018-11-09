@@ -10,7 +10,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import services.FreeBusyService
-import services.FreeBusyService.FreeBusyPeriod
+import services.FreeBusyService.{FreeBusyPeriod, FreeBusyStatus}
 import services.office365.Office365FreeBusyService.Office365FreeBusyServiceError
 import system.TimingCategories
 import warwick.core.Logging
@@ -63,7 +63,7 @@ class Office365FreeBusyServiceImpl @Inject()(
       val queryParams: Seq[(String, String)] = Seq(
         "startDateTime" -> start.atStartOfDay(JavaTime.timeZone).format(JavaTime.iSO8601DateFormat),
         "endDateTime" -> end.plusDays(1).atStartOfDay(JavaTime.timeZone).format(JavaTime.iSO8601DateFormat),
-        "$select" -> "Start,End,IsAllDay,ShowAs",
+        "$select" -> "Start,End,IsAllDay,ShowAs,Categories",
         "$top" -> "100"
       )
 
@@ -77,7 +77,10 @@ class Office365FreeBusyServiceImpl @Inject()(
                 FreeBusyPeriod(
                   start = event.start.toOffsetDateTime,
                   end = event.end.toOffsetDateTime,
-                  status = event.freeBusyStatus
+                  status =
+                    if (event.freeBusyStatus == FreeBusyStatus.Free && event.categories.nonEmpty)
+                      FreeBusyStatus.FreeWithCategories(event.categories)
+                    else event.freeBusyStatus
                 )
               })
             )
