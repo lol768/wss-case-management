@@ -30,22 +30,28 @@ object FreeBusyService {
     def combine(allPeriods: Seq[FreeBusyPeriod]): Seq[FreeBusyPeriod] =
       allPeriods.sorted
         .groupBy(_.status)
-        .mapValues { periods =>
-          periods.foldLeft[List[FreeBusyPeriod]](Nil) { case (acc, next) =>
-            acc.lastOption match {
-              case Some(previous) if !previous.end.isBefore(next.start) && next.end.isAfter(previous.end) =>
-                acc.dropRight(1) :+ previous.copy(end = next.end)
-              case Some(previous) if !previous.end.isBefore(next.start) =>
-                acc
-              case _ => acc :+ next
+        .map {
+          // Don't combine frees
+          case v @ ((FreeBusyStatus.Free, _) | (FreeBusyStatus.FreeWithCategories(_), _)) => v
+          case (status, periods) => status ->
+            periods.foldLeft[List[FreeBusyPeriod]](Nil) { case (acc, next) =>
+              acc.lastOption match {
+                case Some(previous) if !previous.end.isBefore(next.start) && next.end.isAfter(previous.end) =>
+                  acc.dropRight(1) :+ previous.copy(end = next.end)
+                case Some(previous) if !previous.end.isBefore(next.start) =>
+                  acc
+                case _ => acc :+ next
+              }
             }
-          }
         }
         .values.toList.flatten.sorted
   }
 
   sealed abstract class FreeBusyStatus(val description: String) extends EnumEntry
   object FreeBusyStatus extends PlayEnum[FreeBusyStatus] {
+    case class FreeWithCategories(categories: Seq[String]) extends FreeBusyStatus(s"Free (${categories.mkString(", ")})") {
+      override val entryName: String = "Free"
+    }
     case object Free extends FreeBusyStatus("Free")
     case object WorkingElsewhere extends FreeBusyStatus("Working Elsewhere")
     case object Tentative extends FreeBusyStatus("Tentative")

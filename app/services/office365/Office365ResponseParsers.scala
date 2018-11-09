@@ -11,7 +11,8 @@ object Office365ResponseParsers {
     start: ZonedDateTime,
     end: ZonedDateTime,
     allDay: Boolean,
-    freeBusyStatus: FreeBusyStatus
+    freeBusyStatus: FreeBusyStatus,
+    categories: Seq[String]
   )
   val calendarEventReads: Reads[CalendarEvent] = (
     (__ \ "Start" \ "DateTime").read[LocalDateTime].map(_.atZone(ZoneId.systemDefault)) and
@@ -23,7 +24,8 @@ object Office365ResponseParsers {
       case Some("oof") | Some("3") => FreeBusyStatus.OutOfOffice
       case Some("workingelsewhere") | Some("4") => FreeBusyStatus.WorkingElsewhere
       case _ => FreeBusyStatus.Free
-    })
+    }) and
+    (__ \ "Categories").read[Seq[String]]
   )(CalendarEvent.apply _)
 
   val calendarEventsReads: Reads[Seq[CalendarEvent]] = (__ \ "value").read[Seq[CalendarEvent]](Reads.seq(calendarEventReads))
