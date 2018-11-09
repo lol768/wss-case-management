@@ -870,7 +870,7 @@ class DataGenerationJob @Inject()(
             appointments.recordOutcomes(
               appointment.id,
               attendance,
-              Some(randomEnum(AppointmentOutcome)),
+              Set(randomEnum(AppointmentOutcome)),
               note,
               appointment.lastUpdated,
             ).serviceValue -> clients

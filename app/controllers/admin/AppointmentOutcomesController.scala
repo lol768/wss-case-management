@@ -26,7 +26,7 @@ object AppointmentOutcomesController {
 
   case class AppointmentOutcomesFormData(
     attendance: Seq[AppointmentClientAttendanceFormData],
-    outcome: Option[AppointmentOutcome],
+    outcome: Set[AppointmentOutcome],
     note: Option[String],
     version: OffsetDateTime,
   )
@@ -42,7 +42,7 @@ object AppointmentOutcomesController {
             "cancellationReason" -> optional(AppointmentCancellationReason.formField),
           )(AppointmentClientAttendanceFormData.apply)(AppointmentClientAttendanceFormData.unapply)
         ),
-        "outcome" -> optional(AppointmentOutcome.formField),
+        "outcome" -> set(AppointmentOutcome.formField),
         "note" -> optional(text),
         "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == a.appointment.lastUpdated)
       )(AppointmentOutcomesFormData.apply)(AppointmentOutcomesFormData.unapply)

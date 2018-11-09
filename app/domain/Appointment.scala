@@ -19,7 +19,7 @@ case class Appointment(
   purpose: AppointmentPurpose,
   state: AppointmentState,
   cancellationReason: Option[AppointmentCancellationReason],
-  outcome: Option[AppointmentOutcome],
+  outcome: Set[AppointmentOutcome],
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
 ) {
@@ -190,7 +190,9 @@ object AppointmentCancellationReason extends PlayEnum[AppointmentCancellationRea
   override def values: immutable.IndexedSeq[AppointmentCancellationReason] = findValues
 }
 
-sealed abstract class AppointmentOutcome(val description: String) extends EnumEntry
+sealed abstract class AppointmentOutcome(val description: String) extends EnumEntry with IdAndDescription {
+  override val id: String = this.entryName
+}
 object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
   case object BlueSky extends AppointmentOutcome("Advised to contact BlueSky")
   case object Careers extends AppointmentOutcome("Advised to contact Careers")
