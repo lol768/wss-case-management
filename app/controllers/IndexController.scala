@@ -11,6 +11,7 @@ import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent}
 import services._
 import warwick.core.helpers.JavaTime
+import warwick.sso.{AuthenticatedRequest, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -155,6 +156,25 @@ class IndexController @Inject()(
     )
   }
 
+  def appointmentsTab: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    ServiceResults.zip(
+      appointments.countForSearch(appointmentsNeedingOutcomesSearch),
+      userPreferences.get(currentUser().usercode),
+    ).successMap { case (appointmentsNeedingOutcomes, preferences) =>
+      Ok(views.html.admin.appointmentsTab(
+        routes.IndexController.appointments(),
+        None,
+        appointmentsNeedingOutcomes,
+        Some(routes.IndexController.appointmentsNeedingOutcomes()),
+        controllers.admin.routes.AppointmentController.createSelectTeam(),
+        "member",
+        currentUser().usercode.string,
+        " assigned to me",
+        preferences,
+      ))
+    }
+  }
+
   def appointments(start: Option[OffsetDateTime], end: Option[OffsetDateTime]): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     appointments.findForSearch(AppointmentSearchQuery(
       startAfter = start.map(_.toLocalDate),
@@ -168,6 +188,21 @@ class IndexController @Inject()(
           Redirect(routes.IndexController.home().withFragment("appointments"))
       }
     }
+  }
+
+  private def appointmentsNeedingOutcomesSearch(implicit request: AuthenticatedRequest[_]) =
+    AppointmentSearchQuery(
+      teamMember = Some(currentUser().usercode),
+      states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended),
+      hasOutcome = Some(false),
+      endBefore = Some(JavaTime.offsetDateTime),
+    )
+
+  def appointmentsNeedingOutcomes: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+    appointments.findForSearch(appointmentsNeedingOutcomesSearch)
+      .successMap { appointments =>
+        Ok(views.html.admin.appointmentTable(None, appointments, Some("There are no appointments needing their outcomes recording")))
+      }
   }
 
   def messages: Action[AnyContent] = SigninRequiredAction.async { implicit request =>

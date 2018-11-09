@@ -1,7 +1,5 @@
 package controllers.refiners
 
-import java.util.UUID
-
 import domain.IssueKey
 import javax.inject.{Inject, Singleton}
 import play.api.mvc._
@@ -31,10 +29,6 @@ class AppointmentActionFilters @Inject()(
     permissionService.canClientManageAppointment(request.context.user.get, request.appointment.id)
   }
 
-  private val CanEditAppointmentNote = PermissionsFilter[AppointmentNoteSpecificRequest] { implicit request =>
-    permissionService.canEditAppointmentNote(request.context.user.get.usercode, request.note.id)
-  }
-
   def CanViewAppointmentAction(appointmentKey: IssueKey): ActionBuilder[AppointmentSpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithAppointment(appointmentKey) andThen CanViewAppointment
 
@@ -43,8 +37,5 @@ class AppointmentActionFilters @Inject()(
 
   def CanClientManageAppointmentAction(appointmentKey: IssueKey): ActionBuilder[AppointmentSpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithAppointment(appointmentKey) andThen CanClientManageAppointment
-
-  def CanEditAppointmentNoteAction(uuid: UUID): ActionBuilder[AppointmentNoteSpecificRequest, AnyContent] =
-    securityService.SigninRequiredAction andThen WithAppointmentNote(uuid) andThen CanEditAppointmentNote
 
 }

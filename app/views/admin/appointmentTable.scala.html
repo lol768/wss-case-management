@@ -10,32 +10,19 @@
 @appointmentRow(appointment: Appointment, clients: Set[AppointmentClient], teamMembers: Set[AppointmentTeamMember], room: Option[Room], clientCases: Set[Case]) = {
   <tr>
     <td>
+      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string</a>
+    </td>
+    <td>
       <ul class="list-unstyled">
         @clients.toSeq.sortBy(_.client).map { client =>
           <li>
             <a href="@controllers.admin.routes.ClientController.client(client.client.universityID)">@client.client.safeFullName</a>
-            @tags.appointments.clientAppointmentState(appointment, client)
           </li>
         }
       </ul>
     </td>
     <td>
-      @tags.icons.appointmentState(appointment.state)
-      <a href="@controllers.admin.routes.AppointmentController.view(appointment.key)">@appointment.key.string @appointment.subject(Some(clients), Some(teamMembers))</a>
-    </td>
-    <td>
-      @JavaTime.Relative(appointment.start) &ndash; @appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
-    </td>
-    <td>
-      <ul class="list-unstyled">
-        @teamMembers.toSeq.sortBy(_.member).map { teamMember =>
-          <li>@teamMember.member.safeFullName</li>
-        }
-      </ul>
-    </td>
-    <td>
-      @room.map(_.name)
-      (@appointment.appointmentType.description)
+      @JavaTime.Relative(appointment.start)
     </td>
   </tr>
 }
@@ -45,11 +32,9 @@
     @title.map { t => <caption>@t</caption> }
     <thead>
       <tr>
-        <th class="col-sm-2">Clients</th>
-        <th class="col-sm-4">Subject</th>
-        <th class="col-sm-2">When</th>
-        <th class="col-sm-2">Staff member</th>
-        <th class="col-sm-2">Location</th>
+        <th class="col-sm-4">Appointment</th>
+        <th class="col-sm-4">Client</th>
+        <th class="col-sm-4">Meeting date</th>
       </tr>
     </thead>
     <tbody>

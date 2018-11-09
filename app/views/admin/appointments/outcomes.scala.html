@@ -55,6 +55,13 @@
       '_label -> "Outcome"
     )
 
+    @b3.textarea(
+      form("note"),
+      '_label -> "Appointment notes (optional)",
+      '_help -> "(this will be added to all linked cases)",
+      'helpOnTop -> true
+    )
+
     @tags.submitOrCancel("Record outcomes", controllers.admin.routes.AppointmentController.view(a.appointment.key))
   }
 }

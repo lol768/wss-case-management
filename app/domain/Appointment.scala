@@ -6,8 +6,6 @@ import java.util.UUID
 import enumeratum.{EnumEntry, PlayEnum}
 import play.api.libs.json.{Json, Writes}
 import uk.ac.warwick.util.termdates.AcademicYear
-import warwick.core.helpers.JavaTime
-import warwick.sso.Usercode
 
 import scala.collection.immutable
 
@@ -73,7 +71,6 @@ case class AppointmentRender(
   teamMembers: Set[AppointmentTeamMember],
   room: Option[Room],
   clientCases: Set[Case],
-  notes: Seq[AppointmentNote]
 )
 
 object AppointmentRender {
@@ -192,28 +189,6 @@ object AppointmentCancellationReason extends PlayEnum[AppointmentCancellationRea
 
   override def values: immutable.IndexedSeq[AppointmentCancellationReason] = findValues
 }
-
-case class AppointmentNote(
-  id: UUID,
-  text: String,
-  teamMember: Member,
-  created: OffsetDateTime = JavaTime.offsetDateTime,
-  lastUpdated: OffsetDateTime = JavaTime.offsetDateTime,
-)
-
-object AppointmentNote {
-  // oldest first
-  val dateOrdering: Ordering[AppointmentNote] = Ordering.by[AppointmentNote, OffsetDateTime](_.created)(JavaTime.dateTimeOrdering)
-}
-
-/**
-  * Just the data of a note required to save it. Other properties
-  * are derived from other objects passed in to the service method.
-  */
-case class AppointmentNoteSave(
-  text: String,
-  teamMember: Usercode
-)
 
 sealed abstract class AppointmentOutcome(val description: String) extends EnumEntry
 object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
