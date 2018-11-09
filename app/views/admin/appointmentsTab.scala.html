@@ -3,6 +3,8 @@
 @(
   eventsRoute: Call,
   allTeamsEventsRoute: Option[Call],
+  appointmentsNeedingOutcome: Int,
+  appointmentsNeedingOutcomeRoute: Option[Call],
   createRoute: Call,
   searchScope: String,
   searchScopeValue: String,
@@ -19,6 +21,25 @@
     <i class="fal fa-search"></i>
     <input type="text" class="form-control input-lg" placeholder="Search appointments@placeholderSuffix" aria-label="Search appointments@placeholderSuffix" />
   }
+}
+
+@if(appointmentsNeedingOutcome > 0) {
+  <div class="well appointments-needing-outcomes">
+    <div class="media">
+      <div class="media-left">
+        <p class="lead"><i class="fas fa-exclamation-triangle"></i></p>
+      </div>
+      <div class="media-body">
+        <p class="lead">You have appointments that need their outcomes recording. Please record these outcomes as soon as possible</p>
+
+        <div class="appointments-needing-outcomes-details--section async" data-href="@appointmentsNeedingOutcomeRoute">
+          <div class="content">
+            <i class="fas fa-spinner fa-pulse"></i> Loading&hellip;
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 }
 
 <p><a href="@createRoute" class="btn btn-default">Create a new appointment</a></p>

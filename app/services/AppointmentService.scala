@@ -53,6 +53,7 @@ trait AppointmentService {
 
   def search(query: AppointmentSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
   def findForSearch(query: AppointmentSearchQuery)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
+  def countForSearch(query: AppointmentSearchQuery)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
   def findDeclinedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
   def findDeclinedAppointments(teamMember: Usercode)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
@@ -343,6 +344,9 @@ class AppointmentServiceImpl @Inject()(
 
   override def findForSearch(query: AppointmentSearchQuery)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(dao.searchQuery(query))
+
+  override def countForSearch(query: AppointmentSearchQuery)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+    daoRunner.run(dao.searchQuery(query).length.result).map(Right.apply)
 
   override def findDeclinedAppointments(team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
     listForRender(dao.findDeclinedQuery.filter(_.team === team))

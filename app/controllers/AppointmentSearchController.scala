@@ -6,7 +6,7 @@ import controllers.refiners.{AnyTeamActionRefiner, AppointmentActionFilters}
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import helpers.Json.JsonClientError
-import helpers.ServiceResults
+import helpers.{FormHelpers, ServiceResults}
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -27,11 +27,14 @@ object AppointmentSearchController {
     "client" -> optional(nonEmptyText.transform[UniversityID](UniversityID.apply, _.string)),
     "startAfter" -> optional(localDate),
     "startBefore" -> optional(localDate),
+    "endAfter" -> optional(FormHelpers.offsetDateTime),
+    "endBefore" -> optional(FormHelpers.offsetDateTime),
     "roomID" -> optional(uuid),
     "team" -> optional(Teams.formField),
     "member" -> optional(nonEmptyText).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string)),
     "appointmentType" -> optional(AppointmentType.formField),
     "purpose" -> optional(AppointmentPurpose.formField),
+    "hasOutcome" -> optional(boolean),
     "states" -> set(AppointmentState.formField),
   )(AppointmentSearchQuery.apply)(AppointmentSearchQuery.unapply))
 }

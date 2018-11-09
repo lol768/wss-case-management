@@ -40,7 +40,9 @@ GET         /cases                                  @controllers.IndexController
 GET         /cases/open                             @controllers.IndexController.openCases(page: Int ?= 0)
 GET         /cases/closed                           @controllers.IndexController.closedCases(page: Int ?= 0)
 GET         /at-risk-clients                        @controllers.IndexController.atRiskClients
-GET         /appointments                           @controllers.IndexController.appointments(start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
+GET         /appointments                           @controllers.IndexController.appointmentsTab
+GET         /appointments/list                      @controllers.IndexController.appointments(start: Option[java.time.OffsetDateTime] ?= None, end: Option[java.time.OffsetDateTime] ?= None)
+GET         /appointments/needing-outcomes          @controllers.IndexController.appointmentsNeedingOutcomes
 GET         /messages                               @controllers.IndexController.messages
 GET         /client-appointments                    @controllers.IndexController.clientAppointments
 
