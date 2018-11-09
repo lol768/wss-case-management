@@ -32,6 +32,8 @@
       @views.html.admin.appointmentsTab(
         controllers.admin.routes.AdminController.appointments(team.id),
         Some(controllers.admin.routes.AdminController.appointmentsAllTeams()),
+        0,
+        None,
         controllers.admin.routes.AppointmentController.createForm(team.id),
         "team",
         team.id,

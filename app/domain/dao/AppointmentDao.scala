@@ -148,11 +148,14 @@ class AppointmentDaoImpl @Inject()(
         q.client.map { client => c.universityID.? === client },
         q.startAfter.map { d => a.start.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.startBefore.map { d => a.start.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
+        q.endAfter.map { d => a.end.? >= d },
+        q.endBefore.map { d => a.end.? <= d },
         q.team.map { team => a.team.? === team },
         q.teamMember.map { member => tm.userId.? === member },
         q.roomID.map { roomID => a.roomID === roomID },
         q.appointmentType.map { appointmentType => a.appointmentType.? === appointmentType },
         q.purpose.map { purpose => a.purpose.? === purpose },
+        q.hasOutcome.map { hasOutcome => a.outcome.isDefined.? === hasOutcome },
         q.states.headOption.map { _ => a.state.inSet(q.states).? }
       ).flatten
 
@@ -335,6 +338,14 @@ object AppointmentDao {
       (id, key, start, duration, roomID, team, appointmentType, purpose, state, cancellationReason, outcome, created, version).mapTo[StoredAppointment]
     def appointment =
       (id, key, start, duration, team, appointmentType, purpose, state, cancellationReason, outcome, created, version).mapTo[Appointment]
+
+    def end: Rep[OffsetDateTime] =
+      SimpleExpression.binary[OffsetDateTime, Duration, OffsetDateTime] { (start, duration, qb) =>
+        qb.expr(start)
+        qb.sqlBuilder += " + ("
+        qb.expr(duration)
+        qb.sqlBuilder += " || ' seconds')::interval"
+      }.apply(start, duration)
 
     def isProvisional: Rep[Boolean] = state === (AppointmentState.Provisional: AppointmentState)
     def isAccepted: Rep[Boolean] = state === (AppointmentState.Accepted: AppointmentState)
@@ -596,12 +607,15 @@ object AppointmentDao {
     client: Option[UniversityID] = None,
     startAfter: Option[LocalDate] = None,
     startBefore: Option[LocalDate] = None,
+    endAfter: Option[OffsetDateTime] = None,
+    endBefore: Option[OffsetDateTime] = None,
     roomID: Option[UUID] = None,
     team: Option[Team] = None,
     teamMember: Option[Usercode] = None,
     appointmentType: Option[AppointmentType] = None,
     purpose: Option[AppointmentPurpose] = None,
-    states: Set[AppointmentState] = Set()
+    hasOutcome: Option[Boolean] = None,
+    states: Set[AppointmentState] = Set(),
   ) {
     def isEmpty: Boolean = !nonEmpty
     def nonEmpty: Boolean =
@@ -611,11 +625,14 @@ object AppointmentDao {
       client.nonEmpty ||
       startAfter.nonEmpty ||
       startBefore.nonEmpty ||
+      endAfter.nonEmpty ||
+      endBefore.nonEmpty ||
       team.nonEmpty ||
       teamMember.nonEmpty ||
       roomID.nonEmpty ||
       appointmentType.nonEmpty ||
       purpose.nonEmpty ||
+      hasOutcome.nonEmpty ||
       states.nonEmpty
   }
 
