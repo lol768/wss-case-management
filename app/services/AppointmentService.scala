@@ -33,8 +33,8 @@ import scala.language.higherKinds
 
 @ImplementedBy(classOf[AppointmentServiceImpl])
 trait AppointmentService {
-  def create(appointment: AppointmentSave, clients: Set[UniversityID], teamMembers: Set[Usercode], team: Team, caseIDs: Set[UUID])(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
-  def update(id: UUID, appointment: AppointmentSave, cases: Set[UUID], clients: Set[UniversityID], teamMembers: Set[Usercode], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+  def create(appointment: AppointmentSave, clients: Set[UniversityID], teamMembers: Set[Usercode], team: Team, caseIDs: Set[UUID], currentUser: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+  def update(id: UUID, appointment: AppointmentSave, cases: Set[UUID], clients: Set[UniversityID], teamMembers: Set[Usercode], currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Appointment]]
   def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[AppointmentRender]]
@@ -80,7 +80,7 @@ trait AppointmentService {
   def clientDecline(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentState, Option[AppointmentCancellationReason])], outcome: Set[AppointmentOutcome], note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
-  def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+  def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, note: Option[CaseNoteSave], currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def sendClientReminder(appointmentID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 }
@@ -129,7 +129,7 @@ class AppointmentServiceImpl @Inject()(
       JavaTime.offsetDateTime
     )
 
-  override def create(appointment: AppointmentSave, clients: Set[UniversityID], teamMembers: Set[Usercode], team: Team, caseIDs: Set[UUID])(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
+  override def create(appointment: AppointmentSave, clients: Set[UniversityID], teamMembers: Set[Usercode], team: Team, caseIDs: Set[UUID], currentUser: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
     val id = UUID.randomUUID()
     auditService.audit('AppointmentSave, id.toString, 'Appointment, Json.obj()) {
       ServiceResults.zip(
@@ -152,12 +152,17 @@ class AppointmentServiceImpl @Inject()(
           })
         } yield inserted).flatMap { a =>
           ownerService.setAppointmentOwners(a.id, teamMembers).successFlatMapTo { setOwnersResult =>
-            office365CalendarService.updateAppointment(a.id, setOwnersResult)
-
-            notificationService.newAppointment(clients).map(sr =>
-              ServiceResults.logErrors(sr, logger, ())
+            val appointment = a.asAppointment
+            office365CalendarService.updateAppointment(appointment.id, setOwnersResult)
+            val ownersToNotify = setOwnersResult.all.map(_.userId).toSet - currentUser
+            ServiceResults.zip(
+              notificationService.ownerNewAppointment(ownersToNotify, appointment).map(sr =>
+                ServiceResults.logErrors(sr, logger, ())
+              ),
+              notificationService.clientNewAppointment(clients).map(sr =>
+                ServiceResults.logErrors(sr, logger, ())
+              )
             ).map(_ => {
-              val appointment = a.asAppointment
               scheduleClientReminder(appointment)
               Right(appointment)
             })
@@ -167,7 +172,7 @@ class AppointmentServiceImpl @Inject()(
     }
   }
 
-  override def update(id: UUID, changes: AppointmentSave, cases: Set[UUID], clients: Set[UniversityID], teamMembers: Set[Usercode], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
+  override def update(id: UUID, changes: AppointmentSave, cases: Set[UUID], clients: Set[UniversityID], teamMembers: Set[Usercode], currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
     auditService.audit('AppointmentUpdate, id.toString, 'Appointment, Json.obj()) {
       def newState(existing: StoredAppointment, clientResult: UpdateDifferencesResult[StoredAppointmentClient]): AppointmentState =
         if (existing.state == AppointmentState.Provisional || existing.state == AppointmentState.Cancelled || existing.state == AppointmentState.Attended)
@@ -233,24 +238,49 @@ class AppointmentServiceImpl @Inject()(
         } yield (updated, clientsResult)).flatMap { case (a, clientsResult) =>
           ownerService.setAppointmentOwners(a.id, teamMembers).successFlatMapTo { setOwnersResult =>
             office365CalendarService.updateAppointment(a.id, setOwnersResult)
+            val appointment = a.asAppointment
 
             val notifyAddedClients: Future[ServiceResult[Option[Activity]]] =
               if (clientsResult.added.nonEmpty)
-                notificationService.newAppointment(clientsResult.added.map(_.universityID).toSet).map(sr =>
+                notificationService.clientNewAppointment(clientsResult.added.map(_.universityID).toSet).map(sr =>
+                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
+                )
+              else Future.successful(Right(None))
+
+            val addedOwnersToNotify = setOwnersResult.added.map(_.userId).toSet - currentUser
+            val notifyAddedOwners: Future[ServiceResult[Option[Activity]]] =
+              if (addedOwnersToNotify.nonEmpty)
+                notificationService.ownerNewAppointment(addedOwnersToNotify, appointment).map(sr =>
                   ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
                 )
               else Future.successful(Right(None))
 
             val notifyRemovedClients: Future[ServiceResult[Option[Activity]]] =
               if (clientsResult.removed.nonEmpty)
-                notificationService.cancelledAppointment(clientsResult.removed.map(_.universityID).toSet).map(sr =>
+                notificationService.clientCancelledAppointment(clientsResult.removed.map(_.universityID).toSet).map(sr =>
+                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
+                )
+              else Future.successful(Right(None))
+
+            val removedOwnersToNotify = setOwnersResult.removed.map(_.userId).toSet - currentUser
+            val notifyRemovedOwners: Future[ServiceResult[Option[Activity]]] =
+              if (removedOwnersToNotify.nonEmpty)
+                notificationService.ownerCancelledAppointment(removedOwnersToNotify, appointment).map(sr =>
                   ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
                 )
               else Future.successful(Right(None))
 
             val notifyExistingClients: Future[ServiceResult[Option[Activity]]] =
               if (clientsResult.unchanged.nonEmpty)
-                notificationService.changedAppointment(clientsResult.unchanged.map(_.universityID).toSet).map(sr =>
+                notificationService.clientChangedAppointment(clientsResult.unchanged.map(_.universityID).toSet).map(sr =>
+                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
+                )
+              else Future.successful(Right(None))
+
+            val existingOwnersToNotify = setOwnersResult.unchanged.map(_.userId).toSet - currentUser
+            val notifyExistingOwners: Future[ServiceResult[Option[Activity]]] =
+              if (existingOwnersToNotify.nonEmpty)
+                notificationService.ownerChangedAppointment(existingOwnersToNotify, appointment).map(sr =>
                   ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
                 )
               else Future.successful(Right(None))
@@ -258,9 +288,11 @@ class AppointmentServiceImpl @Inject()(
             ServiceResults.zip(
               notifyAddedClients,
               notifyRemovedClients,
-              notifyExistingClients
+              notifyExistingClients,
+              notifyAddedOwners,
+              notifyRemovedOwners,
+              notifyExistingOwners
             ).map(_ => {
-              val appointment = a.asAppointment
               scheduleClientReminder(appointment)
               Right(appointment)
             })
@@ -542,7 +574,7 @@ class AppointmentServiceImpl @Inject()(
       } yield updatedAppointment).map { a => Right(a.asAppointment) }
     }
 
-  override def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
+  override def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, note: Option[CaseNoteSave], currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
     auditService.audit('AppointmentCancel, appointmentID.toString, 'Appointment, Json.obj()) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
@@ -553,11 +585,17 @@ class AppointmentServiceImpl @Inject()(
       } yield (updatedAppointment, clients)).flatMap { case (a, clients) =>
         getTeamMembers(a.id).successFlatMapTo(teamMembers => {
           office365CalendarService.updateAppointment(a.id, teamMembers)
+          val appointment = a.asAppointment
+          val ownersToNotify = teamMembers.map(_.member.usercode) - currentUser
+          val notifications = ServiceResults.zip(
+            notificationService.clientCancelledAppointment(clients.map(_.universityID).toSet).map(sr => ServiceResults.logErrors(sr, logger, ())),
+            notificationService.ownerCancelledAppointment(ownersToNotify, appointment).map(sr => ServiceResults.logErrors(sr, logger, ()))
+          )
           (for {
             _ <- note.map(n => memberService.getOrAddMember(n.teamMember)).getOrElse(Future.successful(()))
-            activity <- notificationService.cancelledAppointment(clients.map(_.universityID).toSet).map(sr => ServiceResults.logErrors(sr, logger, ()))
-          } yield activity).map(_ =>
-            ServiceResults.success(a.asAppointment)
+            activities <- notifications
+          } yield activities).map(_ =>
+            ServiceResults.success(appointment)
           )
         })
       }

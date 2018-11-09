@@ -741,7 +741,7 @@ class DataGenerationJob @Inject()(
                 generatedCases(Random.nextInt(generatedCases.size))._1.id
               }.toSet + c.id
 
-            appointments.create(appointment, clients, teamMembers, c.team, caseIDs).serviceValue -> clients
+            appointments.create(appointment, clients, teamMembers, c.team, caseIDs, teamMembers.head).serviceValue -> clients
           }
         }
       }
@@ -774,7 +774,7 @@ class DataGenerationJob @Inject()(
               randomTeamMember(randomTeam())
             }.toSet + randomTeamMember(team)
 
-          appointments.create(appointment, clients, teamMembers, team, Set()).serviceValue -> clients
+          appointments.create(appointment, clients, teamMembers, team, Set(), teamMembers.head).serviceValue -> clients
         }
       }
 
@@ -828,6 +828,7 @@ class DataGenerationJob @Inject()(
               a.clientCases.map(_.id),
               a.clients.map(_.client.universityID),
               a.teamMembers.map(_.member.usercode),
+              a.teamMembers.head.member.usercode,
               a.appointment.lastUpdated
             ).serviceValue -> clients
           }
@@ -842,7 +843,7 @@ class DataGenerationJob @Inject()(
             implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
           val cancellationNote = Some(CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember))
-          val a = appointments.cancel(appointment.id, randomEnum(AppointmentCancellationReason), cancellationNote, appointment.lastUpdated).serviceValue
+          val a = appointments.cancel(appointment.id, randomEnum(AppointmentCancellationReason), cancellationNote, teamMember, appointment.lastUpdated).serviceValue
 
             a -> clients
           }
