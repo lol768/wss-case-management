@@ -1,7 +1,7 @@
 @(url: String)
 
 @email() {
-  You have been allocated a new appointment
+  An appointment with you has been created.
 
   Follow this link to see details: @url
 }
