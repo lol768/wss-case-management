@@ -21,20 +21,33 @@ class ValidUniversityIDActionFilter @Inject()(
 
   private[this] val clientUserTypes = configuration.get[Seq[String]]("wellbeing.validClientUserTypes").flatMap(UserType.namesToValuesMap.get)
 
+  private def handle(universityID: UniversityID)(implicit request: AuthenticatedRequest[_]): Future[Option[Result]] =
+    userLookupService.getUsers(Seq(universityID)).toOption.flatMap(_.get(universityID)) match {
+      case Some(user) if user.isFound && clientUserTypes.contains(UserType(user)) => Future.successful(None)
+      case _ => profileService.getProfile(universityID).map(_.value.fold(
+        errors => Some(Results.BadRequest(views.html.errors.multiple(errors))),
+        {
+          case Some(p) if clientUserTypes.contains(p.userType) => None
+          case _ => Some(Results.NotFound(views.html.errors.notFound()))
+        }
+      ))
+    }
+
   def ValidUniversityIDRequired(universityID: UniversityID): ActionFilter[AuthenticatedRequest] = new ActionFilter[AuthenticatedRequest] {
     override protected def filter[A](request: AuthenticatedRequest[A]): Future[Option[Result]] = {
       implicit val implicitRequest: AuthenticatedRequest[A] = request
 
-      userLookupService.getUsers(Seq(universityID)).toOption.flatMap(_.get(universityID)) match {
-        case Some(user) if user.isFound && clientUserTypes.contains(UserType(user)) => Future.successful(None)
-        case _ => profileService.getProfile(universityID).map(_.value.fold(
-          errors => Some(Results.BadRequest(views.html.errors.multiple(errors))),
-          {
-            case Some(p) if clientUserTypes.contains(p.userType) => None
-            case _ => Some(Results.NotFound(views.html.errors.notFound()))
-          }
-        ))
-      }
+      handle(universityID)
+    }
+
+    override protected def executionContext: ExecutionContext = ec
+  }
+
+  val ValidUniversityIDRequiredCurrentUser: ActionFilter[AuthenticatedRequest] = new ActionFilter[AuthenticatedRequest] {
+    override protected def filter[A](request: AuthenticatedRequest[A]): Future[Option[Result]] = {
+      implicit val implicitRequest: AuthenticatedRequest[A] = request
+
+      handle(request.context.user.get.universityId.get)
     }
 
     override protected def executionContext: ExecutionContext = ec
