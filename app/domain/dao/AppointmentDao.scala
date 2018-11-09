@@ -14,6 +14,7 @@ import domain.dao.AppointmentDao.AppointmentCase.AppointmentCases
 import domain.dao.AppointmentDao._
 import domain.dao.CaseDao.cases
 import domain.dao.ClientDao.StoredClient.Clients
+import domain.dao.MemberDao.StoredMember.Members
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -130,10 +131,14 @@ class AppointmentDaoImpl @Inject()(
       .filter(_.isCancelled)
 
   override def searchQuery(q: AppointmentSearchQuery): Query[Appointments, StoredAppointment, Seq] = {
-    def queries(a: Appointments, c: Clients, tm: Owners): Seq[Rep[Option[Boolean]]] =
+    def queries(a: Appointments, c: Clients, tm: Members): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
-          a.searchableKey.? @@ prefixTsQuery(queryStr.bind)
+          val query = prefixTsQuery(queryStr.bind)
+
+          (a.searchableId @+ a.searchableKey @+ c.searchableUniversityID @+ tm.searchableUsercode) @@ query ||
+          c.searchableFullName @@ query ||
+          tm.searchableFullName @@ query
         },
         q.createdAfter.map { d => a.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => a.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
@@ -143,7 +148,7 @@ class AppointmentDaoImpl @Inject()(
         q.endAfter.map { d => a.end.? >= d },
         q.endBefore.map { d => a.end.? <= d },
         q.team.map { team => a.team.? === team },
-        q.teamMember.map { member => tm.userId.? === member },
+        q.teamMember.map { member => tm.usercode.? === member },
         q.roomID.map { roomID => a.roomID === roomID },
         q.appointmentType.map { appointmentType => a.appointmentType.? === appointmentType },
         q.purpose.map { purpose => a.purpose.? === purpose },
@@ -153,7 +158,7 @@ class AppointmentDaoImpl @Inject()(
 
     appointments.table
       .withClientsAndTeamMembers
-      .filter { case (a, _, c, tm, _) => queries(a, c, tm).reduce(_ && _) }
+      .filter { case (a, _, c, _, tm) => queries(a, c, tm).reduce(_ && _) }
       .distinct
       .map { case (a, _, _, _, _) => a }
   }
@@ -299,6 +304,7 @@ object AppointmentDao {
     with CommonAppointmentProperties {
     override def matchesPrimaryKey(other: StoredAppointment): Rep[Boolean] = id === other.id
     def id = column[UUID]("id", O.PrimaryKey)
+    def searchableId = toTsVector(id.asColumnOf[String], Some("english"))
 
     override def * : ProvenShape[StoredAppointment] =
       (id, key, start, duration, roomID, team, appointmentType, purpose, state, cancellationReason, outcome, created, version).mapTo[StoredAppointment]
