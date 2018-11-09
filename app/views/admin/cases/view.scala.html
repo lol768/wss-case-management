@@ -208,6 +208,18 @@
           }
         }
 
+        @if(c.clientRiskTypes.nonEmpty || history.clientRiskTypes.size > 1) {
+          @tags.sectioned.detail("Client risk type"){
+            <div data-field-history-field="clientRiskTypes">
+              @if(c.clientRiskTypes.nonEmpty) {
+                @c.clientRiskTypes.toSeq.map(_.description).sorted.mkString(", ")
+              } else {
+                None
+              }
+            </div>
+          }
+        }
+
       </div>
       <div class="col-sm-6 col-md-4">
         <div class="row form-horizontal">

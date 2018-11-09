@@ -6,6 +6,9 @@ import * as DateFormats from './dateFormats';
 
 function getValue(value) {
   if (_.isArray(value)) {
+    if (value.length === 0) {
+      return '(none)';
+    }
     return _.map(value, v => v.description || v.name || v).join(', ');
   }
   return _.get(value, 'description', undefined) || _.get(value, 'name', undefined) || value || 'None';

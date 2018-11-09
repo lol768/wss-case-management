@@ -536,6 +536,7 @@ class DataGenerationJob @Inject()(
                   else None
                 },
                 cause = randomEnum(CaseCause),
+                clientRiskTypes = Set() // TODO Could add some here
               ),
               Set(enquiry.client.universityID),
               (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
@@ -592,6 +593,7 @@ class DataGenerationJob @Inject()(
                 else None
               },
               cause = randomEnum(CaseCause),
+              clientRiskTypes = Set() // TODO Could add some here
             ),
             clients,
             (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
