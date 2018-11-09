@@ -5,7 +5,7 @@
 @(
   team: Team,
   form: Form[CaseFormData],
-  dsaForm: Form[Option[DSAApplicationSave]]
+  dsaForm: Form[Option[DSAApplicationSave]],
 )(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor, request: RequestHeader)
 
 @b3.validatedHidden(form, "originalEnquiry")
@@ -19,7 +19,7 @@
   (form.errors("clients") ++ form("clients").indexes.flatMap(i => form.errors(s"clients[$i]"))).headOption
 }
 @b3.free('_label -> "Clients", '_class -> hasClientError.map(_ => "has-error")) {
-  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for users", multiple = true, universityId = true, selectOnBlur = false)
+  @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Search for users", multiple = true, universityId = true, potentialClientsOnly = true, selectOnBlur = false)
   @b3.indexedFieldErrors(form, "clients")
 }
 
