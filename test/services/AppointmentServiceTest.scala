@@ -2,7 +2,6 @@ package services
 
 import java.time.Duration
 
-import akka.Done
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
@@ -88,7 +87,6 @@ class AppointmentServiceTest extends AbstractDaoTest {
           ),
           None,
           Set.empty,
-          Seq()
         )
       })
 
@@ -98,10 +96,6 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
       DateTimeUtils.useMockDateTime(now.toInstant, () => {
         val multipleClientsMultipleTeamMembersWithCases = service.create(AppointmentSave(now, Duration.ofMinutes(10), None, AppointmentType.Skype, AppointmentPurpose.FollowUp), Set(UniversityID("0672089"), UniversityID("0672088")), Set(Usercode("u1234444"), Usercode("u1234555")), Teams.WellbeingSupport, Set(c.id, c2.id)).serviceValue
-
-        // Add some notes
-        val note1 = service.addNote(multipleClientsMultipleTeamMembersWithCases.id, AppointmentNoteSave("Note 1 test", Usercode("cusfal"))).serviceValue
-        val note2 = service.addNote(multipleClientsMultipleTeamMembersWithCases.id, AppointmentNoteSave("Note 2 test", Usercode("cusfal"))).serviceValue
 
         service.findForRender(multipleClientsMultipleTeamMembersWithCases.key).serviceValue mustBe AppointmentRender(
           multipleClientsMultipleTeamMembersWithCases,
@@ -115,7 +109,6 @@ class AppointmentServiceTest extends AbstractDaoTest {
           ),
           None,
           Set(c.asCase, c2.asCase),
-          Seq(note2, note1)
         )
       })
     }
@@ -210,41 +203,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
       multiClientUpdate3.state mustBe AppointmentState.Provisional // All clients have declined
     }
 
-    "get and set appointment notes" in withData(new AppointmentFixture) { a =>
-      service.getNotes(a.id).serviceValue mustBe 'empty
-
-      val n1 = service.addNote(a.id, AppointmentNoteSave(
-        text = "I just called to say I love you",
-        teamMember = Usercode("cuscav")
-      )).serviceValue
-
-      val n2 = service.addNote(a.id, AppointmentNoteSave(
-        text = "Jim came in to tell me that Peter needed a chat",
-        teamMember = Usercode("cusebr")
-      )).serviceValue
-
-      service.getNotes(a.id).serviceValue mustBe Seq(n2, n1) // Newest first
-
-      val n1Updated = service.updateNote(a.id, n1.id, AppointmentNoteSave(
-        text = "Jim's not really bothered",
-        teamMember = Usercode("cusebr")
-      ), n1.lastUpdated).serviceValue
-
-      service.getNotes(a.id).serviceValue mustBe Seq(n2, n1Updated)
-
-      service.deleteNote(a.id, n2.id, n2.lastUpdated).serviceValue mustBe Done
-
-      service.getNotes(a.id).serviceValue mustBe Seq(n1Updated)
-    }
-
     "search" in withData(new AppointmentFixture) { a =>
-      service.addNote(a.id, AppointmentNoteSave(
-        text = "Here's some text to search",
-        teamMember = Usercode("cuscav")
-      )).serviceValue
-
-      service.search(AppointmentSearchQuery(query = Some("some text")), 5).serviceValue mustBe Seq(a)
-
       val building = execWithCommit(LocationDao.buildings.insert(Fixtures.locations.newBuilding()))
       val r021 = execWithCommit(LocationDao.rooms.insert(Fixtures.locations.newRoom(building.id, name = "R0.21")))
       val r023 = execWithCommit(LocationDao.rooms.insert(Fixtures.locations.newRoom(building.id, name = "R0.23")))

@@ -3,7 +3,12 @@
 @import play.api.data.Forms._
 @import warwick.core.helpers.JavaTime
 
-@(issues: Seq[IssueRender], registration: Option[Registration], supportedMimeTypes: Seq[MediaType])(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+@(
+  issues: Seq[IssueRender],
+  registration: Option[Registration],
+  supportedMimeTypes: Seq[MediaType],
+  canMakeEnquiry: Boolean,
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @registration.map { r =>
   <div class="pull-right">
@@ -17,14 +22,18 @@
   </div>
 }
 
-<p>If you have a question or would like to arrange to speak to somebody about an issue:</p>
-<a class="btn btn-primary" href="@controllers.enquiries.routes.EnquiryController.form()">
-@if(issues.isEmpty) {
-  Make an enquiry
+@if(canMakeEnquiry) {
+  <p>If you have a question or would like to arrange to speak to somebody about an issue:</p>
+  <a class="btn btn-primary" href="@controllers.enquiries.routes.EnquiryController.form()">
+    @if(issues.isEmpty) {
+      Make an enquiry
+    } else {
+      Make another enquiry
+    }
+  </a>
 } else {
-  Make another enquiry
+  <p>Please visit the <a href="https://warwick.ac.uk/wellbeing">Wellbeing at Warwick</a> web pages for information on how to contact Wellbeing Services.</p>
 }
-</a>
 
 @if(issues.nonEmpty) {
   <h2>Your messages</h2>

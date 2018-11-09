@@ -6,8 +6,6 @@ import java.util.UUID
 import enumeratum.{EnumEntry, PlayEnum}
 import play.api.libs.json.{Json, Writes}
 import uk.ac.warwick.util.termdates.AcademicYear
-import warwick.core.helpers.JavaTime
-import warwick.sso.Usercode
 
 import scala.collection.immutable
 
@@ -73,7 +71,6 @@ case class AppointmentRender(
   teamMembers: Set[AppointmentTeamMember],
   room: Option[Room],
   clientCases: Set[Case],
-  notes: Seq[AppointmentNote]
 )
 
 object AppointmentRender {
@@ -193,32 +190,12 @@ object AppointmentCancellationReason extends PlayEnum[AppointmentCancellationRea
   override def values: immutable.IndexedSeq[AppointmentCancellationReason] = findValues
 }
 
-case class AppointmentNote(
-  id: UUID,
-  text: String,
-  teamMember: Member,
-  created: OffsetDateTime = JavaTime.offsetDateTime,
-  lastUpdated: OffsetDateTime = JavaTime.offsetDateTime,
-)
-
-object AppointmentNote {
-  // oldest first
-  val dateOrdering: Ordering[AppointmentNote] = Ordering.by[AppointmentNote, OffsetDateTime](_.created)(JavaTime.dateTimeOrdering)
-}
-
-/**
-  * Just the data of a note required to save it. Other properties
-  * are derived from other objects passed in to the service method.
-  */
-case class AppointmentNoteSave(
-  text: String,
-  teamMember: Usercode
-)
-
 sealed abstract class AppointmentOutcome(val description: String) extends EnumEntry
 object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
+  case object BlueSky extends AppointmentOutcome("Advised to contact BlueSky")
   case object Careers extends AppointmentOutcome("Advised to contact Careers")
   case object Chaplaincy extends AppointmentOutcome("Advised to contact Chaplaincy")
+  case object CRASAC extends AppointmentOutcome("Advised to contact CRASAC")
   case object IAPT extends AppointmentOutcome("Advised to contact IAPT")
   case object Relate extends AppointmentOutcome("Advised to contact Relate")
   case object PersonalTutor extends AppointmentOutcome("Advised to contact Personal Tutor/Senior Tutor")
@@ -243,5 +220,5 @@ object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
   case object Closed extends AppointmentOutcome("Case closed")
   case object Other extends AppointmentOutcome("Other")
 
-  override def values: immutable.IndexedSeq[AppointmentOutcome] = findValues
+  override def values: immutable.IndexedSeq[AppointmentOutcome] = findValues.sortBy(_.description)
 }

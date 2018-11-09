@@ -102,7 +102,7 @@ object CaseController {
     )(CaseLinkFormData.apply)(CaseLinkFormData.unapply))
   }
 
-  val generalNoteTypes: Seq[CaseNoteType] = Seq(GeneralNote, CaseClosed, CaseReopened)
+  val generalNoteTypes: Seq[CaseNoteType] = Seq(GeneralNote, CaseClosed, CaseReopened, AppointmentNote)
 
   case class CaseNoteFormData(
     text: String,
@@ -292,7 +292,8 @@ class CaseController @Inject()(
           teamRequest.team,
           baseForm.bind(Map(
             "clients[0]" -> enquiry.client.universityID.string,
-            "originalEnquiry" -> enquiry.id.toString
+            "originalEnquiry" -> enquiry.id.toString,
+            "case.subject" -> enquiry.subject,
           )).discardingErrors,
           dsaForm
         ))
@@ -302,7 +303,7 @@ class CaseController @Inject()(
         Ok(views.html.admin.cases.create(
           teamRequest.team,
           baseForm.bind(Map(
-            "clients[0]" -> universityID.string
+            "clients[0]" -> universityID.string,
           )).discardingErrors,
           dsaForm
         ))

@@ -27,6 +27,7 @@ object AppointmentOutcomesController {
   case class AppointmentOutcomesFormData(
     attendance: Seq[AppointmentClientAttendanceFormData],
     outcome: Option[AppointmentOutcome],
+    note: Option[String],
     version: OffsetDateTime,
   )
 
@@ -42,6 +43,7 @@ object AppointmentOutcomesController {
           )(AppointmentClientAttendanceFormData.apply)(AppointmentClientAttendanceFormData.unapply)
         ),
         "outcome" -> optional(AppointmentOutcome.formField),
+        "note" -> optional(text),
         "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == a.appointment.lastUpdated)
       )(AppointmentOutcomesFormData.apply)(AppointmentOutcomesFormData.unapply)
     )
@@ -64,6 +66,7 @@ class AppointmentOutcomesController @Inject()(
             AppointmentClientAttendanceFormData(client.client.universityID, client.state, client.cancellationReason)
           },
           a.appointment.outcome,
+          None,
           a.appointment.lastUpdated
         ))
       ))
@@ -83,6 +86,7 @@ class AppointmentOutcomesController @Inject()(
           a.appointment.id,
           data.attendance.map { d => (d.client, (d.state, d.cancellationReason)) }.toMap,
           data.outcome,
+          data.note.map(CaseNoteSave(_, currentUser().usercode)),
           data.version
         ).successMap { updated =>
           Redirect(controllers.admin.routes.AppointmentController.view(updated.key))

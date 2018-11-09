@@ -9,6 +9,7 @@
   autoMultiple: Boolean = true,
   deleteExisting: Boolean = true,
   universityId: Boolean = false,
+  potentialClientsOnly: Boolean = false,
   team: String = "",
   selectOnBlur: Boolean = true,
 )
@@ -23,7 +24,8 @@
       data-include-users="@includeUsers" data-include-email="@includeEmail"
       data-include-groups="@includeGroups" data-prefix-groups="webgroup:"
       data-can-delete="@deleteExisting" value="@value" autocomplete="off"
-      data-universityid="@universityId" data-team="@team" data-select-on-blur="@selectOnBlur"
+      data-universityid="@universityId" data-potential-clients-only="@potentialClientsOnly"
+      data-team="@team" data-select-on-blur="@selectOnBlur"
     />
   </div>
 }
@@ -34,7 +36,8 @@
       data-include-users="@includeUsers" data-include-email="@includeEmail"
       data-include-groups="@includeGroups" data-prefix-groups="webgroup:"
       data-can-delete="@deleteExisting" autocomplete="off"
-      data-universityid="@universityId" data-team="@team" data-select-on-blur="@selectOnBlur"
+      data-universityid="@universityId" data-potential-clients-only="@potentialClientsOnly"
+      data-team="@team" data-select-on-blur="@selectOnBlur"
     />
   </div>
 }
