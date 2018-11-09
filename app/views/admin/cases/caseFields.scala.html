@@ -136,3 +136,12 @@
   field = "case.clientRiskTypes",
   idPrefix = "clientRiskType"
 )
+
+@b3.checkboxGroup(
+  label = "Student support issue type",
+  items = StudentSupportIssueType.values,
+  form = form,
+  field = "case.studentSupportIssueTypes",
+  idPrefix = "studentSupportIssueType",
+  withOther = Some(StudentSupportIssueType.Other(None))
+)

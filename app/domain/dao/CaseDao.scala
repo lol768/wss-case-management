@@ -319,7 +319,9 @@ object CaseDao {
     caseType: Option[CaseType],
     cause: CaseCause,
     dsaApplication: Option[UUID],
-    clientRiskTypes: List[String]
+    clientRiskTypes: List[String],
+    studentSupportIssueTypes: List[String],
+    studentSupportIssueTypeOther: Option[String]
   ) extends Versioned[StoredCase] {
     def asCase: Case =
       Case(
@@ -342,6 +344,7 @@ object CaseDao {
         cause = cause,
         dsaApplication = dsaApplication,
         clientRiskTypes = clientRiskTypes.toSet.map(ClientRiskType.withName),
+        studentSupportIssueTypes = StudentSupportIssueType(studentSupportIssueTypes, studentSupportIssueTypeOther),
         created = created,
         lastUpdated = version,
       )
@@ -414,6 +417,8 @@ object CaseDao {
     def cause = column[CaseCause]("cause")
     def dsaApplication = column[Option[UUID]]("dsa_application")
     def clientRiskTypes = column[List[String]]("client_risk_types")
+    def studentSupportIssueTypes = column[List[String]]("student_support_issue_types")
+    def studentSupportIssueTypeOther = column[Option[String]]("student_support_issue_type_other")
   }
 
   class Cases(tag: Tag) extends Table[StoredCase](tag, "client_case")
@@ -426,7 +431,7 @@ object CaseDao {
     def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 
     override def * : ProvenShape[StoredCase] =
-      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes).mapTo[StoredCase]
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes, studentSupportIssueTypes, studentSupportIssueTypeOther).mapTo[StoredCase]
     def idx = index("idx_client_case_key", key, unique = true)
   }
 

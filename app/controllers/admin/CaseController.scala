@@ -65,6 +65,7 @@ object CaseController {
           "caseType" -> optional(CaseType.formField).verifying("error.caseType.invalid", t => (CaseType.valuesFor(team).isEmpty && t.isEmpty) || t.exists(CaseType.valuesFor(team).contains)),
           "cause" -> CaseCause.formField,
           "clientRiskTypes" -> set(ClientRiskType.formField),
+          "studentSupportIssueTypes" -> StudentSupportIssueType.formMapping
         )(CaseSave.apply)(CaseSave.unapply),
         "tags" -> set(CaseTag.formField),
         "originalEnquiry" -> optional(uuid.verifying("error.required", id => isValidEnquiry(id))),

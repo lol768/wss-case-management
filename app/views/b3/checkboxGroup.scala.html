@@ -1,23 +1,44 @@
 @import domain.IdAndDescription
+@import domain.EnumEntryOther
 @(
     label: String,
     items: IndexedSeq[_ <: IdAndDescription],
     form: Form[_],
     field: String,
-    idPrefix: String
+    idPrefix: String,
+    withOther: Option[_ <: EnumEntryOther] = None
 )(implicit fc: views.html.b3.B3FieldConstructor, messagesProvider: MessagesProvider)
+
+@fullField = @{withOther.map(_ => s"$field.entries").getOrElse(field)}
+@fullFieldWithIndex(i: Int) = @{withOther.map(_ => s"$field.entries[$i]").getOrElse(s"$field[$i]")}
+
 @b3.free('_label -> label,
   '_class -> form(field).error.map(_ => "has-error").getOrElse("")
 ) {
 
-  @items.map { item =>
-    @b3.checkbox(form(s"$field[]"),
+  @items.filter(item => withOther.isEmpty || item.id != withOther.get.id).map { item =>
+    @b3.checkbox(form(s"$fullField[]"),
       'id -> s"$idPrefix-${item.id}",
       'value -> item.id,
       '_text -> item.description,
-      'checked -> form(field).indexes.exists(i => form(s"$field[$i]").value.contains(item.id))
+      'checked -> form(fullField).indexes.exists(i => form(fullFieldWithIndex(i)).value.contains(item.id))
     )(b3.clear.fieldConstructorSpecific, messagesProvider)
     @* pass clear FC to the checkboxes so they aren't each wrapped in a form group *@
+  }
+
+  @withOther.map { other =>
+    @b3.checkbox(form(s"$fullField[]"),
+      'id -> s"$idPrefix-${other.id}",
+      'value -> other.id,
+      '_text -> other.label,
+      'checked -> form(fullField).indexes.exists(i => form(fullFieldWithIndex(i)).value.contains(other.id)),
+      Symbol("data-toggle") -> "optional-subform",
+      Symbol("data-target") -> s"#$idPrefix-${other.id}-value"
+    )(b3.clear.fieldConstructorSpecific, messagesProvider)
+
+    @b3.text(form(s"$field.otherValue"),
+      'id -> s"$idPrefix-${other.id}-value"
+    )(b3.clear.fieldConstructorSpecific, messagesProvider)
   }
 
   @form(field).error.map { error =>

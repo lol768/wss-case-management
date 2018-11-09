@@ -29,6 +29,7 @@ case class Case(
   cause: CaseCause,
   dsaApplication: Option[UUID],
   clientRiskTypes: Set[ClientRiskType],
+  studentSupportIssueTypes: Set[StudentSupportIssueType],
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
 ) extends Issue
@@ -58,7 +59,8 @@ case class CaseSave(
   incident: Option[CaseIncident],
   caseType: Option[CaseType],
   cause: CaseCause,
-  clientRiskTypes: Set[ClientRiskType]
+  clientRiskTypes: Set[ClientRiskType],
+  studentSupportIssueTypes: Set[StudentSupportIssueType]
 )
 
 object CaseSave {
@@ -68,7 +70,8 @@ object CaseSave {
       c.incident,
       c.caseType,
       c.cause,
-      c.clientRiskTypes
+      c.clientRiskTypes,
+      c.studentSupportIssueTypes
     )
 }
 
