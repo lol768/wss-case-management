@@ -128,3 +128,11 @@
   field = "tags",
   idPrefix = "tag"
 )
+
+@b3.checkboxGroup(
+  label = "Client risk type",
+  items = ClientRiskType.values,
+  form = form,
+  field = "case.clientRiskTypes",
+  idPrefix = "clientRiskType"
+)

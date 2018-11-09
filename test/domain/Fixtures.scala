@@ -165,7 +165,8 @@ object Fixtures {
         None,
         None,
         CaseCause.New,
-        None
+        None,
+        List()
       )
 
     def newDSAApplicationSave() = DSAApplicationSave(
