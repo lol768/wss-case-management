@@ -147,12 +147,6 @@ GET         /team/appointment/:key                  @controllers.admin.Appointme
 GET         /team/appointment/:key/edit             @controllers.admin.AppointmentController.editForm(key: domain.IssueKey)
 POST        /team/appointment/:key/edit             @controllers.admin.AppointmentController.edit(key: domain.IssueKey)
 POST        /team/appointment/:key/cancel           @controllers.admin.AppointmentController.cancel(key: domain.IssueKey)
-GET         /team/appointment/:key/notes            @controllers.admin.AppointmentController.notes(key: domain.IssueKey)
-POST        /team/appointment/:key/note             @controllers.admin.AppointmentController.addNote(key: domain.IssueKey)
-GET         /team/appointment/:key/note/:id         @controllers.admin.AppointmentController.editNoteForm(key: domain.IssueKey, id: java.util.UUID)
-POST        /team/appointment/:key/note/:id         @controllers.admin.AppointmentController.editNote(key: domain.IssueKey, id: java.util.UUID)
-POST        /team/appointment/:key/note/:id/delete  @controllers.admin.AppointmentController.deleteNote(key: domain.IssueKey, id: java.util.UUID)
-DELETE      /team/appointment/:key/note/:id         @controllers.admin.AppointmentController.deleteNote(key: domain.IssueKey, id: java.util.UUID)
 GET         /team/appointment/:key/outcomes         @controllers.admin.AppointmentOutcomesController.outcomesForm(key: domain.IssueKey)
 POST        /team/appointment/:key/outcomes         @controllers.admin.AppointmentOutcomesController.outcomes(key: domain.IssueKey)
 

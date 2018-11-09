@@ -5,14 +5,14 @@ import java.util.UUID
 import com.google.inject.ImplementedBy
 import domain.{IssueState, Team, Teams}
 import helpers.ServiceResults
+import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Provider, Singleton}
 import play.api.Configuration
 import system.Roles
-import warwick.core.timing.{TimingContext, TimingService}
-import warwick.sso.{GroupName, GroupService, RoleService, User, Usercode}
-import ServiceResults.Implicits._
 import warwick.core.Logging
+import warwick.core.timing.{TimingContext, TimingService}
+import warwick.sso._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,7 +41,6 @@ trait PermissionService {
   def canViewAppointment(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canEditAppointment(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canClientManageAppointment(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
-  def canEditAppointmentNote(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
   def webgroupFor(team: Team): GroupName
 }
@@ -247,14 +246,6 @@ class PermissionServiceImpl @Inject() (
           appointmentService.getTeamMembers(id).map(_.map(_.map(_.member.usercode).contains(user)))
         }
     )
-
-  override def canEditAppointmentNote(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] = {
-    appointmentService.getNote(id).successFlatMapTo(noteAndAppointment => {
-      canEditAppointment(user, noteAndAppointment.appointment.id).successMapTo(canEditNote => {
-        canEditNote && noteAndAppointment.note.teamMember.usercode == user
-      })
-    })
-  }
 
   override def webgroupFor(team: Team): GroupName =
     GroupName(s"$webgroupPrefix${team.id}")

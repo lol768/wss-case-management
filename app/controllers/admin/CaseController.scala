@@ -102,7 +102,7 @@ object CaseController {
     )(CaseLinkFormData.apply)(CaseLinkFormData.unapply))
   }
 
-  val generalNoteTypes: Seq[CaseNoteType] = Seq(GeneralNote, CaseClosed, CaseReopened)
+  val generalNoteTypes: Seq[CaseNoteType] = Seq(GeneralNote, CaseClosed, CaseReopened, AppointmentNote)
 
   case class CaseNoteFormData(
     text: String,

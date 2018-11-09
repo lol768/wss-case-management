@@ -411,79 +411,12 @@ class AppointmentController @Inject()(
         formWithErrors
       ),
       data => {
-        val note = data.message.map(AppointmentNoteSave(_, request.user.get.usercode))
+        val note = data.message.map(CaseNoteSave(_, currentUser().usercode))
         appointments.cancel(appointment.id, data.cancellationReason, note, data.version).successMap { updated =>
           Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
             .flashing("success" -> Messages("flash.appointment.cancelled"))
         }
       }
-    )
-  }
-
-  def notes(appointmentKey: IssueKey): Action[AnyContent] = CanViewAppointmentAction(appointmentKey).async { implicit request =>
-    appointments.getNotes(request.appointment.id).successMap { notes =>
-      Ok(views.html.admin.appointments.sections.notes(
-        request.appointment,
-        notes,
-        appointmentNoteFormPrefilled(request.appointment.lastUpdated)
-      ))
-    }
-  }
-
-  def addNote(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
-    val appointment = request.appointment
-
-    appointmentNoteForm(appointment.lastUpdated).bindFromRequest().fold(
-      formWithErrors => Future.successful(BadRequest(formWithErrors.errors.mkString(", "))),
-      data =>
-        // We don't do anything with data.version here, it's validated but we don't lock the appointment when adding a note
-        appointments.addNote(appointment.id, AppointmentNoteSave(data.text, currentUser.usercode)).successMap { _ =>
-          Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
-            .flashing("success" -> Messages("flash.appointment.noteAdded"))
-        }
-    )
-  }
-
-  def editNoteForm(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentNoteAction(id) { implicit request =>
-    Ok(
-      views.html.admin.appointments.editNote(
-        appointmentKey,
-        request.note,
-        appointmentNoteForm(request.note.lastUpdated).fill(AppointmentNoteFormData(request.note.text, request.note.lastUpdated))
-      )
-    )
-  }
-
-  def editNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentNoteAction(id).async { implicit request =>
-    appointmentNoteForm(request.note.lastUpdated).bindFromRequest().fold(
-      formWithErrors => Future.successful(
-        Ok(
-          views.html.admin.appointments.editNote(
-            appointmentKey,
-            request.note,
-            formWithErrors
-          )
-        )
-      ),
-      data =>
-        appointments.updateNote(request.appointment.id, request.note.id, AppointmentNoteSave(data.text, currentUser.usercode), data.version).successMap { _ =>
-          Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
-            .flashing("success" -> Messages("flash.appointment.noteUpdated"))
-        }
-    )
-  }
-
-  def deleteNote(appointmentKey: IssueKey, id: UUID): Action[AnyContent] = CanEditAppointmentNoteAction(id).async { implicit request =>
-    deleteForm(request.note.lastUpdated).bindFromRequest().fold(
-      formWithErrors => Future.successful(
-        // Nowhere to show a validation error so just fall back to an error page
-        showErrors(formWithErrors.errors.map { e => ServiceError(e.format) })
-      ),
-      version =>
-        appointments.deleteNote(request.appointment.id, request.note.id, version).successMap { _ =>
-          Redirect(controllers.admin.routes.AppointmentController.view(appointmentKey))
-            .flashing("success" -> Messages("flash.appointment.noteDeleted"))
-        }
     )
   }
 
