@@ -91,6 +91,12 @@ object UserType extends Enum[UserType] {
   case object Staff extends UserType
   case object EmeritusAcademic extends UserType
   case object Applicant extends UserType
+
+  def apply(user: User): UserType =
+    if (user.isStudent || user.isPGR) UserType.Student
+    else if (user.isStaffNotPGR) UserType.Staff
+    // TODO else if (user.isApplicant) UserType.Applicant
+    else UserType.Other
 }
 
 sealed abstract class Attendance(override val entryName: String, val description: String) extends EnumEntry {

@@ -1,7 +1,7 @@
 package controllers.enquiries
 
 import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
-import controllers.refiners.CanViewEnquiryActionRefiner
+import controllers.refiners.{CanViewEnquiryActionRefiner, ValidUniversityIDActionFilter}
 import controllers.{BaseController, UploadedFileControllerHelper}
 import domain.Enquiry.{FormData => Data}
 import domain.IssueState.Open
@@ -18,6 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class EnquiryController @Inject()(
   enquirySpecificActionRefiner: CanViewEnquiryActionRefiner,
+  validUniversityIDActionFilter: ValidUniversityIDActionFilter,
   securityService: SecurityService,
   service: EnquiryService,
   config: Configuration,
@@ -25,17 +26,18 @@ class EnquiryController @Inject()(
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import securityService._
+  import validUniversityIDActionFilter._
 
   private val initialTeam: Team = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
 
   private def render(f: Form[Data])(implicit req: RequestHeader) =
     Ok(views.html.enquiry.form(f, uploadedFileControllerHelper.supportedMimeTypes))
 
-  def form(): Action[AnyContent] = SigninRequiredAction { implicit request =>
+  def form(): Action[AnyContent] = SigninRequiredAction.andThen(ValidUniversityIDRequiredCurrentUser) { implicit request =>
     render(Enquiry.form)
   }
 
-  def submit(): Action[MultipartFormData[TemporaryUploadedFile]] = SigninRequiredAction(uploadedFileControllerHelper.bodyParser).async { implicit request =>
+  def submit(): Action[MultipartFormData[TemporaryUploadedFile]] = SigninRequiredAction.andThen(ValidUniversityIDRequiredCurrentUser)(uploadedFileControllerHelper.bodyParser).async { implicit request =>
     Enquiry.form.bindFromRequest().fold(
       formWithErrors => Future.successful(render(formWithErrors)),
       formData => {

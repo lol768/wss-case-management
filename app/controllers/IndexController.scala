@@ -7,9 +7,11 @@ import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
+import play.api.Configuration
 import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent}
 import services._
+import services.tabula.ProfileService
 import warwick.core.helpers.JavaTime
 import warwick.sso.{AuthenticatedRequest, Usercode}
 
@@ -28,9 +30,13 @@ class IndexController @Inject()(
   appointments: AppointmentService,
   userPreferences: UserPreferencesService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
+  profiles: ProfileService,
+  configuration: Configuration,
 )(implicit executionContext: ExecutionContext) extends BaseController {
   import anyTeamActionRefiner._
   import securityService._
+
+  private[this] val clientUserTypes = configuration.get[Seq[String]]("wellbeing.validClientUserTypes").flatMap(UserType.namesToValuesMap.get)
 
   def home: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
     ServiceResults.zip(
@@ -210,14 +216,16 @@ class IndexController @Inject()(
     ServiceResults.zip(
       enquiryService.findAllEnquiriesForClient(client),
       caseService.findAllForClient(client).map(_.map(_.filter(_.messages.nonEmpty))),
-      registrations.get(client)
-    ).successFlatMapTo { case (clientEnquiries, clientCases, registration) =>
+      registrations.get(client),
+      profiles.getProfile(client).map(_.value),
+    ).successFlatMapTo { case (clientEnquiries, clientCases, registration, profile) =>
       val issues = (clientEnquiries.map(_.toIssue) ++ clientCases.map(_.toIssue)).sortBy(_.lastUpdatedDate)(JavaTime.dateTimeOrdering).reverse
 
       val result = Future.successful(Right(Ok(views.html.messagesTab(
         issues,
         registration,
-        uploadedFileControllerHelper.supportedMimeTypes
+        uploadedFileControllerHelper.supportedMimeTypes,
+        canMakeEnquiry = clientUserTypes.contains(profile.map(_.userType).getOrElse(UserType(currentUser()))),
       ))))
 
       // Record an EnquiryView or CaseView event for the first issue

@@ -50,9 +50,20 @@
       </table>
     }
 
-    @b3.select(form("outcome"),
-      options = ("", "") +: AppointmentOutcome.values.map(o => o.entryName -> o.description),
-      '_label -> "Outcome"
+    @b3.checkboxGroup(
+      label = "Outcomes",
+      items = AppointmentOutcome.values,
+      form = form,
+      field = "outcome",
+      idPrefix = "outcome"
+    )
+
+    @b3.textarea(
+      form("note"),
+      '_label -> "Appointment notes (optional)",
+      '_help -> "(this will be added to all linked cases)",
+      'rows -> 5,
+      'helpOnTop -> true
     )
 
     @tags.submitOrCancel("Record outcomes", controllers.admin.routes.AppointmentController.view(a.appointment.key))
