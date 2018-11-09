@@ -411,7 +411,7 @@ class AppointmentController @Inject()(
         formWithErrors
       ),
       data => {
-        val note = data.message.map(CaseNoteSave(_, request.user.get.usercode))
+        val note = data.message.map(CaseNoteSave(_, currentUser().usercode))
         appointments.cancel(appointment.id, data.cancellationReason, note, currentUser().usercode, data.version).successMap { updated =>
           Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
             .flashing("success" -> Messages("flash.appointment.cancelled"))
