@@ -30,7 +30,8 @@ trait ExtendedPgSearchSupport extends PgSearchSupport { driver: PostgresProfile 
 
 trait ExtendedPostgresProfile
   extends ExPostgresProfile
-    with ExtendedPgSearchSupport {
+    with ExtendedPgSearchSupport
+    with PgArraySupport {
 
   // Add back `capabilities.insertOrUpdate` to enable native `upsert` support; for postgres 9.5+
   override protected def computeCapabilities: Set[Capability] =
@@ -42,6 +43,7 @@ trait ExtendedPostgresProfile
     extends super.API
       with SearchImplicits
       with ExtendedSearchAssistants
+      with ArrayImplicits
 }
 
 object ExtendedPostgresProfile extends ExtendedPostgresProfile
