@@ -64,6 +64,7 @@
     </div>
     <div class="row">
       <div class="col-sm-6 col-md-7 field-history" data-field-history="@Json.stringify(Json.toJson(history)(CaseHistory.writer))">
+        <div class="hidden" data-field-history-field="subject" data-field-history-target=".id7-page-title h1"></div>
 
         @tags.sectioned.detail("Date raised"){ <div>@JavaTime.Relative(c.created)</div> }
 
