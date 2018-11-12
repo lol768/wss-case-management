@@ -220,6 +220,18 @@
           }
         }
 
+        @if(c.counsellingServicesIssues.nonEmpty || history.counsellingServicesIssues.size > 1) {
+          @tags.sectioned.detail("Counselling services issue"){
+            <div data-field-history-field="counsellingServicesIssues">
+              @if(c.counsellingServicesIssues.nonEmpty) {
+                @c.counsellingServicesIssues.toSeq.map(_.description).sorted.mkString(", ")
+              } else {
+                None
+              }
+            </div>
+          }
+        }
+
         @if(c.studentSupportIssueTypes.nonEmpty || history.studentSupportIssueTypes.size > 1) {
           @tags.sectioned.detail("Student support issue type"){
             <div data-field-history-field="studentSupportIssueTypes">

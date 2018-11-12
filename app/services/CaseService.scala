@@ -136,6 +136,7 @@ class CaseServiceImpl @Inject() (
       cause = save.cause,
       dsaApplication = dsaApplication,
       clientRiskTypes = save.clientRiskTypes.map(_.entryName).toList.sorted,
+      counsellingServicesIssues = save.counsellingServicesIssues.map(_.entryName).toList.sorted,
       studentSupportIssueTypes = save.studentSupportIssueTypes.map(_.entryName).toList.sorted,
       studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(save.studentSupportIssueTypes)
     )
@@ -275,6 +276,7 @@ class CaseServiceImpl @Inject() (
               cause = c.cause,
               dsaApplication = dsa.map(_.id),
               clientRiskTypes = c.clientRiskTypes.map(_.entryName).toList.sorted,
+              counsellingServicesIssues = c.counsellingServicesIssues.map(_.entryName).toList.sorted,
               studentSupportIssueTypes = c.studentSupportIssueTypes.map(_.entryName).toList,
               studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(c.studentSupportIssueTypes)
             ),

@@ -537,6 +537,7 @@ class DataGenerationJob @Inject()(
                 },
                 cause = randomEnum(CaseCause),
                 clientRiskTypes = Set(), // TODO Could add some here
+                counsellingServicesIssues = Set(), // TODO Could add some here
                 studentSupportIssueTypes = Set() // TODO Could add some here
               ),
               Set(enquiry.client.universityID),
@@ -595,6 +596,7 @@ class DataGenerationJob @Inject()(
               },
               cause = randomEnum(CaseCause),
               clientRiskTypes = Set(), // TODO Could add some here
+              counsellingServicesIssues = Set(), // TODO Could add some here
               studentSupportIssueTypes = Set() // TODO Could add some here
             ),
             clients,

@@ -138,6 +138,14 @@
 )
 
 @b3.checkboxGroup(
+  label = "Counselling services issue",
+  items = CounsellingServicesIssue.values,
+  form = form,
+  field = "case.counsellingServicesIssues",
+  idPrefix = "counsellingServicesIssue"
+)
+
+@b3.checkboxGroup(
   label = "Student support issue type",
   items = StudentSupportIssueType.values,
   form = form,

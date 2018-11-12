@@ -168,6 +168,7 @@ object Fixtures {
         None,
         List(),
         List(),
+        List(),
         None
       )
 
