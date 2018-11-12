@@ -135,8 +135,12 @@ class CaseServiceImpl @Inject() (
       caseType = save.caseType,
       cause = save.cause,
       dsaApplication = dsaApplication,
-      clientRiskTypes = save.clientRiskTypes.map(_.entryName).toList.sorted,
-      counsellingServicesIssues = save.counsellingServicesIssues.map(_.entryName).toList.sorted
+      fields = StoredCaseFields(
+        clientRiskTypes = save.clientRiskTypes.map(_.entryName).toList.sorted,
+        counsellingServicesIssues = save.counsellingServicesIssues.map(_.entryName).toList.sorted,
+        studentSupportIssueTypes = save.studentSupportIssueTypes.map(_.entryName).toList.sorted,
+        studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(save.studentSupportIssueTypes)
+      )
     )
 
   override def create(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team, originalEnquiry: Option[UUID], application: Option[DSAApplicationSave])(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
@@ -273,8 +277,12 @@ class CaseServiceImpl @Inject() (
               caseType = c.caseType,
               cause = c.cause,
               dsaApplication = dsa.map(_.id),
-              clientRiskTypes = c.clientRiskTypes.map(_.entryName).toList.sorted,
-              counsellingServicesIssues = c.counsellingServicesIssues.map(_.entryName).toList.sorted
+              fields = StoredCaseFields(
+                clientRiskTypes = c.clientRiskTypes.map(_.entryName).toList.sorted,
+                counsellingServicesIssues = c.counsellingServicesIssues.map(_.entryName).toList.sorted,
+                studentSupportIssueTypes = c.studentSupportIssueTypes.map(_.entryName).toList,
+                studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(c.studentSupportIssueTypes)
+              )
             ),
             caseVersion
           )

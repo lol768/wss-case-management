@@ -28,8 +28,7 @@ case class Case(
   caseType: Option[CaseType],
   cause: CaseCause,
   dsaApplication: Option[UUID],
-  clientRiskTypes: Set[ClientRiskType],
-  counsellingServicesIssues: Set[CounsellingServicesIssue],
+  fields: CaseFields,
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
 ) extends Issue
@@ -40,6 +39,12 @@ case class CaseIncident(
   notifiedPolice: Boolean,
   notifiedAmbulance: Boolean,
   notifiedFire: Boolean,
+)
+
+case class CaseFields(
+  clientRiskTypes: Set[ClientRiskType],
+  counsellingServicesIssues: Set[CounsellingServicesIssue],
+  studentSupportIssueTypes: Set[StudentSupportIssueType]
 )
 
 object Case {
@@ -61,6 +66,7 @@ case class CaseSave(
   cause: CaseCause,
   clientRiskTypes: Set[ClientRiskType],
   counsellingServicesIssues: Set[CounsellingServicesIssue],
+  studentSupportIssueTypes: Set[StudentSupportIssueType]
 )
 
 object CaseSave {
@@ -70,8 +76,9 @@ object CaseSave {
       c.incident,
       c.caseType,
       c.cause,
-      c.clientRiskTypes,
-      c.counsellingServicesIssues,
+      c.fields.clientRiskTypes,
+      c.fields.counsellingServicesIssues,
+      c.fields.studentSupportIssueTypes
     )
 }
 
@@ -272,7 +279,8 @@ object CaseHistory {
       "dsaConfirmationDate" -> toJson(dsaHistory[Option[OffsetDateTime]](r.dsaConfirmationDate, date => date.map(JavaTime.Relative.apply(_)).getOrElse("Decision date removed"))),
       "dsaIneligibilityReason" -> toJson(dsaHistory[Option[DSAIneligibilityReason]](r.dsaIneligibilityReason, reason => reason.map(_.description).getOrElse("Ineligibility reason removed"))),
       "clientRiskTypes" -> toJson(r.clientRiskTypes.map { case (clientRiskType, v, u) => (clientRiskType.map(_.description), v, u) }),
-      "counsellingServicesIssues" -> toJson(r.counsellingServicesIssues.map { case (counsellingServicesIssue, v, u) => (counsellingServicesIssue.map(_.description), v, u) })
+      "counsellingServicesIssues" -> toJson(r.counsellingServicesIssues.map { case (counsellingServicesIssue, v, u) => (counsellingServicesIssue.map(_.description), v, u) }),
+      "studentSupportIssueTypes" -> toJson(r.studentSupportIssueTypes.map { case (studentSupportIssueType, v, u) => (studentSupportIssueType.map(_.description), v, u) })
     )
 
   def apply(
@@ -327,8 +335,9 @@ object CaseHistory {
         dsaFundingTypes = flattenCollection[StoredDSAFundingType, StoredDSAFundingTypeVersion](rawDSAFundingTypeHistory)
           .map { case (fundingTypes, v, u) => (fundingTypes.map(_.fundingType), v, u.map(toUsercodeOrUser))},
         dsaIneligibilityReason = dsaFieldHistory(_.ineligibilityReason),
-        clientRiskTypes = simpleFieldHistory(_.clientRiskTypes.map(ClientRiskType.withName).toSet),
-        counsellingServicesIssues = simpleFieldHistory(_.counsellingServicesIssue.map(CounsellingServicesIssue.withName).toSet)
+        clientRiskTypes = simpleFieldHistory(_.fields.clientRiskTypes.map(ClientRiskType.withName).toSet),
+        counsellingServicesIssues = simpleFieldHistory(_.fields.counsellingServicesIssues.map(CounsellingServicesIssue.withName).toSet),
+        studentSupportIssueTypes = simpleFieldHistory(c => StudentSupportIssueType.apply(c.fields.studentSupportIssueTypes, c.fields.studentSupportIssueTypeOther))
       )
     ))
   }
@@ -405,5 +414,6 @@ case class CaseHistory(
   dsaFundingTypes: FieldHistory[Set[DSAFundingType]],
   dsaIneligibilityReason: FieldHistory[Option[Option[DSAIneligibilityReason]]],
   clientRiskTypes: FieldHistory[Set[ClientRiskType]],
-  counsellingServicesIssues: FieldHistory[Set[CounsellingServicesIssue]]
+  counsellingServicesIssues: FieldHistory[Set[CounsellingServicesIssue]],
+  studentSupportIssueTypes: FieldHistory[Set[StudentSupportIssueType]]
 )
