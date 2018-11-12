@@ -153,3 +153,12 @@
   idPrefix = "studentSupportIssueType",
   withOther = Some(StudentSupportIssueType.Other(None))
 )
+
+@b3.checkboxGroup(
+  label = "Current medication",
+  items = CaseMedication.values,
+  form = form,
+  field = "case.medications",
+  idPrefix = "medication",
+  withOther = Some(CaseMedication.Other(None))
+)

@@ -139,7 +139,9 @@ class CaseServiceImpl @Inject() (
         clientRiskTypes = save.clientRiskTypes.map(_.entryName).toList.sorted,
         counsellingServicesIssues = save.counsellingServicesIssues.map(_.entryName).toList.sorted,
         studentSupportIssueTypes = save.studentSupportIssueTypes.map(_.entryName).toList.sorted,
-        studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(save.studentSupportIssueTypes)
+        studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(save.studentSupportIssueTypes),
+        medications = save.medications.map(_.entryName).toList.sorted,
+        medicationOther = CaseMedication.otherValue(save.medications)
       )
     )
 
@@ -280,8 +282,10 @@ class CaseServiceImpl @Inject() (
               fields = StoredCaseFields(
                 clientRiskTypes = c.clientRiskTypes.map(_.entryName).toList.sorted,
                 counsellingServicesIssues = c.counsellingServicesIssues.map(_.entryName).toList.sorted,
-                studentSupportIssueTypes = c.studentSupportIssueTypes.map(_.entryName).toList,
-                studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(c.studentSupportIssueTypes)
+                studentSupportIssueTypes = c.studentSupportIssueTypes.map(_.entryName).toList.sorted,
+                studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(c.studentSupportIssueTypes),
+                medications = c.medications.map(_.entryName).toList.sorted,
+                medicationOther = CaseMedication.otherValue(c.medications)
               )
             ),
             caseVersion
