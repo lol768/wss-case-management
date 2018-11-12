@@ -13,7 +13,7 @@ import play.api.mvc.{Action, AnyContent}
 import services._
 import services.tabula.ProfileService
 import warwick.core.helpers.JavaTime
-import warwick.sso.{AuthenticatedRequest, Usercode}
+import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -157,7 +157,7 @@ class IndexController @Inject()(
   def atRiskClients: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     Future.successful(permissions.teams(currentUser().usercode)).successFlatMap(teams =>
       clientSummaries.findAtRisk(teams.contains(Teams.MentalHealth)).successMap(clients =>
-        Ok(views.html.admin.atRiskClients(clients, teams.contains(Teams.MentalHealth)))
+        Ok(views.html.admin.atRiskClients(clients))
       )
     )
   }

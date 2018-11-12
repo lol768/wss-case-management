@@ -162,12 +162,6 @@
               }
             }
 
-            @if(inMentalHealthTeam && clientSummary.exists(_.highMentalHealthRisk.contains(true))) {
-              @tags.sectioned.detail("Mental health risk") {
-                <span class="label label-danger">High mental health risk</span>
-              }
-            }
-
             @clientSummary.flatMap(_.riskStatus).map { status =>
               @tags.sectioned.detail("Risk status") { @status match {
                 case ClientRiskStatus.Low => {
@@ -529,13 +523,6 @@
                 options = ("", "") +: ClientRiskStatus.values.map { s => s.entryName -> s.entryName },
                 '_label -> "Risk status"
               )
-            </div>
-            <div class="col-sm-3 col-sm-offset-3">
-              @if(inMentalHealthTeam) {
-                @b3.select(form("high-mental-health-risk"), options = Seq("" -> "Not specified", "true" -> "Yes", "false" -> "No"),
-                  '_label -> "High mental health risk"
-                )
-              }
             </div>
           </div>
 

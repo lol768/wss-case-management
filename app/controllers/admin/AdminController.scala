@@ -137,7 +137,7 @@ class AdminController @Inject()(
 
   def atRiskClients(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
     clientSummaryService.findAtRisk(teamRequest.team == Teams.MentalHealth).successMap(clients =>
-      Ok(views.html.admin.atRiskClients(clients, teamRequest.team == Teams.MentalHealth))
+      Ok(views.html.admin.atRiskClients(clients))
     )
   }
 
