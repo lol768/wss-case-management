@@ -162,3 +162,8 @@
   idPrefix = "medication",
   withOther = Some(CaseMedication.Other(None))
 )
+
+@b3.select(form("case.severityOfProblem"),
+  options = ("", "") +: SeverityOfProblem.values.map { c => c.entryName -> c.description },
+  '_label -> "Severity of problem"
+)

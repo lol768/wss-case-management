@@ -45,7 +45,8 @@ case class CaseFields(
   clientRiskTypes: Set[ClientRiskType],
   counsellingServicesIssues: Set[CounsellingServicesIssue],
   studentSupportIssueTypes: Set[StudentSupportIssueType],
-  medications: Set[CaseMedication]
+  medications: Set[CaseMedication],
+  severityOfProblem: Option[SeverityOfProblem]
 )
 
 object Case {
@@ -68,7 +69,8 @@ case class CaseSave(
   clientRiskTypes: Set[ClientRiskType],
   counsellingServicesIssues: Set[CounsellingServicesIssue],
   studentSupportIssueTypes: Set[StudentSupportIssueType],
-  medications: Set[CaseMedication]
+  medications: Set[CaseMedication],
+  severityOfProblem: Option[SeverityOfProblem]
 )
 
 object CaseSave {
@@ -81,7 +83,8 @@ object CaseSave {
       c.fields.clientRiskTypes,
       c.fields.counsellingServicesIssues,
       c.fields.studentSupportIssueTypes,
-      c.fields.medications
+      c.fields.medications,
+      c.fields.severityOfProblem
     )
 }
 
@@ -284,7 +287,8 @@ object CaseHistory {
       "clientRiskTypes" -> toJson(r.clientRiskTypes.map { case (clientRiskType, v, u) => (clientRiskType.map(_.description), v, u) }),
       "counsellingServicesIssues" -> toJson(r.counsellingServicesIssues.map { case (counsellingServicesIssue, v, u) => (counsellingServicesIssue.map(_.description), v, u) }),
       "studentSupportIssueTypes" -> toJson(r.studentSupportIssueTypes.map { case (studentSupportIssueType, v, u) => (studentSupportIssueType.map(_.description), v, u) }),
-      "medications" -> toJson(r.medications.map { case (medication, v, u) => (medication.map(_.description), v, u) })
+      "medications" -> toJson(r.medications.map { case (medication, v, u) => (medication.map(_.description), v, u) }),
+      "severityOfProblem" -> toJson(r.severityOfProblem.map { case (severityOfProblem, v, u) => (severityOfProblem.map(_.description), v, u) })
     )
 
   def apply(
@@ -342,7 +346,8 @@ object CaseHistory {
         clientRiskTypes = simpleFieldHistory(_.fields.clientRiskTypes.map(ClientRiskType.withName).toSet),
         counsellingServicesIssues = simpleFieldHistory(_.fields.counsellingServicesIssues.map(CounsellingServicesIssue.withName).toSet),
         studentSupportIssueTypes = simpleFieldHistory(c => StudentSupportIssueType.apply(c.fields.studentSupportIssueTypes, c.fields.studentSupportIssueTypeOther)),
-        medications = simpleFieldHistory(c => CaseMedication.apply(c.fields.medications, c.fields.medicationOther))
+        medications = simpleFieldHistory(c => CaseMedication.apply(c.fields.medications, c.fields.medicationOther)),
+        severityOfProblem = simpleFieldHistory(_.fields.severityOfProblem),
       )
     ))
   }
@@ -421,5 +426,6 @@ case class CaseHistory(
   clientRiskTypes: FieldHistory[Set[ClientRiskType]],
   counsellingServicesIssues: FieldHistory[Set[CounsellingServicesIssue]],
   studentSupportIssueTypes: FieldHistory[Set[StudentSupportIssueType]],
-  medications: FieldHistory[Set[CaseMedication]]
+  medications: FieldHistory[Set[CaseMedication]],
+  severityOfProblem: FieldHistory[Option[SeverityOfProblem]]
 )
