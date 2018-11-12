@@ -244,6 +244,18 @@
           }
         }
 
+        @if(c.fields.medications.nonEmpty || history.medications.size > 1) {
+          @tags.sectioned.detail("Current medication"){
+            <div data-field-history-field="medications">
+            @if(c.fields.medications.nonEmpty) {
+              @c.fields.medications.toSeq.map(_.description).sorted.mkString(", ")
+            } else {
+              None
+            }
+            </div>
+          }
+        }
+
       </div>
       <div class="col-sm-6 col-md-4">
         <div class="row form-horizontal">
