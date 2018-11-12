@@ -271,7 +271,8 @@ object CaseHistory {
       "dsaFundingTypes" -> toJson(r.dsaFundingTypes.map { case (tags, v, u) => (tags.map(_.description).toSeq.sorted.mkString(", "), v, u) }),
       "dsaConfirmationDate" -> toJson(dsaHistory[Option[OffsetDateTime]](r.dsaConfirmationDate, date => date.map(JavaTime.Relative.apply(_)).getOrElse("Decision date removed"))),
       "dsaIneligibilityReason" -> toJson(dsaHistory[Option[DSAIneligibilityReason]](r.dsaIneligibilityReason, reason => reason.map(_.description).getOrElse("Ineligibility reason removed"))),
-      "clientRiskTypes" -> toJson(r.clientRiskTypes.map { case (clientRiskType, v, u) => (clientRiskType.map(_.description), v, u) })
+      "clientRiskTypes" -> toJson(r.clientRiskTypes.map { case (clientRiskType, v, u) => (clientRiskType.map(_.description), v, u) }),
+      "studentSupportIssueTypes" -> toJson(r.studentSupportIssueTypes.map { case (studentSupportIssueType, v, u) => (studentSupportIssueType.map(_.description), v, u) })
     )
 
   def apply(
@@ -326,7 +327,8 @@ object CaseHistory {
         dsaFundingTypes = flattenCollection[StoredDSAFundingType, StoredDSAFundingTypeVersion](rawDSAFundingTypeHistory)
           .map { case (fundingTypes, v, u) => (fundingTypes.map(_.fundingType), v, u.map(toUsercodeOrUser))},
         dsaIneligibilityReason = dsaFieldHistory(_.ineligibilityReason),
-        clientRiskTypes = simpleFieldHistory(_.clientRiskTypes.map(ClientRiskType.withName).toSet)
+        clientRiskTypes = simpleFieldHistory(_.clientRiskTypes.map(ClientRiskType.withName).toSet),
+        studentSupportIssueTypes = simpleFieldHistory(c => StudentSupportIssueType.apply(c.studentSupportIssueTypes, c.studentSupportIssueTypeOther))
       )
     ))
   }
@@ -402,5 +404,6 @@ case class CaseHistory(
   dsaConfirmationDate: FieldHistory[Option[Option[OffsetDateTime]]],
   dsaFundingTypes: FieldHistory[Set[DSAFundingType]],
   dsaIneligibilityReason: FieldHistory[Option[Option[DSAIneligibilityReason]]],
-  clientRiskTypes: FieldHistory[Set[ClientRiskType]]
+  clientRiskTypes: FieldHistory[Set[ClientRiskType]],
+  studentSupportIssueTypes: FieldHistory[Set[StudentSupportIssueType]]
 )

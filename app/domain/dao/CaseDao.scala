@@ -369,6 +369,8 @@ object CaseDao {
         cause,
         dsaApplication,
         clientRiskTypes,
+        studentSupportIssueTypes,
+        studentSupportIssueTypeOther,
         operation,
         timestamp,
         ac.usercode
@@ -393,6 +395,8 @@ object CaseDao {
     cause: CaseCause,
     dsaApplication: Option[UUID],
     clientRiskTypes: List[String],
+    studentSupportIssueTypes: List[String],
+    studentSupportIssueTypeOther: Option[String],
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
@@ -444,7 +448,7 @@ object CaseDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseVersion] =
-      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes, operation, timestamp, auditUser).mapTo[StoredCaseVersion]
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes, studentSupportIssueTypes, studentSupportIssueTypeOther, operation, timestamp, auditUser).mapTo[StoredCaseVersion]
   }
 
   implicit class CaseExtensions[C[_]](val q: Query[Cases, StoredCase, C]) extends AnyVal {

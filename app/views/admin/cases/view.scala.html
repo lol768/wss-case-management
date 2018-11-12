@@ -220,6 +220,18 @@
           }
         }
 
+        @if(c.studentSupportIssueTypes.nonEmpty || history.studentSupportIssueTypes.size > 1) {
+          @tags.sectioned.detail("Student support issue type"){
+            <div data-field-history-field="studentSupportIssueTypes">
+              @if(c.studentSupportIssueTypes.nonEmpty) {
+                @c.studentSupportIssueTypes.toSeq.map(_.description).sorted.mkString(", ")
+              } else {
+                None
+              }
+            </div>
+          }
+        }
+
       </div>
       <div class="col-sm-6 col-md-4">
         <div class="row form-horizontal">

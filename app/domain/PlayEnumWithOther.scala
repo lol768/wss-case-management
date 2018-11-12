@@ -16,8 +16,9 @@ trait EnumEntryOther extends EnumEntry with IdAndDescription {
   val label: String
 
   override val id: String = EnumEntryOther.id
-  override val description: String = s"$label (${value.orNull})"
   override val entryName: String = EnumEntryOther.entryName
+  // Add the line below to any implementing classes
+  // override val description: String = s"$label (${value.orNull})"
 }
 
 trait PlayEnumWithOther[A <: EnumEntry] extends PlayEnum[A] {
@@ -30,10 +31,7 @@ trait PlayEnumWithOther[A <: EnumEntry] extends PlayEnum[A] {
     }.toSet
 
   def otherValue(entries: Set[A]): Option[String] =
-    entries.collectFirst {
-      case entry: EnumEntryOther => entry.value
-      case _ => None
-    }.flatten
+    entries.collectFirst { case entry: EnumEntryOther => entry.value }.flatten
 
   def nonOtherValues: immutable.IndexedSeq[A]
 
