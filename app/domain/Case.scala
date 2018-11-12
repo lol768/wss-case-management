@@ -28,9 +28,7 @@ case class Case(
   caseType: Option[CaseType],
   cause: CaseCause,
   dsaApplication: Option[UUID],
-  clientRiskTypes: Set[ClientRiskType],
-  counsellingServicesIssues: Set[CounsellingServicesIssue],
-  studentSupportIssueTypes: Set[StudentSupportIssueType],
+  fields: CaseFields,
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
 ) extends Issue
@@ -41,6 +39,12 @@ case class CaseIncident(
   notifiedPolice: Boolean,
   notifiedAmbulance: Boolean,
   notifiedFire: Boolean,
+)
+
+case class CaseFields(
+  clientRiskTypes: Set[ClientRiskType],
+  counsellingServicesIssues: Set[CounsellingServicesIssue],
+  studentSupportIssueTypes: Set[StudentSupportIssueType]
 )
 
 object Case {
@@ -72,9 +76,9 @@ object CaseSave {
       c.incident,
       c.caseType,
       c.cause,
-      c.clientRiskTypes,
-      c.counsellingServicesIssues,
-      c.studentSupportIssueTypes
+      c.fields.clientRiskTypes,
+      c.fields.counsellingServicesIssues,
+      c.fields.studentSupportIssueTypes
     )
 }
 
@@ -331,9 +335,9 @@ object CaseHistory {
         dsaFundingTypes = flattenCollection[StoredDSAFundingType, StoredDSAFundingTypeVersion](rawDSAFundingTypeHistory)
           .map { case (fundingTypes, v, u) => (fundingTypes.map(_.fundingType), v, u.map(toUsercodeOrUser))},
         dsaIneligibilityReason = dsaFieldHistory(_.ineligibilityReason),
-        clientRiskTypes = simpleFieldHistory(_.clientRiskTypes.map(ClientRiskType.withName).toSet),
-        counsellingServicesIssues = simpleFieldHistory(_.counsellingServicesIssue.map(CounsellingServicesIssue.withName).toSet),
-        studentSupportIssueTypes = simpleFieldHistory(c => StudentSupportIssueType.apply(c.studentSupportIssueTypes, c.studentSupportIssueTypeOther))
+        clientRiskTypes = simpleFieldHistory(_.fields.clientRiskTypes.map(ClientRiskType.withName).toSet),
+        counsellingServicesIssues = simpleFieldHistory(_.fields.counsellingServicesIssues.map(CounsellingServicesIssue.withName).toSet),
+        studentSupportIssueTypes = simpleFieldHistory(c => StudentSupportIssueType.apply(c.fields.studentSupportIssueTypes, c.fields.studentSupportIssueTypeOther))
       )
     ))
   }

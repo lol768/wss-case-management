@@ -319,10 +319,7 @@ object CaseDao {
     caseType: Option[CaseType],
     cause: CaseCause,
     dsaApplication: Option[UUID],
-    clientRiskTypes: List[String],
-    counsellingServicesIssues: List[String],
-    studentSupportIssueTypes: List[String],
-    studentSupportIssueTypeOther: Option[String]
+    fields: StoredCaseFields
   ) extends Versioned[StoredCase] {
     def asCase: Case =
       Case(
@@ -344,9 +341,7 @@ object CaseDao {
         caseType = caseType,
         cause = cause,
         dsaApplication = dsaApplication,
-        clientRiskTypes = clientRiskTypes.toSet.map(ClientRiskType.withName),
-        counsellingServicesIssues = counsellingServicesIssues.toSet.map(CounsellingServicesIssue.withName),
-        studentSupportIssueTypes = StudentSupportIssueType(studentSupportIssueTypes, studentSupportIssueTypeOther),
+        fields = fields.asCaseFields,
         created = created,
         lastUpdated = version,
       )
@@ -370,14 +365,27 @@ object CaseDao {
         caseType,
         cause,
         dsaApplication,
-        clientRiskTypes,
-        counsellingServicesIssues,
-        studentSupportIssueTypes,
-        studentSupportIssueTypeOther,
+        fields,
         operation,
         timestamp,
         ac.usercode
       ).asInstanceOf[B]
+  }
+
+  /**
+    * Not a table directly; used to get around the tuple arity limit
+    */
+  case class StoredCaseFields(
+    clientRiskTypes: List[String],
+    counsellingServicesIssues: List[String],
+    studentSupportIssueTypes: List[String],
+    studentSupportIssueTypeOther: Option[String]
+  ) {
+    def asCaseFields: CaseFields = CaseFields(
+      clientRiskTypes = clientRiskTypes.toSet.map(ClientRiskType.withName),
+      counsellingServicesIssues = counsellingServicesIssues.toSet.map(CounsellingServicesIssue.withName),
+      studentSupportIssueTypes = StudentSupportIssueType(studentSupportIssueTypes, studentSupportIssueTypeOther),
+    )
   }
 
   case class StoredCaseVersion(
@@ -397,10 +405,7 @@ object CaseDao {
     caseType: Option[CaseType],
     cause: CaseCause,
     dsaApplication: Option[UUID],
-    clientRiskTypes: List[String],
-    counsellingServicesIssue: List[String],
-    studentSupportIssueTypes: List[String],
-    studentSupportIssueTypeOther: Option[String],
+    fields: StoredCaseFields,
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
@@ -428,6 +433,8 @@ object CaseDao {
     def counsellingServicesIssues = column[List[String]]("counselling_services_issues")
     def studentSupportIssueTypes = column[List[String]]("student_support_issue_types")
     def studentSupportIssueTypeOther = column[Option[String]]("student_support_issue_type_other")
+
+    protected def fieldsProjection = (clientRiskTypes, counsellingServicesIssues, studentSupportIssueTypes, studentSupportIssueTypeOther).mapTo[StoredCaseFields]
   }
 
   class Cases(tag: Tag) extends Table[StoredCase](tag, "client_case")
@@ -440,7 +447,7 @@ object CaseDao {
     def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 
     override def * : ProvenShape[StoredCase] =
-      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes, counsellingServicesIssues, studentSupportIssueTypes, studentSupportIssueTypeOther).mapTo[StoredCase]
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, fieldsProjection).mapTo[StoredCase]
     def idx = index("idx_client_case_key", key, unique = true)
   }
 
@@ -453,7 +460,7 @@ object CaseDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseVersion] =
-      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes, counsellingServicesIssues, studentSupportIssueTypes, studentSupportIssueTypeOther, operation, timestamp, auditUser).mapTo[StoredCaseVersion]
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, fieldsProjection, operation, timestamp, auditUser).mapTo[StoredCaseVersion]
   }
 
   implicit class CaseExtensions[C[_]](val q: Query[Cases, StoredCase, C]) extends AnyVal {

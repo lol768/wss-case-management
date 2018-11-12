@@ -4,7 +4,7 @@ import java.time.{Duration, LocalDate}
 import java.util.UUID
 
 import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
-import domain.dao.CaseDao.StoredCase
+import domain.dao.CaseDao.{StoredCase, StoredCaseFields}
 import domain.dao.LocationDao.{StoredBuilding, StoredRoom}
 import domain.dao._
 import warwick.core.helpers.JavaTime
@@ -166,10 +166,12 @@ object Fixtures {
         None,
         CaseCause.New,
         None,
-        List(),
-        List(),
-        List(),
-        None
+        StoredCaseFields(
+          List(),
+          List(),
+          List(),
+          None,
+        ),
       )
 
     def newDSAApplicationSave() = DSAApplicationSave(

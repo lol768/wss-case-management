@@ -208,11 +208,11 @@
           }
         }
 
-        @if(c.clientRiskTypes.nonEmpty || history.clientRiskTypes.size > 1) {
-          @tags.sectioned.detail("Client risk type"){
+        @if(c.fields.clientRiskTypes.nonEmpty || history.clientRiskTypes.size > 1) {
+          @tags.sectioned.detail("Client risk"){
             <div data-field-history-field="clientRiskTypes">
-              @if(c.clientRiskTypes.nonEmpty) {
-                @c.clientRiskTypes.toSeq.map(_.description).sorted.mkString(", ")
+              @if(c.fields.clientRiskTypes.nonEmpty) {
+                @c.fields.clientRiskTypes.toSeq.map(_.description).sorted.mkString(", ")
               } else {
                 None
               }
@@ -220,11 +220,11 @@
           }
         }
 
-        @if(c.counsellingServicesIssues.nonEmpty || history.counsellingServicesIssues.size > 1) {
+        @if(c.fields.counsellingServicesIssues.nonEmpty || history.counsellingServicesIssues.size > 1) {
           @tags.sectioned.detail("Counselling services issue"){
             <div data-field-history-field="counsellingServicesIssues">
-              @if(c.counsellingServicesIssues.nonEmpty) {
-                @c.counsellingServicesIssues.toSeq.map(_.description).sorted.mkString(", ")
+              @if(c.fields.counsellingServicesIssues.nonEmpty) {
+                @c.fields.counsellingServicesIssues.toSeq.map(_.description).sorted.mkString(", ")
               } else {
                 None
               }
@@ -232,11 +232,11 @@
           }
         }
 
-        @if(c.studentSupportIssueTypes.nonEmpty || history.studentSupportIssueTypes.size > 1) {
-          @tags.sectioned.detail("Student support issue type"){
+        @if(c.fields.studentSupportIssueTypes.nonEmpty || history.studentSupportIssueTypes.size > 1) {
+          @tags.sectioned.detail("Student support issue"){
             <div data-field-history-field="studentSupportIssueTypes">
-              @if(c.studentSupportIssueTypes.nonEmpty) {
-                @c.studentSupportIssueTypes.toSeq.map(_.description).sorted.mkString(", ")
+              @if(c.fields.studentSupportIssueTypes.nonEmpty) {
+                @c.fields.studentSupportIssueTypes.toSeq.map(_.description).sorted.mkString(", ")
               } else {
                 None
               }
