@@ -282,9 +282,9 @@ class CaseServiceImpl @Inject() (
               fields = StoredCaseFields(
                 clientRiskTypes = c.clientRiskTypes.map(_.entryName).toList.sorted,
                 counsellingServicesIssues = c.counsellingServicesIssues.map(_.entryName).toList.sorted,
-                studentSupportIssueTypes = c.studentSupportIssueTypes.map(_.entryName).toList,
+                studentSupportIssueTypes = c.studentSupportIssueTypes.map(_.entryName).toList.sorted,
                 studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(c.studentSupportIssueTypes),
-                medications = c.medications.map(_.entryName).toList,
+                medications = c.medications.map(_.entryName).toList.sorted,
                 medicationOther = CaseMedication.otherValue(c.medications)
               )
             ),
