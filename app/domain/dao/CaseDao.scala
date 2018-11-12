@@ -319,7 +319,8 @@ object CaseDao {
     caseType: Option[CaseType],
     cause: CaseCause,
     dsaApplication: Option[UUID],
-    clientRiskTypes: List[String]
+    clientRiskTypes: List[String],
+    counsellingServicesIssues: List[String]
   ) extends Versioned[StoredCase] {
     def asCase: Case =
       Case(
@@ -342,6 +343,7 @@ object CaseDao {
         cause = cause,
         dsaApplication = dsaApplication,
         clientRiskTypes = clientRiskTypes.toSet.map(ClientRiskType.withName),
+        counsellingServicesIssues = counsellingServicesIssues.toSet.map(CounsellingServicesIssue.withName),
         created = created,
         lastUpdated = version,
       )
@@ -366,6 +368,7 @@ object CaseDao {
         cause,
         dsaApplication,
         clientRiskTypes,
+        counsellingServicesIssues,
         operation,
         timestamp,
         ac.usercode
@@ -390,6 +393,7 @@ object CaseDao {
     cause: CaseCause,
     dsaApplication: Option[UUID],
     clientRiskTypes: List[String],
+    counsellingServicesIssue: List[String],
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
@@ -414,6 +418,7 @@ object CaseDao {
     def cause = column[CaseCause]("cause")
     def dsaApplication = column[Option[UUID]]("dsa_application")
     def clientRiskTypes = column[List[String]]("client_risk_types")
+    def counsellingServicesIssues = column[List[String]]("counselling_services_issues")
   }
 
   class Cases(tag: Tag) extends Table[StoredCase](tag, "client_case")
@@ -426,7 +431,7 @@ object CaseDao {
     def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 
     override def * : ProvenShape[StoredCase] =
-      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes).mapTo[StoredCase]
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes, counsellingServicesIssues).mapTo[StoredCase]
     def idx = index("idx_client_case_key", key, unique = true)
   }
 
@@ -439,7 +444,7 @@ object CaseDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseVersion] =
-      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes, operation, timestamp, auditUser).mapTo[StoredCaseVersion]
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes, counsellingServicesIssues, operation, timestamp, auditUser).mapTo[StoredCaseVersion]
   }
 
   implicit class CaseExtensions[C[_]](val q: Query[Cases, StoredCase, C]) extends AnyVal {
