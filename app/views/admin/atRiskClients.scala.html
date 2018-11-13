@@ -1,24 +1,16 @@
 @import domain.{AtRiskClient, ClientRiskStatus}
 @import warwick.core.helpers.JavaTime
 
-@(clients: Set[AtRiskClient], showMentalHealth: Boolean)
+@(clients: Set[AtRiskClient])
 
 @if(clients.nonEmpty) {
   <table class="table table-default">
     <thead>
       <tr>
-      @if(showMentalHealth) {
-        <th class="col-sm-4">Client</th>
-        <th class="col-sm-2"></th>
-        <th class="col-sm-2"></th>
-        <th class="col-sm-2">Last case updated</th>
-        <th class="col-sm-2">Last enquiry updated</th>
-      } else {
         <th class="col-sm-4">Client</th>
         <th class="col-sm-2"></th>
         <th class="col-sm-3">Last case updated</th>
         <th class="col-sm-3">Last enquiry updated</th>
-      }
       </tr>
     </thead>
     <tbody>
@@ -29,13 +21,6 @@
           @summary.client.safeFullName
         </a>
       </td>
-      @if(showMentalHealth) {
-        <td>
-        @summary.highMentalHealthRisk.filter(r => r).map { r =>
-          <span class="label label-danger">High mental health risk</span>
-        }
-        </td>
-      }
       <td>
         @summary.riskStatus.map {
           case ClientRiskStatus.Low => {
