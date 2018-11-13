@@ -410,13 +410,13 @@ export default function AppointmentCalendar(container) {
       if ($el.find('.fc-title').text()) {
         const tooltip = `<div class="fc-event--tooltip">
             ${$time.data('full') || $time.text()}:
-            ${(event.clients.length === 1) ? `<span class="fc-event--tooltip--name">${event.clients[0].client.fullName || event.clients[0].client.universityID}</span>` : `${event.clients.length} clients`},
-            ${event.appointmentType.description.toLowerCase()}
+            ${(event.clients.length === 1) ? `<span class="fc-event--tooltip--name">${_.escape(event.clients[0].client.fullName || event.clients[0].client.universityID)}</span>` : `${event.clients.length} clients`},
+            ${_.escape(event.appointmentType.description.toLowerCase())}
             with
-            ${_.map(event.teamMembers, tm => `<span class="fc-event--tooltip--name">${tm.fullName || event.team.name}</span>`).join(', ')},
-            ${event.team.name},
-            ${(event.location && event.location.name) ? `${event.location.name}, ${event.location.building},` : ''}
-            ${event.purpose.description.toLowerCase()}
+            ${_.map(event.teamMembers, tm => `<span class="fc-event--tooltip--name">${_.escape(tm.fullName || event.team.name)}</span>`).join(', ')},
+            ${_.escape(event.team.name)},
+            ${(event.location && event.location.name) ? `${_.escape(event.location.name)}, ${_.escape(event.location.building)},` : ''}
+            ${_.escape(event.purpose.description.toLowerCase())}
           </div>`;
 
         $el.tooltip({
