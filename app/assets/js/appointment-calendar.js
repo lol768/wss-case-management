@@ -326,6 +326,7 @@ export default function AppointmentCalendar(container) {
         titleFormat: 'dddd, MMM D, YYYY',
         columnFormat: 'dddd D/MM',
         selectable: true,
+        slotEventOverlap: false,
       },
     },
     events: (start, end, timezone, callback) => {
@@ -407,10 +408,22 @@ export default function AppointmentCalendar(container) {
 
       // CASE-347
       if ($el.find('.fc-title').text()) {
+        const tooltip = `<div class="fc-event--tooltip">
+            ${$time.data('full') || $time.text()}:
+            ${(event.clients.length === 1) ? `<span class="fc-event--tooltip--name">${_.escape(event.clients[0].client.fullName || event.clients[0].client.universityID)}</span>` : `${event.clients.length} clients`},
+            ${_.escape(event.appointmentType.description.toLowerCase())}
+            with
+            ${_.map(event.teamMembers, tm => `<span class="fc-event--tooltip--name">${_.escape(tm.fullName || event.team.name)}</span>`).join(', ')},
+            ${_.escape(event.team.name)},
+            ${(event.location && event.location.name) ? `${_.escape(event.location.name)}, ${_.escape(event.location.building)},` : ''}
+            ${_.escape(event.purpose.description.toLowerCase())}
+          </div>`;
+
         $el.tooltip({
           container: 'body',
-          title: `${$time.data('full') || $time.text()}: ${$el.find('.fc-title').text()}`,
+          title: tooltip,
           placement: 'auto top',
+          html: true,
           delay: {
             show: 500,
             hide: 100,
