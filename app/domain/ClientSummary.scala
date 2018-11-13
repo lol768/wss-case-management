@@ -11,7 +11,6 @@ import scala.collection.immutable
 
 case class ClientSummary(
   client: Client,
-  highMentalHealthRisk: Option[Boolean],
   notes: String,
   alternativeContactNumber: String,
   alternativeEmailAddress: String,
@@ -20,7 +19,6 @@ case class ClientSummary(
   updatedDate: OffsetDateTime
 ) {
   def toSave = ClientSummarySave(
-    highMentalHealthRisk = highMentalHealthRisk,
     notes = notes,
     alternativeContactNumber = alternativeContactNumber,
     alternativeEmailAddress = alternativeEmailAddress,
@@ -30,7 +28,6 @@ case class ClientSummary(
 }
 
 case class ClientSummarySave(
-  highMentalHealthRisk: Option[Boolean],
   notes: String,
   alternativeContactNumber: String,
   alternativeEmailAddress: String,
@@ -57,11 +54,7 @@ case class AtRiskClient(
   lastUpdatedCase: Option[OffsetDateTime]
 ) extends Ordered[AtRiskClient] {
   override def compare(that: AtRiskClient): Int = {
-    if (this.summary.highMentalHealthRisk.contains(true) && !that.summary.highMentalHealthRisk.contains(true)) {
-      -1
-    } else if (!this.summary.highMentalHealthRisk.contains(true) && that.summary.highMentalHealthRisk.contains(true)) {
-      1
-    } else if (this.summary.riskStatus.contains(High) && !that.summary.riskStatus.contains(High)) {
+    if (this.summary.riskStatus.contains(High) && !that.summary.riskStatus.contains(High)) {
       -1      
     } else if (!this.summary.riskStatus.contains(High) && that.summary.riskStatus.contains(High)) {
       1
