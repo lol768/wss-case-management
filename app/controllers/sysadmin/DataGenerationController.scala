@@ -523,10 +523,12 @@ class DataGenerationJob @Inject()(
                   else None
                 },
                 cause = randomEnum(CaseCause),
-                clientRiskTypes = Set(), // TODO Could add some here
-                counsellingServicesIssues = Set(), // TODO Could add some here
-                studentSupportIssueTypes = Set(), // TODO Could add some here
-                medications = Set() // TODO Could add some here
+                // TODO Could add some of these
+                clientRiskTypes = Set(),
+                counsellingServicesIssues = Set(),
+                studentSupportIssueTypes = Set(),
+                medications = Set(),
+                severityOfProblem = None
               ),
               Set(enquiry.client.universityID),
               (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
@@ -583,10 +585,12 @@ class DataGenerationJob @Inject()(
                 else None
               },
               cause = randomEnum(CaseCause),
-              clientRiskTypes = Set(), // TODO Could add some here
-              counsellingServicesIssues = Set(), // TODO Could add some here
-              studentSupportIssueTypes = Set(), // TODO Could add some here
-              medications = Set() // TODO Could add some here
+              // TODO Could add some of these
+              clientRiskTypes = Set(),
+              counsellingServicesIssues = Set(),
+              studentSupportIssueTypes = Set(),
+              medications = Set(),
+              severityOfProblem = None
             ),
             clients,
             (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>

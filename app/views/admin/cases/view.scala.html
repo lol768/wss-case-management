@@ -256,6 +256,10 @@
           }
         }
 
+        @c.fields.severityOfProblem.map { severityOfProblem => @tags.sectioned.detail("Severity of problem"){
+          <div data-field-history-field="severityOfProblem">@severityOfProblem.description</div>
+        }}
+
       </div>
       <div class="col-sm-6 col-md-4">
         <div class="row form-horizontal">

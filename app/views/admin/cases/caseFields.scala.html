@@ -126,7 +126,8 @@
   items = CaseTag.values,
   form = form,
   field = "tags",
-  idPrefix = "tag"
+  idPrefix = "tag",
+  columns = 2
 )
 
 @b3.checkboxGroup(
@@ -134,7 +135,8 @@
   items = ClientRiskType.values,
   form = form,
   field = "case.clientRiskTypes",
-  idPrefix = "clientRiskType"
+  idPrefix = "clientRiskType",
+  columns = 2
 )
 
 @b3.checkboxGroup(
@@ -142,7 +144,8 @@
   items = CounsellingServicesIssue.values,
   form = form,
   field = "case.counsellingServicesIssues",
-  idPrefix = "counsellingServicesIssue"
+  idPrefix = "counsellingServicesIssue",
+  columns = 2
 )
 
 @b3.checkboxGroup(
@@ -151,7 +154,8 @@
   form = form,
   field = "case.studentSupportIssueTypes",
   idPrefix = "studentSupportIssueType",
-  withOther = Some(StudentSupportIssueType.Other(None))
+  withOther = Some(StudentSupportIssueType.Other(None)),
+  columns = 2
 )
 
 @b3.checkboxGroup(
@@ -160,5 +164,11 @@
   form = form,
   field = "case.medications",
   idPrefix = "medication",
-  withOther = Some(CaseMedication.Other(None))
+  withOther = Some(CaseMedication.Other(None)),
+  columns = 2
+)
+
+@b3.select(form("case.severityOfProblem"),
+  options = ("", "") +: SeverityOfProblem.values.map { c => c.entryName -> c.description },
+  '_label -> "Severity of problem"
 )

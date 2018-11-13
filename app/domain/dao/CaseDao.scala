@@ -381,13 +381,15 @@ object CaseDao {
     studentSupportIssueTypes: List[String],
     studentSupportIssueTypeOther: Option[String],
     medications: List[String],
-    medicationOther: Option[String]
+    medicationOther: Option[String],
+    severityOfProblem: Option[SeverityOfProblem]
   ) {
     def asCaseFields: CaseFields = CaseFields(
       clientRiskTypes = clientRiskTypes.toSet.map(ClientRiskType.withName),
       counsellingServicesIssues = counsellingServicesIssues.toSet.map(CounsellingServicesIssue.withName),
       studentSupportIssueTypes = StudentSupportIssueType(studentSupportIssueTypes, studentSupportIssueTypeOther),
       medications = CaseMedication(medications, medicationOther),
+      severityOfProblem = severityOfProblem
     )
   }
 
@@ -438,8 +440,9 @@ object CaseDao {
     def studentSupportIssueTypeOther = column[Option[String]]("student_support_issue_type_other")
     def medications = column[List[String]]("medications")
     def medicationOther = column[Option[String]]("medication_other")
+    def severityOfProblem = column[Option[SeverityOfProblem]]("severity_of_problem")
 
-    protected def fieldsProjection = (clientRiskTypes, counsellingServicesIssues, studentSupportIssueTypes, studentSupportIssueTypeOther, medications, medicationOther).mapTo[StoredCaseFields]
+    protected def fieldsProjection = (clientRiskTypes, counsellingServicesIssues, studentSupportIssueTypes, studentSupportIssueTypeOther, medications, medicationOther, severityOfProblem).mapTo[StoredCaseFields]
   }
 
   class Cases(tag: Tag) extends Table[StoredCase](tag, "client_case")
