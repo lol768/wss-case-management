@@ -38,7 +38,6 @@ class ClientController @Inject()(
   import validUniversityIDActionFilter._
 
   val form = Form(mapping(
-    "high-mental-health-risk" -> optional(boolean),
     "notes" -> text,
     "alternative-contact-number" -> text,
     "alternative-email-address" -> text,
@@ -80,10 +79,9 @@ class ClientController @Inject()(
       form.bindFromRequest.fold(
         formWithErrors => Future.successful(Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, enquiries, cases, appointments, owners, formWithErrors, inMentalHealthTeam))),
         data => {
-          val processedData = if (inMentalHealthTeam) data else data.copy(highMentalHealthRisk = clientSummary.flatMap(_.highMentalHealthRisk))
           val f =
-            if (clientSummary.isEmpty) clientSummaryService.save(universityID, processedData)
-            else clientSummaryService.update(universityID, processedData, clientSummary.get.updatedDate)
+            if (clientSummary.isEmpty) clientSummaryService.save(universityID, data)
+            else clientSummaryService.update(universityID, data, clientSummary.get.updatedDate)
 
           f.successMap { _ =>
             Redirect(routes.ClientController.client(universityID))

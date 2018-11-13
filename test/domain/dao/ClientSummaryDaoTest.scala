@@ -19,7 +19,6 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
   val uniID = UniversityID("1234567")
   val summary = StoredClientSummary(
     universityID = uniID,
-    highMentalHealthRisk = Some(false),
     notes = "Some guy doing something\n\ngood for him",
     alternativeContactNumber = "07777123456",
     alternativeEmailAddress = "nobody@example.com",
@@ -41,7 +40,6 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
 
             result.universityID mustBe uniID
             result.version.toInstant.equals(now) mustBe true
-            result.highMentalHealthRisk mustBe summary.highMentalHealthRisk
             result.notes mustBe summary.notes
             result.alternativeContactNumber mustBe summary.alternativeContactNumber
             result.alternativeEmailAddress mustBe summary.alternativeEmailAddress
@@ -58,7 +56,6 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
 
     "update client summary" in {
       val updatedSummary = summary.copy(
-        highMentalHealthRisk = Some(true),
         notes = "Ah okay then.",
         alternativeContactNumber = "0181 811 8181",
         alternativeEmailAddress = "other@something-else.com",
@@ -81,7 +78,6 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
         _ <- DBIO.from(Future {
           updated.universityID mustBe uniID
           updated.version.toInstant.equals(now) mustBe true
-          updated.highMentalHealthRisk mustBe updatedSummary.highMentalHealthRisk
           updated.notes mustBe updatedSummary.notes
           updated.alternativeContactNumber mustBe updatedSummary.alternativeContactNumber
           updated.alternativeEmailAddress mustBe updatedSummary.alternativeEmailAddress

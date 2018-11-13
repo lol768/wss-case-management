@@ -40,7 +40,6 @@ class ClientSummaryServiceImpl @Inject()(
 
   private def toStored(universityID: UniversityID, summary: ClientSummarySave): StoredClientSummary = StoredClientSummary(
     universityID = universityID,
-    highMentalHealthRisk = summary.highMentalHealthRisk,
     notes = summary.notes,
     alternativeContactNumber = summary.alternativeContactNumber,
     alternativeEmailAddress = summary.alternativeEmailAddress,
@@ -103,7 +102,6 @@ class ClientSummaryServiceImpl @Inject()(
   override def findAtRisk(includeMentalHealth: Boolean)(implicit t: TimingContext): Future[ServiceResult[Set[AtRiskClient]]] = {
     withReasonableAdjustmentsSeq(
       dao.findAtRiskQuery(
-        if (includeMentalHealth) Some(true) else None,
         Set(ClientRiskStatus.Medium, ClientRiskStatus.High)
       ).withClient.result
     ).flatMap(summaries =>

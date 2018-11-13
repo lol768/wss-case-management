@@ -36,8 +36,7 @@ object DataGenerationController {
     EnquiryDisabilityRate: Double = 0.25, // Proportion of enquiries that will be reassigned to disability
     EnquiryMentalHealthRate: Double = 0.25, // Proportion of enquiries that will be reassigned to mental health
     EnquiryToCaseRate: Double = 0.7, // Proportion of enquiries that will become cases
-    HighMentalHealthRiskSetRate: Double = 0.1, // Proportion of clients with a high mental health risk set
-    HighMentalHealthRiskRate: Double = 0.3, // Proportion of clients with a high mental health risk (of the above)
+    HighRiskSetRate: Double = 0.1, // Proportion of clients with a high mental health risk set
     ReasonableAdjustmentRate: Double = 0.1, // Proportion of clients with reasonable adjustments
     DisabilityRate: Double = 0.1, // Proportion of clients who declare a disability
     MedicationRate: Double = 0.2, // Proportion of clients who declare medications
@@ -72,8 +71,7 @@ object DataGenerationController {
         "EnquiryDisabilityRate" -> EnquiryDisabilityRate,
         "EnquiryMentalHealthRate" -> EnquiryMentalHealthRate,
         "EnquiryToCaseRate" -> EnquiryToCaseRate,
-        "HighMentalHealthRiskSetRate" -> HighMentalHealthRiskSetRate,
-        "HighMentalHealthRiskRate" -> HighMentalHealthRiskRate,
+        "HighRiskSetRate" -> HighRiskSetRate,
         "ReasonableAdjustmentRate" -> ReasonableAdjustmentRate,
         "DisabilityRate" -> DisabilityRate,
         "MedicationRate" -> MedicationRate,
@@ -122,8 +120,7 @@ object DataGenerationController {
         EnquiryDisabilityRate = getDoubleOrDefault("EnquiryDisabilityRate", defaults.EnquiryDisabilityRate),
         EnquiryMentalHealthRate = getDoubleOrDefault("EnquiryMentalHealthRate", defaults.EnquiryMentalHealthRate),
         EnquiryToCaseRate = getDoubleOrDefault("EnquiryToCaseRate", defaults.EnquiryToCaseRate),
-        HighMentalHealthRiskSetRate = getDoubleOrDefault("HighMentalHealthRiskSetRate", defaults.HighMentalHealthRiskSetRate),
-        HighMentalHealthRiskRate = getDoubleOrDefault("HighMentalHealthRiskRate", defaults.HighMentalHealthRiskRate),
+        HighRiskSetRate = getDoubleOrDefault("HighRiskSetRate", defaults.HighRiskSetRate),
         ReasonableAdjustmentRate = getDoubleOrDefault("ReasonableAdjustmentRate", defaults.ReasonableAdjustmentRate),
         DisabilityRate = getDoubleOrDefault("DisabilityRate", defaults.DisabilityRate),
         MedicationRate = getDoubleOrDefault("MedicationRate", defaults.MedicationRate),
@@ -439,21 +436,11 @@ class DataGenerationJob @Inject()(
         implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(randomTeam()))
         withMockDateTime(randomPastDateTime()) { _ =>
           val summary = ClientSummarySave(
-            highMentalHealthRisk =
-              if ((options.HighMentalHealthRiskSetRate / Random.nextDouble()).toInt > 0) {
-                if ((options.HighMentalHealthRiskRate / Random.nextDouble()).toInt > 0) {
-                  Some(true)
-                } else {
-                  Some(false)
-                }
-              } else {
-                None
-              },
             notes = dummyWords(Random.nextInt(30)),
             alternativeContactNumber = f"07${Random.nextInt(999999999)}%09d",
             alternativeEmailAddress = s"${Random.alphanumeric.take(Random.nextInt(10) + 10).mkString("")}@gmail.com",
             riskStatus =
-              if ((options.HighMentalHealthRiskSetRate / Random.nextDouble()).toInt > 0) {
+              if ((options.HighRiskSetRate / Random.nextDouble()).toInt > 0) {
                 Some(randomEnum(ClientRiskStatus))
               } else {
                 None
