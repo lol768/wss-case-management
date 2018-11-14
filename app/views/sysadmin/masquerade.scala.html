@@ -1,11 +1,11 @@
 @import controllers.RequestContext
-@import domain.{Route, SitsDepartment, SitsProfile, Team, Teams, UserType}
+@import domain.{Course, SitsDepartment, SitsProfile, Team, UserType}
 @import play.api.data.Form
 @import play.api.data.Forms._
 @import warwick.sso.{User, Usercode}
 
 @(
-  testUsers: Seq[(SitsDepartment, Seq[(UserType, Seq[(Option[Route], Seq[SitsProfile])])])],
+  testUsers: Seq[(SitsDepartment, Seq[(UserType, Seq[(Option[Course], Seq[SitsProfile])])])],
   testTeamMembers: Seq[(Team, Seq[(User, Option[String])])],
   testAdmins: Seq[(User, Option[String])]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
@@ -115,9 +115,9 @@
           @deptProfiles.map { case (userType, userTypeProfiles) =>
             <h5>@userType.entryName</h5>
 
-            @userTypeProfiles.map { case (route, profiles) =>
-              @route.map { r =>
-                <h6>@r.name</h6>
+            @userTypeProfiles.map { case (course, profiles) =>
+              @course.map { c =>
+                <h6>@c.name</h6>
               }
 
               <ul>
