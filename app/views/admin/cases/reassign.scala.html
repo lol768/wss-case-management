@@ -14,19 +14,8 @@
     @b3.validatedHidden(form, "version")
 
     @b3.radio(form("team"),
-      options = Teams.all.map { t => t.id -> t.name },
-      "data-toggle" -> "optional-subform",
-      "data-toggle-value" -> Teams.MentalHealth.id,
-      "data-target" -> "#caseType-field"
+      options = Teams.all.map { t => t.id -> t.name }
     )
-
-    <fieldset id="caseType-field">
-      @b3.select(form("caseType"),
-        options = Seq("" -> "") ++ CaseType.values.map { t => t.entryName -> t.description },
-        '_colClass -> "col-md-6",
-        '_label -> "Case type"
-      )
-    </fieldset>
 
     @b3.textarea(form("message"),
       'rows -> 5,
