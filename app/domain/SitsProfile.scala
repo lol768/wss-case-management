@@ -16,15 +16,10 @@ case class SitsProfile(
   fullName: String,
   dateOfBirth: LocalDate,
   phoneNumber: Option[String],
-  warwickEmail: Option[String],
-  alternateEmail: Option[String],
+  warwickEmail: Option[String], // Only used for notification sending, not displayed on profile
   address: Option[Address],
-  residence: Option[Residence],
   department: SitsDepartment,
   course: Option[Course],
-  route: Option[Route],
-  courseStatus: Option[CourseStatus],
-  enrolmentStatus: Option[EnrolmentStatus],
   attendance: Option[Attendance],
   group: Option[StudentGroup],
   yearOfStudy: Option[YearOfStudy],
@@ -37,8 +32,6 @@ case class SitsProfile(
   disabilityFundingStatus: Option[SitsDisabilityFundingStatus],
   jobTitle: Option[String],
   photo: Option[String],
-  personalTutors: Seq[SitsProfile],
-  researchSupervisors: Seq[SitsProfile],
   userType: UserType
 ) {
   def asUser: User = User(
@@ -67,11 +60,6 @@ object SitsProfile {
 }
 
 case class Course (
-  code: String,
-  name: String
-)
-
-case class Route (
   code: String,
   name: String
 )
@@ -131,16 +119,6 @@ case class YearOfStudy(
   level: String
 )
 
-case class EnrolmentStatus(
-  code: String,
-  description: String
-)
-
-case class CourseStatus(
-  code: String,
-  description: String
-)
-
 case class SitsDisability(
   code: String,
   description: String,
@@ -168,25 +146,3 @@ case class VisaStatus (
   tier4: Boolean,
   requiresClearance: Boolean
 )
-
-sealed trait Residence extends EnumEntry with CapitalWords
-
-object Residence extends Enum[Residence] {
-
-  val values: immutable.IndexedSeq[Residence] = findValues
-
-  case object ArthurVick extends Residence
-  case object Benefactors extends Residence
-  case object Bluebell extends Residence
-  case object Claycroft extends Residence
-  case object Cryfield extends Residence
-  case object Heronbank extends Residence
-  case object JackMartin extends Residence
-  case object Lakeside extends Residence
-  case object Redfern extends Residence
-  case object Rootes extends Residence
-  case object Sherbourne extends Residence
-  case object Tocil extends Residence
-  case object Westwood extends Residence
-  case object Whitefields extends Residence
-}

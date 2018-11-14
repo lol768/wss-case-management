@@ -63,14 +63,9 @@ object Fixtures {
       dateOfBirth = LocalDate.of(1984, 8, 19),
       phoneNumber = None,
       warwickEmail = Some("m.mannion@warwick.ac.uk"),
-      alternateEmail = None,
       address = None,
-      residence = None,
       department = SitsDepartment("IN", "IT Services"),
       course = None,
-      route = None,
-      courseStatus = None,
-      enrolmentStatus = None,
       attendance = None,
       group = None,
       yearOfStudy = None,
@@ -83,8 +78,6 @@ object Fixtures {
       disabilityFundingStatus = None,
       jobTitle = Some("Service Owner"),
       photo = None,
-      personalTutors = Nil,
-      researchSupervisors = Nil,
       userType = UserType.Staff
     )
 
@@ -95,14 +88,9 @@ object Fixtures {
       dateOfBirth = LocalDate.of(1984, 8, 19),
       phoneNumber = None,
       warwickEmail = Some("m.mannion@warwick.ac.uk"),
-      alternateEmail = None,
       address = None,
-      residence = None,
       department = SitsDepartment("CH", "Chemistry"),
       course = None,
-      route = None,
-      courseStatus = None,
-      enrolmentStatus = None,
       attendance = None,
       group = Some(StudentGroup.Undergraduate),
       yearOfStudy = Some(YearOfStudy(1, "1")),
@@ -115,8 +103,6 @@ object Fixtures {
       disabilityFundingStatus = None,
       jobTitle = Some("Undergraduate - full-time"),
       photo = None,
-      personalTutors = Nil,
-      researchSupervisors = Nil,
       userType = UserType.Student
     )
   }
