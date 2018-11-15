@@ -17,9 +17,14 @@ export default function AppointmentFreeBusyForm(form) {
     .map((i, el) => el.value)
     .get();
 
+  const getFormValuesArray = name => $form.find(`:input[name^="${name}["]`)
+    .filter((i, el) => !!el.value)
+    .map((i, el) => el.value)
+    .get();
+
   $form.on('input change', () => {
-    const clients = getFormValues('clients[]');
-    const teamMembers = getFormValues('teamMembers[]');
+    const clients = getFormValuesArray('clients');
+    const teamMembers = getFormValuesArray('teamMembers');
     const rooms = getFormValues('appointment.roomID');
 
     const $button = $form.find('.timepicker button');
@@ -39,8 +44,8 @@ export default function AppointmentFreeBusyForm(form) {
           e.preventDefault();
           e.stopPropagation();
 
-          const clients = getFormValues('clients[]');
-          const teamMembers = getFormValues('teamMembers[]');
+          const clients = getFormValuesArray('clients');
+          const teamMembers = getFormValuesArray('teamMembers');
           const rooms = getFormValues('appointment.roomID');
 
           if ([...clients, ...teamMembers, ...rooms].length) {
@@ -80,8 +85,8 @@ export default function AppointmentFreeBusyForm(form) {
         };
 
         // Get clients
-        const clients = getFormValues('clients[]');
-        const teamMembers = getFormValues('teamMembers[]');
+        const clients = getFormValuesArray('clients');
+        const teamMembers = getFormValuesArray('teamMembers');
         const roomIDs = getFormValues('appointment.roomID');
 
         $calendar.fullCalendar({
