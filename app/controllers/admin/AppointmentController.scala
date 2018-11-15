@@ -469,9 +469,14 @@ class AppointmentController @Inject()(
               purpose = a.appointment.purpose,
             )
 
-            appointments.reschedule(a.appointment.id, updates, currentUser().usercode, data.version.get).successMap { updated =>
-              Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
-                .flashing("success" -> Messages("flash.appointment.updated"))
+            if (updates.start == a.appointment.start && updates.duration == a.appointment.duration && updates.roomID == a.room.map(_.id)) {
+              // no-op, don't send notifications unnecessarily
+              Future.successful(Redirect(controllers.admin.routes.AppointmentController.view(a.appointment.key)))
+            } else {
+              appointments.reschedule(a.appointment.id, updates, currentUser().usercode, data.version.get).successMap { updated =>
+                Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
+                  .flashing("success" -> Messages("flash.appointment.updated"))
+              }
             }
           }
         )
