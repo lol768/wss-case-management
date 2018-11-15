@@ -23,8 +23,10 @@
 @nav-link-padding: 10px 15px;
 @gray-light: lighten(@gray-base, 45%); // #737373, ARIA
 
-// Always scrollbar to avoid horizontal dancing
-html {
+// Always scrollbar to avoid horizontal dancing.
+// Currently only added when there are tabs,
+// as otherwise the page scrolls to the top when showing a modal
+html.overflow-y-scroll {
   overflow-y: scroll;
 }
 
@@ -659,4 +661,15 @@ s {
 
 .well.appointments-needing-outcomes {
   .lead { color: @brand-danger; }
+}
+
+.checkboxGroup {
+  label {
+    margin-bottom: 0;
+  }
+  .selected-items {
+    &__item {
+      color: @gray-light;
+    }
+  }
 }

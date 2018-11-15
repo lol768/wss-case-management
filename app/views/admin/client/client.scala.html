@@ -484,38 +484,14 @@
             </div>
           </div>
 
-          @b3.free('_label -> "Academic reasonable adjustments",
-            '_class -> form("reasonable-adjustments").error.map(_ => "has-error").getOrElse("")
-          ) {
-            @ReasonableAdjustment.partioned.map { case (left, right) =>
-              <div class="row checkbox-condensed">
-                <div class="col-sm-6">
-                  @left.map { item =>
-                    @b3.checkbox(form(s"reasonable-adjustments[]"),
-                      'id -> s"reasonable-adjustment-${item.id}",
-                      'value -> item.id,
-                      '_text -> item.description,
-                      'checked -> form("reasonable-adjustments").indexes.exists(i => form(s"reasonable-adjustments[$i]").value.contains(item.id))
-                    )(b3.clear.fieldConstructorSpecific, messagesProvider)
-                  }
-                </div>
-                <div class="col-sm-6">
-                  @right.map { item =>
-                    @b3.checkbox(form(s"reasonable-adjustments[]"),
-                      'id -> s"reasonable-adjustment-${item.id}",
-                      'value -> item.id,
-                      '_text -> item.description,
-                      'checked -> form("reasonable-adjustments").indexes.exists(i => form(s"reasonable-adjustments[$i]").value.contains(item.id))
-                    )(b3.clear.fieldConstructorSpecific, messagesProvider)
-                  }
-                </div>
-              </div>
-            }
-
-            @form("reasonable-adjustments").error.map { error =>
-              <span class="help-block">@error.format</span>
-            }
-          }
+          @b3.checkboxGroup(
+            label = "Academic reasonable adjustments",
+            items = ReasonableAdjustment.values,
+            form = form,
+            field = "reasonable-adjustments",
+            idPrefix = "reasonable-adjustment",
+            columns = 2
+          )
 
           <div class="row">
             <div class="col-sm-3">
