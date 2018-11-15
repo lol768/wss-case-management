@@ -19,8 +19,11 @@ trait ExtendedPgSearchSupport extends PgSearchSupport { driver: PostgresProfile 
         LiteralNode(config),
         om.column(SearchLibrary.Or,
           om.column(
-            new SqlFunction("quote_literal"),
-            query.toNode
+            new SqlFunction("regexp_replace"),
+            query.toNode,
+            "[^A-Za-z0-9_-]".toNode,
+            "".toNode,
+            "g".toNode
           ).toNode,
           ":*".bind.toNode
         ).toNode
