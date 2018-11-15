@@ -293,10 +293,7 @@ class AppointmentServiceImpl @Inject()(
               notifyAddedOwners,
               notifyRemovedOwners,
               notifyExistingOwners
-            ).map(_ => {
-              scheduleClientReminder(appointment)
-              Right(appointment)
-            })
+            ).map(_ => Right(appointment))
           }
         }
       }
