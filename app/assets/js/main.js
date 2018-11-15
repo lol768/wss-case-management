@@ -2,6 +2,7 @@
 import './polyfills';
 
 import $ from 'jquery';
+import _ from 'lodash-es';
 import './jquery.are-you-sure';
 import FieldHistory from './field-history';
 import * as flexiPicker from './flexi-picker';
@@ -306,13 +307,49 @@ function bindTo($scope) {
       }
     });
   });
+
+  $('.checkboxGroup', $scope).each((i, group) => {
+    const $group = $(group);
+    const $modal = $group.find('.modal');
+
+    // Disable focus restorer
+    $modal.on('shown.bs.modal', () => {
+      $modal.off('hidden.bs.modal');
+    });
+
+    $modal.find('.modal-footer .btn-primary').on('click', () => {
+      const $selectedItemContainer = $group.find('.selected-items').empty();
+      const checked = $modal.find('.modal-body :checked');
+      checked.each((j, input) => {
+        const $label = $(input).closest('label');
+        const item = $('<div />')
+          .addClass('selected-items__item')
+          .append($('<i />').addClass('fal fa-check'))
+          .append(' ')
+          .append($label.text());
+
+        const $otherInput = $(`#${$label.attr('for')}-value`);
+        if ($otherInput.length > 0) {
+          item.append(` (${_.escape($otherInput.val())})`);
+        }
+
+        $selectedItemContainer.append(item);
+      });
+
+      if (checked.length === 0) {
+        $selectedItemContainer.append($('<div />').addClass('selected-items__item').html('(None)'));
+      }
+    });
+  });
 }
 
 $(() => {
+  const $html = $('html');
+
   if (!('open' in document.createElement('details'))) {
-    $('html').addClass('no-details');
+    $html.addClass('no-details');
   } else {
-    $('html').addClass('details');
+    $html.addClass('details');
   }
 
   // Apply to all content loaded non-AJAXically
@@ -326,8 +363,12 @@ $(() => {
     window.history.replaceState({}, null, e.target.hash);
   });
 
+  if ($('.nav-tabs').length > 0) {
+    $html.addClass('overflow-y-scroll');
+  }
+
   // Dismiss popovers when clicking away
-  $('html')
+  $html
     .on('shown.bs.popover', (e) => {
       const $po = $(e.target).popover().data('bs.popover').tip();
       $po.data('creator', $(e.target));
