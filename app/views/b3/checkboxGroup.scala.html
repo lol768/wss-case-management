@@ -88,9 +88,12 @@
       }
     </div>
 
-    <div class="modal fade" id="@idPrefix-checkboxGroup-modal" tabindex="-1" role="dialog" aria-label="@label">
+    <div class="modal fade" id="@idPrefix-checkboxGroup-modal" tabindex="-1" role="dialog" aria-labelledby="@idPrefix-checkboxGroup-modal-label">
       <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title" id="@idPrefix-checkboxGroup-modal-label">@label</h4>
+          </div>
           <div class="modal-body">
             <div class="row">
               @partionedItems.map { group =>
