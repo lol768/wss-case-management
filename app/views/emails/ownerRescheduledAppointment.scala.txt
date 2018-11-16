@@ -1,7 +1,7 @@
 @(url: String)
 
 @email() {
-  An appointment with you has been cancelled.
+  An appointment with you has been rescheduled.
 
   Follow this link to see details: @url
 }

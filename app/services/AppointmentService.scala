@@ -35,6 +35,7 @@ import scala.language.higherKinds
 trait AppointmentService {
   def create(appointment: AppointmentSave, clients: Set[UniversityID], teamMembers: Set[Usercode], team: Team, caseIDs: Set[UUID], currentUser: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
   def update(id: UUID, appointment: AppointmentSave, cases: Set[UUID], clients: Set[UniversityID], teamMembers: Set[Usercode], currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+  def reschedule(id: UUID, appointment: AppointmentSave, currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Appointment]]
   def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[AppointmentRender]]
@@ -220,9 +221,9 @@ class AppointmentServiceImpl @Inject()(
             StoredAppointment(
               existing.id,
               existing.key,
-              changes.start,
-              changes.duration,
-              changes.roomID,
+              existing.start, // Not allowed for updates, use reschedule()
+              existing.duration, // Not allowed for updates, use reschedule()
+              existing.roomID, // Not allowed for updates, use reschedule()
               existing.team,
               changes.appointmentType,
               changes.purpose,
@@ -294,15 +295,74 @@ class AppointmentServiceImpl @Inject()(
               notifyAddedOwners,
               notifyRemovedOwners,
               notifyExistingOwners
-            ).map(_ => {
-              scheduleClientReminder(appointment)
-              Right(appointment)
-            })
+            ).map(_ => Right(appointment))
           }
         }
       }
     }
   }
+
+  override def reschedule(id: UUID, changes: AppointmentSave, currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
+    auditService.audit('AppointmentReschedule, id.toString, 'Appointment, Json.obj()) {
+      daoRunner.run(for {
+        existing <- dao.findByIDQuery(id).result.head
+        clients <- getClientsQuery(id).result
+        updated <- dao.update(
+          // We re-construct the whole StoredAppointment here so that missing a value will throw a compile error
+          StoredAppointment(
+            existing.id,
+            existing.key,
+            changes.start,
+            changes.duration,
+            changes.roomID,
+            existing.team,
+            existing.appointmentType,
+            existing.purpose,
+            AppointmentState.Provisional, // Re-scheduling always sets back to provisional
+            None,
+            existing.outcome,
+            existing.created,
+            JavaTime.offsetDateTime
+          ),
+          version
+        )
+        _ <- DBIO.sequence(clients.map { client =>
+          dao.updateClient(
+            client.copy(
+              state = AppointmentState.Provisional,
+              cancellationReason = None
+            )
+          )
+        })
+      } yield (updated, clients)).flatMap { case (a, clients) =>
+        ownerService.getAppointmentOwners(Set(a.id)).successMapTo(_.getOrElse(id, Set())).successFlatMapTo { teamMembers =>
+          office365CalendarService.updateAppointment(a.id, teamMembers)
+
+          val appointment = a.asAppointment
+
+          val notifyClients: Future[ServiceResult[Option[Activity]]] =
+            notificationService.clientRescheduledAppointment(clients.map(_.universityID).toSet).map(sr =>
+              ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
+            )
+
+          val ownersToNotify = teamMembers.map(_.member.usercode) - currentUser
+          val notifyOwners: Future[ServiceResult[Option[Activity]]] =
+            if (ownersToNotify.nonEmpty)
+              notificationService.ownerRescheduledAppointment(ownersToNotify, appointment).map(sr =>
+                ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
+              )
+            else Future.successful(Right(None))
+
+          ServiceResults.zip(
+            notifyClients,
+            notifyOwners,
+          ).map(_ => {
+            scheduleClientReminder(appointment)
+            Right(appointment)
+          })
+        }
+      }
+    }
 
   override def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Appointment]] =
     daoRunner.run(dao.findByIDQuery(id).result.head).map { a => ServiceResults.success(a.asAppointment) }.recover {

@@ -146,6 +146,8 @@ POST        /team/appointment/freebusy/resources    @controllers.admin.Appointme
 GET         /team/appointment/:key                  @controllers.admin.AppointmentController.view(key: domain.IssueKey)
 GET         /team/appointment/:key/edit             @controllers.admin.AppointmentController.editForm(key: domain.IssueKey)
 POST        /team/appointment/:key/edit             @controllers.admin.AppointmentController.edit(key: domain.IssueKey)
+GET         /team/appointment/:key/reschedule       @controllers.admin.AppointmentController.rescheduleForm(key: domain.IssueKey)
+POST        /team/appointment/:key/reschedule       @controllers.admin.AppointmentController.reschedule(key: domain.IssueKey)
 POST        /team/appointment/:key/cancel           @controllers.admin.AppointmentController.cancel(key: domain.IssueKey)
 GET         /team/appointment/:key/outcomes         @controllers.admin.AppointmentOutcomesController.outcomesForm(key: domain.IssueKey)
 POST        /team/appointment/:key/outcomes         @controllers.admin.AppointmentOutcomesController.outcomes(key: domain.IssueKey)

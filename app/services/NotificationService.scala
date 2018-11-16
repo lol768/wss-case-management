@@ -50,9 +50,11 @@ trait NotificationService {
   def clientNewAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def clientCancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def clientChangedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def clientRescheduledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def ownerNewAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def ownerCancelledAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def ownerChangedAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def ownerRescheduledAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def appointmentConfirmation(appointment: Appointment, teamMembers: Set[Usercode], clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def appointmentReminder(appointment: Appointment, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
 }
@@ -304,6 +306,24 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
+  override def clientRescheduledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUsers(clients) { clientUsers =>
+      val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
+
+      queueEmailAndSendActivity(
+        subject = s"$clientSubjectPrefix Appointment rescheduled",
+        body = views.txt.emails.clientRescheduledAppointment(url),
+        recipients = clientUsers.toSeq,
+        activity = buildActivity(
+          clientUsers,
+          "Appointment rescheduled",
+          url,
+          "appointment-rescheduled-message"
+        )
+      )
+    }
+  }
+
   override def ownerNewAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(owners) { ownerUsers =>
       val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
@@ -358,6 +378,23 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
+  override def ownerRescheduledAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    withUsers(owners) { ownerUsers =>
+      val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
+
+      queueEmailAndSendActivity(
+        subject = s"$teamSubjectPrefix Appointment rescheduled",
+        body = views.txt.emails.ownerRescheduledAppointment(url),
+        recipients = ownerUsers.toSeq,
+        activity = buildActivity(
+          ownerUsers,
+          "Appointment rescheduled",
+          url,
+          "appointment-rescheduled-message-owner"
+        )
+      )
+    }
+  }
 
   override def appointmentConfirmation(appointment: Appointment, teamMembers: Set[Usercode], clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     withUsers(teamMembers) { teamMembers =>
