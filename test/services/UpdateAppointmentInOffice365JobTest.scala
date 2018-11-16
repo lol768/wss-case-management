@@ -55,6 +55,7 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
       state = AppointmentState.Accepted,
       cancellationReason = None,
       outcome = Set(),
+      dsaSupportAccessed = None,
       created = null,
       lastUpdated = null
     )

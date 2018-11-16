@@ -66,6 +66,7 @@ object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
   implicit lazy val appointmentCancellationReasonMapper: JdbcType[AppointmentCancellationReason] = mappedColumnTypeForEnum(AppointmentCancellationReason)
   implicit lazy val appointmentClientAttendanceStateMapper: JdbcType[AppointmentClientAttendanceState] = mappedColumnTypeForEnum(AppointmentClientAttendanceState)
   implicit lazy val appointmentOutcomeMapper: JdbcType[AppointmentOutcome] = mappedColumnTypeForEnum(AppointmentOutcome)
+  implicit lazy val appointmentDSASupportAccessedMapper: JdbcType[AppointmentDSASupportAccessed] = mappedColumnTypeForEnum(AppointmentDSASupportAccessed)
   implicit lazy val clientRiskStatusMapper: JdbcType[ClientRiskStatus] = mappedColumnTypeForEnum(ClientRiskStatus)
   implicit lazy val reasonableAdjustmentMapper: JdbcType[ReasonableAdjustment] = mappedColumnTypeForEnum(ReasonableAdjustment)
   implicit lazy val severityOfProblemMapper: JdbcType[SeverityOfProblem] = mappedColumnTypeForEnum(SeverityOfProblem)

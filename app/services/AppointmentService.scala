@@ -80,7 +80,7 @@ trait AppointmentService {
   def clientAccept(appointmentID: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
   def clientDecline(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
-  def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])], outcome: Set[AppointmentOutcome], note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+  def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])], outcome: Set[AppointmentOutcome], dsaSupportAccessed: Option[AppointmentDSASupportAccessed], note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
   def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, note: Option[CaseNoteSave], currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def sendClientReminder(appointmentID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
@@ -117,6 +117,7 @@ class AppointmentServiceImpl @Inject()(
       AppointmentState.Provisional,
       None,
       List(),
+      None,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime
     )
@@ -233,6 +234,7 @@ class AppointmentServiceImpl @Inject()(
               else
                 existing.cancellationReason,
               existing.outcome,
+              existing.dsaSupportAccessed,
               existing.created,
               JavaTime.offsetDateTime
             ),
@@ -321,6 +323,7 @@ class AppointmentServiceImpl @Inject()(
             AppointmentState.Provisional, // Re-scheduling always sets back to provisional
             None,
             existing.outcome,
+            existing.dsaSupportAccessed,
             existing.created,
             JavaTime.offsetDateTime
           ),
@@ -601,7 +604,7 @@ class AppointmentServiceImpl @Inject()(
       }
     }
 
-  override def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])], outcome: Set[AppointmentOutcome], note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
+  override def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])], outcome: Set[AppointmentOutcome], dsaSupportAccessed: Option[AppointmentDSASupportAccessed], note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
     auditService.audit('AppointmentOutcomes, appointmentID.toString, 'Appointment, Json.obj()) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).filter(_.version === version).result.head
@@ -636,13 +639,19 @@ class AppointmentServiceImpl @Inject()(
 
         // Set the appointment to attended if at least one client has attended and it's not already attended
         // else set it as cancelled with the first client reason
-        updatedAppointment <-
+        updatedAppointment <- {
+          val updates = appointment.copy(
+            outcome = outcome.map(_.entryName).toList.sorted,
+            dsaSupportAccessed = dsaSupportAccessed,
+          )
+
           if (clientAttendance.values.exists { case (s, _) => s.appointmentState == AppointmentState.Attended } && (appointment.state != AppointmentState.Attended || appointment.cancellationReason.nonEmpty))
-            dao.update(appointment.copy(state = AppointmentState.Attended, cancellationReason = None, outcome = outcome.map(_.entryName).toList.sorted), version)
+            dao.update(updates.copy(state = AppointmentState.Attended, cancellationReason = None), version)
           else if (clientAttendance.values.forall { case (s, _) => s.appointmentState == AppointmentState.Cancelled } && (appointment.state != AppointmentState.Cancelled || clientAttendance.values.forall { case (_, r) => r != appointment.cancellationReason }))
-            dao.update(appointment.copy(state = AppointmentState.Cancelled, cancellationReason = clientAttendance.values.headOption.flatMap { case (_, r) => r }, outcome = outcome.map(_.entryName).toList.sorted), version)
+            dao.update(updates.copy(state = AppointmentState.Cancelled, cancellationReason = clientAttendance.values.headOption.flatMap { case (_, r) => r }), version)
           else
-            dao.update(appointment.copy(outcome = outcome.map(_.entryName).toList.sorted), version)
+            dao.update(updates, version)
+        }
 
         _ <- note.map { n => DBIO.seq(cases.map { c => caseService.addNoteDBIO(c.id, CaseNoteType.AppointmentNote, n) }: _*) }.getOrElse(DBIO.successful(()))
       } yield updatedAppointment).map { a => Right(a.asAppointment) }

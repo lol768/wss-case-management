@@ -1,5 +1,5 @@
 @import controllers.admin.AppointmentOutcomesController.AppointmentOutcomesFormData
-@import domain.{AppointmentCancellationReason, AppointmentClientAttendanceState, AppointmentOutcome, AppointmentRender}
+@import domain.{AppointmentCancellationReason, AppointmentClientAttendanceState, AppointmentDSASupportAccessed, AppointmentOutcome, AppointmentRender}
 
 @(
   a: AppointmentRender,
@@ -56,6 +56,13 @@
       field = "outcome",
       idPrefix = "outcome"
     )
+
+    @if(AppointmentDSASupportAccessed.valuesFor(a.appointment.team).nonEmpty) {
+      @b3.select(form("dsaSupportAccessed"),
+        options = ("", "") +: AppointmentDSASupportAccessed.valuesFor(a.appointment.team).map { t => t.entryName -> t.description },
+        '_label -> "DSA type of support accessed",
+      )
+    }
 
     @b3.textarea(
       form("note"),

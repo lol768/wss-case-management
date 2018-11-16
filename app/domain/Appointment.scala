@@ -20,6 +20,7 @@ case class Appointment(
   state: AppointmentState,
   cancellationReason: Option[AppointmentCancellationReason],
   outcome: Set[AppointmentOutcome],
+  dsaSupportAccessed: Option[AppointmentDSASupportAccessed],
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
 ) {
@@ -236,4 +237,24 @@ object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
   case object Other extends AppointmentOutcome("Other")
 
   override def values: immutable.IndexedSeq[AppointmentOutcome] = findValues.sortBy(_.description)
+}
+
+sealed abstract class AppointmentDSASupportAccessed(val description: String, val applicableTo: Seq[Team]) extends EnumEntry with IdAndDescription {
+  override val id: String = this.entryName
+}
+object AppointmentDSASupportAccessed extends PlayEnum[AppointmentDSASupportAccessed] {
+  case object AcademicMentoring extends AppointmentDSASupportAccessed("Academic mentoring", Seq(Teams.Disability, Teams.MentalHealth))
+  case object LibraryAssistance extends AppointmentDSASupportAccessed("Library assistance", Seq(Teams.Disability, Teams.MentalHealth))
+  case object MentalHealthMentoring extends AppointmentDSASupportAccessed("Mental health mentoring", Seq(Teams.Disability, Teams.MentalHealth))
+  case object NoteTaking extends AppointmentDSASupportAccessed("Note-taking", Seq(Teams.Disability, Teams.MentalHealth))
+  case object OrientationTraining extends AppointmentDSASupportAccessed("Orientation training", Seq(Teams.Disability, Teams.MentalHealth))
+  case object SpecialistStudySkills extends AppointmentDSASupportAccessed("Specialist study skills", Seq(Teams.Disability, Teams.MentalHealth))
+  case object Transcription extends AppointmentDSASupportAccessed("Transcription", Seq(Teams.Disability, Teams.MentalHealth))
+  case object OtherPracticalSupport extends AppointmentDSASupportAccessed("Other practical support", Seq(Teams.Disability, Teams.MentalHealth))
+
+  override def values: immutable.IndexedSeq[AppointmentDSASupportAccessed] = findValues
+
+  def valuesFor(team: Team): Seq[AppointmentDSASupportAccessed] = values.filter { t =>
+    t.applicableTo.contains(team)
+  }
 }

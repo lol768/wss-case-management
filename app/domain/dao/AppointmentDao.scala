@@ -222,6 +222,7 @@ object AppointmentDao {
     state: AppointmentState,
     cancellationReason: Option[AppointmentCancellationReason],
     outcome: List[String],
+    dsaSupportAccessed: Option[AppointmentDSASupportAccessed],
     created: OffsetDateTime,
     version: OffsetDateTime,
   ) extends Versioned[StoredAppointment] {
@@ -236,6 +237,7 @@ object AppointmentDao {
       state,
       cancellationReason,
       outcome.toSet.map(AppointmentOutcome.withName),
+      dsaSupportAccessed,
       created,
       version
     )
@@ -255,6 +257,7 @@ object AppointmentDao {
         state,
         cancellationReason,
         outcome,
+        dsaSupportAccessed,
         created,
         version,
         operation,
@@ -275,6 +278,7 @@ object AppointmentDao {
     state: AppointmentState,
     cancellationReason: Option[AppointmentCancellationReason],
     outcome: List[String],
+    dsaSupportAccessed: Option[AppointmentDSASupportAccessed],
     created: OffsetDateTime,
     version: OffsetDateTime,
 
@@ -295,6 +299,7 @@ object AppointmentDao {
     def state = column[AppointmentState]("state")
     def cancellationReason = column[Option[AppointmentCancellationReason]]("cancellation_reason")
     def outcome = column[List[String]]("outcome")
+    def dsaSupportAccessed = column[Option[AppointmentDSASupportAccessed]]("dsa_support_accessed")
     def created = column[OffsetDateTime]("created_utc")
     def version = column[OffsetDateTime]("version_utc")
   }
@@ -307,7 +312,7 @@ object AppointmentDao {
     def searchableId = toTsVector(id.asColumnOf[String], Some("english"))
 
     override def * : ProvenShape[StoredAppointment] =
-      (id, key, start, duration, roomID, team, appointmentType, purpose, state, cancellationReason, outcome, created, version).mapTo[StoredAppointment]
+      (id, key, start, duration, roomID, team, appointmentType, purpose, state, cancellationReason, outcome, dsaSupportAccessed, created, version).mapTo[StoredAppointment]
 
     def end: Rep[OffsetDateTime] =
       SimpleExpression.binary[OffsetDateTime, Duration, OffsetDateTime] { (start, duration, qb) =>
@@ -341,7 +346,7 @@ object AppointmentDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredAppointmentVersion] =
-      (id, key, start, duration, roomID, team, appointmentType, purpose, state, cancellationReason, outcome, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
+      (id, key, start, duration, roomID, team, appointmentType, purpose, state, cancellationReason, outcome, dsaSupportAccessed, created, version, operation, timestamp, auditUser).mapTo[StoredAppointmentVersion]
     def pk = primaryKey("pk_appointment_version", (id, timestamp))
     def idx = index("idx_appointment_version", (id, version))
   }

@@ -27,6 +27,7 @@ object AppointmentOutcomesController {
   case class AppointmentOutcomesFormData(
     attendance: Seq[AppointmentClientAttendanceFormData],
     outcome: Set[AppointmentOutcome],
+    dsaSupportAccessed: Option[AppointmentDSASupportAccessed],
     note: Option[String],
     version: OffsetDateTime,
   )
@@ -43,6 +44,7 @@ object AppointmentOutcomesController {
           )(AppointmentClientAttendanceFormData.apply)(AppointmentClientAttendanceFormData.unapply)
         ),
         "outcome" -> set(AppointmentOutcome.formField),
+        "dsaSupportAccessed" -> optional(AppointmentDSASupportAccessed.formField).verifying("error.appointment.dsaSupportAccessed.invalid", _.forall(AppointmentDSASupportAccessed.valuesFor(a.appointment.team).contains)),
         "note" -> optional(text),
         "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == a.appointment.lastUpdated)
       )(AppointmentOutcomesFormData.apply)(AppointmentOutcomesFormData.unapply)
@@ -70,6 +72,7 @@ class AppointmentOutcomesController @Inject()(
             )
           },
           a.appointment.outcome,
+          a.appointment.dsaSupportAccessed,
           None,
           a.appointment.lastUpdated
         ))
@@ -90,6 +93,7 @@ class AppointmentOutcomesController @Inject()(
           a.appointment.id,
           data.attendance.filter(_.attendanceState.nonEmpty).map { d => (d.client, (d.attendanceState.get, d.cancellationReason)) }.toMap,
           data.outcome,
+          data.dsaSupportAccessed,
           data.note.map(CaseNoteSave(_, currentUser().usercode)),
           data.version
         ).successMap { updated =>
