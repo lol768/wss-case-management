@@ -135,6 +135,16 @@
             @dsaSupportAccessed.description
           }
         }
+
+        @if(a.appointment.dsaActionPoints.nonEmpty) {
+          @tags.sectioned.detail("DSA action points") {
+            <ul class="list-unstyled">
+            @a.appointment.dsaActionPoints.map { dsaActionPoint =>
+              <li>@dsaActionPoint.description</li>
+            }
+            </ul>
+          }
+        }
       </div>
       <div class="col-sm-6 col-md-4">
         <div class="row form-horizontal">

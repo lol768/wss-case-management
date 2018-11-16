@@ -1,6 +1,7 @@
 @import controllers.admin.AppointmentOutcomesController.AppointmentOutcomesFormData
 @import domain.{AppointmentCancellationReason, AppointmentClientAttendanceState, AppointmentDSASupportAccessed, AppointmentOutcome, AppointmentRender}
 
+@import domain.AppointmentDSAActionPoint
 @(
   a: AppointmentRender,
   form: Form[AppointmentOutcomesFormData],
@@ -53,14 +54,25 @@
       label = "Outcomes",
       items = AppointmentOutcome.values,
       form = form,
-      field = "outcome",
+      field = "outcomes.outcome",
       idPrefix = "outcome"
     )
 
     @if(AppointmentDSASupportAccessed.valuesFor(a.appointment.team).nonEmpty) {
-      @b3.select(form("dsaSupportAccessed"),
+      @b3.select(form("outcomes.dsaSupportAccessed"),
         options = ("", "") +: AppointmentDSASupportAccessed.valuesFor(a.appointment.team).map { t => t.entryName -> t.description },
         '_label -> "DSA type of support accessed",
+      )
+    }
+
+    @if(AppointmentDSAActionPoint.valuesFor(a.appointment.team).nonEmpty) {
+      @b3.checkboxGroup(
+        label = "DSA action points",
+        items = AppointmentDSAActionPoint.valuesFor(a.appointment.team),
+        form = form,
+        field = "outcomes.dsaActionPoints",
+        idPrefix = "dsaActionPoint",
+        withOther = Some(AppointmentDSAActionPoint.Other(None)).filter(_.applicableTo.contains(a.appointment.team)),
       )
     }
 

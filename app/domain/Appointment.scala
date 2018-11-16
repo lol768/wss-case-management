@@ -21,6 +21,7 @@ case class Appointment(
   cancellationReason: Option[AppointmentCancellationReason],
   outcome: Set[AppointmentOutcome],
   dsaSupportAccessed: Option[AppointmentDSASupportAccessed],
+  dsaActionPoints: Set[AppointmentDSAActionPoint],
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
 ) {
@@ -64,6 +65,15 @@ case class AppointmentSave(
   roomID: Option[UUID],
   appointmentType: AppointmentType,
   purpose: AppointmentPurpose,
+)
+
+/**
+  * Information to save appointment outcomes
+  */
+case class AppointmentOutcomesSave(
+  outcome: Set[AppointmentOutcome],
+  dsaSupportAccessed: Option[AppointmentDSASupportAccessed],
+  dsaActionPoints: Set[AppointmentDSAActionPoint],
 )
 
 case class AppointmentRender(
@@ -255,6 +265,45 @@ object AppointmentDSASupportAccessed extends PlayEnum[AppointmentDSASupportAcces
   override def values: immutable.IndexedSeq[AppointmentDSASupportAccessed] = findValues
 
   def valuesFor(team: Team): Seq[AppointmentDSASupportAccessed] = values.filter { t =>
+    t.applicableTo.contains(team)
+  }
+}
+
+sealed abstract class AppointmentDSAActionPoint(val description: String, val applicableTo: Seq[Team]) extends EnumEntry with IdAndDescription {
+  override val id: String = this.entryName
+}
+object AppointmentDSAActionPoint extends PlayEnumWithOther[AppointmentDSAActionPoint] {
+  case object AdviceAndGuidance extends AppointmentDSAActionPoint("Advice and guidance", Seq(Teams.Disability, Teams.MentalHealth))
+  case object AnxietyManagement extends AppointmentDSAActionPoint("Anxiety management", Seq(Teams.Disability, Teams.MentalHealth))
+  case object ConcentrationManagement extends AppointmentDSAActionPoint("Concentration management", Seq(Teams.Disability, Teams.MentalHealth))
+  case object CourseworkPlanning extends AppointmentDSAActionPoint("Coursework planning", Seq(Teams.Disability, Teams.MentalHealth))
+  case object Dissertation extends AppointmentDSAActionPoint("Dissertation/thesis", Seq(Teams.Disability, Teams.MentalHealth))
+  case object EssayPlanning extends AppointmentDSAActionPoint("Essay planning", Seq(Teams.Disability, Teams.MentalHealth))
+  case object ExamRevision extends AppointmentDSAActionPoint("Exam revision", Seq(Teams.Disability, Teams.MentalHealth))
+  case object ITServices extends AppointmentDSAActionPoint("IT services and software", Seq(Teams.Disability, Teams.MentalHealth))
+  case object LabReports extends AppointmentDSAActionPoint("Lab reports", Seq(Teams.Disability, Teams.MentalHealth))
+  case object LibraryAssistance extends AppointmentDSAActionPoint("Library assistance", Seq(Teams.Disability, Teams.MentalHealth))
+  case object Motivation extends AppointmentDSAActionPoint("Motivation", Seq(Teams.Disability, Teams.MentalHealth))
+  case object NoteTaking extends AppointmentDSAActionPoint("Note-taking", Seq(Teams.Disability, Teams.MentalHealth))
+  case object OrganisationManagement extends AppointmentDSAActionPoint("Organisation management", Seq(Teams.Disability, Teams.MentalHealth))
+  case object PresentationSkills extends AppointmentDSAActionPoint("Presentation skills", Seq(Teams.Disability, Teams.MentalHealth))
+  case object Procrastination extends AppointmentDSAActionPoint("Procrastination", Seq(Teams.Disability, Teams.MentalHealth))
+  case object Project extends AppointmentDSAActionPoint("Project", Seq(Teams.Disability, Teams.MentalHealth))
+  case object ReadingComprehensionStrategies extends AppointmentDSAActionPoint("Reading comprehension strategies", Seq(Teams.Disability, Teams.MentalHealth))
+  case object Referencing extends AppointmentDSAActionPoint("Referencing", Seq(Teams.Disability, Teams.MentalHealth))
+  case object SocialStrategies extends AppointmentDSAActionPoint("Social strategies", Seq(Teams.Disability, Teams.MentalHealth))
+  case object StressManagement extends AppointmentDSAActionPoint("Stress management", Seq(Teams.Disability, Teams.MentalHealth))
+  case object TimeManagement extends AppointmentDSAActionPoint("Time management", Seq(Teams.Disability, Teams.MentalHealth))
+
+  case class Other(override val value: Option[String]) extends AppointmentDSAActionPoint("Other", Seq(Teams.Disability, Teams.MentalHealth)) with EnumEntryOther {
+    override val label: String = "Other"
+    override val description: String = s"$label (${value.orNull})"
+  }
+
+  override def nonOtherValues: immutable.IndexedSeq[AppointmentDSAActionPoint] = findValues
+  override def otherBuilder[O <: EnumEntryOther](otherValue: Option[String]): O = Other(otherValue).asInstanceOf[O]
+
+  def valuesFor(team: Team): immutable.IndexedSeq[AppointmentDSAActionPoint] = values.filter { t =>
     t.applicableTo.contains(team)
   }
 }

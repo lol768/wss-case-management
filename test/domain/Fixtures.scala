@@ -187,6 +187,8 @@ object Fixtures {
       None,
       List(),
       None,
+      List(),
+      None,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
     )
