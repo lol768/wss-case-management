@@ -195,6 +195,7 @@ object Fixtures {
       appointmentID: UUID,
       AppointmentState.Provisional,
       None,
+      None,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
     )

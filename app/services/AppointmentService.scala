@@ -146,6 +146,7 @@ class AppointmentServiceImpl @Inject()(
               inserted.id,
               AppointmentState.Provisional,
               None,
+              None,
               JavaTime.offsetDateTime,
               JavaTime.offsetDateTime
             )
@@ -206,6 +207,7 @@ class AppointmentServiceImpl @Inject()(
               universityID,
               id,
               AppointmentState.Provisional,
+              None,
               None,
               JavaTime.offsetDateTime,
               JavaTime.offsetDateTime
