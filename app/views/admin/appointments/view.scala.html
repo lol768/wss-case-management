@@ -2,6 +2,7 @@
 @import domain.{AppointmentCancellationReason, AppointmentClient, AppointmentRender, SitsProfile}
 @import warwick.core.helpers.JavaTime
 
+@import domain.AppointmentState
 @(
   a: AppointmentRender,
   profiles: Map[AppointmentClient, Option[SitsProfile]],
@@ -138,6 +139,11 @@
             <p>
               <a class="btn btn-default btn-block" href="@controllers.admin.routes.AppointmentController.editForm(a.appointment.key)">Edit appointment</a>
             </p>
+            @if(a.appointment.state.nonTerminal) {
+              <p>
+                <a class="btn @if(a.clients.exists(_.state == AppointmentState.Cancelled)) {btn-primary} else {btn-default} btn-block" href="@controllers.admin.routes.AppointmentController.rescheduleForm(a.appointment.key)">Reschedule appointment</a>
+              </p>
+            }
             <p>
               <a class="btn @if(a.appointment.start.isBefore(JavaTime.offsetDateTime) && a.appointment.state.nonTerminal) {btn-primary} else {btn-default} btn-block" href="@controllers.admin.routes.AppointmentOutcomesController.outcomesForm(a.appointment.key)">
                 Appointment outcomes

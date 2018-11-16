@@ -1,7 +1,7 @@
 @(url: String)
 
 @email() {
-  An appointment has been updated.
+  An appointment with you has been updated.
 
   Follow this link to see details: @url
 }

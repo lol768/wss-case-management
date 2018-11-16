@@ -24,8 +24,10 @@ class NullNotificationService extends NotificationService {
   override def appointmentConfirmation(appointment: Appointment, teamMembers: Set[Usercode], clientState: AppointmentState)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def clientCancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def clientChangedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def clientRescheduledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def ownerNewAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def ownerCancelledAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def ownerChangedAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
+  override def ownerRescheduledAppointment(owners: Set[Usercode], appointment: Appointment)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
   override def appointmentReminder(appointment: Appointment, clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = result
 }
