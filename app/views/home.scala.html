@@ -48,18 +48,6 @@
       <li role="presentation">
         <a href="#appointments" aria-controls="appointments" role="tab" data-toggle="tab">@tags.icons.appointments() Appointments</a>
       </li>
-      <li role="presentation">
-        <a href="#mymessages" aria-controls="mymessages" role="tab" data-toggle="tab">@tags.icons.myMessages() My messages</a>
-      </li>
-      <li role="presentation">
-        <a href="#myappointments" aria-controls="myappointments" role="tab" data-toggle="tab">
-          @tags.icons.myAppointments()
-          My appointments
-          @if(clientAppointmentCount > 0) {
-            <span class="badge">@clientAppointmentCount</span>
-          }
-        </a>
-      </li>
     </ul>
 
     <div class="tab-content">
@@ -69,8 +57,6 @@
         @views.html.admin.clientsTab(routes.IndexController.atRiskClients)
       </div>
       <div role="tabpanel" class="tab-pane" id="appointments" data-href="@routes.IndexController.appointmentsTab()"></div>
-      <div role="tabpanel" class="tab-pane" id="mymessages" data-href="@routes.IndexController.messages()"></div>
-      <div role="tabpanel" class="tab-pane" id="myappointments" data-href="@routes.IndexController.clientAppointments()"></div>
     </div>
   }
 }
