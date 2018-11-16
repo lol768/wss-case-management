@@ -50,11 +50,26 @@ class ClientMessagesController @Inject()(
       _ => enquiryService.getForRender(issue.id).map(_.map(_.toIssue)),
       _ => caseService.findForClient(issue.id, currentUser.universityId.get).map(_.map(_.toIssue))
     ).successMap(issueRender =>
-      Ok(views.html.clientMessages(
-        issueRender,
-        f,
-        uploadedFileControllerHelper.supportedMimeTypes
-      ))
+      render {
+        case Accepts.Json() =>
+          val clientName = "You"
+
+          Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
+            "lastMessage" -> issueRender.messages.lastOption.map(_.message.created),
+            "lastMessageRelative" -> issueRender.messages.lastOption.map(_.message.created).map(JavaTime.Relative.apply(_)),
+            "awaiting" -> issueRender.messages.lastOption.map(_.message.sender == MessageSender.Team),
+            "messagesHTML" -> issueRender.messages.map { m =>
+              val teamName = m.message.team.getOrElse(request.issue.team).name
+              views.html.tags.messages.message(m.message, m.files, clientName, teamName, f => routes.ClientMessagesController.download(issue.id, f.id)).toString()
+            }.mkString("")
+          ))))
+        case _ =>
+          Ok(views.html.clientMessages(
+            issueRender,
+            f,
+            uploadedFileControllerHelper.supportedMimeTypes
+          ))
+      }
     )
 
   def messages(id: java.util.UUID): Action[AnyContent] = CanClientViewIssueAction(id).async { implicit request =>
@@ -87,6 +102,8 @@ class ClientMessagesController @Inject()(
               val teamName = messageData.team.getOrElse(request.issue.team).name
 
               Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
+                "lastMessage" -> messageData.created,
+                "lastMessageRelative" ->JavaTime.Relative(messageData.created),
                 "message" -> views.html.tags.messages.message(messageData, f, clientName, teamName, f => routes.ClientMessagesController.download(id, f.id)).toString()
               ))))
             case _ =>

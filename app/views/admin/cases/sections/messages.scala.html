@@ -6,20 +6,20 @@
 @(
   c: Case,
   messages: CaseMessages,
-  profiles: Map[Client, Option[SitsProfile]],
+  clients: Set[Client],
   messageForms: Map[Client, Form[MessageFormData]],
   supportedMimeTypes: Seq[MediaType]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 <div class="panel-group message-threads" id="messages-accordion" role="tablist" aria-multiselectable="true" data-count="@messages.length">
-  @profiles.keySet.toSeq.sorted.map { client =>
+  @clients.toSeq.sorted.map { client =>
     @defining(messages.byClient.getOrElse(client.universityID, Nil)) { messages: Seq[MessageRender] =>
-      <div class="thread panel panel-default">
+      <div class="thread panel panel-default" data-href="@controllers.admin.routes.CaseMessageController.messages(c.key, client.universityID)">
         <div class="panel-heading" role="tab" id="thread-heading-@client.universityID.string">
           <h4 class="panel-title">
-          @if(profiles.size > 1){
-            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-thread-@client.universityID.string" aria-expanded="true" aria-controls="collapse-thread-@client.universityID.string">
-              <div class="pull-right">
+          @if(clients.size > 1){
+            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-thread-@client.universityID.string" aria-expanded="true" aria-controls="collapse-thread-@client.universityID.string" data-always-update="true">
+              <div class="pull-right lastMessageRelative">
                 @messages.lastOption.map { m =>
                   @JavaTime.Relative(m.message.created)
                 }
@@ -27,28 +27,26 @@
                 <i class="fas fa-fw fa-angle-up"></i>
               </div>
               @client.safeFullName
-              @if(messages.isEmpty) {
-                (No messages)
-              } else {
-                (@tags.p(messages.length, "message")())
-              }
+              (<span class="threadTitle">@if(messages.isEmpty){No messages} else {@tags.p(messages.length, "message")()}</span>)
             </a>
           } else {
-            <div class="pull-right">
-            @messages.lastOption.map { m =>
-              @JavaTime.Relative(m.message.created)
-            }
+            <div class="pull-right lastMessageRelative">
+              @messages.lastOption.map { m =>
+                @JavaTime.Relative(m.message.created)
+              }
             </div>
-            @if(messages.isEmpty) {
-              No messages
-            } else {
-              @tags.p(messages.length, "message")()
-            }
+            <span class="threadTitle">
+              @if(messages.isEmpty) {
+                No messages
+              } else {
+                @tags.p(messages.length, "message")()
+              }
+            </span>
           }
 
           </h4>
         </div>
-        <div id="collapse-thread-@client.universityID.string" class="panel-collapse @if(profiles.size > 1){ collapse }" role="tabpanel" aria-labelledby="thread-heading-@client.universityID.string">
+        <div id="collapse-thread-@client.universityID.string" class="panel-collapse @if(clients.size > 1){ collapse }" role="tabpanel" aria-labelledby="thread-heading-@client.universityID.string">
           <div class="panel-body">
             @if(messages.nonEmpty) {
               @messages.map { render =>

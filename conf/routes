@@ -134,6 +134,7 @@ GET         /team/case/:caseKey/document/:id        @controllers.admin.CaseDocum
 POST        /team/case/:caseKey/document/:id/delete @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 GET         /team/case/:caseKey/messages            @controllers.admin.CaseController.messages(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.messages(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
 POST        /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.addMessage(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
 GET         /team/case/:caseKey/attachments/:fileId @controllers.admin.CaseMessageController.download(caseKey: domain.IssueKey, fileId: java.util.UUID)
 GET         /team/case/:caseKey/appointments        @controllers.admin.CaseController.appointments(caseKey: domain.IssueKey)

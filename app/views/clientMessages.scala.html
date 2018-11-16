@@ -22,11 +22,13 @@
     <div class="pull-right">
       @JavaTime.Relative(issueRender.lastUpdatedDate)
     </div>
-    @tags.icons.enquiryState(issueRender.issue.state, issueRender.messages.last.message, MessageSender.Client)
+    <span class="icon-container">
+      @tags.icons.enquiryState(issueRender.issue.state, issueRender.messages.last.message, MessageSender.Client)
+    </span>
     @subject
   </h2>
   <div class="message-threads">
-    <div class="thread thread--client panel panel-default">
+    <div class="thread thread--client panel panel-default" data-href="@controllers.routes.ClientMessagesController.messages(issueRender.issue.id)">
       <div class="panel-body">
         @issueRender.messages.map { message =>
           @views.html.tags.messages.message(

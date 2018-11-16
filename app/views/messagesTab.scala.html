@@ -42,13 +42,13 @@
 
   <div class="panel-group message-threads" id="enquiries-accordion" role="tablist" aria-multiselectable="true">
   @issues.map { issueRender: IssueRender =>
-    <div class="panel panel-default thread thread--client state-@issueRender.issue.state.entryName">
+    <div class="panel panel-default thread thread--client state-@issueRender.issue.state.entryName" data-href="@controllers.routes.ClientMessagesController.messages(issueRender.issue.id)">
 
       <div class="panel-heading" role="tab" id="heading-@issueRender.issue.id.toString">
         <h4 class="panel-title">
           <a class="@if(issues.head.issue != issueRender.issue){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@issueRender.issue.id.toString" aria-expanded="true" aria-controls="collapse-@issueRender.issue.id.toString">
             <div class="pull-right">
-              @JavaTime.Relative(issueRender.lastUpdatedDate)
+              <span class="lastMessageRelative">@JavaTime.Relative(issueRender.lastUpdatedDate)</span>
               <i class="fas fa-fw fa-angle-down"></i>
               <i class="fas fa-fw fa-angle-up"></i>
             </div>

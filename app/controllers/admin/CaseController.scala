@@ -258,13 +258,12 @@ class CaseController @Inject()(
     cases.getClients(caseRequest.`case`.id).successFlatMap(caseClients =>
       ServiceResults.zip(
         cases.getCaseMessages(caseRequest.`case`.id),
-        profiles.getProfiles(caseClients.map(_.universityID)),
         cases.getLastUpdatedMessageDates(caseKey)
-      ).successMap { case (messages, p, lastMessageDates) =>
+      ).successMap { case (messages, lastMessageDates) =>
         Ok(views.html.admin.cases.sections.messages(
           caseRequest.`case`,
           messages,
-          caseClients.map(c => c -> p.get(c.universityID)).toMap,
+          caseClients,
           caseClients.map(c => c -> MessagesController.messageForm(lastMessageDates.get(c.universityID)).fill(MessageFormData("", lastMessageDates.get(c.universityID)))).toMap,
           uploadedFileControllerHelper.supportedMimeTypes
         ))

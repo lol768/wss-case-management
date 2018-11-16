@@ -188,13 +188,13 @@
     </div>
 
     <div class="enquiry-details--messages message-threads">
-      <div class="thread thread--team panel">
+      <div class="thread thread--team panel" data-href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key)">
         <div class="panel-body">
           @messages.map { render =>
             @views.html.tags.messages.message(
               render.message,
               render.files,
-              profile.map(_.fullName).getOrElse(enquiry.client.universityID.string),
+              enquiry.client.safeFullName,
               render.message.teamMember.map { member => s"${member.safeFullName}, ${render.message.team.getOrElse(enquiry.team).name}" }
                 .getOrElse(render.message.team.getOrElse(enquiry.team).name),
               f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key, f.id),
