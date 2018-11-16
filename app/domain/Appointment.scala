@@ -132,7 +132,8 @@ object AppointmentRender {
 case class AppointmentClient(
   client: Client,
   state: AppointmentState,
-  cancellationReason: Option[AppointmentCancellationReason]
+  cancellationReason: Option[AppointmentCancellationReason],
+  attendanceState: Option[AppointmentClientAttendanceState],
 )
 
 case class AppointmentTeamMember(
@@ -178,6 +179,18 @@ object AppointmentState extends PlayEnum[AppointmentState] {
   }
 
   override def values: immutable.IndexedSeq[AppointmentState] = findValues
+}
+
+sealed abstract class AppointmentClientAttendanceState(val appointmentState: AppointmentState, val description: String) extends EnumEntry
+object AppointmentClientAttendanceState extends PlayEnum[AppointmentClientAttendanceState] {
+  case object Attended extends AppointmentClientAttendanceState(AppointmentState.Attended, "Attended")
+  case object CancelledWithin24 extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "Cancelled (within 24 hours)")
+  case object CancelledOutside24 extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "Cancelled (outside of 24 hours)")
+  case object DidNotAttend extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "Did not attend")
+  case object DNAClaimable extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "DNA (claimable)")
+  case object DNANonClaimable extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "DNA (non-claimable)")
+
+  override def values: immutable.IndexedSeq[AppointmentClientAttendanceState] = findValues
 }
 
 sealed abstract class AppointmentCancellationReason(val description: String) extends EnumEntry

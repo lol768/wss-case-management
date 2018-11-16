@@ -1,7 +1,6 @@
 @import controllers.admin.AppointmentOutcomesController.AppointmentOutcomesFormData
-@import domain.{AppointmentCancellationReason, AppointmentRender, AppointmentState}
+@import domain.{AppointmentCancellationReason, AppointmentClientAttendanceState, AppointmentOutcome, AppointmentRender}
 
-@import domain.AppointmentOutcome
 @(
   a: AppointmentRender,
   form: Form[AppointmentOutcomesFormData],
@@ -30,8 +29,8 @@
                 @b3.validatedHidden(form, s"attendance[$i].client")
               </td>
               <td>
-                @b3.select(form(s"attendance[$i].state"),
-                  options = Seq(AppointmentState.Attended.entryName -> "Attended", AppointmentState.Cancelled.entryName -> "Did not attend"),
+                @b3.select(form(s"attendance[$i].attendanceState"),
+                  options = AppointmentClientAttendanceState.values.map { s => s.entryName -> s.description },
                   '_hiddenLabel -> s"${client.client.safeFullName} attended",
                   '_default -> "",
                   'required -> true

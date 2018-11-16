@@ -80,7 +80,7 @@ class AppointmentServiceTest extends AbstractDaoTest {
         service.findForRender(singleClientNoCase.key).serviceValue mustBe AppointmentRender(
           singleClientNoCase,
           Set(
-            AppointmentClient(Client(UniversityID("0672089"), None, now), AppointmentState.Provisional, None)
+            AppointmentClient(Client(UniversityID("0672089"), None, now), AppointmentState.Provisional, None, None)
           ),
           Set(
             AppointmentTeamMember(Member(Usercode("u1234567"), None, now), None)
@@ -100,8 +100,8 @@ class AppointmentServiceTest extends AbstractDaoTest {
         service.findForRender(multipleClientsMultipleTeamMembersWithCases.key).serviceValue mustBe AppointmentRender(
           multipleClientsMultipleTeamMembersWithCases,
           Set(
-            AppointmentClient(Client(UniversityID("0672088"), None, now), AppointmentState.Provisional, None),
-            AppointmentClient(Client(UniversityID("0672089"), None, now), AppointmentState.Provisional, None)
+            AppointmentClient(Client(UniversityID("0672088"), None, now), AppointmentState.Provisional, None, None),
+            AppointmentClient(Client(UniversityID("0672089"), None, now), AppointmentState.Provisional, None, None)
           ),
           Set(
             AppointmentTeamMember(Member(Usercode("u1234444"), None, now), None),
