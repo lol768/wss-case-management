@@ -233,7 +233,7 @@
         }
 
         @if(c.fields.studentSupportIssueTypes.nonEmpty || history.studentSupportIssueTypes.size > 1) {
-          @tags.sectioned.detail("Student support issue"){
+          @tags.sectioned.detail("Wellbeing Support issue"){
             <div data-field-history-field="studentSupportIssueTypes">
               @if(c.fields.studentSupportIssueTypes.nonEmpty) {
                 @c.fields.studentSupportIssueTypes.toSeq.map(_.description).sorted.mkString(", ")
