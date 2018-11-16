@@ -186,6 +186,7 @@ object Fixtures {
       AppointmentState.Provisional,
       None,
       List(),
+      None,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
     )

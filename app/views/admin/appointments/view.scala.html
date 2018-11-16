@@ -129,6 +129,12 @@
             </ul>
           }
         }
+
+        @a.appointment.dsaSupportAccessed.map { dsaSupportAccessed =>
+          @tags.sectioned.detail("DSA type of support accessed") {
+            @dsaSupportAccessed.description
+          }
+        }
       </div>
       <div class="col-sm-6 col-md-4">
         <div class="row form-horizontal">

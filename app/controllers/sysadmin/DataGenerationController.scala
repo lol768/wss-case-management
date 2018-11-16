@@ -871,6 +871,11 @@ class DataGenerationJob @Inject()(
               appointment.id,
               attendance,
               Set(randomEnum(AppointmentOutcome)),
+              dsaSupportAccessed = {
+                val typesForTeam = AppointmentDSASupportAccessed.valuesFor(appointment.team)
+                if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
+                else None
+              },
               note,
               appointment.lastUpdated,
             ).serviceValue -> clients
