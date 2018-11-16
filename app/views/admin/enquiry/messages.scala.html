@@ -4,6 +4,7 @@
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
 
+@import controllers.MessagesController.MessageFormData
 @(
   enquiry: Enquiry,
   profile: Option[SitsProfile],
@@ -12,7 +13,7 @@
   owners: Set[Member],
   clientLastRead: Option[OffsetDateTime],
   stateChangeForm: Form[OffsetDateTime],
-  messageForm: Form[String],
+  messageForm: Form[MessageFormData],
   canViewEnquiryTeam: Boolean,
   linkedCases: Seq[Case],
   supportedMimeTypes: Seq[MediaType],

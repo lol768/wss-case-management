@@ -2,11 +2,12 @@
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
 
+@import controllers.MessagesController.MessageFormData
 @(
   c: Case,
   messages: CaseMessages,
   profiles: Map[Client, Option[SitsProfile]],
-  messageForm: Form[String],
+  messageForms: Map[Client, Form[MessageFormData]],
   supportedMimeTypes: Seq[MediaType]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
@@ -48,8 +49,8 @@
           </h4>
         </div>
         <div id="collapse-thread-@client.universityID.string" class="panel-collapse @if(profiles.size > 1){ collapse }" role="tabpanel" aria-labelledby="thread-heading-@client.universityID.string">
-          @if(messages.nonEmpty){
-            <div class="panel-body">
+          <div class="panel-body">
+            @if(messages.nonEmpty) {
               @messages.map { render =>
                 @views.html.tags.messages.message(
                   render.message,
@@ -62,11 +63,11 @@
                   None
                 )
               }
-            </div>
-          }
+            }
+          </div>
           <div class="panel-footer">
           @if(c.state != IssueState.Closed) {
-            @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.key, client.universityID), messageForm, supportedMimeTypes, c.id, client.universityID)
+            @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.key, client.universityID), messageForms(client), supportedMimeTypes, c.id, client.universityID)
           }
           </div>
         </div>

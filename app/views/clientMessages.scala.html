@@ -2,9 +2,10 @@
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
 
+@import controllers.MessagesController.MessageFormData
 @(
   issueRender: IssueRender,
-  f: Form[String],
+  f: Form[MessageFormData],
   supportedMimeTypes: Seq[MediaType],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 

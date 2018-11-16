@@ -3,10 +3,11 @@ package controllers.admin
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import controllers.MessagesController.MessageFormData
 import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.admin.TeamEnquiryController._
 import controllers.refiners._
-import controllers.{API, BaseController, UploadedFileControllerHelper}
+import controllers.{API, BaseController, MessagesController, UploadedFileControllerHelper}
 import domain._
 import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
@@ -41,8 +42,6 @@ object TeamEnquiryController {
   def stateChangeForm(enquiry: Enquiry): Form[OffsetDateTime] = Form(single(
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.lastUpdated)
   ))
-
-  val messageForm = Form(single("text" -> nonEmptyText))
 }
 
 @Singleton
@@ -62,7 +61,7 @@ class TeamEnquiryController @Inject()(
   import canEditEnquiryActionRefiner._
   import canViewEnquiryActionRefiner._
 
-  private def renderMessages(enquiry: Enquiry, stateChangeForm: Form[OffsetDateTime], messageForm: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
+  private def renderMessages(enquiry: Enquiry, stateChangeForm: Form[OffsetDateTime], messageForm: Form[MessageFormData])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
     ServiceResults.zip(
       service.getForRender(enquiry.id),
       profiles.getProfile(enquiry.client.universityID).map(_.value),
@@ -97,7 +96,7 @@ class TeamEnquiryController @Inject()(
     renderMessages(
       request.enquiry,
       stateChangeForm(request.enquiry).fill(request.enquiry.lastUpdated),
-      messageForm
+      MessagesController.messageForm(Some(request.lastEnquiryMessageDate)).fill(MessageFormData("", Some(request.lastEnquiryMessageDate)))
     )
 
   def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
@@ -109,7 +108,7 @@ class TeamEnquiryController @Inject()(
   }
 
   def addMessage(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryUploadedFile]] = CanAddTeamMessageToEnquiryAction(enquiryKey)(uploadedFileControllerHelper.bodyParser).async { implicit request =>
-    messageForm.bindFromRequest().fold(
+    MessagesController.messageForm(Some(request.lastEnquiryMessageDate)).bindFromRequest().fold(
       formWithErrors => {
         render.async {
           case Accepts.Json() =>
@@ -118,8 +117,8 @@ class TeamEnquiryController @Inject()(
             renderMessages()
         }
       },
-      messageText => {
-        val message = messageData(messageText, request)
+      messageFormData => {
+        val message = messageData(messageFormData.text, request)
         val files = request.body.files.map(_.ref)
         val enquiry = request.enquiry
 
@@ -162,7 +161,7 @@ class TeamEnquiryController @Inject()(
       formWithErrors => renderMessages(
         request.enquiry,
         formWithErrors,
-        messageForm
+        MessagesController.messageForm(Some(request.lastEnquiryMessageDate))
       ),
       version =>
         service.updateState(request.enquiry.id, newState, version).successMap { enquiry =>

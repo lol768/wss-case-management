@@ -97,7 +97,7 @@ export default function MessageThreads(container) {
         $form.find('button').prop('disabled', false);
       })
       .finally(() => {
-        checkAndUpdateSendButton();
+        checkAndUpdateSendButton(e);
       });
   });
 }

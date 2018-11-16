@@ -3,11 +3,13 @@
 @import play.api.data.Forms._
 @import warwick.core.helpers.JavaTime
 
+@import controllers.MessagesController.MessageFormData
 @(
   issues: Seq[IssueRender],
   registration: Option[Registration],
   supportedMimeTypes: Seq[MediaType],
   canMakeEnquiry: Boolean,
+  messageForms: Map[IssueRender, Form[MessageFormData]]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @registration.map { r =>
@@ -77,9 +79,7 @@
           </div>
         <div class="panel-footer">
           @if(issueRender.issue.state != IssueState.Closed) {
-            @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
-              @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), form, supportedMimeTypes, issueRender.issue.id, context.user.get.universityId.get)
-            }
+            @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), messageForms(issueRender), supportedMimeTypes, issueRender.issue.id, context.user.get.universityId.get)
           } else {
             <p>
               We think this enquiry is now resolved, so we've marked it as closed.
