@@ -856,12 +856,12 @@ class DataGenerationJob @Inject()(
             val teamMember = randomTeamMember(appointment.team)
             implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
-            val attendance: Map[UniversityID, (AppointmentState, Option[AppointmentCancellationReason])] =
+            val attendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])] =
               clients.map { client =>
                 if ((options.AppointmentAttendedRate / Random.nextDouble()).toInt > 0) {
-                  (client, (AppointmentState.Attended, None))
+                  (client, (AppointmentClientAttendanceState.Attended, None))
                 } else {
-                  (client, (AppointmentState.Cancelled, Some(randomEnum(AppointmentCancellationReason))))
+                  (client, (AppointmentClientAttendanceState.values(Random.nextInt(AppointmentClientAttendanceState.values.size - 1) + 1), Some(randomEnum(AppointmentCancellationReason))))
                 }
               }.toMap
 

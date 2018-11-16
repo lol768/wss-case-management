@@ -5,9 +5,16 @@
   client: AppointmentClient
 )
 
-@if(client.state != appointment.state) {
-  <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
+@client.attendanceState.map { attendanceState =>
+  <span class="label label-@attendanceState.appointmentState.labelType" @client.cancellationReason.map { r => title="@r.description" }>
     @tags.icons.appointmentState(client.state, client = true)
-    @client.state.clientDescription
+    @attendanceState.description
   </span>
+}.getOrElse {
+  @if(client.state != appointment.state) {
+    <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
+      @tags.icons.appointmentState(client.state, client = true)
+      @client.state.clientDescription
+    </span>
+  }
 }

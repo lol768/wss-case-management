@@ -20,7 +20,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object AppointmentOutcomesController {
   case class AppointmentClientAttendanceFormData(
     client: UniversityID,
-    state: AppointmentState,
+    attendanceState: Option[AppointmentClientAttendanceState],
     cancellationReason: Option[AppointmentCancellationReason],
   )
 
@@ -38,7 +38,7 @@ object AppointmentOutcomesController {
           mapping(
             "client" -> nonEmptyText.transform[UniversityID](UniversityID.apply, _.string)
               .verifying("error.client.invalid", u => a.clients.map(_.client.universityID).contains(u)),
-            "state" -> AppointmentState.formField.verifying("error.required", s => s == AppointmentState.Attended || s == AppointmentState.Cancelled),
+            "attendanceState" -> optional(AppointmentClientAttendanceState.formField).verifying("error.required", _.nonEmpty),
             "cancellationReason" -> optional(AppointmentCancellationReason.formField),
           )(AppointmentClientAttendanceFormData.apply)(AppointmentClientAttendanceFormData.unapply)
         ),
@@ -63,7 +63,11 @@ class AppointmentOutcomesController @Inject()(
         a,
         form(a).fill(AppointmentOutcomesFormData(
           a.clients.toSeq.sortBy(_.client.universityID.string).map { client =>
-            AppointmentClientAttendanceFormData(client.client.universityID, client.state, client.cancellationReason)
+            AppointmentClientAttendanceFormData(
+              client.client.universityID,
+              client.attendanceState,
+              client.cancellationReason
+            )
           },
           a.appointment.outcome,
           None,
@@ -84,7 +88,7 @@ class AppointmentOutcomesController @Inject()(
         ),
         data => appointments.recordOutcomes(
           a.appointment.id,
-          data.attendance.map { d => (d.client, (d.state, d.cancellationReason)) }.toMap,
+          data.attendance.filter(_.attendanceState.nonEmpty).map { d => (d.client, (d.attendanceState.get, d.cancellationReason)) }.toMap,
           data.outcome,
           data.note.map(CaseNoteSave(_, currentUser().usercode)),
           data.version

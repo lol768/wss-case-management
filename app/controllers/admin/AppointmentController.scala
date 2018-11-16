@@ -287,6 +287,15 @@ class AppointmentController @Inject()(
     )
   }
 
+  private def appointmentSave(a: AppointmentRender): AppointmentSave =
+    AppointmentSave(
+      a.appointment.start,
+      a.appointment.duration,
+      a.room.map(_.id),
+      a.appointment.appointmentType,
+      a.appointment.purpose,
+    )
+
   def editForm(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
     ServiceResults.zip(appointments.findForRender(appointmentKey), locations.availableRooms).successMap { case (a, availableRooms) =>
       Ok(
@@ -297,13 +306,7 @@ class AppointmentController @Inject()(
               a.clients.map(_.client.universityID),
               a.teamMembers.map(_.member.usercode),
               a.clientCases.map(_.id),
-              AppointmentSave(
-                a.appointment.start,
-                a.appointment.duration,
-                a.room.map(_.id),
-                a.appointment.appointmentType,
-                a.appointment.purpose,
-              ),
+              appointmentSave(a),
               Some(a.appointment.lastUpdated)
             )),
           availableRooms
@@ -469,7 +472,7 @@ class AppointmentController @Inject()(
               purpose = a.appointment.purpose,
             )
 
-            if (updates.start == a.appointment.start && updates.duration == a.appointment.duration && updates.roomID == a.room.map(_.id)) {
+            if (updates == appointmentSave(a)) {
               // no-op, don't send notifications unnecessarily
               Future.successful(Redirect(controllers.admin.routes.AppointmentController.view(a.appointment.key)))
             } else {
