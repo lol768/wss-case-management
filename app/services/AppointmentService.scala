@@ -80,7 +80,7 @@ trait AppointmentService {
   def clientAccept(appointmentID: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
   def clientDecline(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
-  def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])], outcome: Set[AppointmentOutcome], dsaSupportAccessed: Option[AppointmentDSASupportAccessed], note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
+  def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])], outcomes: AppointmentOutcomesSave, note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
   def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, note: Option[CaseNoteSave], currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def sendClientReminder(appointmentID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
@@ -115,6 +115,8 @@ class AppointmentServiceImpl @Inject()(
       save.appointmentType,
       save.purpose,
       AppointmentState.Provisional,
+      None,
+      List(),
       None,
       List(),
       None,
@@ -235,6 +237,8 @@ class AppointmentServiceImpl @Inject()(
                 existing.cancellationReason,
               existing.outcome,
               existing.dsaSupportAccessed,
+              existing.dsaActionPoints,
+              existing.dsaActionPointOther,
               existing.created,
               JavaTime.offsetDateTime
             ),
@@ -324,6 +328,8 @@ class AppointmentServiceImpl @Inject()(
             None,
             existing.outcome,
             existing.dsaSupportAccessed,
+            existing.dsaActionPoints,
+            existing.dsaActionPointOther,
             existing.created,
             JavaTime.offsetDateTime
           ),
@@ -604,7 +610,7 @@ class AppointmentServiceImpl @Inject()(
       }
     }
 
-  override def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])], outcome: Set[AppointmentOutcome], dsaSupportAccessed: Option[AppointmentDSASupportAccessed], note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
+  override def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])], outcomes: AppointmentOutcomesSave, note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
     auditService.audit('AppointmentOutcomes, appointmentID.toString, 'Appointment, Json.obj()) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).filter(_.version === version).result.head
@@ -641,8 +647,10 @@ class AppointmentServiceImpl @Inject()(
         // else set it as cancelled with the first client reason
         updatedAppointment <- {
           val updates = appointment.copy(
-            outcome = outcome.map(_.entryName).toList.sorted,
-            dsaSupportAccessed = dsaSupportAccessed,
+            outcome = outcomes.outcome.map(_.entryName).toList.sorted,
+            dsaSupportAccessed = outcomes.dsaSupportAccessed,
+            dsaActionPoints = outcomes.dsaActionPoints.map(_.entryName).toList.sorted,
+            dsaActionPointOther = AppointmentDSAActionPoint.otherValue(outcomes.dsaActionPoints),
           )
 
           if (clientAttendance.values.exists { case (s, _) => s.appointmentState == AppointmentState.Attended } && (appointment.state != AppointmentState.Attended || appointment.cancellationReason.nonEmpty))

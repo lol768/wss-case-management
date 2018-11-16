@@ -523,12 +523,12 @@ class DataGenerationJob @Inject()(
                   else None
                 },
                 cause = randomEnum(CaseCause),
-                // TODO Could add some of these
-                clientRiskTypes = Set(),
-                counsellingServicesIssues = Set(),
-                studentSupportIssueTypes = Set(),
-                medications = Set(),
-                severityOfProblem = None
+                // TODO parameterise the rates
+                clientRiskTypes = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(ClientRiskType)).toSet,
+                counsellingServicesIssues = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CounsellingServicesIssue)).toSet,
+                studentSupportIssueTypes = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(StudentSupportIssueType)).toSet,
+                medications = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CaseMedication)).toSet,
+                severityOfProblem = if ((0.8 / Random.nextDouble()).toInt > 0) Some(randomEnum(SeverityOfProblem)) else None
               ),
               Set(enquiry.client.universityID),
               (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
@@ -585,12 +585,12 @@ class DataGenerationJob @Inject()(
                 else None
               },
               cause = randomEnum(CaseCause),
-              // TODO Could add some of these
-              clientRiskTypes = Set(),
-              counsellingServicesIssues = Set(),
-              studentSupportIssueTypes = Set(),
-              medications = Set(),
-              severityOfProblem = None
+              // TODO parameterise the rates
+              clientRiskTypes = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(ClientRiskType)).toSet,
+              counsellingServicesIssues = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CounsellingServicesIssue)).toSet,
+              studentSupportIssueTypes = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(StudentSupportIssueType)).toSet,
+              medications = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CaseMedication)).toSet,
+              severityOfProblem = if ((0.8 / Random.nextDouble()).toInt > 0) Some(randomEnum(SeverityOfProblem)) else None
             ),
             clients,
             (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
@@ -870,12 +870,16 @@ class DataGenerationJob @Inject()(
             appointments.recordOutcomes(
               appointment.id,
               attendance,
-              Set(randomEnum(AppointmentOutcome)),
-              dsaSupportAccessed = {
-                val typesForTeam = AppointmentDSASupportAccessed.valuesFor(appointment.team)
-                if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
-                else None
-              },
+              AppointmentOutcomesSave(
+                Set(randomEnum(AppointmentOutcome)),
+                dsaSupportAccessed = {
+                  val typesForTeam = AppointmentDSASupportAccessed.valuesFor(appointment.team)
+                  if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
+                  else None
+                },
+                // TODO parameterise the rates
+                dsaActionPoints = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(AppointmentDSAActionPoint)).toSet,
+              ),
               note,
               appointment.lastUpdated,
             ).serviceValue -> clients
