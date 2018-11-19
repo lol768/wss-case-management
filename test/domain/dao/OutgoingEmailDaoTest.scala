@@ -3,6 +3,7 @@ package domain.dao
 import java.time.{Clock, ZonedDateTime}
 
 import domain._
+import play.api.libs.json.Json
 import play.api.libs.mailer.Email
 import uk.ac.warwick.util.core.DateTimeUtils
 import warwick.core.helpers.JavaTime
@@ -89,5 +90,45 @@ class OutgoingEmailDaoTest extends AbstractDaoTest {
       DateTimeUtils.CLOCK_IMPLEMENTATION = Clock.systemDefaultZone
     }
 
+    "insert multiple emails" in {
+      val email = Email(
+        subject = "Here's a lovely email",
+        from = "no-reply@warwick.ac.uk",
+        bodyText = Some("Love it")
+      )
+
+      val recipients = Stream(Usercode("cuscav"), Usercode("cusebr"), Usercode("cusfal"), Usercode("cusjau"), Usercode("cuskak"))
+
+      val emails = recipients.map { usercode =>
+        OutgoingEmail(
+          id = None, // Allow the DAO to set this
+          email = email,
+          recipient = Some(usercode)
+        )
+      }
+
+      val inserted = exec(dao.insertAll(emails))
+      inserted.size mustBe recipients.size
+      inserted.foreach { e =>
+        e.id mustNot be(null)
+        e.email mustBe Json.obj(
+          "subject" -> "Here's a lovely email",
+          "from" -> "no-reply@warwick.ac.uk",
+          "to" -> Seq.empty[String],
+          "bodyText" -> "Love it",
+          "cc" -> Seq.empty[String],
+          "bcc" -> Seq.empty[String],
+          "replyTo" -> Seq.empty[String],
+          "attachments" -> Seq.empty[String],
+          "headers" -> Seq.empty[String],
+        )
+        recipients.contains(e.recipient.get) mustBe true
+        e.emailAddress mustBe 'empty
+        e.sent mustBe 'empty
+        e.lastSendAttempt mustBe 'empty
+        e.failureReason mustBe 'empty
+      }
+      recipients.forall(inserted.map(_.recipient.get).contains) mustBe true
+    }
   }
 }
