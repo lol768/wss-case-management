@@ -55,7 +55,7 @@ val appDeps = Seq(
   "com.typesafe.play" %% "play-mailer-guice" % "6.0.1",
 
   "com.typesafe.slick" %% "slick" % "3.2.3",
-  "org.postgresql" % "postgresql" % "42.2.5",
+  "org.postgresql" % "postgresql" % "42.2.4",
   "com.github.tminglei" %% "slick-pg" % "0.16.3",
 
   // in-memory JNDI context used by Play to pass DataSource to Quartz
