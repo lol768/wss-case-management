@@ -16,7 +16,7 @@ object API {
 
   def badRequestJson(formWithErrors: Form[_])(implicit messages: Messages) =
     Results.BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
-      formWithErrors.errors.map(error => API.Error(error.getClass.getSimpleName, error.format))
+      formWithErrors.errors.map(error => API.Error(error.getClass.getSimpleName, error.format, error.message))
     )))
 
   sealed abstract class Response[A: Reads : Writes](val success: Boolean, status: String) {
@@ -28,7 +28,7 @@ object API {
     def either: Either[Failure[A], Success[A]]
   }
 
-  case class Error(id: String, message: String)
+  case class Error(id: String, message: String, messageKey: String = null)
 
   case class Success[A: Reads : Writes](status: String = "ok", data: A) extends Response[A](true, status) {
     def either = Right(this)

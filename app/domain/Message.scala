@@ -116,6 +116,12 @@ object Message extends Versioning {
       .groupBy(_.ownerId)
       .map { case (id, m) => (id, m.map(_.created).max) }
 
+  val lastUpdatedCasePerClientMessage =
+    Message.messages.table
+      .filter(m => m.ownerType === (MessageOwner.Case: MessageOwner))
+      .groupBy(m => (m.ownerId, m.client))
+      .map { case ((id, c), m) => (id, c, m.map(_.created).max) }
+
   val lastUpdatedEnquiryMessage =
     Message.messages.table
       .filter(m => m.ownerType === (MessageOwner.Enquiry: MessageOwner))

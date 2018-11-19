@@ -3,9 +3,10 @@ package controllers.admin
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import controllers.MessagesController.MessageFormData
 import controllers.admin.CaseController._
 import controllers.refiners._
-import controllers.{BaseController, UploadedFileControllerHelper}
+import controllers.{BaseController, MessagesController, UploadedFileControllerHelper}
 import domain.CaseNoteType._
 import domain._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
@@ -160,14 +161,13 @@ class CaseController @Inject()(
   uploadedFileControllerHelper: UploadedFileControllerHelper
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import CaseMessageController.messageForm
   import anyTeamActionRefiner._
   import canEditCaseActionRefiner._
   import canEditCaseNoteActionRefiner._
   import canViewCaseActionRefiner._
   import canViewTeamActionRefiner._
 
-  def renderCase(caseKey: IssueKey, messageForm: Form[String])(implicit request: CaseSpecificRequest[_]): Future[Result] = {
+  def renderCase(caseKey: IssueKey)(implicit request: CaseSpecificRequest[_]): Future[Result] = {
     val fetchOriginalEnquiry: Future[ServiceResult[Option[Enquiry]]] =
       request.`case`.originalEnquiry.map { enquiryId =>
         enquiries.get(enquiryId).map(_.right.map(Some(_)))
@@ -204,11 +204,7 @@ class CaseController @Inject()(
   }
 
   private def renderCase()(implicit request: CaseSpecificRequest[_]): Future[Result] = {
-    import request.{`case` => c}
-    renderCase(
-      c.key,
-      messageForm
-    )
+    renderCase(request.`case`.key)
   }
 
   def view(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
@@ -262,13 +258,13 @@ class CaseController @Inject()(
     cases.getClients(caseRequest.`case`.id).successFlatMap(caseClients =>
       ServiceResults.zip(
         cases.getCaseMessages(caseRequest.`case`.id),
-        profiles.getProfiles(caseClients.map(_.universityID))
-      ).successMap { case (messages, p) =>
+        cases.getLastUpdatedMessageDates(caseKey)
+      ).successMap { case (messages, lastMessageDates) =>
         Ok(views.html.admin.cases.sections.messages(
           caseRequest.`case`,
           messages,
-          caseClients.map(c => c -> p.get(c.universityID)).toMap,
-          messageForm,
+          caseClients,
+          caseClients.map(c => c -> MessagesController.messageForm(lastMessageDates.get(c.universityID)).fill(MessageFormData("", lastMessageDates.get(c.universityID)))).toMap,
           uploadedFileControllerHelper.supportedMimeTypes
         ))
       }

@@ -98,6 +98,10 @@ trait CaseService {
   def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]]
 
   def findDSAApplication(`case`: Case)(implicit t: TimingContext): Future[ServiceResult[Option[DSAApplication]]]
+
+  def getLastUpdatedMessageDates(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, OffsetDateTime]]]
+  def getLastUpdatedMessageDates(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Map[UniversityID, OffsetDateTime]]]]
+
 }
 
 @Singleton
@@ -684,6 +688,24 @@ class CaseServiceImpl @Inject() (
       fundingTypes <- dsaDao.findFundingTypesQuery(Set(dsaID)).result
     } yield DSAApplication(application, fundingTypes.map(_.fundingType).toSet)
 
+  override def getLastUpdatedMessageDates(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, OffsetDateTime]]] =
+    daoRunner.run(
+      dao.findByKeyQuery(caseKey)
+        .join(Message.lastUpdatedCasePerClientMessage)
+        .on { case (c, (id, _, _)) => c.id === id }
+        .result
+    ).map(r => Right(r.map { case (_, (_, c, d)) => (c, d.get) }.toMap))
+
+  override def getLastUpdatedMessageDates(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Map[UniversityID, OffsetDateTime]]]] =
+    daoRunner.run(
+      dao.findByIDsQuery(ids)
+        .join(Message.lastUpdatedCasePerClientMessage)
+        .on { case (c, (id, _, _)) => c.id === id }
+        .result
+    ).map(r => Right(
+      r.map { case (clientCase, (_, c, d)) => (clientCase.id, c, d.get) }
+        .groupBy(_._1).mapValues(_.groupBy(_._2).mapValues(_.head._3))
+    ))
 }
 
 object CaseService {

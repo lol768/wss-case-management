@@ -1,8 +1,9 @@
 package controllers
 
+import java.time.OffsetDateTime
 import java.util.UUID
 
-import controllers.ClientMessagesController._
+import controllers.MessagesController.MessageFormData
 import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.refiners.{ClientIssueActionFilters, IssueSpecificRequest}
 import domain._
@@ -13,12 +14,21 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.tabula.ProfileService
 import services.{AuditService, CaseService, EnquiryService}
+import warwick.core.helpers.JavaTime
 import warwick.sso.UserLookupService
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object ClientMessagesController {
-  val form = Form(single("text" -> nonEmptyText))
+object MessagesController {
+  case class MessageFormData(
+    text: String,
+    lastMessage: Option[OffsetDateTime]
+  )
+
+  def messageForm(lastMessageDate: Option[OffsetDateTime]) = Form(mapping(
+    "text" -> nonEmptyText,
+    "lastMessage" -> optional(JavaTime.offsetDateTimeFormField), // Don't optimistic lock clients .verifying("error.optimisticLocking", _ == lastMessageDate)
+  )(MessageFormData.apply)(MessageFormData.unapply))
 }
 
 @Singleton
@@ -34,39 +44,51 @@ class ClientMessagesController @Inject()(
 
   import canClientViewIssueActionRefiner._
 
-  private def renderMessages(issue: Issue, f: Form[String])(implicit request: IssueSpecificRequest[_]): Future[Result] =
+  private def renderMessages(issue: Issue, f: Form[MessageFormData])(implicit request: IssueSpecificRequest[_]): Future[Result] =
     matchIssue(
       issue,
       _ => enquiryService.getForRender(issue.id).map(_.map(_.toIssue)),
       _ => caseService.findForClient(issue.id, currentUser.universityId.get).map(_.map(_.toIssue))
     ).successMap(issueRender =>
-      Ok(views.html.clientMessages(
-        issueRender,
-        f,
-        uploadedFileControllerHelper.supportedMimeTypes
-      ))
+      render {
+        case Accepts.Json() =>
+          val clientName = "You"
+
+          Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
+            "lastMessage" -> issueRender.messages.lastOption.map(_.message.created),
+            "lastMessageRelative" -> issueRender.messages.lastOption.map(_.message.created).map(JavaTime.Relative.apply(_)),
+            "awaiting" -> issueRender.messages.lastOption.map(_.message.sender == MessageSender.Team),
+            "messagesHTML" -> issueRender.messages.map { m =>
+              val teamName = m.message.team.getOrElse(request.issue.team).name
+              views.html.tags.messages.message(m.message, m.files, clientName, teamName, f => routes.ClientMessagesController.download(issue.id, f.id)).toString()
+            }.mkString("")
+          ))))
+        case _ =>
+          Ok(views.html.clientMessages(
+            issueRender,
+            f,
+            uploadedFileControllerHelper.supportedMimeTypes
+          ))
+      }
     )
 
   def messages(id: java.util.UUID): Action[AnyContent] = CanClientViewIssueAction(id).async { implicit request =>
-    renderMessages(request.issue, form)
+    renderMessages(request.issue, MessagesController.messageForm(request.lastMessageDate).fill(MessageFormData("", request.lastMessageDate)))
   }
 
   def addMessage(id: java.util.UUID): Action[MultipartFormData[TemporaryUploadedFile]] = CanAddClientMessageToIssueAction(id)(uploadedFileControllerHelper.bodyParser).async { implicit request =>
-    form.bindFromRequest().fold(
+    MessagesController.messageForm(request.lastMessageDate).bindFromRequest().fold(
       formWithErrors => {
         render.async {
           case Accepts.Json() =>
-            Future.successful(
-              BadRequest(Json.toJson(API.Failure[JsObject]("bad_request",
-                formWithErrors.errors.map(error => API.Error(error.getClass.getSimpleName, error.format))
-              )))
+            Future.successful(API.badRequestJson(formWithErrors)
             )
           case _ =>
             renderMessages(request.issue, formWithErrors)
         }
       },
-      messageText => {
-        val message = messageData(messageText)
+      messageFormData => {
+        val message = messageData(messageFormData.text)
         val files = request.body.files.map(_.ref)
 
         matchIssue(
@@ -80,6 +102,8 @@ class ClientMessagesController @Inject()(
               val teamName = messageData.team.getOrElse(request.issue.team).name
 
               Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
+                "lastMessage" -> messageData.created,
+                "lastMessageRelative" ->JavaTime.Relative(messageData.created),
                 "message" -> views.html.tags.messages.message(messageData, f, clientName, teamName, f => routes.ClientMessagesController.download(id, f.id)).toString()
               ))))
             case _ =>

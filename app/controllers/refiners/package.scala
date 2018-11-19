@@ -3,6 +3,7 @@ package controllers
 import java.util.UUID
 
 import domain.{IssueKey, Teams}
+import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
 import play.api.mvc._
 import services.{AppointmentService, CaseService, EnquiryService, RegistrationService}
@@ -20,9 +21,12 @@ package object refiners {
       override protected def refine[A](request: AuthenticatedRequest[A]): Future[Either[Result, EnquirySpecificRequest[A]]] = {
         implicit val requestContext: RequestContext = requestContextBuilder(request)
 
-        enquiryService.get(enquiryKey).map {
-          case Right(enquiry) =>
-            Right(new EnquirySpecificRequest[A](enquiry, request))
+        ServiceResults.zip(
+          enquiryService.get(enquiryKey),
+          enquiryService.getLastUpdatedMessageDate(enquiryKey)
+        ).map {
+          case Right((enquiry, lastUpdatedMessageDate)) =>
+            Right(new EnquirySpecificRequest[A](enquiry, lastUpdatedMessageDate, request))
 
           case _ =>
             Left(Results.NotFound(views.html.errors.notFound()))
@@ -78,13 +82,21 @@ package object refiners {
 
         enquiryService.get(id).flatMap {
           case Right(enquiry) =>
-            Future.successful(Right(new IssueSpecificRequest[A](enquiry, request)))
+            enquiryService.getLastUpdatedMessageDate(enquiry.key).map(_.fold(
+              errors => throw errors.head.cause.getOrElse(new Exception(errors.head.message)),
+              lastMessageDate => Right(new IssueSpecificRequest[A](enquiry, Some(lastMessageDate), request))
+            ))
           case _ =>
-            caseService.find(id).map {
+            caseService.find(id).flatMap {
               case Right(clientCase) =>
-                Right(new IssueSpecificRequest[A](clientCase, request))
+                caseService.getLastUpdatedMessageDates(clientCase.key).map(_.fold(
+                  errors =>
+                    throw errors.head.cause.getOrElse(new Exception(errors.head.message)),
+                  lastMessageDates =>
+                    Right(new IssueSpecificRequest[A](clientCase, lastMessageDates.get(request.user.get.universityId.get), request))
+                ))
               case _ =>
-                Left(Results.NotFound(views.html.errors.notFound()))
+                Future.successful(Left(Results.NotFound(views.html.errors.notFound())))
             }
         }
       }
