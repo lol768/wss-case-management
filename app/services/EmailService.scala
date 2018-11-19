@@ -51,23 +51,26 @@ class EmailServiceImpl @Inject()(
       )
     }
 
-    daoRunner.run(dao.insertAll(emails)).map(_.map { email =>
-      // Schedule the email to be sent
-      val key = new JobKey(email.id.toString, "SendOutgoingEmail")
-      logger.info(s"Scheduling job with key $key")
+    daoRunner.run(dao.insertAll(emails)).map { inserted =>
+      // This may be a Stream() so call foreach to ensure this is actually run
+      inserted.foreach { email =>
+        // Schedule the email to be sent
+        val key = new JobKey(email.id.toString, "SendOutgoingEmail")
+        logger.info(s"Scheduling job with key $key")
 
-      scheduler.scheduleJob(
-        JobBuilder.newJob(classOf[SendOutgoingEmailJob])
-          .withIdentity(key)
-          .usingJobData("id", email.id.toString)
-          .build(),
-        TriggerBuilder.newTrigger()
-          .startNow()
-          .build()
-      )
+        scheduler.scheduleJob(
+          JobBuilder.newJob(classOf[SendOutgoingEmailJob])
+            .withIdentity(key)
+            .usingJobData("id", email.id.toString)
+            .build(),
+          TriggerBuilder.newTrigger()
+            .startNow()
+            .build()
+        )
+      }
 
-      email.parsed
-    }).map(Right.apply)
+      Right(inserted.map(_.parsed))
+    }
   }
 
   override def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]] =
