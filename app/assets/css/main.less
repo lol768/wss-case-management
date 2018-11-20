@@ -160,7 +160,10 @@ section.indent {
 
 .panel.thread {
   &.thread--client {
-    background: #bfcac6 url(/assets/images/messages-bg.jpg) top right no-repeat;
+    background: #bfcac6 url(/assets/images/messages-bg.webp) top right no-repeat;
+    html.no-js &, html.no-webp & {
+      background-image: url(/assets/images/messages-bg.jpg);
+    }
     background-size: cover;
   }
 
