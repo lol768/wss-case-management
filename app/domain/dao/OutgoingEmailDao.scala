@@ -25,6 +25,7 @@ trait OutgoingEmailDao {
   def insertAll(emails: Seq[OutgoingEmail])(implicit ac: AuditLogContext): DBIO[Seq[PersistedOutgoingEmail]]
   def update(email: OutgoingEmail, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[PersistedOutgoingEmail]
   def get(id: UUID): DBIO[Option[PersistedOutgoingEmail]]
+  def allUnsentEmails(): DBIO[Seq[PersistedOutgoingEmail]]
   def countUnsentEmails(): DBIO[Int]
   def oldestUnsentEmail(): DBIO[Option[PersistedOutgoingEmail]]
   def mostRecentlySentEmail(): DBIO[Option[PersistedOutgoingEmail]]
@@ -186,6 +187,9 @@ class OutgoingEmailDaoImpl @Inject()(
 
   override def get(id: UUID): DBIO[Option[PersistedOutgoingEmail]] =
     outgoingEmails.table.filter(_.id === id).take(1).result.headOption
+
+  override def allUnsentEmails(): DBIO[Seq[PersistedOutgoingEmail]] =
+    outgoingEmails.table.filter(_.isQueued).sortBy(_.created).result
 
   override def countUnsentEmails(): DBIO[Int] =
     outgoingEmails.table.filter(_.isQueued).length.result

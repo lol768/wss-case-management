@@ -173,6 +173,8 @@ GET         /sysadmin                               @controllers.IndexController
 GET         /sysadmin/masquerade                    @controllers.sysadmin.MasqueradeController.masquerade
 GET         /sysadmin/data-generation               @controllers.sysadmin.DataGenerationController.generateForm()
 POST        /sysadmin/data-generation               @controllers.sysadmin.DataGenerationController.generate()
+GET         /sysadmin/emails                        @controllers.sysadmin.EmailQueueController.queued()
+POST        /sysadmin/emails/:id                    @controllers.sysadmin.EmailQueueController.enqueue(id: java.util.UUID)
 
 ## Fallbacks ##
 

@@ -1,0 +1,65 @@
+@import domain.OutgoingEmail
+@import org.quartz.Trigger
+@import warwick.core.helpers.JavaTime
+
+@(
+  emails: Seq[(OutgoingEmail, Option[Trigger.TriggerState])]
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@main("Outgoing email queue") {
+  <table class="table table-default">
+    <thead>
+      <tr>
+        <th>Recipient</th>
+        <th>Email address</th>
+        <th>Subject</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Last send attempt</th>
+        <th>Failure reason</th>
+        <th>Trigger status</th>
+      </tr>
+    </thead>
+    <tbody>
+      @emails.map { case (email, state) =>
+        <tr>
+          <td>@email.recipient.map(_.string)</td>
+          <td>@email.emailAddress</td>
+          <td>
+            <i class="fal fa-envelope"></i>
+            <a href="#" data-toggle="popover" title="@email.email.subject" data-html="true" data-content="<pre>@email.email.bodyText</pre>" data-placement="auto bottom">
+              @email.email.subject
+            </a>
+          </td>
+          <td>
+            @if(email.lastSendAttempt.nonEmpty) {
+              <span class="label label-warning" @email.failureReason.map { reason => data-toggle="tooltip" data-placement="bottom" title="@reason" }>Retrying</span>
+            } else {
+              @if(email.failureReason.nonEmpty) {
+                <span class="label label-danger" data-toggle="tooltip" data-placement="bottom" title="@{email.failureReason}">Failed</span>
+              } else {
+                <span class="label label-info">Queued</span>
+              }
+            }
+          </td>
+          <td>@JavaTime.Relative(email.created)</td>
+          <td>@email.lastSendAttempt.map { dt => @JavaTime.Relative(dt) }</td>
+          <td>@email.failureReason</td>
+          <td>
+            @state.map { s =>
+              <span class="label label-info">@s</span>
+            }.getOrElse {
+              <span class="label label-danger">Missing</span>
+              @b3.inline.formCSRF(controllers.sysadmin.routes.EmailQueueController.enqueue(email.id.get), 'class -> "inline-form") { implicit ifc =>
+                <button type="submit" class="btn btn-primary btn-xs">
+                  <i class="fal fa-clock"></i>
+                  Reschedule
+                </button>
+              }
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}
