@@ -62,3 +62,4 @@ flash.room.updated=The room has been updated
 flash.datageneration.scheduled=Dummy data generation has been scheduled. This may take some time
 flash.datageneration.alreadyRunning=Dummy data generation job is already running!
 flash.userPreferences.updated=Your preferences have been updated
+flash.email.queued=The email has been queued for sending
