@@ -100,6 +100,7 @@ export default function AppointmentFreeBusyForm(form) {
           defaultView: 'agendaDay',
           defaultDate: dateTimePicker.date(),
           groupByResource: true,
+          slotDuration: '00:10:00',
           views: {
             agendaWeek: {
               columnFormat: 'ddd D/MM',
