@@ -244,6 +244,8 @@ object CaseDocumentType extends PlayEnum[CaseDocumentType] {
   case object SpecificLearningDifficultyDocument extends CaseDocumentType("Specific Learning Difficulty Document")
   case object WellbeingSupportInformationForm extends CaseDocumentType("Wellbeing Support Information Form")
   case object UIRForm extends CaseDocumentType("UIR Form")
+  case object EmailCorrespondence extends CaseDocumentType("Email correspondence")
+  case object Referral extends CaseDocumentType("Referral")
   case object Other extends CaseDocumentType("Other")
 
   override def values: immutable.IndexedSeq[CaseDocumentType] = findValues
