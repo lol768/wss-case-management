@@ -85,7 +85,7 @@ object AppointmentController {
             .verifying("error.appointment.teamMember.invalid", u => u.isEmpty || u.exists { usercode => isValidTeamMember(usercode) })
         ).transform[Set[Usercode]](_.flatten, _.map(Some.apply)).verifying("error.required", _.nonEmpty),
         "cases" -> set(
-          optional(uuid.verifying("error.required", id => isValidCase(id)))
+          optional(uuid.verifying("error.appointment.cases.invalid", id => isValidCase(id)))
         ).transform[Set[UUID]](_.flatten, _.map(Some.apply)).verifying("error.appointment.cases.nonEmpty", _.nonEmpty),
         "appointment" -> mapping(
           "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", dt => (existingVersion.nonEmpty && !isRescheduling) || dt.isAfter(JavaTime.offsetDateTime)),

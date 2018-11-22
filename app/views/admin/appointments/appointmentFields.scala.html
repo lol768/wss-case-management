@@ -36,7 +36,7 @@
   </div>
   <div class="col-sm-6">
     @if(mode == Mode.Create || mode == Mode.Edit) {
-      @b3.free('_label -> "Cases", '_class -> form.error("cases").map(_ => "has-error")) {
+      @b3.free('_label -> "Cases", '_class -> (Seq(form.error("cases")) ++ form("cases").indexes.map(i => form.error(s"cases[$i]"))).flatten.headOption.map(_ => "has-error")) {
         <div class="case-picker-collection" data-automatic="true" data-containers="case-picker-container">
           @defining(form.data.filter { case (k, v) => k.startsWith("cases[") && v.nonEmpty }.values.toSeq) { values: Seq[String] =>
             @if(values.nonEmpty){
@@ -51,7 +51,7 @@
             </div>
           }
         </div>
-        @b3.errors(form("cases"))
+        @b3.indexedFieldErrors(form, "cases")
       }
     } else {
       @form.data.keys.filter(_.startsWith("cases[")).map { k =>
