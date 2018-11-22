@@ -20,7 +20,7 @@
 
     @if(mode == Mode.Create || mode == Mode.Edit) {
       @b3.free('_label -> "Clients", '_class -> hasClientError.map(_ => "has-error")) {
-        @tags.flexipicker(values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Add a client", multiple = true, universityId = true, potentialClientsOnly = true, selectOnBlur = false)
+        @tags.picker(pickerType = "client", values = form.data.filter { case (k, v) => k.startsWith("clients[") && v.nonEmpty }.values.toSeq, name = "clients[]", placeholder = "Add a client", multiple = true)
         @b3.indexedFieldErrors(form, "clients")
       }
     } else {
@@ -70,7 +70,7 @@
   <div class="col-sm-6">
     @if(mode == Mode.Create || mode == Mode.Edit) {
       @b3.free('_label -> "Team members", '_class -> form.error("teamMembers").map(_ => "has-error")) {
-        @tags.memberPicker(values = form.data.filter { case (k, v) => k.startsWith("teamMembers[") && v.nonEmpty }.values.toSeq, name = "teamMembers[]", placeholder = "Add a team member", multiple = true)
+        @tags.picker(pickerType = "member", values = form.data.filter { case (k, v) => k.startsWith("teamMembers[") && v.nonEmpty }.values.toSeq, name = "teamMembers[]", placeholder = "Add a team member", multiple = true)
         @b3.errors(form("teamMembers"))
       }
     } else {

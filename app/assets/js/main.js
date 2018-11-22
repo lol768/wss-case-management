@@ -7,7 +7,8 @@ import _ from 'lodash-es';
 import './jquery.are-you-sure';
 import FieldHistory from './field-history';
 import * as flexiPicker from './flexi-picker';
-import * as memberPicker from './member-picker';
+import MemberPicker from './member-picker';
+import ClientPicker from './client-picker';
 import ClientSearch from './client-search';
 import UserListPopovers from './user-list-popovers';
 import MessageThreads from './message-threads';
@@ -64,7 +65,9 @@ function bindTo($scope) {
 
   flexiPicker.bindTo($scope);
 
-  memberPicker.bindTo($scope);
+  MemberPicker($scope);
+
+  ClientPicker($scope);
 
   $('.case-picker-collection', $scope).each((i, collection) => {
     MultiplePickers(collection, (element) => {

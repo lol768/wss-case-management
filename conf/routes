@@ -21,8 +21,9 @@ GET         /service/appointmentsearch              @controllers.AppointmentSear
 POST        /service/appointmentsearch              @controllers.AppointmentSearchController.search
 POST        /service/appointmentsearch/:key         @controllers.AppointmentSearchController.lookup(key: domain.IssueKey)
 GET         /service/clientsearch                   @controllers.ClientSearchController.search(query: String ?= "")
-GET         /service/membersearch/:usercode         @controllers.MemberSearchController.search(usercode: String)
-POST        /service/membersearch/:usercode         @controllers.MemberSearchController.search(usercode: String)
+POST        /service/clientsearch/:query            @controllers.ClientSearchController.searchFromPath(query: String)
+GET         /service/membersearch                   @controllers.MemberSearchController.search(query: String ?= "")
+POST        /service/membersearch/:query            @controllers.MemberSearchController.searchFromPath(query: String)
 GET         /service/casesearch                     @controllers.CaseSearchController.search
 POST        /service/casesearch                     @controllers.CaseSearchController.search
 POST        /service/casesearch/:keyOrId            @controllers.CaseSearchController.lookup(keyOrId: String)

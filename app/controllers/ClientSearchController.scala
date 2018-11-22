@@ -61,6 +61,8 @@ class ClientSearchController @Inject()(
     }
   }
 
+  def searchFromPath(query: String): Action[AnyContent] = search(query)
+
   private def toJson(profile: SitsProfile) = Json.obj(
     "name" -> profile.fullName,
     "department" -> profile.department.name,

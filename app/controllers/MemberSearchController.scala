@@ -48,6 +48,8 @@ class MemberSearchController @Inject()(
     }
   }
 
+  def searchFromPath(query: String): Action[AnyContent] = search(query)
+
   private def toJson(user: User, teams: Seq[Team]) = Json.obj(
     "name" -> user.name.full,
     "team" -> teams.map(_.name).mkString(", "),

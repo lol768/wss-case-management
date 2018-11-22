@@ -1,88 +1,30 @@
 import $ from 'jquery';
-import log from 'loglevel';
-import _ from 'lodash-es';
 import 'bootstrap-3-typeahead';
-import { postJsonWithCredentials } from './serverpipe';
-import RichResultField from './rich-result-field';
+import _ from 'lodash-es';
 import MultiplePickers from './multiple-picker';
+import AbstractPicker from './abstract-picker';
 
-export default function MemberPicker(element) {
-  let currentQuery = null;
-  const $element = $(element);
-
-  // Might have manually wired this element up with MemberPicker,
-  // but add the class for CSS style purposes.
-  if (!$element.hasClass('member-picker')) {
-    $element.addClass('member-picker');
-  }
-
-  // Disable browser autocomplete dropdowns, it gets in the way.
-  $element.attr('autocomplete', 'off');
-
-  const richResultField = new RichResultField(element);
-
-  function displayItem(input) {
+class MemberPicker extends AbstractPicker {
+  static displayItem(input) {
     return `${input.name} (${input.value}, ${input.team})`;
   }
 
-  function doSearch(query, callback) {
-    currentQuery = query;
-
-    if (currentQuery && currentQuery.trim().length > 0) {
-      postJsonWithCredentials(`/service/membersearch/${currentQuery}`, {})
-        .then(response => response.json())
-        .catch((e) => {
-          log.error(e);
-          return [];
-        })
-        .then((response) => {
-          // Return the items only if the user hasn't since made a different query
-          if (currentQuery === query) {
-            callback(response.data.results || []);
-          }
-        });
-    } else {
-      callback([]);
-    }
+  static displayText(item) {
+    return `
+      <div class="member-picker-result">
+        <div class="media-left">
+          ${(item.photo) ? `<img class="media-object" src="${_.escape(item.photo)}" />` : ''}
+        </div>
+        <div class="media-body">
+          <span class="title">${_.escape(item.name)}</span>
+          <div class="description">${_.escape(item.team)}</div>
+        </div>
+      </div>
+    `;
   }
 
-  $element.typeahead({
-    source: doSearch,
-    delay: 200,
-    matcher: () => true, // All data received from the server matches the query
-    displayText: item => `
-        <div class="member-picker-result">
-          <div class="media-left">
-            ${(item.photo) ? `<img class="media-object" src="${_.escape(item.photo)}" />` : ''}
-          </div>
-          <div class="media-body">
-            <span class="title">${_.escape(item.name)}</span>
-            <div class="description">${_.escape(item.team)}</div>
-          </div>
-        </div>`,
-    highlighter: html => html,
-    showHintOnFocus: 'all',
-    changeInputOnMove: false,
-    selectOnBlur: false,
-    afterSelect: (item) => {
-      if (item) {
-        const text = displayItem(item);
-        richResultField.store(item.value, _.escape(text));
-        $element.data('item', item);
-      }
-    },
-  });
-
-  // On load, look up the existing value and give it human-friendly text if possible
-  const currentValue = $element.val();
-  if (currentValue && currentValue.trim().length > 0) {
-    postJsonWithCredentials(`/service/membersearch/${currentValue}`, {})
-      .then(response => response.json())
-      .catch((e) => {
-        log.error(e);
-        return [];
-      })
-      .then(response => richResultField.storeText(`${_.escape(displayItem(response.data.results[0]))}`));
+  constructor(element) {
+    super(element, 'member', '/service/membersearch');
   }
 }
 
@@ -98,7 +40,7 @@ $.fn.memberPicker = function initMemberPicker() {
   });
 };
 
-export function bindTo($scope) {
+export default function bindTo($scope) {
   $('.member-picker', $scope).memberPicker();
 
   $('.member-picker-collection', $scope).each((i, collection) => {
