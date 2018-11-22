@@ -52,7 +52,7 @@ export default function CasePicker(element) {
           </div>
           <div class="media-body">
             <span class="title">${_.escape(item.key)}</span>
-            <span class="type">${_.escape(item.team)}</span>
+            <span class="type">${_.escape(item.clients)}</span>
             <div class="description">${_.escape(item.subject)}</div>
           </div>
         </div>`,
