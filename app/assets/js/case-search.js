@@ -49,7 +49,6 @@ export default function CaseSearch(container) {
     changeInputOnSelect: false,
     changeInputOnMove: false,
     followLinkOnSelect: true,
-    openLinkInNewTab: true,
     selectOnBlur: false,
     showHintOnFocus: true,
     itemLink: (item) => {
