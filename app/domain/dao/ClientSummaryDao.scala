@@ -8,7 +8,7 @@ import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.ClientDao.StoredClient
-import domain.dao.ClientSummaryDao.StoredClientSummary
+import domain.dao.ClientSummaryDao.{StoredClientSummary, StoredClientSummaryVersion}
 import domain.dao.ClientSummaryDao.StoredClientSummary.{ClientSummaries, ReasonableAdjustments, StoredReasonableAdjustment}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -30,6 +30,7 @@ trait ClientSummaryDao {
   def get(universityID: UniversityID): DBIO[Option[(StoredClientSummary, StoredClient)]]
   def getByAlternativeEmailAddress(email: String): DBIO[Option[(StoredClientSummary, StoredClient)]]
   def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq]
+  def getHistory(universityID: UniversityID): DBIO[Seq[StoredClientSummaryVersion]]
   def findAtRiskQuery(riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq]
 }
 
@@ -211,6 +212,17 @@ class ClientSummaryDaoImpl @Inject()(
   override def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq] =
     reasonableAdjustments.table
       .filter(_.universityID === universityID)
+
+  override def getHistory(universityID: UniversityID): _root_.domain.ExtendedPostgresProfile.api.DBIO[Seq[StoredClientSummaryVersion]] =
+    clientSummaries.versionsTable
+      .filter(r =>
+        r.universityID === universityID && (
+          r.operation === (DatabaseOperation.Insert:DatabaseOperation) ||
+            r.operation === (DatabaseOperation.Update:DatabaseOperation)
+          )
+      )
+      .sortBy(_.timestamp)
+      .result
 
   override def findAtRiskQuery(riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq] =
     clientSummaries.table

@@ -2,12 +2,18 @@ package domain
 
 import java.time.{Instant, OffsetDateTime}
 
+import domain.History._
 import domain.ClientRiskStatus.{High, Medium}
+import domain.dao.ClientSummaryDao.{StoredClientSummary, StoredClientSummaryVersion}
 import enumeratum.{EnumEntry, PlayEnum}
-import play.api.libs.json.{Format, Json}
+import helpers.ServiceResults.ServiceResult
+import play.api.libs.json.{Format, Json, Writes}
+import services.{AuditLogContext, ClientService}
 import warwick.core.helpers.JavaTime
+import warwick.sso.{User, UserLookupService, Usercode}
 
 import scala.collection.immutable
+import scala.concurrent.{ExecutionContext, Future}
 
 case class ClientSummary(
   client: Client,
@@ -72,3 +78,32 @@ case class AtRiskClient(
     }
   }
 }
+
+object ClientSummaryHistory {
+
+  val writer: Writes[ClientSummaryHistory] = (r: ClientSummaryHistory) =>
+    Json.obj(
+      "riskStatus" -> toJson(r.riskStatus)
+    )
+
+  def apply(
+    history: Seq[StoredClientSummaryVersion],
+    userLookupService: UserLookupService
+  ): Future[ServiceResult[ClientSummaryHistory]] = {
+    val usercodes = history.flatMap(_.auditUser)
+    implicit val usersByUsercode: Map[Usercode, User] = userLookupService.getUsers(usercodes.distinct).toOption.getOrElse(Map())
+
+    def typedSimpleFieldHistory[A](f: StoredClientSummaryVersion => A) = simpleFieldHistory[StoredClientSummary, StoredClientSummaryVersion, A](history, f)
+
+    Future.successful(Right(
+      ClientSummaryHistory(
+        riskStatus = typedSimpleFieldHistory(_.riskStatus),
+      )
+    ))
+  }
+
+}
+
+case class ClientSummaryHistory(
+  riskStatus: FieldHistory[Option[ClientRiskStatus]]
+)
