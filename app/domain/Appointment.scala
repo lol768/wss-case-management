@@ -173,6 +173,10 @@ object AppointmentPurpose extends PlayEnum[AppointmentPurpose] {
   case object FollowUp extends AppointmentPurpose("Follow up")
   case object Mentoring extends AppointmentPurpose("Mentoring")
   case object GroupTherapy extends AppointmentPurpose("Group therapy")
+  case object PreGroupMeeting extends AppointmentPurpose("Pre-group meeting")
+  case object PreCounsellingSession extends AppointmentPurpose("Pre-counselling session")
+  case object Screening extends AppointmentPurpose("Screening")
+  case object AdviceAppointment extends AppointmentPurpose("Advice appointment")
 
   override def values: immutable.IndexedSeq[AppointmentPurpose] = findValues
 }
