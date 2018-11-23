@@ -50,6 +50,7 @@ object Appointment {
     ("20 minutes", Duration.ofMinutes(20)),
     ("30 minutes", Duration.ofMinutes(30)),
     ("45 minutes", Duration.ofMinutes(45)),
+    ("50 minutes", Duration.ofMinutes(50)),
     ("1 hour", Duration.ofHours(1)),
     ("1 hour 30 minutes", Duration.ofMinutes(90)),
     ("2 hours", Duration.ofHours(2))
