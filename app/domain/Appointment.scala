@@ -233,7 +233,7 @@ object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
   case object GP extends AppointmentOutcome("Advised to contact GP/Statutory services")
   case object SocialServices extends AppointmentOutcome("Advised to contact Social Services")
   case object StudentFunding extends AppointmentOutcome("Advised to contact Student Funding team")
-  case object StudentUnion extends AppointmentOutcome("Advised to contact Student Union Advice Centre")
+  case object StudentUnion extends AppointmentOutcome("Advised to contact Students' Union Advice Centre")
   case object Funding extends AppointmentOutcome("Advised to contact funding body")
   case object SupportWorker extends AppointmentOutcome("Agreed provision of support worker - bank 1 or 2")
   case object StudySkills extends AppointmentOutcome("Agreed provision of 1-1 study skills")
@@ -244,6 +244,7 @@ object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
   case object Disciplinary extends AppointmentOutcome("Disciplinary")
   case object Fitness extends AppointmentOutcome("Fitness to attend")
   case object NoFurtherAction extends AppointmentOutcome("No further action required")
+  case object Referral extends AppointmentOutcome("Referred to another WSS team")
   case object Closed extends AppointmentOutcome("Case closed")
   case object Other extends AppointmentOutcome("Other")
 
