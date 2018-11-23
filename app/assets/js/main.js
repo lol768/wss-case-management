@@ -1,6 +1,5 @@
 /* eslint-env browser */
 import './polyfills';
-import './webp.modernizr';
 
 import $ from 'jquery';
 import _ from 'lodash-es';
