@@ -327,7 +327,6 @@ export default function AppointmentCalendar(container) {
         titleFormat: 'dddd, MMM D, YYYY',
         columnFormat: 'dddd D/MM',
         selectable: true,
-        slotEventOverlap: false,
       },
     },
     events: (start, end, timezone, callback) => {
