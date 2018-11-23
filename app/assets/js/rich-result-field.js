@@ -43,18 +43,27 @@ export default class RichResultField {
   }
 
   /** Set value of input field, hide it and show the rich `text` instead */
-  store(value, text) {
+  store(value, text, url) {
     this.$input.val(value).trigger('change').trigger('richResultField.store');
-    this.$input.hide();
-    this.$uneditable.show()
-      .find('.val')
-      .text(text)
-      .attr('title', text);
+    this.storeText(text, url);
   }
 
   /** Hide input field and show the rich `text` instead */
-  storeText(text) {
+  storeText(text, url) {
     this.$input.hide();
-    this.$uneditable.show().find('.val').text(text).attr('title', text);
+    const $val = this.$uneditable.show().find('.val');
+    if (url && url.length > 0) {
+      $val
+        .empty()
+        .append($('<a/>').attr({
+          target: '_blank',
+          href: url,
+        }).text(text))
+        .attr('title', text);
+    } else {
+      $val
+        .text(text)
+        .attr('title', text);
+    }
   }
 }

@@ -82,7 +82,8 @@ class CaseSearchController @Inject()(
     "caseType" -> c.caseType.map(_.description),
     "created" -> c.created.format(JavaTime.iSO8601DateFormat),
     "state" -> c.state.entryName,
-    "category" -> category
+    "category" -> category,
+    "url" -> controllers.admin.routes.CaseController.view(c.key).toString
   )
 
 }
