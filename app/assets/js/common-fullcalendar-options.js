@@ -13,7 +13,7 @@ const CommonFullCalendarOptions = {
   },
   firstDay: 1,
   allDaySlot: false,
-  slotEventOverlap: true,
+  slotEventOverlap: false,
   slotLabelFormat: 'HH:mm',
   slotDuration: '00:15:00',
   slotLabelInterval: '01:00:00',
