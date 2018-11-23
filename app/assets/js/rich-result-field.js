@@ -56,7 +56,6 @@ export default class RichResultField {
       $val
         .empty()
         .append($('<a/>').attr({
-          target: '_blank',
           href: url,
         }).text(text))
         .attr('title', text);
