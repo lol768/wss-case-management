@@ -9,7 +9,7 @@
 
 @main(s"Reschedule appointment ${a.appointment.key.string}") {
   @b3.vertical.formCSRF(
-    action = controllers.admin.routes.AppointmentController.edit(a.appointment.key),
+    action = controllers.admin.routes.AppointmentController.reschedule(a.appointment.key),
     'class -> "appointment-freebusy-form",
     Symbol("data-freebusy") -> controllers.admin.routes.AppointmentController.freeBusy().url,
     Symbol("data-freebusyresources") -> controllers.admin.routes.AppointmentController.freeBusyResources().url
