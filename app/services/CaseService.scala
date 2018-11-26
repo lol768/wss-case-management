@@ -40,6 +40,8 @@ trait CaseService {
   def findForView(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def findAllForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]]
   def listForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
+  def countOpenForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def countClosedForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]]
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
@@ -217,6 +219,24 @@ class CaseServiceImpl @Inject() (
         .sortBy { case (_, lu) => lu.desc }
         .result
     ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
+  }
+
+  override def countOpenForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]] = {
+    daoRunner.run(
+      dao.findByClientQuery(universityID)
+        .filter(_.isOpen)
+        .size
+        .result
+    ).map(Right.apply)
+  }
+
+  override def countClosedForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]] = {
+    daoRunner.run(
+      dao.findByClientQuery(universityID)
+        .filter(!_.isOpen)
+        .size
+        .result
+    ).map(Right.apply)
   }
 
   override def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]] = {
