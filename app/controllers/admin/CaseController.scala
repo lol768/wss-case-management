@@ -197,7 +197,8 @@ class CaseController @Inject()(
           sectionNotesByType,
           originalEnquiry,
           dsaApplication,
-          history
+          history,
+          OwnersController.ownersForm
         ))
       }
     }

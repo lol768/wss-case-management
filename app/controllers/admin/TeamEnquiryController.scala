@@ -103,7 +103,8 @@ class TeamEnquiryController @Inject()(
                   messageForm,
                   canViewTeam,
                   linkedCases,
-                  uploadedFileControllerHelper.supportedMimeTypes
+                  uploadedFileControllerHelper.supportedMimeTypes,
+                  OwnersController.ownersForm
                 ))
               }
           }
