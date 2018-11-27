@@ -545,7 +545,8 @@ class DataGenerationJob @Inject()(
             // Copy enquiry owners to case owners
             cases.setOwners(
               c.id,
-              enquiries.getOwners(Set(enquiry.id)).serviceValue.values.toSet.flatten.map(_.usercode)
+              enquiries.getOwners(Set(enquiry.id)).serviceValue.values.toSet.flatten.map(_.usercode),
+              None
             ).serviceValue
 
             c -> Set(enquiry.client.universityID)
@@ -609,7 +610,7 @@ class DataGenerationJob @Inject()(
           }
 
           if (owners.nonEmpty) {
-            cases.setOwners(c.id, owners).serviceValue
+            cases.setOwners(c.id, owners, None).serviceValue
           }
 
           c -> clients

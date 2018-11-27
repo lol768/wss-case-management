@@ -78,7 +78,7 @@ trait CaseService {
   def countClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
-  def setOwners(id: UUID, owners: Set[Usercode], note: Option[CaseNoteSave] = None)(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
+  def setOwners(id: UUID, owners: Set[Usercode], note: Option[CaseNoteSave])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
 
   def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Client]]]]
   def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[Client]]]
@@ -544,7 +544,7 @@ class CaseServiceImpl @Inject() (
   override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]] =
     ownerService.getCaseOwners(ids)
 
-  override def setOwners(id: UUID, owners: Set[Usercode], note: Option[CaseNoteSave] = None)(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
+  override def setOwners(id: UUID, owners: Set[Usercode], note: Option[CaseNoteSave])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
     ServiceResults.zip(
       ownerService.setCaseOwners(id, owners),
       daoRunner.run(
