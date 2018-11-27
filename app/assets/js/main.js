@@ -129,6 +129,16 @@ function bindTo($scope) {
       if ($target.hasClass('hidden')) {
         $target.removeClass('hidden');
         $this.html(shownLabel);
+        if (typeof $this.data('href') !== 'undefined' && !$this.data('loading')) {
+          $this.data('loading', true);
+          $target.load($this.data('href'), (text, status, xhr) => {
+            if (status === 'error') {
+              $target.text(`Unable to load content: ${xhr.statusText || xhr.status || 'error'}`);
+            } else {
+              bindTo($target);
+            }
+          });
+        }
       } else {
         $target.addClass('hidden');
         $this.html(hiddenLabel);
