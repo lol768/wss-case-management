@@ -17,8 +17,7 @@
   messageForm: Form[MessageFormData],
   canViewEnquiryTeam: Boolean,
   linkedCases: Seq[Case],
-  supportedMimeTypes: Seq[MediaType],
-  ownerForm: Form[OwnerSave]
+  supportedMimeTypes: Seq[MediaType]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
@@ -118,7 +117,6 @@
           owners,
           controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key),
           controllers.admin.routes.OwnersController.enquirySubmitSelf(enquiry.key),
-          ownerForm
         )()
 
         @if(linkedCases.nonEmpty) {

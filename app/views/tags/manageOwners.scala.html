@@ -5,8 +5,7 @@
   owners: Set[Member],
   submit: Call,
   submitSelf: Call,
-  form: Form[OwnerSave],
-  provideMessage: Boolean = false
+  form: Option[Form[OwnerSave]] = None
 )(content: Html = Html(""))(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 <div class="row form-horizontal">
@@ -50,9 +49,9 @@
                 @b3.free('_label -> "Owners") {
                   @tags.picker(pickerType = "member", values = Nil, name = "owners[]", placeholder = "Search for a user")
                 }
-                @if(provideMessage) {
+                @form.map { f =>
                   @b3.textarea(
-                    form("message"),
+                    f("message"),
                     '_label -> "New owner note",
                     '_help -> "(why are new owners being added to this case?)",
                     'helpOnTop -> true

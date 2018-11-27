@@ -139,8 +139,7 @@
           owners,
           controllers.admin.routes.OwnersController.caseSubmit(c.key),
           controllers.admin.routes.OwnersController.caseSubmitSelf(c.key),
-          ownerForm,
-          provideMessage = true
+          Some(ownerForm),
         ) {
           @viewSectionNotes(OwnerNote, "owner note")
         }
