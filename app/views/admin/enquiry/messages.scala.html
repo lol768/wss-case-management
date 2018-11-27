@@ -5,6 +5,7 @@
 @import warwick.core.helpers.JavaTime
 
 @import controllers.MessagesController.MessageFormData
+@import domain.OwnerSave
 @(
   enquiry: Enquiry,
   profile: Option[SitsProfile],
@@ -16,7 +17,7 @@
   messageForm: Form[MessageFormData],
   canViewEnquiryTeam: Boolean,
   linkedCases: Seq[Case],
-  supportedMimeTypes: Seq[MediaType],
+  supportedMimeTypes: Seq[MediaType]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
@@ -115,8 +116,8 @@
         @tags.manageOwners(
           owners,
           controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key),
-          controllers.admin.routes.OwnersController.enquirySubmitSelf(enquiry.key)
-        )
+          controllers.admin.routes.OwnersController.enquirySubmitSelf(enquiry.key),
+        )()
 
         @if(linkedCases.nonEmpty) {
           <div class="row form-horizontal">

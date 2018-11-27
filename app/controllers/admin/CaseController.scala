@@ -197,7 +197,8 @@ class CaseController @Inject()(
           sectionNotesByType,
           originalEnquiry,
           dsaApplication,
-          history
+          history,
+          OwnersController.ownersForm
         ))
       }
     }
@@ -350,7 +351,7 @@ class CaseController @Inject()(
 
             // Always include the current user
             enquiryOwners.map(_.map(_ + teamRequest.context.user.get.usercode)).successFlatMapTo(owners =>
-              cases.setOwners(createdCase.id, owners)
+              cases.setOwners(createdCase.id, owners, None)
             )
           }
 
