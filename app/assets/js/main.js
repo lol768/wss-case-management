@@ -20,6 +20,7 @@ import AppointmentCalendar from './appointment-calendar';
 import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
 import * as dateTimePicker from './date-time-picker';
 import PaginatingTable from './paginating-table';
+import { fetchWithCredentials } from './serverpipe';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -281,13 +282,21 @@ function bindTo($scope) {
       $tabPanel
         .data('tabPanelLoaded', true)
         .empty()
-        .append('<i class="fas fa-spinner fa-pulse"></i> Loading&hellip;')
-        .load($tabPanel.data('href'), (text, status, xhr) => {
-          if (status === 'error') {
-            $tabPanel.text(`Unable to load content: ${xhr.statusText || xhr.status || 'error'}`);
-          } else {
-            bindTo($tabPanel);
+        .append('<i class="fas fa-spinner fa-pulse"></i> Loading&hellip;');
+      fetchWithCredentials($tabPanel.data('href'))
+        .then((response) => {
+          if (response.status === 200) {
+            return response.text();
           }
+          if (response.status === 401) {
+            window.location.reload();
+          }
+          throw new Error(response.statusText || response.status || 'error');
+        }).then((html) => {
+          $tabPanel.html(html);
+          bindTo($tabPanel);
+        }).catch((e) => {
+          $tabPanel.text(`Unable to load content: ${e.message}`);
         });
     }
   }

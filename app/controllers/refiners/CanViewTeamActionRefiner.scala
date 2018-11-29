@@ -20,6 +20,9 @@ class CanViewTeamActionRefiner @Inject()(
   def CanViewTeamAction(teamId: String): ActionBuilder[TeamSpecificRequest, AnyContent] =
     securityService.SigninRequiredAction andThen WithTeam(teamId) andThen TeamMember
 
+  def CanViewTeamAjaxAction(teamId: String): ActionBuilder[TeamSpecificRequest, AnyContent] =
+    securityService.SigninRequiredAjaxAction andThen WithTeam(teamId) andThen TeamMember
+
 }
 
 
