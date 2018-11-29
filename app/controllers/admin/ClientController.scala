@@ -56,13 +56,10 @@ class ClientController @Inject()(
       caseService.countOpenForClient(universityID),
       caseService.countClosedForClient(universityID),
       appointmentService.findForSearch(AppointmentSearchQuery(client = Some(universityID), startAfter = Some(JavaTime.localDate), states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended))),
-    ).successFlatMapTo { case (profile, registration, clientSummary, enquiries, openCases, closedCases, appointments) =>
-      zip(
-        enquiryService.getOwners(enquiries.map(_.enquiry.id).toSet),
-        caseService.getOwners(cases.map(_.clientCase.id).toSet),
-      ).successMapTo { case (enquiryOwners, caseOwners) =>
-        (profile, registration, clientSummary, clientSummaryHistory, enquiries, cases, appointments, enquiryOwners ++ caseOwners)
-      }
+    ).successFlatMapTo { case (profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments) =>
+      enquiryService.getOwners(enquiries.map(_.enquiry.id).toSet).successMapTo(enquiryOwners =>
+        (profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments, enquiryOwners)
+      )
     }
   }
 
