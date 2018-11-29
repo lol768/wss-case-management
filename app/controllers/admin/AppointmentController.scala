@@ -176,6 +176,7 @@ class AppointmentController @Inject()(
   freeBusyService: FreeBusyService,
   clients: ClientService,
   members: MemberService,
+  permissionService: PermissionService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   appointmentActionFilters: AppointmentActionFilters,
@@ -186,14 +187,19 @@ class AppointmentController @Inject()(
   import canViewTeamActionRefiner._
 
   private def renderAppointment(appointmentKey: IssueKey, cancelForm: Form[CancelAppointmentData])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
-    appointments.findForRender(appointmentKey).successFlatMap { render =>
+    ServiceResults.zip(
+      appointments.findForRender(appointmentKey),
+      permissionService.canEditAppointment(currentUser().usercode, request.appointment.id)
+    )
+   .successFlatMap { case (render, canEdit) =>
       profiles.getProfiles(render.clients.map(_.client.universityID)).successMap { clientProfiles =>
         val clients = render.clients.map(c => c -> clientProfiles.get(c.client.universityID)).toMap
 
         Ok(views.html.admin.appointments.view(
           render,
           clients,
-          cancelForm
+          cancelForm,
+          canEdit
         ))
       }
     }

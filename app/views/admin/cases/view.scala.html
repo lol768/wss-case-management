@@ -1,5 +1,6 @@
 @import domain.CaseNoteType._
 @import domain.{DSAApplication, _}
+@import domain.OwnerSave
 @import play.api.libs.json.Json
 @import warwick.core.helpers.JavaTime
 
@@ -12,6 +13,7 @@
   originalEnquiry: Option[Enquiry],
   dsaApplication: Option[DSAApplication],
   history: CaseHistory,
+  ownerForm: Form[OwnerSave]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @viewSectionNotes(noteType: CaseNoteType, link: String) = {
@@ -137,7 +139,10 @@
           owners,
           controllers.admin.routes.OwnersController.caseSubmit(c.key),
           controllers.admin.routes.OwnersController.caseSubmitSelf(c.key),
-        )
+          Some(ownerForm),
+        ) {
+          @viewSectionNotes(OwnerNote, "owner note")
+        }
 
         @* Only show DSA fields for Disability or MentalHealth cases *@
         @if(DSAApplication.DSATeams.contains(c.team)){

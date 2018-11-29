@@ -3,6 +3,7 @@ import EventEmitter from 'events';
 import WebpackNotifierPlugin from 'webpack-notifier';
 import RemovePlugin from 'remove-files-webpack-plugin';
 import { ProvidePlugin } from 'webpack';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 
 import PlayFingerprintsPlugin from './build-tooling/PlayFingerprintsPlugin';
 import WatchEventsPlugin from './build-tooling/WatchEventsPlugin';
@@ -58,8 +59,8 @@ const commonConfig = merge([
       },
     },
     externals: {
-      jquery: 'jQuery'
-    }
+      jquery: 'jQuery',
+    },
   },
   tooling.lintJS(),
   tooling.transpileJS({
@@ -71,6 +72,14 @@ const commonConfig = merge([
     dest: path.join(paths.ASSETS, 'lib'),
     modules: ['id7'],
   }),
+  {
+    plugins: [
+      new CopyWebpackPlugin([{
+        from: 'node_modules/@fortawesome/fontawesome-pro/webfonts',
+        to: path.join(paths.ASSETS, 'lib/fontawesome-pro/webfonts'),
+      }]),
+    ],
+  },
   tooling.copyLocalImages({
     dest: paths.ASSETS,
   }),

@@ -40,6 +40,8 @@ trait CaseService {
   def findForView(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def findAllForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]]
   def listForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
+  def countOpenForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def countClosedForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]]
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
@@ -76,7 +78,7 @@ trait CaseService {
   def countClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
-  def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
+  def setOwners(id: UUID, owners: Set[Usercode], note: Option[CaseNoteSave])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
 
   def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Client]]]]
   def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[Client]]]
@@ -217,6 +219,24 @@ class CaseServiceImpl @Inject() (
         .sortBy { case (_, lu) => lu.desc }
         .result
     ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
+  }
+
+  override def countOpenForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]] = {
+    daoRunner.run(
+      dao.findByClientQuery(universityID)
+        .filter(_.isOpen)
+        .size
+        .result
+    ).map(Right.apply)
+  }
+
+  override def countClosedForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]] = {
+    daoRunner.run(
+      dao.findByClientQuery(universityID)
+        .filter(!_.isOpen)
+        .size
+        .result
+    ).map(Right.apply)
   }
 
   override def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]] = {
@@ -524,8 +544,14 @@ class CaseServiceImpl @Inject() (
   override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]] =
     ownerService.getCaseOwners(ids)
 
-  override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] =
-    ownerService.setCaseOwners(id, owners)
+  override def setOwners(id: UUID, owners: Set[Usercode], note: Option[CaseNoteSave])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
+    ServiceResults.zip(
+      ownerService.setCaseOwners(id, owners),
+      daoRunner.run(
+        note.map(n => addNoteDBIO(id, CaseNoteType.OwnerNote, n)).getOrElse(DBIO.successful(()))
+      ).map(Right.apply)
+    ).successMapTo { case (ownerChanges, _)  => ownerChanges }
+  }
 
   override def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Client]]]] = {
     daoRunner.run(dao.findClientsQuery(ids).result)
