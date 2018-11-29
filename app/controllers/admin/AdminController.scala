@@ -36,7 +36,7 @@ class AdminController @Inject()(
     }
   }
 
-  def enquiries(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+  def enquiries(teamId: String): Action[AnyContent] = CanViewTeamAjaxAction(teamId).async { implicit teamRequest =>
     ServiceResults.zip(
       enquiryService.countEnquiriesNeedingReply(teamRequest.team),
       enquiryService.findEnquiriesNeedingReply(teamRequest.team, Pagination.firstPage()),
@@ -88,7 +88,7 @@ class AdminController @Inject()(
     }
   }
 
-  def cases(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
+  def cases(teamId: String): Action[AnyContent] = CanViewTeamAjaxAction(teamId).async { implicit teamRequest =>
     ServiceResults.zip(
       caseService.countOpenCases(teamRequest.team),
       caseService.listOpenCases(teamRequest.team, Pagination.firstPage()),

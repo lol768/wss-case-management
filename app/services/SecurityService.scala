@@ -18,6 +18,7 @@ trait SecurityService {
 
   def SigninAwareAction: AuthActionBuilder
   def SigninRequiredAction: AuthActionBuilder
+  def SigninRequiredAjaxAction: AuthActionBuilder
   def RequiredRoleAction(role: RoleName): AuthActionBuilder
   def RequiredActualUserRoleAction(role: RoleName): AuthActionBuilder
 
@@ -37,6 +38,7 @@ class SecurityServiceImpl @Inject()(
 
   override def SigninAwareAction: AuthActionBuilder = sso.Lenient(defaultParser)
   override def SigninRequiredAction: AuthActionBuilder = sso.Strict(defaultParser) andThen requireCondition(_.context.user.get.universityId.nonEmpty, noUniversityIdResponse)
+  override def SigninRequiredAjaxAction: AuthActionBuilder = sso.Lenient(defaultParser) andThen requireCondition(_.context.user.nonEmpty, _ => unauthorizedResponse) andThen requireCondition(_.context.user.get.universityId.nonEmpty, noUniversityIdResponse)
   override def RequiredRoleAction(role: RoleName): AuthActionBuilder = sso.RequireRole(role, forbidden)(defaultParser)
   override def RequiredActualUserRoleAction(role: RoleName): AuthActionBuilder = sso.RequireActualUserRole(role, forbidden)(defaultParser)
 
