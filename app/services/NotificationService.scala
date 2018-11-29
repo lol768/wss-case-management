@@ -41,7 +41,7 @@ object NotificationService {
 trait NotificationService {
   def newRegistration(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def registrationInvite(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
-  def newEnquiry(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def newEnquiry(enquiryKey: IssueKey, team: Team)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def enquiryMessage(enquiry: Enquiry, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def enquiryReassign(enquiry: Enquiry)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
@@ -71,13 +71,12 @@ class NotificationServiceImpl @Inject()(
 )(implicit executionContext: ExecutionContext) extends NotificationService {
 
   private implicit lazy val domain: NotificationService.Domain = config.get[String]("domain")
-  private lazy val initialTeam = Teams.fromId(config.get[String]("app.enquiries.initialTeamId"))
 
   private lazy val myWarwickEnabled: Boolean = config.get[Boolean]("wellbeing.features.notifications.mywarwick")
   private lazy val emailEnabled: Boolean = config.get[Boolean]("wellbeing.features.notifications.email")
 
-  override def newRegistration(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
-    withInitialTeamUsers { users =>
+  override def newRegistration(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
+    withTeamUsers(Teams.WellbeingSupport) { users =>
       val url = controllers.admin.routes.ClientController.client(universityID).build
 
       queueEmailAndSendActivity(
@@ -85,14 +84,13 @@ class NotificationServiceImpl @Inject()(
         body = views.txt.emails.newregistration(url),
         recipients = users,
         activity = buildActivity(
-          initialTeam,
+          Teams.WellbeingSupport,
           "New registration received",
           url,
           "new-registration"
         )
       )
     }
-  }
 
   override def registrationInvite(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
     val url = controllers.registration.routes.RegisterController.form().build
@@ -112,8 +110,8 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  override def newEnquiry(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
-    withInitialTeamUsers { users =>
+  override def newEnquiry(enquiryKey: IssueKey, team: Team)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
+    withTeamUsers(team) { users =>
       val url = controllers.admin.routes.TeamEnquiryController.messages(enquiryKey).build
 
       queueEmailAndSendActivity(
@@ -121,7 +119,7 @@ class NotificationServiceImpl @Inject()(
         body = views.txt.emails.newenquiry(url),
         recipients = users,
         activity = buildActivity(
-          initialTeam,
+          team,
           "New enquiry received",
           url,
           "new-enquiry"
@@ -486,9 +484,6 @@ class NotificationServiceImpl @Inject()(
         }
       }
     else Future.successful(Right(activity))
-
-  private def withInitialTeamUsers(f: Seq[User] => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] =
-    withTeamUsers(initialTeam)(f)
 
   private def withTeamUsers(team: Team)(f: Seq[User] => Future[ServiceResult[Activity]])(implicit t: TimingContext): Future[ServiceResult[Activity]] = {
     val webGroup = permissionService.webgroupFor(team)

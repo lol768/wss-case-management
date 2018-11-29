@@ -1,0 +1,7 @@
+@import controllers.enquiries.EnquiryController.MentalHealthEnquiryFormData
+
+@(data: MentalHealthEnquiryFormData)
+
+Help with reasonable adjustments? @tags.threeStateBoolean(data.reasonableAdjustments)
+Specialist mentoring and advice on study skills? @tags.threeStateBoolean(data.reasonableAdjustments)
+General advice and support on mental health? @tags.threeStateBoolean(data.generalAdvice)

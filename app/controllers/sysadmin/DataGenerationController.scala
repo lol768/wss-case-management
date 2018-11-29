@@ -318,8 +318,6 @@ class DataGenerationJob @Inject()(
     configuration.get[Seq[String]]("wellbeing.testAdmins")
       .map(Usercode.apply)
 
-  private[this] val initialTeam: Team = Teams.fromId(configuration.get[String]("app.enquiries.initialTeamId"))
-
   private[this] implicit class FutureServiceResultOps[A](f: Future[ServiceResult[A]]) {
     // Convenient way to block on a Future[ServiceResult[_]] that you expect
     // to be successful.
@@ -368,7 +366,7 @@ class DataGenerationJob @Inject()(
           val client = randomClient()
           implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
 
-          val enquiry = EnquirySave(client, dummyWords(Random.nextInt(5) + 3), initialTeam, IssueState.Open)
+          val enquiry = EnquirySave(client, dummyWords(Random.nextInt(5) + 3), randomTeam(), IssueState.Open)
           val initialMessage = MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Client, None)
 
           enquiries.save(enquiry, initialMessage, randomAttachments(options.MessageAttachmentRate)).serviceValue
@@ -378,7 +376,7 @@ class DataGenerationJob @Inject()(
       // Re-assign some enquiries
       generatedEnquiries = generatedEnquiries.map { enquiry =>
         withMockDateTime(randomFutureDateTime(base = enquiry.created)) { _ =>
-          val teamMember = randomTeamMember(initialTeam)
+          val teamMember = randomTeamMember(enquiry.team)
           implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
           val note = EnquiryNoteSave(dummyWords(Random.nextInt(50)), teamMember)
@@ -403,7 +401,7 @@ class DataGenerationJob @Inject()(
             case 0 => Set()
             case 1 => Set(randomTeamMember(enquiry.team))
             case 2 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team))
-            case 3 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team), randomTeamMember(initialTeam))
+            case 3 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team), randomTeamMember(randomTeam()))
           }
 
           if (owners.nonEmpty) {
@@ -606,7 +604,7 @@ class DataGenerationJob @Inject()(
             case 0 => Set()
             case 1 => Set(randomTeamMember(team))
             case 2 => Set(randomTeamMember(team), randomTeamMember(team))
-            case 3 => Set(randomTeamMember(team), randomTeamMember(team), randomTeamMember(initialTeam))
+            case 3 => Set(randomTeamMember(team), randomTeamMember(team), randomTeamMember(randomTeam()))
           }
 
           if (owners.nonEmpty) {

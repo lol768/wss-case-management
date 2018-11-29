@@ -1,0 +1,8 @@
+@import controllers.enquiries.EnquiryController.DisabilityEnquiryFormData
+
+@(data: DisabilityEnquiryFormData)
+
+Reasonable adjustments (including special exam arrangements)? @tags.threeStateBoolean(data.reasonableAdjustments)
+Specialist mentoring? @tags.threeStateBoolean(data.specialistMentoring)
+Screening for SpLDs such as dyslexia? @tags.threeStateBoolean(data.disabilityScreening)
+General advice and support? @tags.threeStateBoolean(data.generalAdvice)

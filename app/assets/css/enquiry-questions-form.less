@@ -1,0 +1,31 @@
+@import (reference) "bootstrap/less/variables.less";
+@import (reference) "bootstrap/less/mixins.less";
+@import (reference) "id7/less/variables.less";
+@import (reference) "id7/less/mixins.less";
+
+.enquiry-questions-form {
+  .init-questions {
+    &.started {
+      display: none;
+    }
+
+    margin-top: (@grid-gutter-width * 1.5);
+    margin-bottom: @grid-gutter-width;
+  }
+
+  .control-label {
+    font-weight: normal;
+
+    + .radiosAsButtons, + input[type="file"] {
+      margin-left: @grid-gutter-width;
+    }
+  }
+
+  > fieldset {
+    margin-top: @grid-gutter-width;
+
+    &:not(.form-horizontal) > .form-group .control-label {
+      font-weight: bold;
+    }
+  }
+}
