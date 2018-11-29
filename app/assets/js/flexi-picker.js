@@ -92,7 +92,7 @@ export default class FlexiPicker {
           typeof (item.description) !== 'undefined' ? ` (${_.escape(item.description)})` : ''
         );
         const text = `${item.title}${description}`;
-        self.richResultField.store(item.value, _.escape(text));
+        self.richResultField.store(item.value, text);
         $element.data('item', item);
       },
     });
@@ -106,7 +106,7 @@ export default class FlexiPicker {
         ? currentValue.substring(this.prefixGroups.length) : currentValue;
       this.doSearch(searchQuery, { exact: true }, (results) => {
         if (results.length > 0) {
-          self.richResultField.storeText(`${_.escape(results[0].title)} (${_.escape(results[0].description)})`);
+          self.richResultField.storeText(`${results[0].title} (${results[0].description})`);
         }
       });
     }
