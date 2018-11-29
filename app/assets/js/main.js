@@ -20,6 +20,7 @@ import AppointmentCalendar from './appointment-calendar';
 import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
 import * as dateTimePicker from './date-time-picker';
 import PaginatingTable from './paginating-table';
+import EnquiryQuestionsForm from './enquiry-questions-form';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -108,6 +109,10 @@ function bindTo($scope) {
 
   $('.datetimepicker-inline', $scope).each((i, container) => {
     dateTimePicker.InlineDateTimePicker(container);
+  });
+
+  $('.enquiry-questions-form', $scope).each((i, container) => {
+    EnquiryQuestionsForm.bindTo(container);
   });
 
 
@@ -352,6 +357,20 @@ function bindTo($scope) {
       if (checked.length === 0) {
         $selectedItemContainer.append($('<div />').addClass('selected-items__item').html('(None)'));
       }
+    });
+  });
+
+  $('.radiosAsButtons', $scope).each((i, group) => {
+    $(group).on('change', () => {
+      $('input[type="radio"]', $(group)).each((j, radio) => {
+        const $radio = $(radio);
+        const $label = $radio.parent('label.btn');
+        if ($radio.is(':checked')) {
+          $label.addClass('btn-primary').removeClass('btn-default');
+        } else {
+          $label.removeClass('btn-primary').addClass('btn-default');
+        }
+      });
     });
   });
 }

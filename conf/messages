@@ -25,6 +25,8 @@ error.appointment.cases.invalid=Could not find a case with the given ID
 error.appointment.cases.nonEmpty=Appointments must be linked to at least 1 case
 error.appointment.dsaSupportAccessed.invalid=Please select a valid type of DSA support
 error.enumWithOther.otherValue.empty=Please specify an Other value
+error.enquiry.message.required=Please provide a brief summary of what your enquiry pertains to
+error.enquiry.incomplete=Your enquiry is incomplete, please answer all the questions before submitting
 
 flash.client.summary.updated=Client summary updated
 flash.client.registration.invited=Invitation to register sent to client
