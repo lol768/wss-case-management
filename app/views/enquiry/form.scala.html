@@ -4,7 +4,8 @@
 
 @(
   form: Form[EnquiryFormData],
-  supportedMimeTypes: Seq[MediaType]
+  supportedMimeTypes: Seq[MediaType],
+  outsideOfficeHours: Boolean,
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Make an enquiry") {
@@ -13,6 +14,28 @@
     'enctype -> "multipart/form-data",
     'class -> "enquiry-questions-form",
   ) { implicit ifc =>
+    @if(form.data.isEmpty && outsideOfficeHours) {
+      <div class="well outside-office-hours">
+        <div class="media">
+          <div class="media-left">
+            <p class="lead"><i class="fas fa-exclamation-triangle"></i></p>
+          </div>
+          <div class="media-body">
+            <p>The Wellbeing Support Service is not currently open; its hours are Monday to Thursday
+              9am to 5pm and Friday 9am until 4pm. You can still send us an enquiry, but it won't be
+              seen for some time.</p>
+
+            <p>If you require immediate emergency support, please contact Campus Security (who are
+              all qualified first aid responders) on <a href="tel:+442476522222">024 7652 2222</a>
+              or internally on 22222.</p>
+
+            <p>If your enquiry relates to a mental health emergency, please see the Mental Health
+              Team website for <a href="https://warwick.ac.uk/mentalhealth/crisis">information regarding on and off campus crisis support services</a>.</p>
+          </div>
+        </div>
+      </div>
+    }
+
     <p>
       To help us get your enquiry to the team best placed to help you, would you mind answering a
       few questions? It should only take a minute or so, and nothing is sent to us until you say so.

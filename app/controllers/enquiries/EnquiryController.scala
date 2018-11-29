@@ -1,5 +1,7 @@
 package controllers.enquiries
 
+import java.time.{DayOfWeek, LocalTime}
+
 import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.enquiries.EnquiryController._
 import controllers.refiners.ValidUniversityIDActionFilter
@@ -12,6 +14,7 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc._
 import services.{EnquiryService, SecurityService}
+import warwick.core.helpers.JavaTime
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -111,6 +114,21 @@ object EnquiryController {
         case Teams.WellbeingSupport => true
       })
   )
+
+  def outsideOfficeHours: Boolean = {
+    val now = JavaTime.offsetDateTime
+    val time = now.toLocalTime
+
+    now.getDayOfWeek match {
+      case DayOfWeek.MONDAY | DayOfWeek.TUESDAY | DayOfWeek.WEDNESDAY | DayOfWeek.THURSDAY =>
+        time.isBefore(LocalTime.of(9, 0)) || time.isAfter(LocalTime.of(17, 0))
+
+      case DayOfWeek.FRIDAY =>
+        time.isBefore(LocalTime.of(9, 0)) || time.isAfter(LocalTime.of(16, 0))
+
+      case _ => true
+    }
+  }
 }
 
 @Singleton
@@ -125,7 +143,7 @@ class EnquiryController @Inject()(
   import validUniversityIDActionFilter._
 
   private def render(f: Form[EnquiryFormData])(implicit req: RequestHeader): Result =
-    Ok(views.html.enquiry.form(f, uploadedFileControllerHelper.supportedMimeTypes))
+    Ok(views.html.enquiry.form(f, uploadedFileControllerHelper.supportedMimeTypes, outsideOfficeHours))
 
   def form(): Action[AnyContent] = SigninRequiredAction.andThen(ValidUniversityIDRequiredCurrentUser) { implicit request =>
     render(enquiryForm.bindFromRequest().discardingErrors)
