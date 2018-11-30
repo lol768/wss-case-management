@@ -4,11 +4,13 @@
 @import warwick.core.helpers.JavaTime
 @import warwick.sso.UniversityID
 
+@import play.api.libs.json.Json
 @(
   universityID: UniversityID,
   profile: Option[SitsProfile],
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
+  clientSummaryHistory: ClientSummaryHistory,
   enquiries: Seq[EnquiryListRender],
   openCases: Int,
   closedCases: Int,
@@ -48,7 +50,7 @@
               </div>
             </div>
           }
-          <div class="col-xs-7 col-sm-9 col-md-10">
+          <div class="col-xs-7 col-sm-9 col-md-10 field-history" data-field-history="@Json.stringify(Json.toJson(clientSummaryHistory)(ClientSummaryHistory.writer))">
             @tags.sectioned.detail("Department") {
               @profile.department.name
             }
@@ -164,18 +166,33 @@
               }
             }
 
-            @clientSummary.flatMap(_.riskStatus).map { status =>
-              @tags.sectioned.detail("Risk status") { @status match {
-                case ClientRiskStatus.Low => {
-                  <span class="label label-success">Low risk status</span>
-                }
-                case ClientRiskStatus.Medium => {
-                  <span class="label label-warning">Medium risk status</span>
-                }
-                case ClientRiskStatus.High => {
-                  <span class="label label-danger">High risk status</span>
-                }
-              }}
+            @if(clientSummary.exists(_.riskStatus.nonEmpty) || clientSummaryHistory.riskStatus.size > 1) {
+              @tags.sectioned.detail("Risk status") {
+                <div data-field-history-field="riskStatus">
+                  @clientSummary.flatMap(_.riskStatus).map {
+                    case ClientRiskStatus.Low => {
+                      <span class="label label-success">Low risk status</span>
+                    }
+                    case ClientRiskStatus.Medium => {
+                      <span class="label label-warning">Medium risk status</span>
+                    }
+                    case ClientRiskStatus.High => {
+                      <span class="label label-danger">High risk status</span>
+                    }
+                  }.getOrElse(clientSummaryHistory.riskStatus.find(_._1.nonEmpty).map(_._1).map {
+                    case Some(ClientRiskStatus.Low) => {
+                        <span class="label label-success"><s>Low risk status</s></span>
+                    }
+                    case Some(ClientRiskStatus.Medium) => {
+                        <span class="label label-warning"><s>Medium risk status</s></span>
+                    }
+                    case Some(ClientRiskStatus.High) => {
+                        <span class="label label-danger"><s>High risk status</s></span>
+                    }
+                    case _ => {}
+                  })
+                </div>
+              }
             }
           </div>
         </div>

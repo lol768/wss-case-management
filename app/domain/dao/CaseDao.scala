@@ -231,17 +231,7 @@ class CaseDaoImpl @Inject()(
     })
   }
 
-  override def getHistory(id: UUID): DBIO[Seq[StoredCaseVersion]] = {
-    cases.versionsTable
-      .filter(c =>
-        c.id === id && (
-          c.operation === (DatabaseOperation.Insert:DatabaseOperation) ||
-          c.operation === (DatabaseOperation.Update:DatabaseOperation)
-        )
-      )
-      .sortBy(_.timestamp)
-      .result
-  }
+  override def getHistory(id: UUID): DBIO[Seq[StoredCaseVersion]] = cases.history(_.id === id)
 
   override def getTagHistory(caseID: UUID): DBIO[Seq[StoredCaseTagVersion]] = {
     caseTags.versionsTable.filter(t => t.caseId === caseID).result

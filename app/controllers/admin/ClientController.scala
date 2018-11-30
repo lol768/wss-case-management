@@ -50,37 +50,38 @@ class ClientController @Inject()(
     "reasonable-adjustments" -> set(ReasonableAdjustment.formField)
   )(ClientSummarySave.apply)(ClientSummarySave.unapply))
 
-  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], Seq[EnquiryListRender], Int, Int, Seq[AppointmentRender], Map[UUID, Set[Member]])]] = {
+  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], ClientSummaryHistory, Seq[EnquiryListRender], Int, Int, Seq[AppointmentRender], Map[UUID, Set[Member]])]] = {
     zip(
       profileService.getProfile(universityID).map(_.value),
       registrationService.get(universityID),
       clientSummaryService.get(universityID),
+      clientSummaryService.getHistory(universityID),
       enquiryService.listEnquiriesForClient(universityID),
       caseService.countOpenForClient(universityID),
       caseService.countClosedForClient(universityID),
       appointmentService.findForSearch(AppointmentSearchQuery(client = Some(universityID), startAfter = Some(JavaTime.localDate), states = Set(AppointmentState.Provisional, AppointmentState.Accepted, AppointmentState.Attended))),
-    ).successFlatMapTo { case (profile, registration, clientSummary, enquiries, openCases, closedCases, appointments) =>
+    ).successFlatMapTo { case (profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments) =>
       enquiryService.getOwners(enquiries.map(_.enquiry.id).toSet).successMapTo(enquiryOwners =>
-        (profile, registration, clientSummary, enquiries, openCases, closedCases, appointments, enquiryOwners)
+        (profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments, enquiryOwners)
       )
     }
   }
 
   def client(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.andThen(ValidUniversityIDRequired(universityID)).async { implicit request =>
-    clientInformation(universityID).successMap { case (profile, registration, clientSummary, enquiries, openCases, closedCases, appointments, owners) =>
+    clientInformation(universityID).successMap { case (profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments, owners) =>
       val f = clientSummary match {
         case Some(cs) => form.fill(cs.toSave)
         case _ => form
       }
 
-      Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, enquiries, openCases, closedCases, appointments, owners, f, inMentalHealthTeam, registrationInvitesEnabled))
+      Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments, owners, f, inMentalHealthTeam, registrationInvitesEnabled))
     }
   }
 
   def updateSummary(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.andThen(ValidUniversityIDRequired(universityID)).async { implicit request =>
-    clientInformation(universityID).successFlatMap { case (profile, registration, clientSummary, enquiries, openCases, closedCases, appointments, owners) =>
+    clientInformation(universityID).successFlatMap { case (profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments, owners) =>
       form.bindFromRequest.fold(
-        formWithErrors => Future.successful(Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, enquiries, openCases, closedCases, appointments, owners, formWithErrors, inMentalHealthTeam, registrationInvitesEnabled))),
+        formWithErrors => Future.successful(Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments, owners, formWithErrors, inMentalHealthTeam, registrationInvitesEnabled))),
         data => {
           val f =
             if (clientSummary.isEmpty) clientSummaryService.save(universityID, data)
