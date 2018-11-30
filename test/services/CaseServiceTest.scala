@@ -7,8 +7,9 @@ import akka.Done
 import com.google.common.io.ByteSource
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.CaseDao.CaseSearchQuery
-import domain.dao.{AbstractDaoTest, CaseDao, UploadedFileDao}
+import domain.dao.CaseDao.{CaseSearchQuery, StoredCaseClient}
+import domain.dao.ClientDao.StoredClient
+import domain.dao.{AbstractDaoTest, CaseDao, ClientDao, UploadedFileDao}
 import helpers.DataFixture
 import warwick.core.timing.TimingContext
 import warwick.objectstore.ObjectStorageService
@@ -21,9 +22,17 @@ class CaseServiceTest extends AbstractDaoTest {
 
   class CaseFixture extends DataFixture[Case] {
     override def setup(): Case = {
-      execWithCommit(CaseDao.cases.insert(
-        Fixtures.cases.newStoredCase()
-      )).asCase
+      // Ensure that the case has a client, it's required and searching relies on it being a join not a left join
+      val c = execWithCommit(
+        CaseDao.cases.insert(Fixtures.cases.newStoredCase())
+      ).asCase
+
+      execWithCommit(
+        ClientDao.clients.insert(StoredClient(UniversityID("3344556"), Some("Jonathan Testman"))) andThen
+        CaseDao.caseClients.insert(StoredCaseClient(c.id, UniversityID("3344556")))
+      )
+
+      c
     }
 
     override def teardown(): Unit = {
@@ -147,7 +156,7 @@ class CaseServiceTest extends AbstractDaoTest {
     }
 
     "update" in withData(new CaseFixture()) { c1 =>
-      service.getClients(c1.id).serviceValue mustBe 'empty
+      service.getClients(c1.id).serviceValue.map(_.universityID) mustBe Set(UniversityID("3344556"))
       service.getCaseTags(c1.id).serviceValue mustBe 'empty
 
       // Just add some clients and tags, it's all the same except with a new version

@@ -8,9 +8,11 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain.QueryHelpers._
-import domain.{Case, _}
 import domain.dao.CaseDao._
 import domain.dao.ClientDao.StoredClient
+import domain.dao.ClientDao.StoredClient.Clients
+import domain.dao.MemberDao.StoredMember.Members
+import domain.{Case, _}
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -102,20 +104,22 @@ class CaseDaoImpl @Inject()(
       .map { case (c, _, _) => c }
 
   override def searchQuery(q: CaseSearchQuery): Query[Cases, StoredCase, Seq] = {
-    def queries(c: Cases, n: Rep[Option[CaseNotes]], o: Rep[Option[Owner.Owners]]): Seq[Rep[Option[Boolean]]] =
+    def queries(c: Cases, client: Clients, n: Rep[Option[CaseNotes]], tm: Rep[Option[Members]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
           val query = prefixTsQuery(queryStr.bind)
 
-          // Need to search CaseNote fields separately otherwise the @+ will stop it matching cases
-          // with no notes
-          (c.searchableId @+ c.searchableKey @+ c.searchableSubject) @@ query ||
-          n.map(_.searchableText) @@ query
+          // Need to search CaseNote and Member fields separately otherwise the @+ will stop it matching cases
+          // with no notes/owners
+          (c.searchableId @+ c.searchableKey @+ c.searchableSubject @+ client.searchableUniversityID @+ client.searchableFullName) @@ query ||
+          n.map(_.searchableText) @@ query ||
+          tm.map(_.searchableUsercode) @@ query ||
+          tm.flatMap(_.searchableFullName) @@ query
         },
         q.createdAfter.map { d => c.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => c.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.team.map { team => c.team.? === team },
-        q.member.map { member => o.map(_.userId === member) },
+        q.member.map { member => tm.map(_.usercode === member) },
         q.caseType.map { caseType => c.caseType === caseType },
         q.state.flatMap {
           case IssueStateFilter.All => None
@@ -125,11 +129,14 @@ class CaseDaoImpl @Inject()(
       ).flatten
 
     cases.table
-      .withNotes
-      .joinLeft(Owner.owners.table)
-      .on { case ((e, _), o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Case:Owner.EntityType) }
-      .filter { case ((c, n), o) => queries(c, n, o).reduce(_ && _) }
-      .map { case ((c, _), _) => (c, c.isOpen) }
+      .withClients
+      .joinLeft(caseNotes.table)
+      .on { case ((c, _, _), n) => c.id === n.caseId }
+      .joinLeft(Owner.owners.table.join(MemberDao.members.table).on(_.userId === _.usercode))
+      .on { case (((c, _, _), _), (o, _)) => c.id === o.entityId && o.entityType === (Owner.EntityType.Case: Owner.EntityType) }
+      .map { case (((c, _, client), n), o) => (c, client, n, o.map { case (_, tm) => tm }) }
+      .filter { case (c, client, n, tm) => queries(c, client, n, tm).reduce(_ && _) }
+      .map { case (c, _, _, _) => (c, c.isOpen) }
       .sortBy { case (c, isOpen) => (isOpen.desc, c.created.desc) }
       .distinct
       .map { case (c, _) => c }

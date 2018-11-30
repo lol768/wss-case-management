@@ -7,7 +7,6 @@ import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
-import domain.Owner.Owners
 import domain.QueryHelpers._
 import domain._
 import domain.dao.AppointmentDao.AppointmentCase.AppointmentCases
@@ -136,9 +135,7 @@ class AppointmentDaoImpl @Inject()(
         q.query.filter(_.nonEmpty).map { queryStr =>
           val query = prefixTsQuery(queryStr.bind)
 
-          (a.searchableId @+ a.searchableKey @+ c.searchableUniversityID @+ tm.searchableUsercode) @@ query ||
-          c.searchableFullName @@ query ||
-          tm.searchableFullName @@ query
+          (a.searchableId @+ a.searchableKey @+ c.searchableUniversityID @+ tm.searchableUsercode @+ c.searchableFullName @+ tm.searchableFullName) @@ query
         },
         q.createdAfter.map { d => a.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => a.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
