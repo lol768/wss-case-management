@@ -214,15 +214,7 @@ class ClientSummaryDaoImpl @Inject()(
       .filter(_.universityID === universityID)
 
   override def getHistory(universityID: UniversityID): _root_.domain.ExtendedPostgresProfile.api.DBIO[Seq[StoredClientSummaryVersion]] =
-    clientSummaries.versionsTable
-      .filter(r =>
-        r.universityID === universityID && (
-          r.operation === (DatabaseOperation.Insert:DatabaseOperation) ||
-            r.operation === (DatabaseOperation.Update:DatabaseOperation)
-          )
-      )
-      .sortBy(_.timestamp)
-      .result
+    clientSummaries.history(_.universityID === universityID)
 
   override def findAtRiskQuery(riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq] =
     clientSummaries.table

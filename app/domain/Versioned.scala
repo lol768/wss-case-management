@@ -7,7 +7,7 @@ import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import services.AuditLogContext
 import slick.dbio.Effect
-import slick.lifted.Rep
+import slick.lifted.{CanBeQueryCondition, Rep}
 import slick.sql.FixedSqlStreamingAction
 import warwick.core.helpers.JavaTime
 import warwick.sso.Usercode
@@ -139,6 +139,16 @@ class VersionedTableQuery[A <: Versioned[A], B <: StoredVersion[A], C <: Table[A
       _ <- versionsTable ++= storedVersions
     } yield delete
   }
+
+  def history[T <: Rep[_]](idFilter: D => T)(implicit wt: CanBeQueryCondition[T]): DBIO[Seq[B]] =
+    this.versionsTable
+      .filter(idFilter)
+      .filter(e =>
+          e.operation === (DatabaseOperation.Insert:DatabaseOperation) ||
+            e.operation === (DatabaseOperation.Update:DatabaseOperation)
+      )
+      .sortBy(_.timestamp)
+      .result
 }
 
 trait Versioning {
