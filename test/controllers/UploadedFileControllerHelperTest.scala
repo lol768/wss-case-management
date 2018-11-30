@@ -6,7 +6,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.typesafe.config.ConfigMemorySize
 import domain.UploadedFileSave
-import helpers.OneAppPerSuite
+import helpers.{MockVirusScanService, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.{Millis, Span}
@@ -23,14 +23,21 @@ class UploadedFileControllerHelperTest extends PlaySpec with OneAppPerSuite with
   val uploadedFileControllerHelper: UploadedFileControllerHelper = get[UploadedFileControllerHelper]
   implicit val materializer: Materializer = get[Materializer]
 
-  private abstract class MultipartBodyFixture(val fileSize: Long, val fileName: String, val contentType: String = "application/octet-stream") {
+  private abstract class MultipartBodyFixture(val content: Array[Byte], val fileName: String, val contentType: String = "application/octet-stream") {
+    def this(fileSize: Long, fileName: String, contentType: String) {
+      this(Array.ofDim[Byte](fileSize.toInt), fileName, contentType)
+    }
+
+    def this(fileSize: Long, fileName: String) {
+      this(fileSize, fileName, "application/octet-stream")
+    }
+
     val boundary = "-----------------------------14568445977970839651285587160"
     val header =
       s"--$boundary\r\n" +
         s"""Content-Disposition: form-data; name="uploadedfile"; filename="$fileName"""" + "\r\n" +
         s"Content-Type: $contentType\r\n" +
         "\r\n"
-    val content = Array.ofDim[Byte](fileSize.toInt)
     val footer =
       "\r\n" +
       s"--$boundary--\r\n"
@@ -42,7 +49,7 @@ class UploadedFileControllerHelperTest extends PlaySpec with OneAppPerSuite with
       Nil
     )
 
-    val bodySize = header.length + fileSize + footer.length
+    val bodySize = header.length + content.length + footer.length
 
     val request = FakeRequest(
       method = "POST",
@@ -63,8 +70,8 @@ class UploadedFileControllerHelperTest extends PlaySpec with OneAppPerSuite with
 
       val file = parsedBody.files.head.ref
       file.key mustBe "uploadedfile"
-      file.in.size() mustBe fileSize
-      file.metadata mustBe UploadedFileSave("uploadedfile.txt", fileSize, "text/plain")
+      file.in.size() mustBe content.length
+      file.metadata mustBe UploadedFileSave("uploadedfile.txt", content.length.toLong, "text/plain")
     }
 
     "fail if a file is too large" in new MultipartBodyFixture(get[Configuration].get[ConfigMemorySize]("wellbeing.files.maxIndividualFileSize").toBytes + 1, "uploadedfile.txt") {
@@ -81,6 +88,14 @@ class UploadedFileControllerHelperTest extends PlaySpec with OneAppPerSuite with
 
       val result = response.futureValue.left.get
       result.header.status mustBe Status.UNSUPPORTED_MEDIA_TYPE
+    }
+
+    "fail if a file is a virus" in new MultipartBodyFixture(MockVirusScanService.virusContent.read(), "uploadedfile.txt") {
+      val response = uploadedFileControllerHelper.bodyParser.apply(request).run(body)
+      response.futureValue.isLeft mustBe true
+
+      val result = response.futureValue.left.get
+      result.header.status mustBe Status.UNPROCESSABLE_ENTITY
     }
   }
 
