@@ -48,7 +48,7 @@ export default class AbstractPicker {
       afterSelect: (item) => {
         if (item) {
           const text = this.constructor.displayItem(item);
-          richResultField.store(item.value, _.escape(text));
+          richResultField.store(item.value, text);
           $element.data('item', item);
         }
       },
@@ -63,7 +63,9 @@ export default class AbstractPicker {
           log.error(e);
           return [];
         })
-        .then(response => richResultField.storeText(`${_.escape(this.constructor.displayItem(response.data.results[0]))}`));
+        .then(response => richResultField.storeText(
+          this.constructor.displayItem(response.data.results[0]),
+        ));
     }
   }
 

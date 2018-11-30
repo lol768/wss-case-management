@@ -28,7 +28,6 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
   private trait Fixture {
     val config: Configuration = Configuration.from(Map(
       "domain" -> "wss.warwick.ac.uk",
-      "app.enquiries.initialTeamId" -> "disability",
       "wellbeing.features.notifications.email" -> true,
       "wellbeing.features.notifications.mywarwick" -> true,
     ))
@@ -53,7 +52,7 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
 
   "NotificationService" should {
     "send an email and a My Warwick notification on new registrations" in new Fixture {
-      when(permissionService.webgroupFor(Teams.Disability)).thenReturn(GroupName("disability-team"))
+      when(permissionService.webgroupFor(Teams.WellbeingSupport)).thenReturn(GroupName("disability-team"))
       val group = Group(
         name = GroupName("disability-team"),
         title = Some("Disability team members"),

@@ -20,6 +20,8 @@ import AppointmentCalendar from './appointment-calendar';
 import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
 import * as dateTimePicker from './date-time-picker';
 import PaginatingTable from './paginating-table';
+import EnquiryQuestionsForm from './enquiry-questions-form';
+import { fetchWithCredentials } from './serverpipe';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -108,6 +110,10 @@ function bindTo($scope) {
 
   $('.datetimepicker-inline', $scope).each((i, container) => {
     dateTimePicker.InlineDateTimePicker(container);
+  });
+
+  $('.enquiry-questions-form', $scope).each((i, container) => {
+    EnquiryQuestionsForm.bindTo(container);
   });
 
 
@@ -281,13 +287,21 @@ function bindTo($scope) {
       $tabPanel
         .data('tabPanelLoaded', true)
         .empty()
-        .append('<i class="fas fa-spinner fa-pulse"></i> Loading&hellip;')
-        .load($tabPanel.data('href'), (text, status, xhr) => {
-          if (status === 'error') {
-            $tabPanel.text(`Unable to load content: ${xhr.statusText || xhr.status || 'error'}`);
-          } else {
-            bindTo($tabPanel);
+        .append('<i class="fas fa-spinner fa-pulse"></i> Loading&hellip;');
+      fetchWithCredentials($tabPanel.data('href'))
+        .then((response) => {
+          if (response.status === 200) {
+            return response.text();
           }
+          if (response.status === 401) {
+            window.location.reload();
+          }
+          throw new Error(response.statusText || response.status || 'error');
+        }).then((html) => {
+          $tabPanel.html(html);
+          bindTo($tabPanel);
+        }).catch((e) => {
+          $tabPanel.text(`Unable to load content: ${e.message}`);
         });
     }
   }
@@ -352,6 +366,20 @@ function bindTo($scope) {
       if (checked.length === 0) {
         $selectedItemContainer.append($('<div />').addClass('selected-items__item').html('(None)'));
       }
+    });
+  });
+
+  $('.radiosAsButtons', $scope).each((i, group) => {
+    $(group).on('change', () => {
+      $('input[type="radio"]', $(group)).each((j, radio) => {
+        const $radio = $(radio);
+        const $label = $radio.parent('label.btn');
+        if ($radio.is(':checked')) {
+          $label.addClass('btn-primary').removeClass('btn-default');
+        } else {
+          $label.removeClass('btn-primary').addClass('btn-default');
+        }
+      });
     });
   });
 }

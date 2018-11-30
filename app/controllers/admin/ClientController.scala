@@ -9,6 +9,7 @@ import domain.dao.AppointmentDao.AppointmentSearchQuery
 import helpers.ServiceResults
 import helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
@@ -32,11 +33,14 @@ class ClientController @Inject()(
   caseService: CaseService,
   appointmentService: AppointmentService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
-  validUniversityIDActionFilter: ValidUniversityIDActionFilter
+  validUniversityIDActionFilter: ValidUniversityIDActionFilter,
+  configuration: Configuration,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import anyTeamActionRefiner._
   import validUniversityIDActionFilter._
+
+  private[this] val registrationInvitesEnabled = configuration.get[Boolean]("wellbeing.features.registrationInvites")
 
   val form = Form(mapping(
     "notes" -> text,
@@ -70,14 +74,14 @@ class ClientController @Inject()(
         case _ => form
       }
 
-      Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments, owners, f, inMentalHealthTeam))
+      Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments, owners, f, inMentalHealthTeam, registrationInvitesEnabled))
     }
   }
 
   def updateSummary(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.andThen(ValidUniversityIDRequired(universityID)).async { implicit request =>
     clientInformation(universityID).successFlatMap { case (profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments, owners) =>
       form.bindFromRequest.fold(
-        formWithErrors => Future.successful(Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments, owners, formWithErrors, inMentalHealthTeam))),
+        formWithErrors => Future.successful(Ok(views.html.admin.client.client(universityID, profile, registration, clientSummary, clientSummaryHistory, enquiries, openCases, closedCases, appointments, owners, formWithErrors, inMentalHealthTeam, registrationInvitesEnabled))),
         data => {
           val f =
             if (clientSummary.isEmpty) clientSummaryService.save(universityID, data)
@@ -93,8 +97,12 @@ class ClientController @Inject()(
   }
 
   def invite(universityID: UniversityID): Action[AnyContent] = AnyTeamMemberRequiredAction.andThen(ValidUniversityIDRequired(universityID)).async { implicit request =>
-    registrationService.invite(universityID).successMap { _ =>
-      Redirect(routes.ClientController.client(universityID)).flashing("success" -> Messages("flash.client.registration.invited"))
+    if (registrationInvitesEnabled) {
+      registrationService.invite(universityID).successMap { _ =>
+        Redirect(routes.ClientController.client(universityID)).flashing("success" -> Messages("flash.client.registration.invited"))
+      }
+    } else {
+      Future.successful(Redirect(routes.ClientController.client(universityID)))
     }
   }
 

@@ -50,7 +50,7 @@ class IndexController @Inject()(
     }
   }
 
-  def enquiries: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+  def enquiries: Action[AnyContent] = AnyTeamMemberRequiredAjaxAction.async { implicit request =>
     val usercode = currentUser().usercode
     ServiceResults.zip(
       enquiryService.countEnquiriesNeedingReply(usercode),
@@ -106,7 +106,7 @@ class IndexController @Inject()(
     }
   }
 
-  def cases: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+  def cases: Action[AnyContent] = AnyTeamMemberRequiredAjaxAction.async { implicit request =>
     val usercode = currentUser().usercode
     ServiceResults.zip(
       caseService.countOpenCases(usercode),
@@ -164,7 +164,7 @@ class IndexController @Inject()(
     )
   }
 
-  def appointmentsTab: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+  def appointmentsTab: Action[AnyContent] = AnyTeamMemberRequiredAjaxAction.async { implicit request =>
     ServiceResults.zip(
       appointments.countForSearch(appointmentsNeedingOutcomesSearch),
       userPreferences.get(currentUser().usercode),

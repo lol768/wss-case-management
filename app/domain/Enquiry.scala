@@ -4,30 +4,12 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import enumeratum.{EnumEntry, PlayEnum}
-import play.api.data.Form
-import play.api.data.Forms._
 import services.EnquiryService
 import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.collection.immutable
 import scala.language.higherKinds
-
-object Enquiry {
-
-  val SubjectMaxLength = 200
-
-  case class FormData(
-    subject: String,
-    text: String
-  )
-
-  val form = Form(mapping(
-    "subject" -> nonEmptyText(maxLength = Enquiry.SubjectMaxLength),
-    "text" -> nonEmptyText
-  )(FormData.apply)(FormData.unapply))
-
-}
 
 case class Enquiry(
   id: UUID,

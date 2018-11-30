@@ -318,7 +318,7 @@ class DataGenerationJob @Inject()(
     configuration.get[Seq[String]]("wellbeing.testAdmins")
       .map(Usercode.apply)
 
-  private[this] val initialTeam: Team = Teams.fromId(configuration.get[String]("app.enquiries.initialTeamId"))
+  private[this] val registrationInvitesEnabled = configuration.get[Boolean]("wellbeing.features.registrationInvites")
 
   private[this] implicit class FutureServiceResultOps[A](f: Future[ServiceResult[A]]) {
     // Convenient way to block on a Future[ServiceResult[_]] that you expect
@@ -368,7 +368,7 @@ class DataGenerationJob @Inject()(
           val client = randomClient()
           implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
 
-          val enquiry = EnquirySave(client, dummyWords(Random.nextInt(5) + 3), initialTeam, IssueState.Open)
+          val enquiry = EnquirySave(client, dummyWords(Random.nextInt(5) + 3), randomTeam(), IssueState.Open)
           val initialMessage = MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Client, None)
 
           enquiries.save(enquiry, initialMessage, randomAttachments(options.MessageAttachmentRate)).serviceValue
@@ -378,7 +378,7 @@ class DataGenerationJob @Inject()(
       // Re-assign some enquiries
       generatedEnquiries = generatedEnquiries.map { enquiry =>
         withMockDateTime(randomFutureDateTime(base = enquiry.created)) { _ =>
-          val teamMember = randomTeamMember(initialTeam)
+          val teamMember = randomTeamMember(enquiry.team)
           implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
           val note = EnquiryNoteSave(dummyWords(Random.nextInt(50)), teamMember)
@@ -403,7 +403,7 @@ class DataGenerationJob @Inject()(
             case 0 => Set()
             case 1 => Set(randomTeamMember(enquiry.team))
             case 2 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team))
-            case 3 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team), randomTeamMember(initialTeam))
+            case 3 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team), randomTeamMember(randomTeam()))
           }
 
           if (owners.nonEmpty) {
@@ -461,39 +461,41 @@ class DataGenerationJob @Inject()(
         }
       }
 
-      // Generate registrations
-      val generatedRegistration: Seq[Option[Registration]] = allClients.map { client =>
-        if ((options.RegistrationRate / Random.nextDouble()).toInt > 0) Some {
-          implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
-          withMockDateTime(randomPastDateTime()) { _ =>
-            val registration = RegistrationData(
-              gp = s"Dr. ${dummyWords(Random.nextInt(2))}",
-              tutor = s"Prof. ${dummyWords(Random.nextInt(2))}",
-              disabilities =
-                (1 to (options.DisabilityRate / Random.nextDouble()).toInt).map { _ =>
-                  randomEnum(Disabilities)
-                }.toSet,
-              medications =
-                (1 to (options.MedicationRate / Random.nextDouble()).toInt).map { _ =>
-                  randomEnum(Medications)
-                }.toSet,
-              appointmentAdjustments = dummyWords(Random.nextInt(10)),
-              referrals =
-                (1 to (options.ReferralRate / Random.nextDouble()).toInt).map { _ =>
-                  randomEnum(RegistrationReferrals)
-                }.toSet,
-              consentPrivacyStatement = Some(true)
-            )
+      if (registrationInvitesEnabled) {
+        // Generate registrations
+        allClients.map { client =>
+          if ((options.RegistrationRate / Random.nextDouble()).toInt > 0) Some {
+            implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
+            withMockDateTime(randomPastDateTime()) { _ =>
+              val registration = RegistrationData(
+                gp = s"Dr. ${dummyWords(Random.nextInt(2))}",
+                tutor = s"Prof. ${dummyWords(Random.nextInt(2))}",
+                disabilities =
+                  (1 to (options.DisabilityRate / Random.nextDouble()).toInt).map { _ =>
+                    randomEnum(Disabilities)
+                  }.toSet,
+                medications =
+                  (1 to (options.MedicationRate / Random.nextDouble()).toInt).map { _ =>
+                    randomEnum(Medications)
+                  }.toSet,
+                appointmentAdjustments = dummyWords(Random.nextInt(10)),
+                referrals =
+                  (1 to (options.ReferralRate / Random.nextDouble()).toInt).map { _ =>
+                    randomEnum(RegistrationReferrals)
+                  }.toSet,
+                consentPrivacyStatement = Some(true)
+              )
 
-            registrations.get(client).serviceValue match {
-              case Some(existing) =>
-                registrations.register(client, registration, existing.updatedDate).serviceValue
-              case _ =>
-                val newRegistration = registrations.invite(client).serviceValue
-                registrations.register(client, registration, newRegistration.updatedDate).serviceValue
+              registrations.get(client).serviceValue match {
+                case Some(existing) =>
+                  registrations.register(client, registration, existing.updatedDate).serviceValue
+                case _ =>
+                  val newRegistration = registrations.invite(client).serviceValue
+                  registrations.register(client, registration, newRegistration.updatedDate).serviceValue
+              }
             }
-          }
-        } else None
+          } else None
+        }
       }
 
       // Generate cases
@@ -606,7 +608,7 @@ class DataGenerationJob @Inject()(
             case 0 => Set()
             case 1 => Set(randomTeamMember(team))
             case 2 => Set(randomTeamMember(team), randomTeamMember(team))
-            case 3 => Set(randomTeamMember(team), randomTeamMember(team), randomTeamMember(initialTeam))
+            case 3 => Set(randomTeamMember(team), randomTeamMember(team), randomTeamMember(randomTeam()))
           }
 
           if (owners.nonEmpty) {

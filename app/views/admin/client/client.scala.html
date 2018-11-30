@@ -18,7 +18,8 @@
   owners: Map[UUID, Set[Member]],
   form: Form[ClientSummarySave],
   inMentalHealthTeam: Boolean,
-  success: Option[String] = None
+  registrationInvitesEnabled: Boolean,
+  success: Option[String] = None,
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("Client profile") {
@@ -198,57 +199,59 @@
       </div>
     }
 
-    <div class="client-profile--registration">
-      <div class="client-profile--registration--header">
-        <h2>Registration</h2>
-      </div>
+    @if(registrationInvitesEnabled || registration.flatMap(_.data).nonEmpty) {
+      <div class="client-profile--registration">
+        <div class="client-profile--registration--header">
+          <h2>Registration</h2>
+        </div>
 
-      <section class="client-profile--registration--fields indent">
-        @registration.flatMap(_.data).map { registrationData =>
-          <div class="field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(universityID)">
-            @tags.sectioned.detail("Registered") {
-              @JavaTime.Relative(registration.get.updatedDate)
-            }
+        <section class="client-profile--registration--fields indent">
+          @registration.flatMap(_.data).map { registrationData =>
+            <div class="field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(universityID)">
+              @tags.sectioned.detail("Registered") {
+                @JavaTime.Relative(registration.get.updatedDate)
+              }
 
-            @tags.sectioned.detail("GP") {
-              <div data-field-history-field="gp">@registrationData.gp</div>
-            }
+              @tags.sectioned.detail("GP") {
+                <div data-field-history-field="gp">@registrationData.gp</div>
+              }
 
-            @tags.sectioned.detail("Tutor") {
-              <div data-field-history-field="tutor">@registrationData.tutor</div>
-            }
+              @tags.sectioned.detail("Tutor") {
+                <div data-field-history-field="tutor">@registrationData.tutor</div>
+              }
 
-            @tags.sectioned.detail("Disabilities") {
-              <div data-field-history-field="disabilities">@registrationData.disabilities.map(_.description).mkString(", ")</div>
-            }
+              @tags.sectioned.detail("Disabilities") {
+                <div data-field-history-field="disabilities">@registrationData.disabilities.map(_.description).mkString(", ")</div>
+              }
 
-            @tags.sectioned.detail("Medication") {
-              <div data-field-history-field="medications">@registrationData.medications.map(_.description).mkString(", ")</div>
-            }
+              @tags.sectioned.detail("Medication") {
+                <div data-field-history-field="medications">@registrationData.medications.map(_.description).mkString(", ")</div>
+              }
 
-            @tags.sectioned.detail("Appointment adjustments") {
-              <div data-field-history-field="appointmentAdjustments">@views.utils.nl2br(registrationData.appointmentAdjustments)</div>
-            }
+              @tags.sectioned.detail("Appointment adjustments") {
+                <div data-field-history-field="appointmentAdjustments">@views.utils.nl2br(registrationData.appointmentAdjustments)</div>
+              }
 
-            @tags.sectioned.detail("Referrals") {
-              <div data-field-history-field="referrals">@registrationData.referrals.map(_.description).mkString(", ")</div>
-            }
-          </div>
-        }.getOrElse {
-          <em>
-            Client is not currently registered
-            @registration.map { r =>
-              (last invited @JavaTime.Relative(r.lastInvited, lowercaseToday = true))
-            }
-          </em>
-          @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(universityID)) { implicit ifc =>
-            @b3.submit('class -> "btn btn-default") {
-              Invite to register
+              @tags.sectioned.detail("Referrals") {
+                <div data-field-history-field="referrals">@registrationData.referrals.map(_.description).mkString(", ")</div>
+              }
+            </div>
+          }.getOrElse {
+            <em>
+              Client is not currently registered
+              @registration.map { r =>
+                (last invited @JavaTime.Relative(r.lastInvited, lowercaseToday = true))
+              }
+            </em>
+            @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(universityID)) { implicit ifc =>
+              @b3.submit('class -> "btn btn-default") {
+                Invite to register
+              }
             }
           }
-        }
-      </section>
-    </div>
+        </section>
+      </div>
+    }
 
     <div class="client-profile--summary">
       <div class="client-profile--summary--header">
