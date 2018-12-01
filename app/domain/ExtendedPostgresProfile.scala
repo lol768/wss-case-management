@@ -19,12 +19,24 @@ trait ExtendedPgSearchSupport extends PgSearchSupport { driver: PostgresProfile 
       om.column(
         SearchLibrary.ToTsQuery,
         LiteralNode(config),
+        // regexp_replace(regexp_replace(trim(?), '[^A-Za-z0-9_\s-]', ''), '\s+', ':* & ') || ':*'
         om.column(SearchLibrary.Or,
+          // regexp_replace(regexp_replace(trim(?), '[^A-Za-z0-9_\s-]', ''), '\s+', ':* & ')
           om.column(
             new SqlFunction("regexp_replace"),
-            query.toNode,
-            "[^A-Za-z0-9_-]".toNode,
-            "".toNode,
+            // regexp_replace(trim(?), '[^A-Za-z0-9_\s-]', '')
+            om.column(
+              new SqlFunction("regexp_replace"),
+              om.column(
+                new SqlFunction("trim"),
+                query.toNode
+              ).toNode,
+              "[^A-Za-z0-9_\\s-]".toNode,
+              "".toNode,
+              "g".toNode
+            ).toNode,
+            "\\s+".toNode,
+            ":* & ".toNode,
             "g".toNode
           ).toNode,
           ":*".bind.toNode

@@ -13,6 +13,7 @@ class ExtendedPostgresProfileTest extends AbstractDaoTest {
   class EntityTable(tag: Tag) extends Table[Entity](tag, "ENTITY") {
     def id = column[UUID]("id")
     def string = column[String]("string")
+    def searchableString = toTsVector(string, Some("english"))
 
     def * = (id, string).mapTo[Entity]
     def pk = primaryKey("ENTITY_PK", id)
@@ -33,6 +34,13 @@ class ExtendedPostgresProfileTest extends AbstractDaoTest {
       val e2 = exec(table.filter(_.id === e.id).result.head)
       e2.id mustBe e.id
       e2.string mustBe "valid string with null byte in the middle"
+    }
+
+    "search with multiple word prefixes" in withData(new DatabaseFixture) { _ =>
+      val e = Entity(UUID.randomUUID(), "hey, here's my magic string")
+      execWithCommit(table += e)
+
+      exec(table.filter(_.searchableString @@ prefixTsQuery("magic hey str".bind)).length.result) mustBe 1
     }
   }
 
