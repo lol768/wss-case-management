@@ -98,14 +98,16 @@ class EnquiryDaoImpl @Inject() (
     def queries(e: Enquiries, client: Clients, m: Rep[Option[Message.Messages]], f: Rep[Option[UploadedFileDao.UploadedFiles]], tm: Rep[Option[Members]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
-          val query = prefixTsQuery(queryStr.bind)
-
-          // Need to search UploadedFile & member fields separately otherwise the @+ will stop it matching messages
-          // with no file/owner
-          (e.searchableKey @+ e.searchableSubject @+ m.map(_.searchableText) @+ client.searchableUniversityID @+ client.searchableFullName) @@ query ||
-          f.map(_.searchableFileName) @@ query ||
-          tm.map(_.searchableUsercode) @@ query ||
-          tm.flatMap(_.searchableFullName) @@ query
+          (
+            e.searchableKey @+
+            e.searchableSubject @+
+            m.map(_.searchableText).orEmptyTsVector @+
+            client.searchableUniversityID @+
+            client.searchableFullName @+
+            f.map(_.searchableFileName).orEmptyTsVector @+
+            tm.map(_.searchableUsercode).orEmptyTsVector @+
+            tm.map(_.searchableFullName).orEmptyTsVector
+          ).? @@ prefixTsQuery(queryStr.bind)
         },
         q.createdAfter.map { d => e.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => e.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },

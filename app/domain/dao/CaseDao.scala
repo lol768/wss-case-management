@@ -107,14 +107,16 @@ class CaseDaoImpl @Inject()(
     def queries(c: Cases, client: Clients, n: Rep[Option[CaseNotes]], tm: Rep[Option[Members]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
-          val query = prefixTsQuery(queryStr.bind)
-
-          // Need to search CaseNote and Member fields separately otherwise the @+ will stop it matching cases
-          // with no notes/owners
-          (c.searchableId @+ c.searchableKey @+ c.searchableSubject @+ client.searchableUniversityID @+ client.searchableFullName) @@ query ||
-          n.map(_.searchableText) @@ query ||
-          tm.map(_.searchableUsercode) @@ query ||
-          tm.flatMap(_.searchableFullName) @@ query
+          (
+            c.searchableId @+
+            c.searchableKey @+
+            c.searchableSubject @+
+            client.searchableUniversityID @+
+            client.searchableFullName @+
+            n.map(_.searchableText).orEmptyTsVector @+
+            tm.map(_.searchableUsercode).orEmptyTsVector @+
+            tm.map(_.searchableFullName).orEmptyTsVector
+          ).? @@ prefixTsQuery(queryStr.bind)
         },
         q.createdAfter.map { d => c.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => c.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },

@@ -42,6 +42,10 @@ trait ExtendedPgSearchSupport extends PgSearchSupport { driver: PostgresProfile 
           ":*".bind.toNode
         ).toNode
       )
+
+    implicit class OptionTsVectorColumnExtensions(r: Rep[Option[TsVector]])(implicit tm: JdbcType[TsVector]) {
+      def orEmptyTsVector: Rep[TsVector] = r.getOrElse("".bind.asColumnOf[TsVector])
+    }
   }
 }
 

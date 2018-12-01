@@ -133,9 +133,14 @@ class AppointmentDaoImpl @Inject()(
     def queries(a: Appointments, c: Clients, tm: Members): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
-          val query = prefixTsQuery(queryStr.bind)
-
-          (a.searchableId @+ a.searchableKey @+ c.searchableUniversityID @+ tm.searchableUsercode @+ c.searchableFullName @+ tm.searchableFullName) @@ query
+          (
+            a.searchableId @+
+            a.searchableKey @+
+            c.searchableUniversityID @+
+            tm.searchableUsercode @+
+            c.searchableFullName @+
+            tm.searchableFullName
+          ).? @@ prefixTsQuery(queryStr.bind)
         },
         q.createdAfter.map { d => a.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => a.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
