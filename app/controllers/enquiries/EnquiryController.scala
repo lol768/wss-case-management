@@ -24,7 +24,7 @@ object EnquiryController {
     studySkills: Option[Boolean],
     generalAdvice: Option[Boolean],
   ) {
-    val isEmpty: Boolean = reasonableAdjustments.contains(false) && studySkills.contains(false) && generalAdvice.contains(false)
+    val isEmpty: Boolean = Seq(reasonableAdjustments, studySkills, generalAdvice).exists(_.contains(true))
     val nonEmpty: Boolean = !isEmpty
 
     def enquiryText: String = views.txt.enquiry.mentalHealthQuery(this).toString.trim
@@ -35,7 +35,7 @@ object EnquiryController {
     therapy: Option[Boolean],
     online: Option[Boolean],
   ) {
-    val isEmpty: Boolean = faceToFace.contains(false) && therapy.contains(false) && online.contains(false)
+    val isEmpty: Boolean = Seq(faceToFace, therapy, online).exists(_.contains(true))
     val nonEmpty: Boolean = !isEmpty
 
     def enquiryText: String = views.txt.enquiry.counsellingQuery(this).toString.trim
@@ -47,7 +47,7 @@ object EnquiryController {
     disabilityScreening: Option[Boolean],
     generalAdvice: Option[Boolean],
   ) {
-    val isEmpty: Boolean = reasonableAdjustments.contains(false) && specialistMentoring.contains(false) && disabilityScreening.contains(false) && generalAdvice.contains(false)
+    val isEmpty: Boolean = Seq(reasonableAdjustments, specialistMentoring, disabilityScreening, generalAdvice).exists(_.contains(true))
     val nonEmpty: Boolean = !isEmpty
 
     def enquiryText: String = views.txt.enquiry.disabilityQuery(this).toString.trim

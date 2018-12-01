@@ -16,7 +16,7 @@ export default class EnquiryQuestionsForm {
     const $questions = $section.find('.form-group');
     const $questionsWithValue = $questions.filter(EnquiryQuestionsForm.hasValueOrOptional);
 
-    return $questionsWithValue.length === $questions.length && ($questionsWithValue.find('input[type="radio"][name*="."]').length === 0 || $questionsWithValue.find('input[type="radio"][name*="."][value!="false"]:enabled:checked').length > 0);
+    return $questionsWithValue.length === $questions.length && ($questionsWithValue.find('input[type="radio"][name*="."]').length === 0 || $questionsWithValue.find('input[type="radio"][name*="."][value="true"]:enabled:checked').length > 0);
   }
 
   static hasValueOrOptional(i, question) { // eslint-disable-line no-unused-vars
@@ -116,8 +116,19 @@ export default class EnquiryQuestionsForm {
       }
     } else {
       $buttons.find(':input').prop('disabled', true);
-      $buttons.find('.form-group').hide();
-      $buttons.hide();
+
+      if ($buttons.prev('fieldset').is(':visible')) {
+        $buttons.find('.form-group').show();
+
+        if (!$buttons.is(':visible') && !initial) {
+          $buttons.slideDown('fast', 'swing');
+        } else {
+          $buttons.show();
+        }
+      } else {
+        $buttons.find('.form-group').hide();
+        $buttons.hide();
+      }
     }
   }
 
