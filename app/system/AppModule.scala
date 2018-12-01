@@ -25,6 +25,7 @@ class AppModule extends ScalaModule {
     healthchecks.addBinding.to[MailerThreadPoolHealthCheck]
     healthchecks.addBinding.to[ObjectStorageThreadPoolHealthCheck]
     healthchecks.addBinding.to[UserLookupThreadPoolHealthCheck]
+    healthchecks.addBinding.to[VirusScanServiceHealthCheck]
 
     // For HealthCheckService
     bind[QuartzDAO].to[SlickQuartzDAO]
