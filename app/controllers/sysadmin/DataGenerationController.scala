@@ -530,7 +530,8 @@ class DataGenerationJob @Inject()(
                 counsellingServicesIssues = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CounsellingServicesIssue)).toSet,
                 studentSupportIssueTypes = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(StudentSupportIssueType)).toSet,
                 medications = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CaseMedication)).toSet,
-                severityOfProblem = if ((0.8 / Random.nextDouble()).toInt > 0) Some(randomEnum(SeverityOfProblem)) else None
+                severityOfProblem = if ((0.8 / Random.nextDouble()).toInt > 0) Some(randomEnum(SeverityOfProblem)) else None,
+                duty = (0.1 / Random.nextDouble()).toInt > 0,
               ),
               Set(enquiry.client.universityID),
               (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
@@ -593,7 +594,8 @@ class DataGenerationJob @Inject()(
               counsellingServicesIssues = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CounsellingServicesIssue)).toSet,
               studentSupportIssueTypes = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(StudentSupportIssueType)).toSet,
               medications = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CaseMedication)).toSet,
-              severityOfProblem = if ((0.8 / Random.nextDouble()).toInt > 0) Some(randomEnum(SeverityOfProblem)) else None
+              severityOfProblem = if ((0.8 / Random.nextDouble()).toInt > 0) Some(randomEnum(SeverityOfProblem)) else None,
+              duty = (0.1 / Random.nextDouble()).toInt > 0,
             ),
             clients,
             (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>

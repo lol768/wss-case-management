@@ -148,7 +148,8 @@ class CaseServiceImpl @Inject() (
         studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(save.studentSupportIssueTypes),
         medications = save.medications.map(_.entryName).toList.sorted,
         medicationOther = CaseMedication.otherValue(save.medications),
-        severityOfProblem = save.severityOfProblem
+        severityOfProblem = save.severityOfProblem,
+        duty = save.duty,
       )
     )
 
@@ -311,7 +312,8 @@ class CaseServiceImpl @Inject() (
                 studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(c.studentSupportIssueTypes),
                 medications = c.medications.map(_.entryName).toList.sorted,
                 medicationOther = CaseMedication.otherValue(c.medications),
-                severityOfProblem = c.severityOfProblem
+                severityOfProblem = c.severityOfProblem,
+                duty = c.duty,
               )
             ),
             caseVersion

@@ -172,3 +172,7 @@
   options = ("", "") +: SeverityOfProblem.values.map { c => c.entryName -> c.description },
   '_label -> "Severity of problem"
 )
+
+@b3.checkbox(form("case.duty"),
+  '_text -> "This case is a Duty case"
+)

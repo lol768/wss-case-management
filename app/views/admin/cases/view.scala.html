@@ -51,7 +51,10 @@
   </div>
 }
 
-@main(s"${c.key.string} ${c.subject}") {
+@main(
+  title = s"${c.key.string} ${c.subject}",
+  icon = if (c.fields.duty) { tags.cases.dutyLabel() } else null,
+) {
   <div class="case-details">
     <div class="case-details--header">
       @profiles.keySet.toSeq.sorted.map { client =>
