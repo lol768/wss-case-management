@@ -6,7 +6,7 @@
 
 @(c: Case, note: CaseNote)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-<div class="panel panel-default">
+<div class="panel panel-default note-type-@note.noteType.entryName">
   <div class="panel-heading">
     <h3 class="panel-title">
       <span class="date pull-right">
