@@ -21,6 +21,7 @@ import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
 import * as dateTimePicker from './date-time-picker';
 import PaginatingTable from './paginating-table';
 import EnquiryQuestionsForm from './enquiry-questions-form';
+import QuickFilter from './quick-filter';
 import { fetchWithCredentials } from './serverpipe';
 
 function closePopover($popover) {
@@ -116,6 +117,9 @@ function bindTo($scope) {
     EnquiryQuestionsForm.bindTo(container);
   });
 
+  $('.quick-filter-container', $scope).each((i, container) => {
+    QuickFilter(container);
+  });
 
   $('form', $scope)
     .not('.no-dirty-check')

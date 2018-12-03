@@ -1,8 +1,8 @@
 @import java.time.OffsetDateTime
-
 @import controllers.admin.CaseDocumentController
 @import domain.{Case, CaseDocument, EntityAndCreator}
 @import warwick.core.helpers.JavaTime
+@import domain.CaseDocumentType
 
 @(
   c: Case,
@@ -10,9 +10,23 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @if(documents.nonEmpty) {
-  <ul class="list-unstyled">
+  @defining(documents.map(d => d.entity.documentType).distinct) { docTypes: Seq[CaseDocumentType] =>
+    @if(docTypes.size > 1) {
+      <div class="quick-filter-container" data-target="#case-documents-list" data-target-class-prefix="document-type-">
+        Filter:
+        <span data-toggle="buttons">
+        @docTypes.map { t =>
+          <label class="btn btn-xs btn-default">
+            <input type="checkbox" autocomplete="off" value="@t.entryName"> @t.description
+          </label>
+        }
+        </span>
+      </div>
+    }
+  }
+  <ul class="list-unstyled" id="case-documents-list">
   @documents.map { doc =>
-    <li>
+    <li class="document-type-@doc.entity.documentType.entryName">
       <a href="@controllers.admin.routes.CaseDocumentController.download(c.key, doc.entity.id)">@doc.entity.file.fileName</a>,
       @doc.entity.documentType.description,
       added @JavaTime.Relative(doc.entity.created, lowercaseToday = true) by @tags.creatorAndTeam(doc.creator)
