@@ -17,6 +17,8 @@
         <span data-toggle="buttons">
         @docTypes.map { t =>
           <label class="btn btn-xs btn-default">
+            <i class="far fa-fw fa-square"></i>
+            <i class="far fa-fw fa-check-square"></i>
             <input type="checkbox" autocomplete="off" value="@t.entryName"> @t.description
           </label>
         }

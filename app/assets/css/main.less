@@ -686,7 +686,15 @@ s {
 .quick-filter-container {
   margin-bottom: @grid-gutter-width / 2;
 
+  .btn  {
+    .fa-check-square { display: none; }
+    .fa-square { opacity: 0.2; }
+  }
+
   .btn.active {
+    .fa-check-square { display: inline-block; }
+    .fa-square { display: none; }
+
     background-color: @brand-colour;
     color: white !important;
     border-color: darken(@brand-colour, 20%);
