@@ -1,6 +1,7 @@
 @import controllers.admin.CaseController.CaseNoteFormData
 @import domain.{Case, CaseNote, IssueState}
 
+@import domain.CaseNoteType
 @(
   c: Case,
   notes: Seq[CaseNote],
@@ -22,6 +23,20 @@
   }
 }
 
-<div data-count="@notes.size">
+@defining(notes.map(n => n.noteType).distinct) { noteTypes: Seq[CaseNoteType] =>
+  @if(noteTypes.size > 1) {
+    <div class="quick-filter-container" data-target="#case-notes-list" data-target-class-prefix="note-type-">
+      Filter:
+      <span data-toggle="buttons">
+        @noteTypes.map { t =>
+          <label class="btn btn-xs btn-default">
+            <input type="checkbox" autocomplete="off" value="@t.entryName"> @t.description
+          </label>
+        }
+      </span>
+    </div>
+  }
+}
+<div data-count="@notes.size" id="case-notes-list">
   @notes.map(n => tags.cases.caseNote(c, n))
 </div>
