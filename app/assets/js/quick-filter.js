@@ -3,9 +3,9 @@ import $ from 'jquery';
 export default function QuickFilter(container) {
   const $container = $(container);
   const targetClassPrefix = $container.data('target-class-prefix');
+  const $checkboxes = $container.find('input:checkbox');
   const $targetContainer = $($container.data('target'));
   const $items = $targetContainer.children();
-  const $checkboxes = $container.find('input:checkbox');
 
   $checkboxes.on('change', () => {
     const types = $checkboxes.filter(':checked').map((i, el) => el.value);
