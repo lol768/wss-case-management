@@ -159,7 +159,8 @@ object Fixtures {
           None,
           List(),
           None,
-          None
+          None,
+          duty = false
         ),
       )
 

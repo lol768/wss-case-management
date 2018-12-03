@@ -69,7 +69,8 @@ object CaseController {
           "counsellingServicesIssues" -> set(CounsellingServicesIssue.formField),
           "studentSupportIssueTypes" -> StudentSupportIssueType.formMapping,
           "medications" -> CaseMedication.formMapping,
-          "severityOfProblem" -> optional(SeverityOfProblem.formField)
+          "severityOfProblem" -> optional(SeverityOfProblem.formField),
+          "duty" -> boolean,
         )(CaseSave.apply)(CaseSave.unapply),
         "tags" -> set(CaseTag.formField),
         "originalEnquiry" -> optional(uuid.verifying("error.required", id => isValidEnquiry(id))),

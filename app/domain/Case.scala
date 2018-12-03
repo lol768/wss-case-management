@@ -46,7 +46,8 @@ case class CaseFields(
   counsellingServicesIssues: Set[CounsellingServicesIssue],
   studentSupportIssueTypes: Set[StudentSupportIssueType],
   medications: Set[CaseMedication],
-  severityOfProblem: Option[SeverityOfProblem]
+  severityOfProblem: Option[SeverityOfProblem],
+  duty: Boolean,
 )
 
 object Case {
@@ -70,7 +71,8 @@ case class CaseSave(
   counsellingServicesIssues: Set[CounsellingServicesIssue],
   studentSupportIssueTypes: Set[StudentSupportIssueType],
   medications: Set[CaseMedication],
-  severityOfProblem: Option[SeverityOfProblem]
+  severityOfProblem: Option[SeverityOfProblem],
+  duty: Boolean,
 )
 
 object CaseSave {
@@ -84,7 +86,8 @@ object CaseSave {
       c.fields.counsellingServicesIssues,
       c.fields.studentSupportIssueTypes,
       c.fields.medications,
-      c.fields.severityOfProblem
+      c.fields.severityOfProblem,
+      c.fields.duty,
     )
 }
 
