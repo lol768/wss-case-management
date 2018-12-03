@@ -1,10 +1,9 @@
 @import controllers.admin.CaseController.CaseNoteFormData
-@import domain.{Case, CaseNote, IssueState}
-@import domain.CaseNoteType
+@import domain.{Case, CaseNoteRender, IssueState, CaseNoteType}
 
 @(
   c: Case,
-  notes: Seq[CaseNote],
+  notes: Seq[CaseNoteRender],
   noteForm: Form[CaseNoteFormData],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
@@ -23,7 +22,7 @@
   }
 }
 
-@defining(notes.map(n => n.noteType).distinct) { noteTypes: Seq[CaseNoteType] =>
+@defining(notes.map(n => n.note.noteType).distinct) { noteTypes: Seq[CaseNoteType] =>
   @if(noteTypes.size > 1) {
     <div class="quick-filter-container" data-target="#case-notes-list" data-target-class-prefix="note-type-">
       Filter:

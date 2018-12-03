@@ -733,6 +733,7 @@ object CaseDao {
     noteType: CaseNoteType,
     text: String,
     teamMember: Usercode,
+    appointmentId: Option[UUID],
     created: OffsetDateTime,
     version: OffsetDateTime
   ) extends Versioned[StoredCaseNote] {
@@ -754,6 +755,7 @@ object CaseDao {
         noteType,
         text,
         teamMember,
+        appointmentId,
         created,
         version,
         operation,
@@ -768,6 +770,7 @@ object CaseDao {
     noteType: CaseNoteType,
     text: String,
     teamMember: Usercode,
+    appointmentId: Option[UUID],
     created: OffsetDateTime,
     version: OffsetDateTime,
     operation: DatabaseOperation,
@@ -781,6 +784,7 @@ object CaseDao {
     def text = column[String]("text")
     def searchableText = toTsVector(text, Some("english"))
     def teamMember = column[Usercode]("team_member")
+    def appointmentId = column[Option[UUID]]("appointment_id")
     def created = column[OffsetDateTime]("created_utc")
     def version = column[OffsetDateTime]("version_utc")
   }
@@ -792,9 +796,11 @@ object CaseDao {
     def id = column[UUID]("id", O.PrimaryKey)
 
     override def * : ProvenShape[StoredCaseNote] =
-      (id, caseId, noteType, text, teamMember, created, version).mapTo[StoredCaseNote]
+      (id, caseId, noteType, text, teamMember, appointmentId, created, version).mapTo[StoredCaseNote]
     def fk = foreignKey("fk_case_note", caseId, cases.table)(_.id)
     def idx = index("idx_case_note", caseId)
+    def appointmentFK = foreignKey("fk_case_note_appointment", appointmentId, AppointmentDao.appointments.table)(_.id.?)
+    def appointmentIndex = index("idx_case_note_appointment", appointmentId)
   }
 
   class CaseNoteVersions(tag: Tag) extends Table[StoredCaseNoteVersion](tag, "client_case_note_version")
@@ -806,7 +812,7 @@ object CaseDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseNoteVersion] =
-      (id, caseId, noteType, text, teamMember, created, version, operation, timestamp, auditUser).mapTo[StoredCaseNoteVersion]
+      (id, caseId, noteType, text, teamMember, appointmentId, created, version, operation, timestamp, auditUser).mapTo[StoredCaseNoteVersion]
     def pk = primaryKey("pk_case_note_version", (id, timestamp))
     def idx = index("idx_case_note_version", (id, version))
   }

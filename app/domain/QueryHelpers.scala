@@ -19,6 +19,18 @@ object QueryHelpers {
     def flattenJoin = q.map { case ((t1, t2), t3) => (t1, t2, t3) }
   }
 
+  implicit class QueryHelpers3Option[
+    T1, T2, T3,
+    Tbl1 <: Table[T1], Tbl2 <: Table[T2], Tbl3 <: Table[T3],
+    S[_]
+  ](val q: Query[
+    ((Tbl1, Tbl2), Rep[Option[Tbl3]]),
+    ((T1, T2), Option[T3]),
+    S
+  ]) extends AnyVal {
+    def flattenJoin = q.map { case ((t1, t2), t3) => (t1, t2, t3) }
+  }
+
   implicit class QueryHelpers4[
     T1, T2, T3, T4,
     Tbl1 <: Table[T1], Tbl2 <: Table[T2], Tbl3 <: Table[T3], Tbl4 <: Table[T4],

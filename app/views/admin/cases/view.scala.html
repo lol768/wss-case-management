@@ -9,7 +9,7 @@
   profiles: Map[Client, Option[SitsProfile]],
   caseTags: Set[CaseTag],
   owners: Set[Member],
-  sectionNotes: Map[CaseNoteType, Seq[CaseNote]],
+  sectionNotes: Map[CaseNoteType, Seq[CaseNoteRender]],
   originalEnquiry: Option[Enquiry],
   dsaApplication: Option[DSAApplication],
   history: CaseHistory,
@@ -17,7 +17,7 @@
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @viewSectionNotes(noteType: CaseNoteType, link: String) = {
-  @defining(sectionNotes.getOrElse(noteType, Nil)) { notes: Seq[CaseNote] =>
+  @defining(sectionNotes.getOrElse(noteType, Nil)) { notes: Seq[CaseNoteRender] =>
     @if(notes.nonEmpty) {
       <a role="button" href="#@noteType.entryName-notes-modal" data-toggle="modal" data-target="#@noteType.entryName-notes-modal">
         View @tags.p(notes.size, link)()

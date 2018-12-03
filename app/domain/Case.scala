@@ -94,7 +94,7 @@ object CaseSave {
 case class CaseRender(
   clientCase: Case,
   messages: Seq[MessageRender],
-  notes: Seq[CaseNote]
+  notes: Seq[CaseNote],
 ) {
   def toIssue = IssueRender(
     clientCase,
@@ -188,9 +188,19 @@ case class CaseNote(
   lastUpdated: OffsetDateTime = JavaTime.offsetDateTime,
 )
 
+case class CaseNoteRender(
+  note: CaseNote,
+  appointment: Option[AppointmentRender],
+)
+
 object CaseNote {
   // oldest first
   val dateOrdering: Ordering[CaseNote] = Ordering.by[CaseNote, OffsetDateTime](_.created)(JavaTime.dateTimeOrdering)
+}
+
+object CaseNoteRender {
+  // delegates to CaseNote.dateOrdering
+  val dateOrdering: Ordering[CaseNoteRender] = Ordering.by[CaseNoteRender, CaseNote](_.note)(CaseNote.dateOrdering)
 }
 
 /**
@@ -199,7 +209,8 @@ object CaseNote {
   */
 case class CaseNoteSave(
   text: String,
-  teamMember: Usercode
+  teamMember: Usercode,
+  appointmentID: Option[UUID],
 )
 
 sealed abstract class CaseNoteType(val description: String) extends EnumEntry

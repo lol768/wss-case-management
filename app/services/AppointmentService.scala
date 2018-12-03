@@ -40,6 +40,7 @@ trait AppointmentService {
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Appointment]]
   def findFull(id: UUID)(implicit t: TimingContext): Future[ServiceResult[AppointmentRender]]
   def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]]
+  def findFull(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
   def find(appointmentKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Appointment]]
   def findForRender(appointmentKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentRender]]
   def findForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]]
@@ -394,6 +395,16 @@ class AppointmentServiceImpl @Inject()(
         Right(ids.map(lookup.apply))
       else
         Left(ids.filterNot(lookup.contains).toList.map { id => ServiceError(s"Could not find an Appointment with ID $id") })
+    }
+
+  override def findFull(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[AppointmentRender]]] =
+    listForRender(dao.findByIDsQuery(ids.toSet)).successFlatMapTo { appointments =>
+      val lookup = appointments.groupBy(_.appointment.id).mapValues(_.head)
+
+      if (ids.forall(lookup.contains))
+        Future.successful(Right(ids.map(lookup.apply)))
+      else
+        Future.successful(Left(ids.filterNot(lookup.contains).toList.map { id => ServiceError(s"Could not find an Appointment with ID $id") }))
     }
 
   override def find(appointmentKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Appointment]] =

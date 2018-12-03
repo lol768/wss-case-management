@@ -105,9 +105,9 @@ class CaseServiceTest extends AbstractDaoTest {
 
       service.getLinks(c1.id).serviceValue mustBe ((Nil, Nil))
 
-      service.addLink(CaseLinkType.Related, c1.id, c2.id, CaseNoteSave("c1 is related to c2", Usercode("cuscav"))).serviceValue
-      service.addLink(CaseLinkType.Related, c1.id, c3.id, CaseNoteSave("c1 merged to c3", Usercode("cuscav"))).serviceValue
-      service.addLink(CaseLinkType.Related, c2.id, c3.id, CaseNoteSave("c2 merged to c2", Usercode("cuscav"))).serviceValue
+      service.addLink(CaseLinkType.Related, c1.id, c2.id, CaseNoteSave("c1 is related to c2", Usercode("cuscav"), None)).serviceValue
+      service.addLink(CaseLinkType.Related, c1.id, c3.id, CaseNoteSave("c1 merged to c3", Usercode("cuscav"), None)).serviceValue
+      service.addLink(CaseLinkType.Related, c2.id, c3.id, CaseNoteSave("c2 merged to c2", Usercode("cuscav"), None)).serviceValue
 
       val (c1Outgoing, c1Incoming) = service.getLinks(c1.id).serviceValue
       c1Outgoing.size mustBe 2
@@ -133,26 +133,29 @@ class CaseServiceTest extends AbstractDaoTest {
 
       val n1 = service.addGeneralNote(c.id, CaseNoteSave(
         text = "I just called to say I love you",
-        teamMember = Usercode("cuscav")
+        teamMember = Usercode("cuscav"),
+        None,
       )).serviceValue
 
       val n2 = service.addGeneralNote(c.id, CaseNoteSave(
         text = "Jim came in to tell me that Peter needed a chat",
-        teamMember = Usercode("cusebr")
+        teamMember = Usercode("cusebr"),
+        None,
       )).serviceValue
 
-      service.getNotes(c.id).serviceValue mustBe Seq(n2, n1) // Newest first
+      service.getNotes(c.id).serviceValue.map(_.note) mustBe Seq(n2, n1) // Newest first
 
       val n1Updated = service.updateNote(c.id, n1.id, CaseNoteSave(
         text = "Jim's not really bothered",
-        teamMember = Usercode("cusebr")
+        teamMember = Usercode("cusebr"),
+        None,
       ), n1.lastUpdated).serviceValue
 
-      service.getNotes(c.id).serviceValue mustBe Seq(n2, n1Updated)
+      service.getNotes(c.id).serviceValue.map(_.note) mustBe Seq(n2, n1Updated)
 
       service.deleteNote(c.id, n2.id, n2.lastUpdated).serviceValue mustBe Done
 
-      service.getNotes(c.id).serviceValue mustBe Seq(n1Updated)
+      service.getNotes(c.id).serviceValue.map(_.note) mustBe Seq(n1Updated)
     }
 
     "update" in withData(new CaseFixture()) { c1 =>
@@ -180,10 +183,10 @@ class CaseServiceTest extends AbstractDaoTest {
     "update state" in withData(new CaseFixture()) { c1 =>
       c1.state mustBe IssueState.Open
 
-      val c2 = service.updateState(c1.id, IssueState.Closed, c1.lastUpdated, CaseNoteSave("Case closed", Usercode("cuscav"))).serviceValue
+      val c2 = service.updateState(c1.id, IssueState.Closed, c1.lastUpdated, CaseNoteSave("Case closed", Usercode("cuscav"), None)).serviceValue
       c2.state mustBe IssueState.Closed
 
-      val c3 = service.updateState(c1.id, IssueState.Reopened, c2.lastUpdated, CaseNoteSave("Case reopened", Usercode("cuscav"))).serviceValue
+      val c3 = service.updateState(c1.id, IssueState.Reopened, c2.lastUpdated, CaseNoteSave("Case reopened", Usercode("cuscav"), None)).serviceValue
       c3.state mustBe IssueState.Reopened
     }
 
@@ -195,7 +198,7 @@ class CaseServiceTest extends AbstractDaoTest {
         CaseDocumentSave(CaseDocumentType.SpecificLearningDifficultyDocument, Usercode("cuscav")),
         ByteSource.wrap("I love lamp".getBytes(StandardCharsets.UTF_8)),
         UploadedFileSave("problem.txt", 11, "text/plain"),
-        CaseNoteSave("I hate herons", Usercode("cuscav"))
+        CaseNoteSave("I hate herons", Usercode("cuscav"), None)
       ).serviceValue
       saved.documentType mustBe CaseDocumentType.SpecificLearningDifficultyDocument
       saved.file.fileName mustBe "problem.txt"

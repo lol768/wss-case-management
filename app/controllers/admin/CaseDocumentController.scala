@@ -69,7 +69,7 @@ class CaseDocumentController @Inject()(
             ),
             in = file.ref.in,
             file = file.ref.metadata,
-            caseNote = CaseNoteSave(formData.description, caseRequest.context.user.get.usercode)
+            caseNote = CaseNoteSave(formData.description, caseRequest.context.user.get.usercode, None)
           ).successMap { _ =>
             Redirect(controllers.admin.routes.CaseController.view(caseKey))
               .flashing("success" -> Messages("flash.case.documentAdded"))

@@ -631,7 +631,7 @@ class DataGenerationJob @Inject()(
 
           val newTeam = randomTeam()
           if (newTeam != c.team && (options.CaseReassignRate / Random.nextDouble()).toInt > 0) {
-            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember, None)
 
             cases.reassign(
               c,
@@ -656,7 +656,7 @@ class DataGenerationJob @Inject()(
 
           val other = generatedCases(Random.nextInt(generatedCases.size))._1
           if (other != c && (options.CaseLinkRate / Random.nextDouble()).toInt > 0) {
-            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember, None)
 
             cases.addLink(CaseLinkType.Related, c.id, other.id, note).serviceValue
           }
@@ -674,7 +674,7 @@ class DataGenerationJob @Inject()(
 
             val document = CaseDocumentSave(randomEnum(CaseDocumentType), teamMember)
             val attachment = randomAttachment()
-            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember, None)
 
             cases.addDocument(c.id, document, attachment._1, attachment._2, note).serviceValue
           }
@@ -709,7 +709,7 @@ class DataGenerationJob @Inject()(
             val teamMember = randomTeamMember(c.team)
             implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
-            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember, None)
 
             cases.addGeneralNote(c.id, note).serviceValue
           }
@@ -846,7 +846,7 @@ class DataGenerationJob @Inject()(
             val teamMember = randomTeamMember(appointment.team)
             implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
-          val cancellationNote = Some(CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember))
+          val cancellationNote = Some(CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember, Some(appointment.id)))
           val a = appointments.cancel(appointment.id, randomEnum(AppointmentCancellationReason), cancellationNote, teamMember, appointment.lastUpdated).serviceValue
 
             a -> clients
@@ -870,7 +870,7 @@ class DataGenerationJob @Inject()(
                 }
               }.toMap
 
-            val note = Some(CaseNoteSave(dummyWords(Random.nextInt(200)), teamMember))
+            val note = Some(CaseNoteSave(dummyWords(Random.nextInt(200)), teamMember, Some(appointment.id)))
 
             appointments.recordOutcomes(
               appointment.id,
