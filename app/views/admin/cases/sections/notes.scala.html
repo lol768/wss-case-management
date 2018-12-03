@@ -27,13 +27,13 @@
   @if(noteTypes.size > 1) {
     <div class="quick-filter-container" data-target="#case-notes-list" data-target-class-prefix="note-type-">
       Filter:
-      <div class="btn-group" data-toggle="buttons">
+      <span data-toggle="buttons">
         @noteTypes.map { t =>
-          <label class="btn btn-sm btn-default">
+          <label class="btn btn-xs btn-default">
             <input type="checkbox" autocomplete="off" value="@t.entryName"> @t.description
           </label>
         }
-      </div>
+      </span>
     </div>
   }
 }
