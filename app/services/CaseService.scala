@@ -60,7 +60,7 @@ trait CaseService {
   def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def addNoteDBIO(caseID: UUID, noteType: CaseNoteType, note: CaseNoteSave)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
   def getNote(id: UUID)(implicit t: TimingContext): Future[ServiceResult[NoteAndCase]]
-  def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]]
+  def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNoteRender]]]
   def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def deleteNote(caseID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
@@ -433,6 +433,7 @@ class CaseServiceImpl @Inject() (
         noteType = noteType,
         text = note.text,
         teamMember = note.teamMember,
+        appointmentId = note.appointmentID,
         created = JavaTime.offsetDateTime,
         version = JavaTime.offsetDateTime
       )
@@ -452,8 +453,20 @@ class CaseServiceImpl @Inject() (
   private def getNotesDBIO(caseID: UUID): DBIO[Seq[(StoredCaseNote, StoredMember)]] =
     dao.findNotesQuery(caseID).sortBy(_.created.desc).withMember.result
 
-  override def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]] =
-    daoRunner.run(getNotesDBIO(caseID)).map(notes => Right(notes.map { case (n, m) => n.asCaseNote(m.asMember) }))
+  override def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNoteRender]]] =
+    daoRunner.run(getNotesDBIO(caseID)).flatMap { notes =>
+      val appointmentIDs = notes.flatMap(_._1.appointmentId).distinct
+
+      val appointments: Future[ServiceResult[Map[UUID, AppointmentRender]]] =
+        if (appointmentIDs.isEmpty) Future.successful(ServiceResults.success(Map()))
+        else appointmentService.findFull(appointmentIDs).successMapTo(_.map { a => a.appointment.id -> a }.toMap)
+
+      appointments.successMapTo { appointmentLookup =>
+        notes.map { case (n, m) =>
+          CaseNoteRender(n.asCaseNote(m.asMember), n.appointmentId.map(appointmentLookup.apply))
+        }
+      }
+    }
 
   override def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]] =
     auditService.audit('CaseNoteUpdate, caseID.toString, 'Case, Json.obj("noteID" -> noteID.toString)) {
@@ -746,8 +759,9 @@ object CaseService {
     )
 
     val notesByCase = notes.groupBy { case (n, _) => n.caseId }
-      .mapValues(_.map { case (n, m) => n.asCaseNote(m.asMember) }.sorted(CaseNote.dateOrdering)
-      ).withDefaultValue(Seq())
+      .mapValues(_.map {
+        case (n, m) => n.asCaseNote(m.asMember)
+      }.sorted(CaseNote.dateOrdering)).withDefaultValue(Seq())
 
     sortByRecent(casesAndMessages.map { case (c, m) => CaseRender(c.asCase, m.distinct, notesByCase(c.id)) })
   }

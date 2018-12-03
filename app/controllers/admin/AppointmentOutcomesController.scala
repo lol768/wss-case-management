@@ -98,7 +98,7 @@ class AppointmentOutcomesController @Inject()(
           a.appointment.id,
           data.attendance.filter(_.attendanceState.nonEmpty).map { d => (d.client, (d.attendanceState.get, d.cancellationReason)) }.toMap,
           data.outcomes,
-          data.note.map(CaseNoteSave(_, currentUser().usercode)),
+          data.note.map(CaseNoteSave(_, currentUser().usercode, Some(a.appointment.id))),
           data.version
         ).successMap { updated =>
           Redirect(controllers.admin.routes.AppointmentController.view(updated.key))

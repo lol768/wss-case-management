@@ -100,7 +100,7 @@ class OwnersController @Inject()(
               Future.successful(Ok(views.html.admin.cases.owners(formWithErrors, request.`case`)))
             },
             data => {
-              val note = data.message.map(m => CaseNoteSave(m, currentUser().usercode))
+              val note = data.message.map(m => CaseNoteSave(m, currentUser().usercode, None))
               caseService.setOwners(request.`case`.id, data.usercodes.toSet, note).successFlatMap { setOwnersResult =>
                 notificationService.newCaseOwner(setOwnersResult.added.map(_.userId).toSet, request.`case`).successMap(_ =>
                   Redirect(controllers.admin.routes.CaseController.view(request.`case`.key))
@@ -125,7 +125,7 @@ class OwnersController @Inject()(
           if (currentOwners.map(_.usercode).contains(currentUser.usercode)) {
             Future.successful(Redirect(controllers.admin.routes.CaseController.view(request.`case`.key)))
           } else {
-            val note = data.message.map(m => CaseNoteSave(m, currentUser().usercode))
+            val note = data.message.map(m => CaseNoteSave(m, currentUser().usercode, None))
             caseService.setOwners(request.`case`.id, currentOwners.map(_.usercode) + currentUser.usercode, note).successMap { _ =>
               Redirect(controllers.admin.routes.CaseController.view(request.`case`.key))
                 .flashing("success" -> Messages("flash.case.owners.updated"))

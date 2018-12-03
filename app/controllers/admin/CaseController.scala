@@ -183,8 +183,8 @@ class CaseController @Inject()(
       fetchOriginalEnquiry,
       cases.getHistory(request.`case`.id)
     ).successFlatMap { case (c, clients, tags, notes, owners, originalEnquiry, history) =>
-      val sectionNotes = notes.filterNot(note => generalNoteTypes.contains(note.noteType))
-      val sectionNotesByType = sectionNotes.groupBy(_.noteType)
+      val sectionNotes = notes.filterNot(note => generalNoteTypes.contains(note.note.noteType))
+      val sectionNotesByType = sectionNotes.groupBy(_.note.noteType)
 
       ServiceResults.zip(
         cases.findDSAApplication(c),
@@ -250,7 +250,7 @@ class CaseController @Inject()(
     cases.getNotes(caseRequest.`case`.id).successMap(notes =>
       Ok(views.html.admin.cases.sections.notes(
         caseRequest.`case`,
-        notes.filter(note => generalNoteTypes.contains(note.noteType)),
+        notes.filter(note => generalNoteTypes.contains(note.note.noteType)),
         caseNoteFormPrefilled(caseRequest.`case`.lastUpdated)
       ))
     )
@@ -433,7 +433,7 @@ class CaseController @Inject()(
         Ok(views.html.admin.cases.link(caseRequest.`case`, formWithErrors))
       ),
       data => cases.find(data.targetID).successFlatMap { targetCase =>
-        val caseNote = CaseNoteSave(data.message, caseRequest.context.user.get.usercode)
+        val caseNote = CaseNoteSave(data.message, caseRequest.context.user.get.usercode, None)
 
         cases.addLink(data.linkType, caseRequest.`case`.id, targetCase.id, caseNote).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
@@ -470,7 +470,7 @@ class CaseController @Inject()(
       formWithErrors => Future.successful(BadRequest(formWithErrors.errors.mkString(", "))),
       data =>
         // We don't do anything with data.version here, it's validated but we don't lock the case when adding a general note
-        cases.addGeneralNote(caseRequest.`case`.id, CaseNoteSave(data.text, caseRequest.context.user.get.usercode)).successMap { _ =>
+        cases.addGeneralNote(caseRequest.`case`.id, CaseNoteSave(data.text, caseRequest.context.user.get.usercode, None)).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.noteAdded"))
         }
@@ -487,7 +487,7 @@ class CaseController @Inject()(
         Ok(views.html.admin.cases.close(caseRequest.`case`, formWithErrors))
       ),
       data => {
-        val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
+        val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode, None)
 
         cases.updateState(caseRequest.`case`.id, IssueState.Closed, data.version, caseNote).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
@@ -501,7 +501,7 @@ class CaseController @Inject()(
     caseNoteForm(caseRequest.`case`.lastUpdated).bindFromRequest().fold(
       formWithErrors => Future.successful(BadRequest(formWithErrors.errors.mkString(", "))),
       data => {
-        val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode)
+        val caseNote = CaseNoteSave(data.text, caseRequest.context.user.get.usercode, None)
 
         cases.updateState(caseRequest.`case`.id, IssueState.Reopened, data.version, caseNote).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
@@ -536,7 +536,7 @@ class CaseController @Inject()(
         )
       ),
       data =>
-        cases.updateNote(noteRequest.`case`.id, noteRequest.note.id, CaseNoteSave(data.text, noteRequest.context.user.get.usercode), data.version).successMap { _ =>
+        cases.updateNote(noteRequest.`case`.id, noteRequest.note.id, CaseNoteSave(data.text, noteRequest.context.user.get.usercode, None), data.version).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.noteUpdated"))
         }
@@ -583,7 +583,7 @@ class CaseController @Inject()(
           if (data.team == caseRequest.`case`.team) // No change
             Future.successful(Redirect(controllers.admin.routes.AdminController.teamHome(data.team.id).withFragment("cases")))
           else
-            cases.reassign(caseRequest.`case`, data.team, data.caseType, CaseNoteSave(data.message, caseRequest.context.user.get.usercode), data.version).successMap { _ =>
+            cases.reassign(caseRequest.`case`, data.team, data.caseType, CaseNoteSave(data.message, caseRequest.context.user.get.usercode, None), data.version).successMap { _ =>
               Redirect(controllers.admin.routes.AdminController.teamHome(caseRequest.`case`.team.id).withFragment("cases"))
                 .flashing("success" -> Messages("flash.case.reassigned", data.team.name))
             }
