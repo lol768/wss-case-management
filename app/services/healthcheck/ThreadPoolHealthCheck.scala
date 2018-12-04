@@ -24,7 +24,10 @@ class ThreadPoolHealthCheck(id: String)
   @Inject private var actorSystem: ActorSystem = _
 
   // The thread pool we're inspecting
-  private lazy val dispatcher = actorSystem.dispatchers.lookup(s"threads.$id")
+  private lazy val dispatcher = id match {
+    case "default" => actorSystem.dispatcher
+    case _ => actorSystem.dispatchers.lookup(s"threads.$id")
+  }
 
   val logger: Logger = LoggerFactory.getLogger(getClass)
 

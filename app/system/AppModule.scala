@@ -24,6 +24,7 @@ class AppModule(environment: Environment, configuration: Configuration) extends 
     healthchecks.addBinding.to[OutgoingEmailDelayHealthCheck]
     healthchecks.addBinding.to[VirusScanServiceHealthCheck]
 
+    healthchecks.addBinding.toInstance(new ThreadPoolHealthCheck("default"))
     configuration.get[Configuration]("threads").subKeys.toSeq.foreach { name =>
       healthchecks.addBinding.toInstance(new ThreadPoolHealthCheck(name))
     }
