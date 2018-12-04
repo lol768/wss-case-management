@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets
 
 import akka.actor.ActorSystem
 import com.google.common.io.CharSource
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
 import services.healthcheck.EncryptedObjectStorageHealthCheck._
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status._
@@ -14,6 +14,7 @@ import warwick.core.helpers.JavaTime.{localDateTime => now}
 import warwick.objectstore.{EncryptedObjectStorageService, ObjectStorageService}
 
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.io.Source
 import scala.util.Try
@@ -27,6 +28,7 @@ object EncryptedObjectStorageHealthCheck {
 class EncryptedObjectStorageHealthCheck @Inject()(
   objectStorageService: ObjectStorageService,
   system: ActorSystem,
+  @Named("objectStorage") ec: ExecutionContext
 ) extends ServiceHealthcheckProvider(new ServiceHealthcheck("encrypted-storage", Status.Unknown, now)) with Logging {
 
   private val name: String = "encrypted-storage"
@@ -97,13 +99,12 @@ class EncryptedObjectStorageHealthCheck @Inject()(
     }.get
   })
 
-  import system.dispatcher
   system.scheduler.schedule(0.seconds, interval = 1.minute) {
     try run()
     catch {
       case e: Throwable =>
         logger.error("Error in health check", e)
     }
-  }
+  }(ec)
 
 }
