@@ -38,7 +38,8 @@
 
     <p>
       To help us get your enquiry to the team best placed to help you, would you mind answering a
-      few questions? It should only take a minute or so, and nothing is sent to us until you say so.
+      few questions? Just choose 'Yes', 'No' or 'Not sure' to each question, and then we'll move on
+      to the next one. It should only take a minute or so, and nothing is sent to us until you say so.
     </p>
 
     <div class="row init-questions @if(form.data.nonEmpty) {started}">
@@ -67,15 +68,15 @@
 
       <fieldset>
         @b3.threeStateBooleanButtons(form("mentalHealthFields.reasonableAdjustments"),
-          '_label -> "Q1a. Are you looking for help with reasonable adjustments?",
+          '_label -> "Q1a. Are you looking for help with reasonable adjustments (including special exam arrangements)?",
         )
 
         @b3.threeStateBooleanButtons(form("mentalHealthFields.studySkills"),
-          '_label -> "Q1b. Are you looking for specialist mentoring and advice on study skills?",
+          '_label -> "Q1b. Are you looking for specialist mentoring?",
         )
 
         @b3.threeStateBooleanButtons(form("mentalHealthFields.generalAdvice"),
-          '_label -> "Q1c. Are you looking for general advice and support on mental health?",
+          '_label -> "Q1c. Are you looking for general advice and support on mental health? (eg self help, liaising with statutory services)",
         )
 
         @b3.free(
@@ -103,7 +104,7 @@
         )
 
         @b3.threeStateBooleanButtons(form("counsellingFields.online"),
-          '_label -> "Q2c. Would you be interested in online counselling?",
+          '_label -> "Q2c. Would you be interested in email counselling?",
         )
       </fieldset>
     </fieldset>
@@ -119,7 +120,7 @@
         )
 
         @b3.threeStateBooleanButtons(form("disabilityFields.specialistMentoring"),
-          '_label -> "Q3b. Are you looking for specialist mentoring?",
+          '_label -> "Q3b. Are you looking for specialist mentoring and advice on study skills?",
         )
 
         @b3.threeStateBooleanButtons(form("disabilityFields.disabilityScreening"),
@@ -136,7 +137,7 @@
       <label>
         Q4. It seems as though you might be looking for more general practical advice and support.
         (This might include matters such as accommodation, safety, crime (including sexual violence),
-        complaints or wellbeing). If so, please could you briefly summarise what you're hoping to
+        complaints or wellbeing). If so, please could you briefly summarise what you're hoping to get
         help with?
       </label>
 
