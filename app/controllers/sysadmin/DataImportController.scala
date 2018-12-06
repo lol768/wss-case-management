@@ -6,7 +6,7 @@ import controllers.admin.{CaseController, OwnersController}
 import controllers.sysadmin.DataImportController._
 import controllers.sysadmin.SpreadsheetContentsHandler.{Cell, Row, Sheet}
 import controllers.{BaseController, UploadedFileControllerHelper}
-import domain.{CaseNoteSave, OwnerSave, Team, Teams}
+import domain._
 import helpers.ServiceResults
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
@@ -22,7 +22,7 @@ import play.api.data.Form
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, MultipartFormData}
 import services.tabula.ProfileService
-import services.{CaseService, EnquiryService, SecurityService}
+import services.{CaseService, EnquiryService, PermissionService, SecurityService}
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
 
 import scala.collection.mutable
@@ -39,6 +39,10 @@ object DataImportController {
     "Cause" -> "case.cause",
   )
 
+  val ColumnTransforms: Map[String, String => String] = Map(
+    "Cause" -> ((d: String) => CaseCause.values.find(_.description == d).map(_.entryName).getOrElse(d))
+  )
+
   val AllColumnHeadings: Seq[String] = Seq(TeamColumnHeading, NotesColumnHeading, CaseOwnerColumnHeading) ++ ColumnMappings.keys
 }
 
@@ -49,6 +53,7 @@ class DataImportController @Inject()(
   enquiryService: EnquiryService,
   caseService: CaseService,
   userLookupService: UserLookupService,
+  permissionService: PermissionService,
   configuration: Configuration,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
@@ -100,7 +105,13 @@ class DataImportController @Inject()(
                 enquiryService,
                 Set.empty,
                 None
-              ).bind(row.values.filterKeys(ColumnMappings.contains).map { case (k, cell) => ColumnMappings(k) -> cell.formattedValue })
+              ).bind(
+                row.values.filterKeys(ColumnMappings.contains)
+                  .map { case (k, cell) =>
+                    val value = cell.formattedValue
+                    ColumnMappings(k) -> ColumnTransforms.get(k).map(_(value)).getOrElse(value)
+                  }
+              )
 
               // Has an owner been passed?
               val ownerForm =
@@ -112,8 +123,8 @@ class DataImportController @Inject()(
                     } else userLookupService.getUser(Usercode(cell.formattedValue)).toOption
                   }
                   .map { user =>
-                    // TODO this doesn't validate
-                    OwnersController.ownersForm.bind(Map("owners[0]" -> user.usercode.string))
+                    OwnersController.ownersForm(userLookupService, permissionService, Set.empty, allowEmpty = false)
+                      .bind(Map("owners[0]" -> user.usercode.string))
                   }
 
               val generalNote: Option[CaseNoteSave] =

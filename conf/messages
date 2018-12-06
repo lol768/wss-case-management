@@ -1,4 +1,5 @@
 missing=Please fill in this field
+error.enum=Please fill in this field
 error.path.missing=A value is required for the property ''{0}''
 error.disability.unknown=Unknown disability
 error.medication.unknown=Unknown medication
