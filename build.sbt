@@ -92,7 +92,11 @@ val appDeps = Seq(
 
   "org.dom4j" % "dom4j" % "2.1.1",
   "org.apache.tika" % "tika-core" % "1.19.1",
-  "org.apache.tika" % "tika-parsers" % "1.19.1"
+  "org.apache.tika" % "tika-parsers" % "1.19.1",
+
+  "org.apache.poi" % "poi" % "4.0.1",
+  "org.apache.poi" % "poi-ooxml" % "4.0.1",
+  "org.apache.poi" % "poi-ooxml-schemas" % "4.0.1"
 )
 
 val testDeps = Seq(
