@@ -1,4 +1,5 @@
 missing=Please fill in this field
+error.enum=Please fill in this field
 error.path.missing=A value is required for the property ''{0}''
 error.disability.unknown=Unknown disability
 error.medication.unknown=Unknown medication
@@ -66,3 +67,7 @@ flash.datageneration.scheduled=Dummy data generation has been scheduled. This ma
 flash.datageneration.alreadyRunning=Dummy data generation job is already running!
 flash.userPreferences.updated=Your preferences have been updated
 flash.email.queued=The email has been queued for sending
+flash.import.empty=No importable rows were found in the spreadsheet
+flash.cases.imported={0} cases have been imported
+flash.import.scheduled=The import job is scheduled and will be starting momentarily
+flash.import.alreadyRunning=An import is already running!

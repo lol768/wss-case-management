@@ -2,7 +2,9 @@ package domain
 
 import play.api.data.{FormError, Forms, Mapping}
 import play.api.data.format.Formatter
-import play.api.libs.json.{Json, Writes}
+import play.api.libs.json.{Format, Json, Writes}
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 sealed abstract class Team(val id: String, val name: String)
 
@@ -37,5 +39,9 @@ object Teams {
   val writer: Writes[Team] = (o: Team) => Json.obj(
     "id" -> o.id,
     "name" -> o.name
+  )
+  val format: Format[Team] = Format(
+    (__ \ "id").read[String].map(fromId),
+    writer
   )
 }

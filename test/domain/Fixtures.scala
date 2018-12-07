@@ -93,7 +93,7 @@ object Fixtures {
       course = None,
       attendance = None,
       group = Some(StudentGroup.Undergraduate),
-      yearOfStudy = Some(YearOfStudy(1, "1")),
+      yearOfStudy = Some(YearOfStudy(1, Some("1"))),
       startDate = None,
       endDate = None,
       nationality = None,

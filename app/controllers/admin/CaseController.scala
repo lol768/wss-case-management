@@ -199,7 +199,7 @@ class CaseController @Inject()(
           originalEnquiry,
           dsaApplication,
           history,
-          OwnersController.ownersForm
+          OwnersController.ownersForm(userLookupService, permissions, owners, allowEmpty = false)
         ))
       }
     }
