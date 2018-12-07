@@ -116,7 +116,7 @@ object StudentGroup extends Enum[StudentGroup] {
 
 case class YearOfStudy(
   block: Int,
-  level: String
+  level: Option[String]
 )
 
 case class SitsDisability(

@@ -178,7 +178,8 @@ POST        /sysadmin/data-generation               @controllers.sysadmin.DataGe
 GET         /sysadmin/emails                        @controllers.sysadmin.EmailQueueController.queued()
 POST        /sysadmin/emails/:id                    @controllers.sysadmin.EmailQueueController.enqueue(id: java.util.UUID)
 GET         /sysadmin/import                        @controllers.sysadmin.DataImportController.importForm()
-POST        /sysadmin/import                        @controllers.sysadmin.DataImportController.importCases()
+POST        /sysadmin/import/preview                @controllers.sysadmin.DataImportController.importCasesPreview()
+POST        /sysadmin/import                        @controllers.sysadmin.DataImportController.scheduleJob()
 
 ## Fallbacks ##
 

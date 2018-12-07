@@ -1,13 +1,13 @@
 @()(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main("Import system data") {
-  @b3.vertical.formCSRF(controllers.sysadmin.routes.DataImportController.importCases(), 'enctype -> "multipart/form-data", 'class -> "no-double-submit-protection") { implicit vfc =>
+  @b3.vertical.formCSRF(controllers.sysadmin.routes.DataImportController.importCasesPreview(), 'enctype -> "multipart/form-data") { implicit vfc =>
     @b3.free('_label -> "File") {
       <input type="file" id="file" name="file" accept="application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="form-control" aria-label="Attach a file">
     }
 
     @b3.free('_class -> "spaced-buttons") {
-      <button type="submit" class="btn btn-primary">Import</button>
+      <button type="submit" class="btn btn-primary">Preview</button>
     }
   }
 }

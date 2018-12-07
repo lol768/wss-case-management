@@ -1,0 +1,106 @@
+@import controllers.admin.CaseController.CaseFormData
+@import controllers.sysadmin.SpreadsheetContentsHandler.Row
+@import controllers.sysadmin.DataImportJob.JobData
+@import domain.{CaseNoteSave, OwnerSave, Team}
+
+@(
+  invalid: Seq[((String, Row), (Team, Form[CaseFormData], Option[Form[OwnerSave]], Seq[CaseNoteSave]))],
+  valid: Seq[((String, Row), (Team, Form[CaseFormData], Option[Form[OwnerSave]], Seq[CaseNoteSave]))],
+  form: Option[Form[JobData]],
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@main(s"Import system data - preview") {
+  @if(invalid.nonEmpty) {
+    <p>There were @invalid.size problems with rows in the spreadsheet.</p>
+
+    <h2>Invalid rows</h2>
+
+    <table class="table table-default">
+      <thead>
+        <tr>
+          <th>Sheet name</th>
+          <th>Row number</th>
+          <th>Errors</th>
+        </tr>
+      </thead>
+      <tbody>
+        @invalid.map { row =>
+          <tr>
+            <th>@row._1._1</th>
+            <th>@row._1._2.rowNumber</th>
+            <th>
+              <ul>
+                @row._2._2.errors.map { error =>
+                  <li>@error.key: @error.format</li>
+                }
+
+                @row._2._3.map { f => @f.errors.map { error =>
+                  <li>@error.key: @error.format</li>
+                }}
+              </ul>
+            </th>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if(valid.nonEmpty) {
+    <h2>Valid rows</h2>
+
+    <table class="table table-default">
+      <thead>
+        <tr>
+          <th>Sheet name</th>
+          <th>Row number</th>
+          <th>Client</th>
+          <th>Team</th>
+          <th>Subject</th>
+          <th>Cause</th>
+          <th>Case owner</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        @valid.map { row =>
+          <tr>
+            <td>@row._1._1</td>
+            <td>@row._1._2.rowNumber</td>
+            <td>@row._2._2.get.clients.map(_.string).mkString</td>
+            <td>@row._2._1.name</td>
+            <td>@{row._2._2.get.`case`.subject}</td>
+            <td>@{row._2._2.get.`case`.cause.description}</td>
+            <td>@row._2._3.map(_.get.usercodes.map(_.string).mkString)</td>
+            <td>
+              <ul>
+                @row._2._4.map { note =>
+                  <li>@views.utils.nl2br(note.text)</li>
+                }
+              </ul>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if(form.nonEmpty) {
+    @form.map { form =>
+      @b3.vertical.formCSRF(controllers.sysadmin.routes.DataImportController.scheduleJob(), 'enctype -> "multipart/form-data") { implicit vfc =>
+        @b3.hidden(form("data"))
+
+        @tags.submitOrCancel(s"Import ${valid.size} cases", controllers.sysadmin.routes.DataImportController.importForm())
+      }
+    }
+  } else {
+    @b3.vertical.formCSRF(controllers.sysadmin.routes.DataImportController.importCasesPreview(), 'enctype -> "multipart/form-data") { implicit vfc =>
+      @b3.free('_label -> "File") {
+        <input type="file" id="file" name="file" accept="application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="form-control" aria-label="Attach a file">
+      }
+
+      @b3.free('_class -> "spaced-buttons") {
+        <button type="submit" class="btn btn-primary">Preview</button>
+      }
+    }
+  }
+}

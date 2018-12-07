@@ -69,3 +69,5 @@ flash.userPreferences.updated=Your preferences have been updated
 flash.email.queued=The email has been queued for sending
 flash.import.empty=No importable rows were found in the spreadsheet
 flash.cases.imported={0} cases have been imported
+flash.import.scheduled=The import job is scheduled and will be starting momentarily
+flash.import.alreadyRunning=An import is already running!
