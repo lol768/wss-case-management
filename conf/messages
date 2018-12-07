@@ -21,7 +21,12 @@ error.privacyStatementConsent.required=Please confirm you have read the privacy 
 error.appointment.start.inPast=Please select a date/time for the appointment in the future
 error.appointment.teamMember.invalid=This user is not in any WSS team
 error.appointment.clients.invalid=These clients are not in any of the associated cases: {0}
+error.appointment.cases.invalid=Could not find a case with the given ID
 error.appointment.cases.nonEmpty=Appointments must be linked to at least 1 case
+error.appointment.dsaSupportAccessed.invalid=Please select a valid type of DSA support
+error.enumWithOther.otherValue.empty=Please specify an Other value
+error.enquiry.message.required=Please provide a brief summary of what your enquiry pertains to
+error.enquiry.incomplete=Your enquiry is incomplete, please answer all the questions before submitting
 
 flash.client.summary.updated=Client summary updated
 flash.client.registration.invited=Invitation to register sent to client
@@ -60,3 +65,4 @@ flash.room.updated=The room has been updated
 flash.datageneration.scheduled=Dummy data generation has been scheduled. This may take some time
 flash.datageneration.alreadyRunning=Dummy data generation job is already running!
 flash.userPreferences.updated=Your preferences have been updated
+flash.email.queued=The email has been queued for sending

@@ -70,7 +70,7 @@ object MemberDao {
 
     sealed trait CommonProperties { self: Table[_] =>
       def fullName: Rep[Option[String]] = column[Option[String]]("full_name")
-      def searchableFullName: Rep[Option[TsVector]] = toTsVector(fullName, Some("english"))
+      def searchableFullName: Rep[TsVector] = toTsVector(fullName, Some("english")).orEmptyTsVector
       def version: Rep[OffsetDateTime] = column[OffsetDateTime]("version_utc")
     }
 

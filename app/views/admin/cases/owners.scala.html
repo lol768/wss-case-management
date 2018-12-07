@@ -1,29 +1,41 @@
 @import domain.Case
+@import domain.OwnerSave
 @import warwick.sso.Usercode
 
-@(form: Form[Seq[Usercode]], clientCase: Case)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@(form: Form[OwnerSave], clientCase: Case)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("Edit owners") {
   @b3.vertical.formCSRF(controllers.admin.routes.OwnersController.caseSubmit(clientCase.key)) { implicit ifc =>
 
-    @if(form.hasErrors) {
-      <div class="alert alert-danger">
-        There @tags.p(form.errors.size, "is")(plural = "are", showNumber = false) @tags.p(form.errors.size, "error")()
-        that prevented the owners from being changed: <br/>
-        @form.errors.map(_.format).mkString(", ")
-      </div>
+    @defining(form.errors.filter(_.key.contains("owners"))) { errors: Seq[FormError] =>
+      @if(errors.nonEmpty) {
+        <div class="alert alert-danger">
+          There @tags.p(errors.size, "is")(plural = "are", showNumber = false) @tags.p(errors.size, "error")()
+          that prevented the owners from being changed: <br/>
+          @errors.map(_.format).mkString(", ")
+        </div>
+      }
     }
 
     @b3.free('_label -> "Owners") {
-      @tags.memberPicker(values = form.data.values.toSeq, name = "owners[]", placeholder = "Search for a team member", multiple = true)
+      @tags.picker(pickerType = "member", form.data.filter { case (k, v) => k.startsWith("owners[") && v.nonEmpty }.values.toSeq, name = "owners[]", placeholder = "Search for a team member", multiple = true)
     }
 
+    @b3.textarea(
+      form("message"),
+      '_colClass -> "col-md-6",
+      '_label -> "New owner note",
+      '_help -> "(why are new owners being added to this case?)",
+      'helpOnTop -> true
+    )
+
     @b3.free('_class -> "spaced-buttons") {
-      @if(!form.value.exists(_.contains(context.user.get.usercode))) {
+      @if(!form.data.filterKeys(_.contains("owners[")).values.toSeq.contains(context.user.get.usercode.string)) {
         <button type="submit" class="btn btn-primary" formaction="@controllers.admin.routes.OwnersController.caseSubmitSelf(clientCase.key)">Add me</button>
       }
       <button type="submit" class="btn btn-primary">Save</button>
-      <a href="@controllers.admin.routes.AdminController.teamHome(clientCase.team.id)" class="btn btn-default">Cancel</a>
+      <a href="@controllers.admin.routes.CaseController.editForm(clientCase.key)" class="btn btn-default">Cancel</a>
     }
   }
 }

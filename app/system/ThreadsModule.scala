@@ -1,30 +1,21 @@
 package system
 
 import akka.actor.ActorSystem
-import com.google.inject.name.Named
-import com.google.inject.{AbstractModule, Provides}
-import javax.inject.Singleton
+import play.api.inject._
+import javax.inject.{Inject, Provider}
+import play.api.Configuration
+import play.api.inject.SimpleModule
 
 import scala.concurrent.ExecutionContext
 
-class ThreadsModule extends AbstractModule {
-  override def configure(): Unit = {}
+class ThreadsModule extends SimpleModule((_, configuration) => {
+  configuration.get[Configuration]("threads").subKeys.toSeq.map { name =>
+    bind[ExecutionContext].qualifiedWith(name).to(new NamedThreadPoolProvider(name))
+  }
+})
 
-  @Provides
-  @Singleton
-  @Named("mailer")
-  def mailer(akka: ActorSystem): ExecutionContext =
-    akka.dispatchers.lookup("threads.mailer")
+class NamedThreadPoolProvider(name: String) extends Provider[ExecutionContext] {
+  @Inject private var akka: ActorSystem = _
 
-  @Provides
-  @Singleton
-  @Named("objectStorage")
-  def objectStorage(akka: ActorSystem): ExecutionContext =
-    akka.dispatchers.lookup("threads.objectStorage")
-
-  @Provides
-  @Singleton
-  @Named("userLookup")
-  def userLookup(akka: ActorSystem): ExecutionContext =
-    akka.dispatchers.lookup("threads.userLookup")
+  lazy val get: ExecutionContext = akka.dispatchers.lookup(s"threads.$name")
 }

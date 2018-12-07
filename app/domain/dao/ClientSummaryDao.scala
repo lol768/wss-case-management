@@ -8,7 +8,7 @@ import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.ClientDao.StoredClient
-import domain.dao.ClientSummaryDao.StoredClientSummary
+import domain.dao.ClientSummaryDao.{StoredClientSummary, StoredClientSummaryVersion}
 import domain.dao.ClientSummaryDao.StoredClientSummary.{ClientSummaries, ReasonableAdjustments, StoredReasonableAdjustment}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -30,13 +30,13 @@ trait ClientSummaryDao {
   def get(universityID: UniversityID): DBIO[Option[(StoredClientSummary, StoredClient)]]
   def getByAlternativeEmailAddress(email: String): DBIO[Option[(StoredClientSummary, StoredClient)]]
   def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq]
-  def findAtRiskQuery(highMentalHealth: Option[Boolean], riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq]
+  def getHistory(universityID: UniversityID): DBIO[Seq[StoredClientSummaryVersion]]
+  def findAtRiskQuery(riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq]
 }
 
 object ClientSummaryDao {
   case class StoredClientSummary(
     universityID: UniversityID,
-    highMentalHealthRisk: Option[Boolean],
     notes: String,
     alternativeContactNumber: String,
     alternativeEmailAddress: String,
@@ -48,7 +48,6 @@ object ClientSummaryDao {
     override def storedVersion[B <: StoredVersion[StoredClientSummary]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredClientSummaryVersion(
         universityID,
-        highMentalHealthRisk,
         notes,
         alternativeContactNumber,
         alternativeEmailAddress,
@@ -61,7 +60,6 @@ object ClientSummaryDao {
 
     def asClientSummary(client: Client, reasonableAdjustments: Set[ReasonableAdjustment]) = ClientSummary(
       client = client,
-      highMentalHealthRisk = highMentalHealthRisk,
       notes = notes,
       alternativeContactNumber = alternativeContactNumber,
       alternativeEmailAddress = alternativeEmailAddress,
@@ -73,7 +71,6 @@ object ClientSummaryDao {
 
   case class StoredClientSummaryVersion(
     universityId: UniversityID,
-    highMentalHealthRisk: Option[Boolean],
     notes: String,
     alternativeContactNumber: String,
     alternativeEmailAddress: String,
@@ -85,10 +82,9 @@ object ClientSummaryDao {
   ) extends StoredVersion[StoredClientSummary]
 
   object StoredClientSummary extends Versioning {
-    def tupled: ((UniversityID, Option[Boolean], String, String, String, Option[ClientRiskStatus], OffsetDateTime)) => StoredClientSummary = (StoredClientSummary.apply _).tupled
+    def tupled: ((UniversityID, String, String, String, Option[ClientRiskStatus], OffsetDateTime)) => StoredClientSummary = (StoredClientSummary.apply _).tupled
 
     sealed trait CommonClientSummaryProperties { self: Table[_] =>
-      def highMentalHealthRisk: Rep[Option[Boolean]] = column[Option[Boolean]]("mental_health_risk")
       def notes: Rep[String] = column[String]("notes")
       def alternativeContactNumber: Rep[String] = column[String]("alt_contact_number")
       def alternativeEmailAddress: Rep[String] = column[String]("alt_email")
@@ -101,7 +97,7 @@ object ClientSummaryDao {
 
       def universityID: Rep[UniversityID] = column[UniversityID]("university_id", O.PrimaryKey)
 
-      def * : ProvenShape[StoredClientSummary] = (universityID, highMentalHealthRisk, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, version).mapTo[StoredClientSummary]
+      def * : ProvenShape[StoredClientSummary] = (universityID, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, version).mapTo[StoredClientSummary]
     }
 
     class ClientSummaryVersions(tag: Tag) extends Table[StoredClientSummaryVersion](tag, "client_summary_version") with StoredVersionTable[StoredClientSummary] with CommonClientSummaryProperties {
@@ -110,7 +106,7 @@ object ClientSummaryDao {
       def timestamp: Rep[OffsetDateTime] = column[OffsetDateTime]("version_timestamp_utc")
       def auditUser = column[Option[Usercode]]("version_user")
 
-      def * : ProvenShape[StoredClientSummaryVersion] = (universityID, highMentalHealthRisk, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, version, operation, timestamp, auditUser).mapTo[StoredClientSummaryVersion]
+      def * : ProvenShape[StoredClientSummaryVersion] = (universityID, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, version, operation, timestamp, auditUser).mapTo[StoredClientSummaryVersion]
       def pk: PrimaryKey = primaryKey("pk_client_summary_version", (universityID, timestamp))
       def idx: Index = index("idx_client_summary_version", (universityID, version))
     }
@@ -217,11 +213,12 @@ class ClientSummaryDaoImpl @Inject()(
     reasonableAdjustments.table
       .filter(_.universityID === universityID)
 
-  override def findAtRiskQuery(highMentalHealth: Option[Boolean], riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq] =
+  override def getHistory(universityID: UniversityID): _root_.domain.ExtendedPostgresProfile.api.DBIO[Seq[StoredClientSummaryVersion]] =
+    clientSummaries.history(_.universityID === universityID)
+
+  override def findAtRiskQuery(riskStatues: Set[ClientRiskStatus]): Query[ClientSummaries, StoredClientSummary, Seq] =
     clientSummaries.table
-      .filter(c =>
-        c.riskStatus.inSet(riskStatues) || LiteralColumn(highMentalHealth.nonEmpty) && c.highMentalHealthRisk === highMentalHealth
-      )
+      .filter(c => c.riskStatus.inSet(riskStatues))
 
 }
 

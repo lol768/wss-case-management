@@ -3,10 +3,11 @@ package controllers.admin
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import controllers.MessagesController.MessageFormData
 import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.admin.TeamEnquiryController._
 import controllers.refiners._
-import controllers.{API, BaseController, UploadedFileControllerHelper}
+import controllers.{API, BaseController, MessagesController, UploadedFileControllerHelper}
 import domain._
 import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
@@ -41,8 +42,6 @@ object TeamEnquiryController {
   def stateChangeForm(enquiry: Enquiry): Form[OffsetDateTime] = Form(single(
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.lastUpdated)
   ))
-
-  val messageForm = Form(single("text" -> nonEmptyText))
 }
 
 @Singleton
@@ -62,42 +61,62 @@ class TeamEnquiryController @Inject()(
   import canEditEnquiryActionRefiner._
   import canViewEnquiryActionRefiner._
 
-  private def renderMessages(enquiry: Enquiry, stateChangeForm: Form[OffsetDateTime], messageForm: Form[String])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
-    ServiceResults.zip(
-      service.getForRender(enquiry.id),
-      profiles.getProfile(enquiry.client.universityID).map(_.value),
-      service.getOwners(Set(enquiry.id)),
-      permissionService.canViewTeamFuture(currentUser.usercode, enquiry.team),
-      caseService.findFromOriginalEnquiry(enquiry.id)
-    ).successFlatMap { case (render, profile, ownersMap, canViewTeam, linkedCases) =>
+  private def renderMessages(enquiry: Enquiry, stateChangeForm: Form[OffsetDateTime], messageForm: Form[MessageFormData])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
+    service.getForRender(enquiry.id).successFlatMap(enquiryRender =>
+      profiles.getProfile(enquiry.client.universityID).map(_.value).successFlatMap { profile =>
+        val getClientLastRead: Future[ServiceResult[Option[OffsetDateTime]]] =
+          profile.map { p => service.findLastViewDate(enquiry.id, p.usercode) }
+            .getOrElse(Future.successful(Right(None)))
 
-      val getClientLastRead: Future[ServiceResult[Option[OffsetDateTime]]] =
-        profile.map { p => service.findLastViewDate(enquiry.id, p.usercode) }
-          .getOrElse(Future.successful(Right(None)))
-
-      getClientLastRead.successMap { clientLastRead =>
-        Ok(views.html.admin.enquiry.messages(
-          render.enquiry,
-          profile,
-          render.messages,
-          render.notes,
-          ownersMap.values.flatten.toSet,
-          clientLastRead,
-          stateChangeForm,
-          messageForm,
-          canViewTeam,
-          linkedCases,
-          uploadedFileControllerHelper.supportedMimeTypes
-        ))
+        getClientLastRead.successFlatMap(clientLastRead =>
+          render.async {
+            case Accepts.Json() =>
+              Future.successful(Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
+                "lastMessage" -> enquiryRender.messages.lastOption.map(_.message.created),
+                "awaiting" -> enquiryRender.messages.lastOption.map(_.message.sender == MessageSender.Client),
+                "messagesHTML" -> enquiryRender.messages.map { m =>
+                  views.html.tags.messages.message(
+                    m.message,
+                    m.files,
+                    enquiryRender.enquiry.client.safeFullName,
+                    m.message.teamMember.map { member => s"${member.safeFullName}, ${m.message.team.getOrElse(enquiry.team).name}" }
+                      .getOrElse(m.message.team.getOrElse(enquiry.team).name),
+                    f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key, f.id),
+                    clientLastRead.filter(_ => m.message.sender == MessageSender.Team).map(_.isAfter(m.message.created))
+                  ).toString
+                }.mkString("")
+              )))))
+            case _ =>
+              ServiceResults.zip(
+                service.getOwners(Set(enquiry.id)),
+                permissionService.canViewTeamFuture(currentUser.usercode, enquiry.team),
+                caseService.findFromOriginalEnquiry(enquiry.id)
+              ).successMap { case (ownersMap, canViewTeam, linkedCases) =>
+                Ok(views.html.admin.enquiry.messages(
+                  enquiryRender.enquiry,
+                  profile,
+                  enquiryRender.messages,
+                  enquiryRender.notes,
+                  ownersMap.values.flatten.toSet,
+                  clientLastRead,
+                  stateChangeForm,
+                  messageForm,
+                  canViewTeam,
+                  linkedCases,
+                  uploadedFileControllerHelper.supportedMimeTypes
+                ))
+              }
+          }
+        )
       }
-    }
+    )
   }
 
   def renderMessages()(implicit request: EnquirySpecificRequest[_]): Future[Result] =
     renderMessages(
       request.enquiry,
       stateChangeForm(request.enquiry).fill(request.enquiry.lastUpdated),
-      messageForm
+      MessagesController.messageForm(Some(request.lastEnquiryMessageDate)).fill(MessageFormData("", Some(request.lastEnquiryMessageDate)))
     )
 
   def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
@@ -109,7 +128,7 @@ class TeamEnquiryController @Inject()(
   }
 
   def addMessage(enquiryKey: IssueKey): Action[MultipartFormData[TemporaryUploadedFile]] = CanAddTeamMessageToEnquiryAction(enquiryKey)(uploadedFileControllerHelper.bodyParser).async { implicit request =>
-    messageForm.bindFromRequest().fold(
+    MessagesController.messageForm(Some(request.lastEnquiryMessageDate)).bindFromRequest().fold(
       formWithErrors => {
         render.async {
           case Accepts.Json() =>
@@ -118,8 +137,8 @@ class TeamEnquiryController @Inject()(
             renderMessages()
         }
       },
-      messageText => {
-        val message = messageData(messageText, request)
+      messageFormData => {
+        val message = messageData(messageFormData.text, request)
         val files = request.body.files.map(_.ref)
         val enquiry = request.enquiry
 
@@ -162,7 +181,7 @@ class TeamEnquiryController @Inject()(
       formWithErrors => renderMessages(
         request.enquiry,
         formWithErrors,
-        messageForm
+        MessagesController.messageForm(Some(request.lastEnquiryMessageDate))
       ),
       version =>
         service.updateState(request.enquiry.id, newState, version).successMap { enquiry =>

@@ -18,11 +18,15 @@ import play.api.libs.Files.TemporaryFileCreator
 import play.api.mvc.Results._
 import play.api.mvc._
 import system.{ImplicitRequestContext, TimingCategories}
+import uk.ac.warwick.util.virusscan.{VirusScanResult, VirusScanService}
+import warwick.core.Logging
 import warwick.core.timing.{TimingContext, TimingService}
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.AuthenticatedRequest
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.compat.java8.FutureConverters._
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 @ImplementedBy(classOf[UploadedFileControllerHelperImpl])
 trait UploadedFileControllerHelper {
@@ -85,11 +89,12 @@ class UploadedFileControllerHelperImpl @Inject()(
   objectStorageService: ObjectStorageService,
   temporaryFileCreator: TemporaryFileCreator,
   timing: TimingService,
+  virusScanService: VirusScanService,
   parse: PlayBodyParsers,
   configuration: Configuration,
   @Named("objectStorage") objectStorageExecutionContext: ExecutionContext,
 )(implicit executionContext: ExecutionContext, mimeTypes: FileMimeTypes)
-  extends UploadedFileControllerHelper with ImplicitRequestContext {
+  extends UploadedFileControllerHelper with ImplicitRequestContext with Logging {
 
   import timing._
 
@@ -140,6 +145,20 @@ class UploadedFileControllerHelperImpl @Inject()(
   private def isAllowedMimeType(file: TemporaryUploadedFile): Boolean =
     config.isAllowed(MediaType.parse(file.metadata.contentType))
 
+  private def isVirus(file: TemporaryUploadedFile): Boolean = {
+    val result = Await.result(virusScanService.scan(file.in).toScala, Duration.Inf)
+
+    result.getStatus match {
+      case VirusScanResult.Status.clean => false
+      case VirusScanResult.Status.virus =>
+        logger.warn(s"Virus uploaded: $file (${result.getVirus})")
+        true
+      case VirusScanResult.Status.error =>
+        logger.warn(s"Error calling virus scan service for $file (${result.getError})")
+        true
+    }
+  }
+
   override def bodyParser: BodyParser[MultipartFormData[TemporaryUploadedFile]] =
     parse.using { request =>
       parse.multipartFormData
@@ -173,7 +192,11 @@ class UploadedFileControllerHelperImpl @Inject()(
           }.getOrElse {
             files.find(!isAllowedMimeType(_)).map { file =>
               Left(Results.UnsupportedMediaType(views.html.errors.unsupportedMediaType(file, config)))
-            }.getOrElse(Right(body))
+            }.getOrElse {
+              files.find(isVirus).map { file =>
+                Left(Results.UnprocessableEntity(views.html.errors.unprocessableEntity(file, config)))
+              }.getOrElse(Right(body))
+            }
           }
         }
     }

@@ -4,26 +4,34 @@ import java.util.concurrent.{ExecutorService, ThreadPoolExecutor}
 
 import akka.actor.ActorSystem
 import akka.dispatch.{Dispatcher, ExecutorServiceDelegate, ForkJoinExecutorConfigurator}
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{Inject}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.ac.warwick.util.service.ServiceHealthcheck.Status
 import uk.ac.warwick.util.service.{ServiceHealthcheck, ServiceHealthcheckProvider}
 import warwick.core.helpers.JavaTime.{localDateTime => now}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import ThreadPoolHealthCheck._
 
-abstract class ThreadPoolHealthCheck(
-  name: String,
-  executionContext: ExecutionContext,
-  akka: ActorSystem
-) extends ServiceHealthcheckProvider(new ServiceHealthcheck(name, Status.Unknown, now)) {
+object ThreadPoolHealthCheck {
+  def name(id:String) = s"thread-pool-${id.toLowerCase}"
+}
+
+class ThreadPoolHealthCheck(id: String)
+  extends ServiceHealthcheckProvider(new ServiceHealthcheck(name(id), Status.Unknown, now)) {
+
+  @Inject private var actorSystem: ActorSystem = _
+
+  // The thread pool we're inspecting
+  private lazy val dispatcher = id match {
+    case "default" => actorSystem.dispatcher
+    case _ => actorSystem.dispatchers.lookup(s"threads.$id")
+  }
+
   val logger: Logger = LoggerFactory.getLogger(getClass)
 
   override def run(): Unit = update({
-    val dispatcher = executionContext.asInstanceOf[Dispatcher]
-
     val executorServiceMethod = classOf[Dispatcher].getDeclaredMethod("executorService")
     executorServiceMethod.setAccessible(true)
 
@@ -70,39 +78,17 @@ abstract class ThreadPoolHealthCheck(
       case _ => (Status.Warning, executor.getClass.getName, Nil)
     }
 
-    new ServiceHealthcheck(name, status, now, message, perfData.asInstanceOf[Seq[ServiceHealthcheck.PerformanceData[_]]].asJava)
+    new ServiceHealthcheck(name(id), status, now, message, perfData.asInstanceOf[Seq[ServiceHealthcheck.PerformanceData[_]]].asJava)
   })
 
-  import akka.dispatcher
-  akka.scheduler.schedule(0.seconds, 5.seconds) {
-    try run()
-    catch {
-      case e: Throwable =>
-        logger.error("Error in health check", e)
-    }
+  // Called by AppStartup (Guice has no PostConstruct support)
+  def init(): Unit = {
+    actorSystem.scheduler.schedule(0.seconds, 5.seconds) {
+      try run()
+      catch {
+        case e: Throwable =>
+          logger.error("Error in health check", e)
+      }
+    }(actorSystem.dispatcher)
   }
 }
-
-@Singleton
-class DefaultThreadPoolHealthCheck @Inject()(
-  executionContext: ExecutionContext,
-  akka: ActorSystem
-) extends ThreadPoolHealthCheck("thread-pool-default", executionContext, akka)
-
-@Singleton
-class MailerThreadPoolHealthCheck @Inject()(
-  @Named("mailer") executionContext: ExecutionContext,
-  akka: ActorSystem
-) extends ThreadPoolHealthCheck("thread-pool-mailer", executionContext, akka)
-
-@Singleton
-class ObjectStorageThreadPoolHealthCheck @Inject()(
-  @Named("objectStorage") executionContext: ExecutionContext,
-  akka: ActorSystem
-) extends ThreadPoolHealthCheck("thread-pool-objectstorage", executionContext, akka)
-
-@Singleton
-class UserLookupThreadPoolHealthCheck @Inject()(
-  @Named("userLookup") executionContext: ExecutionContext,
-  akka: ActorSystem
-) extends ThreadPoolHealthCheck("thread-pool-userlookup", executionContext, akka)

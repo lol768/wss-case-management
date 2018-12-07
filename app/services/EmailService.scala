@@ -26,6 +26,7 @@ trait EmailService {
   def queue(email: Email, recipients: Seq[User])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[OutgoingEmail]]]
   def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]]
   def sendImmediately(email: OutgoingEmail)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
+  def allUnsentEmails()(implicit t: TimingContext): Future[ServiceResult[Seq[OutgoingEmail]]]
   def countUnsentEmails()(implicit t: TimingContext): Future[ServiceResult[Int]]
   def oldestUnsentEmail()(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]]
   def mostRecentlySentEmail()(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]]
@@ -51,23 +52,26 @@ class EmailServiceImpl @Inject()(
       )
     }
 
-    daoRunner.run(dao.insertAll(emails)).map(_.map { email =>
-      // Schedule the email to be sent
-      val key = new JobKey(email.id.toString, "SendOutgoingEmail")
-      logger.info(s"Scheduling job with key $key")
+    daoRunner.run(dao.insertAll(emails)).map { inserted =>
+      // This may be a Stream() so call foreach to ensure this is actually run
+      inserted.foreach { email =>
+        // Schedule the email to be sent
+        val key = new JobKey(email.id.toString, "SendOutgoingEmail")
+        logger.info(s"Scheduling job with key $key")
 
-      scheduler.scheduleJob(
-        JobBuilder.newJob(classOf[SendOutgoingEmailJob])
-          .withIdentity(key)
-          .usingJobData("id", email.id.toString)
-          .build(),
-        TriggerBuilder.newTrigger()
-          .startNow()
-          .build()
-      )
+        scheduler.scheduleJob(
+          JobBuilder.newJob(classOf[SendOutgoingEmailJob])
+            .withIdentity(key)
+            .usingJobData("id", email.id.toString)
+            .build(),
+          TriggerBuilder.newTrigger()
+            .startNow()
+            .build()
+        )
+      }
 
-      email.parsed
-    }).map(Right.apply)
+      Right(inserted.map(_.parsed))
+    }
   }
 
   override def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Option[OutgoingEmail]]] =
@@ -122,6 +126,9 @@ class EmailServiceImpl @Inject()(
       }
     } else send(email, None)
   }
+
+  override def allUnsentEmails()(implicit t: TimingContext): Future[ServiceResult[Seq[OutgoingEmail]]] =
+    daoRunner.run(dao.allUnsentEmails()).map(_.map(_.parsed)).map(Right.apply)
 
   override def countUnsentEmails()(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(dao.countUnsentEmails()).map(Right.apply)

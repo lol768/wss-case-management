@@ -4,6 +4,8 @@
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
 
+@import controllers.MessagesController.MessageFormData
+@import domain.OwnerSave
 @(
   enquiry: Enquiry,
   profile: Option[SitsProfile],
@@ -12,10 +14,10 @@
   owners: Set[Member],
   clientLastRead: Option[OffsetDateTime],
   stateChangeForm: Form[OffsetDateTime],
-  messageForm: Form[String],
+  messageForm: Form[MessageFormData],
   canViewEnquiryTeam: Boolean,
   linkedCases: Seq[Case],
-  supportedMimeTypes: Seq[MediaType],
+  supportedMimeTypes: Seq[MediaType]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
@@ -114,8 +116,8 @@
         @tags.manageOwners(
           owners,
           controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key),
-          controllers.admin.routes.OwnersController.enquirySubmitSelf(enquiry.key)
-        )
+          controllers.admin.routes.OwnersController.enquirySubmitSelf(enquiry.key),
+        )()
 
         @if(linkedCases.nonEmpty) {
           <div class="row form-horizontal">
@@ -187,13 +189,13 @@
     </div>
 
     <div class="enquiry-details--messages message-threads">
-      <div class="thread thread--team panel">
+      <div class="thread thread--team panel" data-href="@controllers.admin.routes.TeamEnquiryController.messages(enquiry.key)">
         <div class="panel-body">
           @messages.map { render =>
             @views.html.tags.messages.message(
               render.message,
               render.files,
-              profile.map(_.fullName).getOrElse(enquiry.client.universityID.string),
+              enquiry.client.safeFullName,
               render.message.teamMember.map { member => s"${member.safeFullName}, ${render.message.team.getOrElse(enquiry.team).name}" }
                 .getOrElse(render.message.team.getOrElse(enquiry.team).name),
               f => controllers.admin.routes.TeamEnquiryController.download(enquiry.key, f.id),

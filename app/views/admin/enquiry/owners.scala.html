@@ -1,7 +1,8 @@
 @import domain.Owner
+@import domain.OwnerSave
 @import domain.Enquiry
 @import warwick.sso.Usercode
-@(form: Form[Seq[Usercode]], enquiry: Enquiry)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+@(form: Form[OwnerSave], enquiry: Enquiry)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("Edit owners") {
   @b3.vertical.formCSRF(controllers.admin.routes.OwnersController.enquirySubmit(enquiry.key)) { implicit ifc =>
@@ -15,7 +16,7 @@
     }
 
     @b3.free('_label -> "Owners") {
-      @tags.memberPicker(values = form.data.values.toSeq, name = "owners[]", placeholder = "Search for a team member", multiple = true)
+      @tags.picker(pickerType = "member", values = form.data.filter { case (k, v) => k.startsWith("owners[") && v.nonEmpty }.values.toSeq, name = "owners[]", placeholder = "Search for a team member", multiple = true)
     }
 
     @tags.submitOrCancel("Save", controllers.admin.routes.AdminController.teamHome(enquiry.team.id))

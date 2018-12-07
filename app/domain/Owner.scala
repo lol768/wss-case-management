@@ -52,6 +52,11 @@ object AppointmentOwner {
     Owner(entityId = appointmentID, entityType = Owner.EntityType.Appointment, userId = userId, version = version, outlookId = None)
 }
 
+case class OwnerSave (
+  usercodes: Seq[Usercode],
+  message: Option[String]
+)
+
 object Owner extends Versioning {
 
   sealed trait EntityType extends EnumEntry

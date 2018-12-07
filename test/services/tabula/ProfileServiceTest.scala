@@ -82,14 +82,9 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       studentProfile.dateOfBirth mustBe LocalDate.parse("1995-08-23")
       studentProfile.phoneNumber mustBe Some("07743766700")
       studentProfile.warwickEmail mustBe Some("Reiher.Gwenyn@warwick.ac.uk")
-      studentProfile.alternateEmail mustBe Some("Reiher.Gwenyn@warwick.ac.uk")
       studentProfile.address mustBe Some(Address(Some("HB666"), Some("Heronbank"), Some("University of Warwick"), Some("Coventry"), None, Some("CV4 7ES")))
-      studentProfile.residence mustBe Some(Residence.Heronbank)
       studentProfile.department mustBe SitsDepartment("lf", "Life Sciences")
       studentProfile.course mustBe Some(Course("RBSA-C1PH","RBSA-C1PH Ardea Herodias Studies"))
-      studentProfile.route mustBe Some(Route("c1ph","C1PH Ardea Herodias Studies"))
-      studentProfile.courseStatus mustBe Some(CourseStatus("C","Current Student"))
-      studentProfile.enrolmentStatus mustBe Some(EnrolmentStatus("2","Not yet re-enrolled: continuing student"))
       studentProfile.attendance mustBe Some(Attendance.FullTime)
       studentProfile.group mustBe Some(StudentGroup.PGR)
       studentProfile.yearOfStudy mustBe Some(YearOfStudy(4, "M2"))
@@ -103,17 +98,6 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       studentProfile.jobTitle mustBe None
       studentProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/842cfad8a90147436f7a7dfeb2d42800/1234567")
       studentProfile.userType mustBe UserType.Student
-      studentProfile.personalTutors mustBe Nil
-      studentProfile.researchSupervisors.size mustBe 1
-
-      val supervisorProfile = studentProfile.researchSupervisors.head
-      supervisorProfile.universityID mustBe UniversityID("1222222")
-      supervisorProfile.fullName mustBe "Garza Hegre"
-      supervisorProfile.dateOfBirth mustBe LocalDate.parse("1972-03-14")
-      supervisorProfile.warwickEmail mustBe Some("garza.hegre@warwick.ac.uk")
-      supervisorProfile.department mustBe SitsDepartment("lf", "Life Sciences")
-      supervisorProfile.photo mustBe Some("https://photos.warwick.ac.uk/heron/photo/d48375298d78b79384e2ff529e2aac62/1222222")
-      supervisorProfile.userType mustBe UserType.Staff
     }
 
     "fetch an applicant profile" in  withProfileService() { profileService =>
@@ -123,14 +107,9 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       applicantProfile.dateOfBirth mustBe LocalDate.parse("1996-02-08")
       applicantProfile.phoneNumber mustBe Some("07512345678")
       applicantProfile.warwickEmail mustBe Some("reynard.fox@outlook.com")
-      applicantProfile.alternateEmail mustBe Some("reynard.fox@outlook.com")
       applicantProfile.address mustBe Some(Address(Some("Heron Tower"), Some("110 Bishopsgate"), None, Some("London"), None, Some("EC2N 4AY")))
-      applicantProfile.residence mustBe None
       applicantProfile.department mustBe SitsDepartment("sl", "Student Recruitment")
       applicantProfile.course mustBe None
-      applicantProfile.route mustBe None
-      applicantProfile.courseStatus mustBe None
-      applicantProfile.enrolmentStatus mustBe None
       applicantProfile.attendance mustBe None
       applicantProfile.group mustBe None
       applicantProfile.yearOfStudy mustBe None
@@ -153,14 +132,9 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       staffProfile.dateOfBirth mustBe LocalDate.parse("1986-08-23")
       staffProfile.phoneNumber mustBe None
       staffProfile.warwickEmail mustBe Some("Ritchie.Allen@warwick.ac.uk")
-      staffProfile.alternateEmail mustBe None
       staffProfile.address mustBe None
-      staffProfile.residence mustBe None
       staffProfile.department mustBe SitsDepartment("in", "IT Services")
       staffProfile.course mustBe None
-      staffProfile.route mustBe None
-      staffProfile.courseStatus mustBe None
-      staffProfile.enrolmentStatus mustBe None
       staffProfile.attendance mustBe None
       staffProfile.group mustBe None
       staffProfile.yearOfStudy mustBe None

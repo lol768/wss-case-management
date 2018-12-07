@@ -1,5 +1,5 @@
-@import (reference) "id7/less/bootstrap/variables.less";
-@import (reference) "id7/less/bootstrap/mixins.less";
+@import (reference) "bootstrap/less/variables.less";
+@import (reference) "bootstrap/less/mixins.less";
 @import (reference) "id7/less/variables.less";
 @import (reference) "id7/less/mixins.less";
 
@@ -13,18 +13,20 @@
 @import "flexi-picker";
 @import "icons";
 @import "calendars";
-@import "bootstrap-labels";
+@import "enquiry-questions-form";
 
 @id7-ignore-id6-legacy: true;
 @id7-image-root-dir: './lib/id7/images';
-@icon-font-path: './lib/id7/fonts';
-@fa-font-path: './lib/id7/fonts';
+@icon-font-path: './lib/fontawesome-pro/webfonts';
+@fa-font-path: './lib/fontawesome-pro/webfonts';
 @brand-colour: #a14418;
 @nav-link-padding: 10px 15px;
 @gray-light: lighten(@gray-base, 45%); // #737373, ARIA
 
-// Always scrollbar to avoid horizontal dancing
-html {
+// Always scrollbar to avoid horizontal dancing.
+// Currently only added when there are tabs,
+// as otherwise the page scrolls to the top when showing a modal
+html.overflow-y-scroll {
   overflow-y: scroll;
 }
 
@@ -158,7 +160,10 @@ section.indent {
 
 .panel.thread {
   &.thread--client {
-    background: #bfcac6 url(/assets/images/messages-bg.jpg) top right no-repeat;
+    background: #bfcac6 url(/assets/images/messages-bg.webp) top right no-repeat;
+    html.no-js &, html.no-webp & {
+      background-image: url(/assets/images/messages-bg.jpg);
+    }
     background-size: cover;
   }
 
@@ -659,4 +664,39 @@ s {
 
 .well.appointments-needing-outcomes {
   .lead { color: @brand-danger; }
+}
+
+.checkboxGroup {
+  label {
+    margin-bottom: 0;
+  }
+  .selected-items {
+    &__item {
+      color: @gray-light;
+    }
+  }
+}
+
+.radiosAsButtons {
+  .clearfix();
+  display: block;
+  vertical-align: baseline;
+}
+
+.quick-filter-container {
+  margin-bottom: @grid-gutter-width / 2;
+
+  .btn  {
+    .fa-check-square { display: none; }
+    .fa-square { opacity: 0.2; }
+  }
+
+  .btn.active {
+    .fa-check-square { display: inline-block; }
+    .fa-square { display: none; }
+
+    background-color: @brand-colour;
+    color: white !important;
+    border-color: darken(@brand-colour, 20%);
+  }
 }

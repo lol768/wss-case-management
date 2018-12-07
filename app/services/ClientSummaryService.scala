@@ -15,7 +15,7 @@ import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import warwick.core.timing.TimingContext
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, UserLookupService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -25,6 +25,7 @@ trait ClientSummaryService {
   def update(universityID: UniversityID, summary: ClientSummarySave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]]
   def get(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]]
   def getByAlternativeEmailAddress(email: String)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]]
+  def getHistory(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[ClientSummaryHistory]]
   def findAtRisk(includeMentalHealth: Boolean)(implicit t: TimingContext): Future[ServiceResult[Set[AtRiskClient]]]
 }
 
@@ -34,13 +35,13 @@ class ClientSummaryServiceImpl @Inject()(
   caseService: CaseService,
   enquiryService: EnquiryService,
   clientService: ClientService,
+  userLookupService: UserLookupService,
   dao: ClientSummaryDao,
   daoRunner: DaoRunner
 )(implicit executionContext: ExecutionContext) extends ClientSummaryService {
 
   private def toStored(universityID: UniversityID, summary: ClientSummarySave): StoredClientSummary = StoredClientSummary(
     universityID = universityID,
-    highMentalHealthRisk = summary.highMentalHealthRisk,
     notes = summary.notes,
     alternativeContactNumber = summary.alternativeContactNumber,
     alternativeEmailAddress = summary.alternativeEmailAddress,
@@ -100,10 +101,13 @@ class ClientSummaryServiceImpl @Inject()(
   override def getByAlternativeEmailAddress(email: String)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]] =
     withReasonableAdjustments(dao.getByAlternativeEmailAddress(email)).map(Right.apply)
 
+  override def getHistory(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[ClientSummaryHistory]] =
+    daoRunner.run(dao.getHistory(universityID)).flatMap(versions => ClientSummaryHistory(versions, userLookupService))
+
+
   override def findAtRisk(includeMentalHealth: Boolean)(implicit t: TimingContext): Future[ServiceResult[Set[AtRiskClient]]] = {
     withReasonableAdjustmentsSeq(
       dao.findAtRiskQuery(
-        if (includeMentalHealth) Some(true) else None,
         Set(ClientRiskStatus.Medium, ClientRiskStatus.High)
       ).withClient.result
     ).flatMap(summaries =>

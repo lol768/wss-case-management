@@ -48,7 +48,7 @@ class CasePermissionSpec extends BaseSpec with BeforeAndAfterAll {
   override protected def beforeAll(): Unit = {
     val clients = Set(studentCaseClient.universityId.get )
     val tags = Set.empty[CaseTag]
-    val created = caseService.create(CaseSave("Mental health assessment", None, None, CaseCause.New, Set()), clients, tags, Teams.MentalHealth, None, None).serviceValue
+    val created = caseService.create(CaseSave("Mental health assessment", None, None, CaseCause.New, Set(), Set(), Set(), Set(), None, duty = false), clients, tags, Teams.MentalHealth, None, None).serviceValue
     created.key mustBe firstKey
     created.team mustBe Teams.MentalHealth
 

@@ -55,15 +55,17 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
       state = AppointmentState.Accepted,
       cancellationReason = None,
       outcome = Set(),
+      dsaSupportAccessed = None,
+      dsaActionPoints = Set(),
       created = null,
       lastUpdated = null
     )
     val appointmentRender: AppointmentRender = mock[AppointmentRender](RETURNS_SMART_NULLS)
     when(appointmentRender.appointment).thenReturn(appointment)
-    when(appointmentRender.clients).thenReturn(Set(AppointmentClient(Client(UniversityID("1234"), None, null), AppointmentState.Accepted, None)))
+    when(appointmentRender.clients).thenReturn(Set(AppointmentClient(Client(UniversityID("1234"), None, null), AppointmentState.Accepted, None, None)))
     when(appointmentRender.room).thenReturn(Some(Room(null, Building(null, "Building", 0, null, null), "Room", 0, available = true, null, null)))
 
-    when(mockAppointmentService.findFull(Matchers.any())(Matchers.any())).thenReturn(Future.successful(
+    when(mockAppointmentService.findFull(Matchers.any(classOf[UUID]))(Matchers.any())).thenReturn(Future.successful(
       ServiceResults.error[AppointmentRender](s"Could not find an Appointment with ID")
     ))
     when(mockAppointmentService.findFull(appointmentId)).thenReturn(Future.successful(Right(appointmentRender)))

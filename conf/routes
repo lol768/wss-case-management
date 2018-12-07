@@ -21,8 +21,9 @@ GET         /service/appointmentsearch              @controllers.AppointmentSear
 POST        /service/appointmentsearch              @controllers.AppointmentSearchController.search
 POST        /service/appointmentsearch/:key         @controllers.AppointmentSearchController.lookup(key: domain.IssueKey)
 GET         /service/clientsearch                   @controllers.ClientSearchController.search(query: String ?= "")
-GET         /service/membersearch/:usercode         @controllers.MemberSearchController.search(usercode: String)
-POST        /service/membersearch/:usercode         @controllers.MemberSearchController.search(usercode: String)
+POST        /service/clientsearch/:query            @controllers.ClientSearchController.searchFromPath(query: String)
+GET         /service/membersearch                   @controllers.MemberSearchController.search(query: String ?= "")
+POST        /service/membersearch/:query            @controllers.MemberSearchController.searchFromPath(query: String)
 GET         /service/casesearch                     @controllers.CaseSearchController.search
 POST        /service/casesearch                     @controllers.CaseSearchController.search
 POST        /service/casesearch/:keyOrId            @controllers.CaseSearchController.lookup(keyOrId: String)
@@ -88,6 +89,7 @@ GET         /team/client/:universityID                          @controllers.adm
 POST        /team/client/:universityID                          @controllers.admin.ClientController.updateSummary(universityID: warwick.sso.UniversityID)
 POST        /team/client/:universityID/invite                   @controllers.admin.ClientController.invite(universityID: warwick.sso.UniversityID)
 GET         /team/client/:universityID/registration-history     @controllers.admin.ClientController.registrationHistory(universityID: warwick.sso.UniversityID)
+GET         /team/client/:universityID/cases                    @controllers.admin.ClientController.cases(universityID: warwick.sso.UniversityID)
 
 GET         /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.messages(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.addMessage(enquiryKey: domain.IssueKey)
@@ -134,6 +136,7 @@ GET         /team/case/:caseKey/document/:id        @controllers.admin.CaseDocum
 POST        /team/case/:caseKey/document/:id/delete @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 GET         /team/case/:caseKey/messages            @controllers.admin.CaseController.messages(caseKey: domain.IssueKey)
+GET         /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.messages(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
 POST        /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.addMessage(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
 GET         /team/case/:caseKey/attachments/:fileId @controllers.admin.CaseMessageController.download(caseKey: domain.IssueKey, fileId: java.util.UUID)
 GET         /team/case/:caseKey/appointments        @controllers.admin.CaseController.appointments(caseKey: domain.IssueKey)
@@ -146,6 +149,8 @@ POST        /team/appointment/freebusy/resources    @controllers.admin.Appointme
 GET         /team/appointment/:key                  @controllers.admin.AppointmentController.view(key: domain.IssueKey)
 GET         /team/appointment/:key/edit             @controllers.admin.AppointmentController.editForm(key: domain.IssueKey)
 POST        /team/appointment/:key/edit             @controllers.admin.AppointmentController.edit(key: domain.IssueKey)
+GET         /team/appointment/:key/reschedule       @controllers.admin.AppointmentController.rescheduleForm(key: domain.IssueKey)
+POST        /team/appointment/:key/reschedule       @controllers.admin.AppointmentController.reschedule(key: domain.IssueKey)
 POST        /team/appointment/:key/cancel           @controllers.admin.AppointmentController.cancel(key: domain.IssueKey)
 GET         /team/appointment/:key/outcomes         @controllers.admin.AppointmentOutcomesController.outcomesForm(key: domain.IssueKey)
 POST        /team/appointment/:key/outcomes         @controllers.admin.AppointmentOutcomesController.outcomes(key: domain.IssueKey)
@@ -170,6 +175,8 @@ GET         /sysadmin                               @controllers.IndexController
 GET         /sysadmin/masquerade                    @controllers.sysadmin.MasqueradeController.masquerade
 GET         /sysadmin/data-generation               @controllers.sysadmin.DataGenerationController.generateForm()
 POST        /sysadmin/data-generation               @controllers.sysadmin.DataGenerationController.generate()
+GET         /sysadmin/emails                        @controllers.sysadmin.EmailQueueController.queued()
+POST        /sysadmin/emails/:id                    @controllers.sysadmin.EmailQueueController.enqueue(id: java.util.UUID)
 
 ## Fallbacks ##
 

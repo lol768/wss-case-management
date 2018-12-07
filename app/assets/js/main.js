@@ -2,10 +2,12 @@
 import './polyfills';
 
 import $ from 'jquery';
+import _ from 'lodash-es';
 import './jquery.are-you-sure';
 import FieldHistory from './field-history';
 import * as flexiPicker from './flexi-picker';
-import * as memberPicker from './member-picker';
+import MemberPicker from './member-picker';
+import ClientPicker from './client-picker';
 import ClientSearch from './client-search';
 import UserListPopovers from './user-list-popovers';
 import MessageThreads from './message-threads';
@@ -18,6 +20,9 @@ import AppointmentCalendar from './appointment-calendar';
 import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
 import * as dateTimePicker from './date-time-picker';
 import PaginatingTable from './paginating-table';
+import EnquiryQuestionsForm from './enquiry-questions-form';
+import QuickFilter from './quick-filter';
+import { fetchWithCredentials } from './serverpipe';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -62,7 +67,9 @@ function bindTo($scope) {
 
   flexiPicker.bindTo($scope);
 
-  memberPicker.bindTo($scope);
+  MemberPicker($scope);
+
+  ClientPicker($scope);
 
   $('.case-picker-collection', $scope).each((i, collection) => {
     MultiplePickers(collection, (element) => {
@@ -106,6 +113,13 @@ function bindTo($scope) {
     dateTimePicker.InlineDateTimePicker(container);
   });
 
+  $('.enquiry-questions-form', $scope).each((i, container) => {
+    EnquiryQuestionsForm.bindTo(container);
+  });
+
+  $('.quick-filter-container', $scope).each((i, container) => {
+    QuickFilter(container);
+  });
 
   $('form', $scope)
     .not('.no-dirty-check')
@@ -125,6 +139,16 @@ function bindTo($scope) {
       if ($target.hasClass('hidden')) {
         $target.removeClass('hidden');
         $this.html(shownLabel);
+        if (typeof $this.data('href') !== 'undefined' && !$this.data('loading')) {
+          $this.data('loading', true);
+          $target.load($this.data('href'), (text, status, xhr) => {
+            if (status === 'error') {
+              $target.text(`Unable to load content: ${xhr.statusText || xhr.status || 'error'}`);
+            } else {
+              bindTo($target);
+            }
+          });
+        }
       } else {
         $target.addClass('hidden');
         $this.html(hiddenLabel);
@@ -267,13 +291,21 @@ function bindTo($scope) {
       $tabPanel
         .data('tabPanelLoaded', true)
         .empty()
-        .append('<i class="fas fa-spinner fa-pulse"></i> Loading&hellip;')
-        .load($tabPanel.data('href'), (text, status, xhr) => {
-          if (status === 'error') {
-            $tabPanel.text(`Unable to load content: ${xhr.statusText || xhr.status || 'error'}`);
-          } else {
-            bindTo($tabPanel);
+        .append('<i class="fas fa-spinner fa-pulse"></i> Loading&hellip;');
+      fetchWithCredentials($tabPanel.data('href'))
+        .then((response) => {
+          if (response.status === 200) {
+            return response.text();
           }
+          if (response.status === 401) {
+            window.location.reload();
+          }
+          throw new Error(response.statusText || response.status || 'error');
+        }).then((html) => {
+          $tabPanel.html(html);
+          bindTo($tabPanel);
+        }).catch((e) => {
+          $tabPanel.text(`Unable to load content: ${e.message}`);
         });
     }
   }
@@ -306,13 +338,63 @@ function bindTo($scope) {
       }
     });
   });
+
+  $('.checkboxGroup', $scope).each((i, group) => {
+    const $group = $(group);
+    const $modal = $group.find('.modal');
+
+    // Disable focus restorer
+    $modal.on('shown.bs.modal', () => {
+      $modal.off('hidden.bs.modal');
+    });
+
+    $modal.find('.modal-footer .btn-primary').on('click', () => {
+      const $selectedItemContainer = $group.find('.selected-items').empty();
+      const checked = $modal.find('.modal-body :checked');
+      checked.each((j, input) => {
+        const $label = $(input).closest('label');
+        const item = $('<div />')
+          .addClass('selected-items__item')
+          .append($('<i />').addClass('fal fa-check'))
+          .append(' ')
+          .append($label.text());
+
+        const $otherInput = $(`#${$label.attr('for')}-value`);
+        if ($otherInput.length > 0) {
+          item.append(` (${_.escape($otherInput.val())})`);
+        }
+
+        $selectedItemContainer.append(item);
+      });
+
+      if (checked.length === 0) {
+        $selectedItemContainer.append($('<div />').addClass('selected-items__item').html('(None)'));
+      }
+    });
+  });
+
+  $('.radiosAsButtons', $scope).each((i, group) => {
+    $(group).on('change', () => {
+      $('input[type="radio"]', $(group)).each((j, radio) => {
+        const $radio = $(radio);
+        const $label = $radio.parent('label.btn');
+        if ($radio.is(':checked')) {
+          $label.addClass('btn-primary').removeClass('btn-default');
+        } else {
+          $label.removeClass('btn-primary').addClass('btn-default');
+        }
+      });
+    });
+  });
 }
 
 $(() => {
+  const $html = $('html');
+
   if (!('open' in document.createElement('details'))) {
-    $('html').addClass('no-details');
+    $html.addClass('no-details');
   } else {
-    $('html').addClass('details');
+    $html.addClass('details');
   }
 
   // Apply to all content loaded non-AJAXically
@@ -326,8 +408,12 @@ $(() => {
     window.history.replaceState({}, null, e.target.hash);
   });
 
+  if ($('.nav-tabs').length > 0) {
+    $html.addClass('overflow-y-scroll');
+  }
+
   // Dismiss popovers when clicking away
-  $('html')
+  $html
     .on('shown.bs.popover', (e) => {
       const $po = $(e.target).popover().data('bs.popover').tip();
       $po.data('creator', $(e.target));

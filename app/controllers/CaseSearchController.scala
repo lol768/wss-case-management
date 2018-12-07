@@ -4,7 +4,8 @@ import controllers.API.Response._
 import controllers.CaseSearchController._
 import controllers.refiners.{AnyTeamActionRefiner, CanViewCaseActionRefiner}
 import domain.dao.CaseDao.CaseSearchQuery
-import domain.{Case, CaseType, IssueStateFilter, Teams}
+import domain._
+import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -53,30 +54,36 @@ class CaseSearchController @Inject()(
           if (query.isEmpty) "Recently viewed cases" -> cases.findRecentlyViewed(request.user.get.usercode, 10)
           else "Search results" -> cases.search(query, 10)
 
-        results.successMap { c =>
+        results.successFlatMapTo( c =>
+          ServiceResults.zip(results, cases.getClients(c.map(_.id).toSet))
+        ).successMap { case (c, clients) =>
           Ok(Json.toJson(API.Success(data = Json.obj(
-            "results" -> c.map(toJson(_, Some(category)))
+            "results" -> c.map(clientCase => toJson(clientCase, clients.getOrElse(clientCase.id, Set()), Some(category)))
           ))))
         }
       }
     )
   }
 
-  def lookup(caseKeyorId: String): Action[AnyContent] = CanViewCaseAction(caseKeyorId) { implicit caseRequest =>
-    Ok(Json.toJson(API.Success(data = Json.obj(
-      "results" -> Seq(toJson(caseRequest.`case`))
-    ))))
+  def lookup(caseKeyorId: String): Action[AnyContent] = CanViewCaseAction(caseKeyorId).async { implicit caseRequest =>
+    cases.getClients(caseRequest.`case`.id).successMap { clients =>
+      Ok(Json.toJson(API.Success(data = Json.obj(
+        "results" -> Seq(toJson(caseRequest.`case`, clients))
+      ))))
+    }
   }
 
-  private def toJson(c: Case, category: Option[String] = None): JsObject = Json.obj(
+  private def toJson(c: Case, clients: Set[Client], category: Option[String] = None): JsObject = Json.obj(
     "id" -> c.id,
     "key" -> c.key.string,
     "subject" -> c.subject,
     "team" -> c.team.name,
+    "clients" -> clients.map(_.safeFullName).mkString(", "),
     "caseType" -> c.caseType.map(_.description),
     "created" -> c.created.format(JavaTime.iSO8601DateFormat),
     "state" -> c.state.entryName,
-    "category" -> category
+    "category" -> category,
+    "url" -> controllers.admin.routes.CaseController.view(c.key).toString
   )
 
 }

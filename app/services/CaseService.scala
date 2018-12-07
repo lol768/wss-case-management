@@ -40,6 +40,8 @@ trait CaseService {
   def findForView(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def findAllForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]]
   def listForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
+  def countOpenForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def countClosedForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]]
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def search(query: CaseSearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
@@ -58,7 +60,7 @@ trait CaseService {
   def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def addNoteDBIO(caseID: UUID, noteType: CaseNoteType, note: CaseNoteSave)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
   def getNote(id: UUID)(implicit t: TimingContext): Future[ServiceResult[NoteAndCase]]
-  def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]]
+  def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNoteRender]]]
   def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def deleteNote(caseID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
@@ -76,7 +78,7 @@ trait CaseService {
   def countClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
-  def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
+  def setOwners(id: UUID, owners: Set[Usercode], note: Option[CaseNoteSave])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
 
   def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Client]]]]
   def getClients(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Set[Client]]]
@@ -98,6 +100,10 @@ trait CaseService {
   def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]]
 
   def findDSAApplication(`case`: Case)(implicit t: TimingContext): Future[ServiceResult[Option[DSAApplication]]]
+
+  def getLastUpdatedMessageDates(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, OffsetDateTime]]]
+  def getLastUpdatedMessageDates(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Map[UniversityID, OffsetDateTime]]]]
+
 }
 
 @Singleton
@@ -135,7 +141,16 @@ class CaseServiceImpl @Inject() (
       caseType = save.caseType,
       cause = save.cause,
       dsaApplication = dsaApplication,
-      clientRiskTypes = save.clientRiskTypes.map(_.entryName).toList.sorted
+      fields = StoredCaseFields(
+        clientRiskTypes = save.clientRiskTypes.map(_.entryName).toList.sorted,
+        counsellingServicesIssues = save.counsellingServicesIssues.map(_.entryName).toList.sorted,
+        studentSupportIssueTypes = save.studentSupportIssueTypes.map(_.entryName).toList.sorted,
+        studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(save.studentSupportIssueTypes),
+        medications = save.medications.map(_.entryName).toList.sorted,
+        medicationOther = CaseMedication.otherValue(save.medications),
+        severityOfProblem = save.severityOfProblem,
+        duty = save.duty,
+      )
     )
 
   override def create(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team, originalEnquiry: Option[UUID], application: Option[DSAApplicationSave])(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
@@ -207,6 +222,24 @@ class CaseServiceImpl @Inject() (
     ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
   }
 
+  override def countOpenForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]] = {
+    daoRunner.run(
+      dao.findByClientQuery(universityID)
+        .filter(_.isOpen)
+        .size
+        .result
+    ).map(Right.apply)
+  }
+
+  override def countClosedForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]] = {
+    daoRunner.run(
+      dao.findByClientQuery(universityID)
+        .filter(!_.isOpen)
+        .size
+        .result
+    ).map(Right.apply)
+  }
+
   override def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]] = {
     auditService.audit('CaseView, id.toString, 'Case, Json.obj()) {
       withClientMessagesAndNotes(universityID, dao.findByIDQuery(id)).map(r => Right(r.head))
@@ -272,7 +305,16 @@ class CaseServiceImpl @Inject() (
               caseType = c.caseType,
               cause = c.cause,
               dsaApplication = dsa.map(_.id),
-              clientRiskTypes = c.clientRiskTypes.map(_.entryName).toList.sorted
+              fields = StoredCaseFields(
+                clientRiskTypes = c.clientRiskTypes.map(_.entryName).toList.sorted,
+                counsellingServicesIssues = c.counsellingServicesIssues.map(_.entryName).toList.sorted,
+                studentSupportIssueTypes = c.studentSupportIssueTypes.map(_.entryName).toList.sorted,
+                studentSupportIssueTypeOther = StudentSupportIssueType.otherValue(c.studentSupportIssueTypes),
+                medications = c.medications.map(_.entryName).toList.sorted,
+                medicationOther = CaseMedication.otherValue(c.medications),
+                severityOfProblem = c.severityOfProblem,
+                duty = c.duty,
+              )
             ),
             caseVersion
           )
@@ -391,6 +433,7 @@ class CaseServiceImpl @Inject() (
         noteType = noteType,
         text = note.text,
         teamMember = note.teamMember,
+        appointmentId = note.appointmentID,
         created = JavaTime.offsetDateTime,
         version = JavaTime.offsetDateTime
       )
@@ -410,8 +453,20 @@ class CaseServiceImpl @Inject() (
   private def getNotesDBIO(caseID: UUID): DBIO[Seq[(StoredCaseNote, StoredMember)]] =
     dao.findNotesQuery(caseID).sortBy(_.created.desc).withMember.result
 
-  override def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNote]]] =
-    daoRunner.run(getNotesDBIO(caseID)).map(notes => Right(notes.map { case (n, m) => n.asCaseNote(m.asMember) }))
+  override def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNoteRender]]] =
+    daoRunner.run(getNotesDBIO(caseID)).flatMap { notes =>
+      val appointmentIDs = notes.flatMap(_._1.appointmentId).distinct
+
+      val appointments: Future[ServiceResult[Map[UUID, AppointmentRender]]] =
+        if (appointmentIDs.isEmpty) Future.successful(ServiceResults.success(Map()))
+        else appointmentService.findFull(appointmentIDs).successMapTo(_.map { a => a.appointment.id -> a }.toMap)
+
+      appointments.successMapTo { appointmentLookup =>
+        notes.map { case (n, m) =>
+          CaseNoteRender(n.asCaseNote(m.asMember), n.appointmentId.map(appointmentLookup.apply))
+        }
+      }
+    }
 
   override def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]] =
     auditService.audit('CaseNoteUpdate, caseID.toString, 'Case, Json.obj("noteID" -> noteID.toString)) {
@@ -504,8 +559,14 @@ class CaseServiceImpl @Inject() (
   override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]] =
     ownerService.getCaseOwners(ids)
 
-  override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] =
-    ownerService.setCaseOwners(id, owners)
+  override def setOwners(id: UUID, owners: Set[Usercode], note: Option[CaseNoteSave])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
+    ServiceResults.zip(
+      ownerService.setCaseOwners(id, owners),
+      daoRunner.run(
+        note.map(n => addNoteDBIO(id, CaseNoteType.OwnerNote, n)).getOrElse(DBIO.successful(()))
+      ).map(Right.apply)
+    ).successMapTo { case (ownerChanges, _)  => ownerChanges }
+  }
 
   override def getClients(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Client]]]] = {
     daoRunner.run(dao.findClientsQuery(ids).result)
@@ -668,6 +729,24 @@ class CaseServiceImpl @Inject() (
       fundingTypes <- dsaDao.findFundingTypesQuery(Set(dsaID)).result
     } yield DSAApplication(application, fundingTypes.map(_.fundingType).toSet)
 
+  override def getLastUpdatedMessageDates(caseKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, OffsetDateTime]]] =
+    daoRunner.run(
+      dao.findByKeyQuery(caseKey)
+        .join(Message.lastUpdatedCasePerClientMessage)
+        .on { case (c, (id, _, _)) => c.id === id }
+        .result
+    ).map(r => Right(r.map { case (_, (_, c, d)) => (c, d.get) }.toMap))
+
+  override def getLastUpdatedMessageDates(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Map[UniversityID, OffsetDateTime]]]] =
+    daoRunner.run(
+      dao.findByIDsQuery(ids)
+        .join(Message.lastUpdatedCasePerClientMessage)
+        .on { case (c, (id, _, _)) => c.id === id }
+        .result
+    ).map(r => Right(
+      r.map { case (clientCase, (_, c, d)) => (clientCase.id, c, d.get) }
+        .groupBy(_._1).mapValues(_.groupBy(_._2).mapValues(_.head._3))
+    ))
 }
 
 object CaseService {
@@ -680,8 +759,9 @@ object CaseService {
     )
 
     val notesByCase = notes.groupBy { case (n, _) => n.caseId }
-      .mapValues(_.map { case (n, m) => n.asCaseNote(m.asMember) }.sorted(CaseNote.dateOrdering)
-      ).withDefaultValue(Seq())
+      .mapValues(_.map {
+        case (n, m) => n.asCaseNote(m.asMember)
+      }.sorted(CaseNote.dateOrdering)).withDefaultValue(Seq())
 
     sortByRecent(casesAndMessages.map { case (c, m) => CaseRender(c.asCase, m.distinct, notesByCase(c.id)) })
   }

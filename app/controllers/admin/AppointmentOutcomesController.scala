@@ -20,13 +20,13 @@ import scala.concurrent.{ExecutionContext, Future}
 object AppointmentOutcomesController {
   case class AppointmentClientAttendanceFormData(
     client: UniversityID,
-    state: AppointmentState,
+    attendanceState: Option[AppointmentClientAttendanceState],
     cancellationReason: Option[AppointmentCancellationReason],
   )
 
   case class AppointmentOutcomesFormData(
     attendance: Seq[AppointmentClientAttendanceFormData],
-    outcome: Set[AppointmentOutcome],
+    outcomes: AppointmentOutcomesSave,
     note: Option[String],
     version: OffsetDateTime,
   )
@@ -38,11 +38,15 @@ object AppointmentOutcomesController {
           mapping(
             "client" -> nonEmptyText.transform[UniversityID](UniversityID.apply, _.string)
               .verifying("error.client.invalid", u => a.clients.map(_.client.universityID).contains(u)),
-            "state" -> AppointmentState.formField.verifying("error.required", s => s == AppointmentState.Attended || s == AppointmentState.Cancelled),
+            "attendanceState" -> optional(AppointmentClientAttendanceState.formField).verifying("error.required", _.nonEmpty),
             "cancellationReason" -> optional(AppointmentCancellationReason.formField),
           )(AppointmentClientAttendanceFormData.apply)(AppointmentClientAttendanceFormData.unapply)
         ),
-        "outcome" -> set(AppointmentOutcome.formField),
+        "outcomes" -> mapping(
+          "outcome" -> set(AppointmentOutcome.formField),
+          "dsaSupportAccessed" -> optional(AppointmentDSASupportAccessed.formField).verifying("error.appointment.dsaSupportAccessed.invalid", _.forall(AppointmentDSASupportAccessed.valuesFor(a.appointment.team).contains)),
+          "dsaActionPoints" -> AppointmentDSAActionPoint.formMapping,
+        )(AppointmentOutcomesSave.apply)(AppointmentOutcomesSave.unapply),
         "note" -> optional(text),
         "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == a.appointment.lastUpdated)
       )(AppointmentOutcomesFormData.apply)(AppointmentOutcomesFormData.unapply)
@@ -63,9 +67,17 @@ class AppointmentOutcomesController @Inject()(
         a,
         form(a).fill(AppointmentOutcomesFormData(
           a.clients.toSeq.sortBy(_.client.universityID.string).map { client =>
-            AppointmentClientAttendanceFormData(client.client.universityID, client.state, client.cancellationReason)
+            AppointmentClientAttendanceFormData(
+              client.client.universityID,
+              client.attendanceState,
+              client.cancellationReason
+            )
           },
-          a.appointment.outcome,
+          AppointmentOutcomesSave(
+            a.appointment.outcome,
+            a.appointment.dsaSupportAccessed,
+            a.appointment.dsaActionPoints,
+          ),
           None,
           a.appointment.lastUpdated
         ))
@@ -84,9 +96,9 @@ class AppointmentOutcomesController @Inject()(
         ),
         data => appointments.recordOutcomes(
           a.appointment.id,
-          data.attendance.map { d => (d.client, (d.state, d.cancellationReason)) }.toMap,
-          data.outcome,
-          data.note.map(CaseNoteSave(_, currentUser().usercode)),
+          data.attendance.filter(_.attendanceState.nonEmpty).map { d => (d.client, (d.attendanceState.get, d.cancellationReason)) }.toMap,
+          data.outcomes,
+          data.note.map(CaseNoteSave(_, currentUser().usercode, Some(a.appointment.id))),
           data.version
         ).successMap { updated =>
           Redirect(controllers.admin.routes.AppointmentController.view(updated.key))

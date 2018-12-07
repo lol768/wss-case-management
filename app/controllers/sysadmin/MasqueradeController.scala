@@ -34,11 +34,11 @@ class MasqueradeController @Inject()(
           .map { case (department, deptProfiles) =>
             department -> deptProfiles.groupBy(_.userType).toSeq
               .map { case (userType, userTypeProfiles) =>
-                userType -> userTypeProfiles.groupBy(_.route).toSeq
+                userType -> userTypeProfiles.groupBy(_.course).toSeq
                   .map { case (route, routeProfiles) =>
                     route -> routeProfiles.toSeq.sortBy(_.universityID.string)
                   }
-                  .sortBy { case (route, _) => route.map(_.code) }
+                  .sortBy { case (course, _) => course.map(_.code) }
               }
               .sortBy { case (userType, _) => userType == UserType.Student }
           }

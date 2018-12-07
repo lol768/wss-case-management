@@ -1,5 +1,6 @@
 @import domain.CaseNoteType._
 @import domain.{DSAApplication, _}
+@import domain.OwnerSave
 @import play.api.libs.json.Json
 @import warwick.core.helpers.JavaTime
 
@@ -8,14 +9,15 @@
   profiles: Map[Client, Option[SitsProfile]],
   caseTags: Set[CaseTag],
   owners: Set[Member],
-  sectionNotes: Map[CaseNoteType, Seq[CaseNote]],
+  sectionNotes: Map[CaseNoteType, Seq[CaseNoteRender]],
   originalEnquiry: Option[Enquiry],
   dsaApplication: Option[DSAApplication],
   history: CaseHistory,
+  ownerForm: Form[OwnerSave]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @viewSectionNotes(noteType: CaseNoteType, link: String) = {
-  @defining(sectionNotes.getOrElse(noteType, Nil)) { notes: Seq[CaseNote] =>
+  @defining(sectionNotes.getOrElse(noteType, Nil)) { notes: Seq[CaseNoteRender] =>
     @if(notes.nonEmpty) {
       <a role="button" href="#@noteType.entryName-notes-modal" data-toggle="modal" data-target="#@noteType.entryName-notes-modal">
         View @tags.p(notes.size, link)()
@@ -49,7 +51,10 @@
   </div>
 }
 
-@main(s"${c.key.string} ${c.subject}") {
+@main(
+  title = s"${c.key.string} ${c.subject}",
+  icon = if (c.fields.duty) { tags.cases.dutyLabel() } else null,
+) {
   <div class="case-details">
     <div class="case-details--header">
       @profiles.keySet.toSeq.sorted.map { client =>
@@ -137,7 +142,10 @@
           owners,
           controllers.admin.routes.OwnersController.caseSubmit(c.key),
           controllers.admin.routes.OwnersController.caseSubmitSelf(c.key),
-        )
+          Some(ownerForm),
+        ) {
+          @viewSectionNotes(OwnerNote, "owner note")
+        }
 
         @* Only show DSA fields for Disability or MentalHealth cases *@
         @if(DSAApplication.DSATeams.contains(c.team)){
@@ -208,17 +216,57 @@
           }
         }
 
-        @if(c.clientRiskTypes.nonEmpty || history.clientRiskTypes.size > 1) {
-          @tags.sectioned.detail("Client risk type"){
+        @if(c.fields.clientRiskTypes.nonEmpty || history.clientRiskTypes.size > 1) {
+          @tags.sectioned.detail("Client risk"){
             <div data-field-history-field="clientRiskTypes">
-              @if(c.clientRiskTypes.nonEmpty) {
-                @c.clientRiskTypes.toSeq.map(_.description).sorted.mkString(", ")
+              @if(c.fields.clientRiskTypes.nonEmpty) {
+                @c.fields.clientRiskTypes.toSeq.map(_.description).sorted.mkString(", ")
               } else {
                 None
               }
             </div>
           }
         }
+
+        @if(c.fields.counsellingServicesIssues.nonEmpty || history.counsellingServicesIssues.size > 1) {
+          @tags.sectioned.detail("Counselling services issue"){
+            <div data-field-history-field="counsellingServicesIssues">
+              @if(c.fields.counsellingServicesIssues.nonEmpty) {
+                @c.fields.counsellingServicesIssues.toSeq.map(_.description).sorted.mkString(", ")
+              } else {
+                None
+              }
+            </div>
+          }
+        }
+
+        @if(c.fields.studentSupportIssueTypes.nonEmpty || history.studentSupportIssueTypes.size > 1) {
+          @tags.sectioned.detail("Wellbeing Support issue"){
+            <div data-field-history-field="studentSupportIssueTypes">
+              @if(c.fields.studentSupportIssueTypes.nonEmpty) {
+                @c.fields.studentSupportIssueTypes.toSeq.map(_.description).sorted.mkString(", ")
+              } else {
+                None
+              }
+            </div>
+          }
+        }
+
+        @if(c.fields.medications.nonEmpty || history.medications.size > 1) {
+          @tags.sectioned.detail("Current medication"){
+            <div data-field-history-field="medications">
+            @if(c.fields.medications.nonEmpty) {
+              @c.fields.medications.toSeq.map(_.description).sorted.mkString(", ")
+            } else {
+              None
+            }
+            </div>
+          }
+        }
+
+        @c.fields.severityOfProblem.map { severityOfProblem => @tags.sectioned.detail("Severity of problem"){
+          <div data-field-history-field="severityOfProblem">@severityOfProblem.description</div>
+        }}
 
       </div>
       <div class="col-sm-6 col-md-4">

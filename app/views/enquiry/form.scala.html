@@ -1,43 +1,163 @@
-@import domain.Enquiry.FormData
+@import controllers.enquiries.EnquiryController.EnquiryFormData
 @import org.apache.tika.mime.MediaType
 @import play.twirl.api._
+
 @(
-  form: Form[FormData],
-  supportedMimeTypes: Seq[MediaType]
+  form: Form[EnquiryFormData],
+  supportedMimeTypes: Seq[MediaType],
+  outsideOfficeHours: Boolean,
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(s"Make an enquiry") {
-  @* There's a bug in play-bootstrap where b3.free labels will be the wrong
-   * size if you define more than a single column width, so just defining md *@
-  @b3.horizontal.formCSRF(
+  @b3.clear.formCSRF(
     controllers.enquiries.routes.EnquiryController.submit(),
-    "col-sm-2", "col-sm-5",
-    'enctype -> "multipart/form-data"
+    'enctype -> "multipart/form-data",
+    'class -> "enquiry-questions-form",
   ) { implicit ifc =>
-    @b3.free('_label -> "Name") {
-      <p class="form-control-static">@context.user.flatMap(_.name.full)</p>
+    @if(form.data.isEmpty && outsideOfficeHours) {
+      <div class="well outside-office-hours">
+        <div class="media">
+          <div class="media-left">
+            <p class="lead"><i class="fas fa-exclamation-triangle"></i></p>
+          </div>
+          <div class="media-body">
+            <p>The Wellbeing Support Service is not currently open; its hours are Monday to Thursday
+              9am to 5pm and Friday 9am until 4pm. You can still send us an enquiry, but it won't be
+              seen for some time.</p>
+
+            <p>If you require immediate emergency support, please contact Campus Security (who are
+              all qualified first aid responders) on <a href="tel:+442476522222">024 7652 2222</a>
+              or internally on 22222.</p>
+
+            <p>If your enquiry relates to a mental health emergency, please see the Mental Health
+              Team website for <a href="https://warwick.ac.uk/mentalhealth/crisis">information regarding on and off campus crisis support services</a>.</p>
+          </div>
+        </div>
+      </div>
     }
 
-    @b3.text(form("subject"),
-      '_label -> "Subject",
-      'autocomplete -> "off",
-    )
+    <p>
+      To help us get your enquiry to the team best placed to help you, would you mind answering a
+      few questions? Just choose 'Yes', 'No' or 'Not sure' to each question, and then we'll move on
+      to the next one. It should only take a minute or so, and nothing is sent to us until you say so.
+    </p>
 
-    @b3.textarea(form("text"),
-      '_label -> html"""Message<br /><span class="hint">(please tell us as much as you need to about your enquiry)</span>""",
-      'rows -> 10
-    )
+    <div class="row init-questions @if(form.data.nonEmpty) {started}">
+      <div class="col-xs-6 col-sm-2 col-sm-offset-3 col-lg-1 col-lg-offset-4">
+        <button type="button" class="btn btn-primary btn-block">Start</button>
+      </div>
+      <div class="col-xs-6 col-sm-2 col-sm-offset-2 col-lg-1">
+        <a class="btn btn-default btn-block" href="@controllers.routes.IndexController.home()">Cancel</a>
+      </div>
+    </div>
 
-    @b3.free('_label -> "Attachment", '_class -> form.error("file").map(_ => "has-error")) {
-      <input type="file" id="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" class="form-control" aria-label="Attach a file">
-      @b3.errors(form("file"))
+    @if(form.hasErrors) {
+      <div class="alert alert-danger">
+        <p>There were errors in your enquiry. Please correct them and submit again.</p>
+
+        @form.globalErrors.map { error =>
+          <p>@error.format</p>
+        }
+      </div>
     }
 
-    @b3.free() {
-      <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Privacy statement</a>
-      <span class="hint">(what will happen after I send this enquiry?)</span>
-    }
+    <fieldset>
+      @b3.threeStateBooleanButtons(form("mentalHealth"),
+        '_label -> "Q1. Are you looking for support for mental health disabilities?",
+      )
 
-    @tags.submitOrCancel("Send this enquiry", controllers.routes.IndexController.home())
+      <fieldset>
+        @b3.threeStateBooleanButtons(form("mentalHealthFields.reasonableAdjustments"),
+          '_label -> "Q1a. Are you looking for help with reasonable adjustments (including special exam arrangements)?",
+        )
+
+        @b3.threeStateBooleanButtons(form("mentalHealthFields.studySkills"),
+          '_label -> "Q1b. Are you looking for specialist mentoring?",
+        )
+
+        @b3.threeStateBooleanButtons(form("mentalHealthFields.generalAdvice"),
+          '_label -> "Q1c. Are you looking for general advice and support on mental health? (eg self help, liaising with statutory services)",
+        )
+
+        @b3.free(
+          '_label -> "Q1d. Do you have any documents you can upload that might help us understand your situation?",
+          '_class -> form.error("file").map(_ => "has-error"),
+        ) {
+          <input type="file" id="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" aria-label="Attach a file">
+          @b3.errors(form("file"))
+        }(b3.vertical.fieldConstructorSpecific, messagesProvider)
+      </fieldset>
+    </fieldset>
+
+    <fieldset>
+      @b3.threeStateBooleanButtons(form("counselling"),
+        '_label -> "Q2. Are you looking for counselling for emotional or psychological issues?",
+      )
+
+      <fieldset>
+        @b3.threeStateBooleanButtons(form("counsellingFields.faceToFace"),
+          '_label -> "Q2a. Would you be interested in face to face counselling?",
+        )
+
+        @b3.threeStateBooleanButtons(form("counsellingFields.therapy"),
+          '_label -> "Q2b. Would you be interested in group therapy?",
+        )
+
+        @b3.threeStateBooleanButtons(form("counsellingFields.online"),
+          '_label -> "Q2c. Would you be interested in email counselling?",
+        )
+      </fieldset>
+    </fieldset>
+
+    <fieldset>
+      @b3.threeStateBooleanButtons(form("disability"),
+        '_label -> "Q3. Are you looking for support with disabilities such as mobility or dyslexia or autism spectrum?",
+      )
+
+      <fieldset>
+        @b3.threeStateBooleanButtons(form("disabilityFields.reasonableAdjustments"),
+          '_label -> "Q3a. Are you looking for advice on reasonable adjustments (including special exam arrangements)?",
+        )
+
+        @b3.threeStateBooleanButtons(form("disabilityFields.specialistMentoring"),
+          '_label -> "Q3b. Are you looking for specialist mentoring and advice on study skills?",
+        )
+
+        @b3.threeStateBooleanButtons(form("disabilityFields.disabilityScreening"),
+          '_label -> "Q3c. Are you looking for screening for SpLDs such as dyslexia?",
+        )
+
+        @b3.threeStateBooleanButtons(form("disabilityFields.generalAdvice"),
+          '_label -> "Q3d. Are you looking for general advice and support on disability?",
+        )
+      </fieldset>
+    </fieldset>
+
+    <fieldset class="form-horizontal">
+      <label>
+        Q4. It seems as though you might be looking for more general practical advice and support.
+        (This might include matters such as accommodation, safety, crime (including sexual violence),
+        complaints or wellbeing). If so, please could you briefly summarise what you're hoping to get
+        help with?
+      </label>
+
+      @b3.textarea(form("wellbeingText"),
+        '_label -> html"""Message<br /><span class="hint">(please tell us as much as you need to about your enquiry)</span>""",
+        'rows -> 10
+      )(b3.horizontal.fieldConstructorSpecific("col-sm-2", "col-sm-5"), messagesProvider)
+    </fieldset>
+
+    <fieldset>
+      @b3.free() {
+        The information you send us will be seen only by Wellbeing Support staff and used only for
+        the purpose of responding to your enquiry.
+        <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Read our full privacy statement</a>
+      }(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
+
+      @tags.submitOrCancel(
+        "Submit enquiry",
+        controllers.routes.IndexController.home()
+      )(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
+    </fieldset>
   }
 }

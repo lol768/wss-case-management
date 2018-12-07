@@ -1,26 +1,29 @@
 @import warwick.sso.User
 @import domain.Member
+@import domain.OwnerSave
 @(
   owners: Set[Member],
   submit: Call,
   submitSelf: Call,
-)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+  form: Option[Form[OwnerSave]] = None
+)(content: Html = Html(""))(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 <div class="row form-horizontal">
   <div class="col-sm-3 control-label">
     Owners
   </div>
   <div class="col-sm-9">
-    @b3.horizontal.formCSRF(submit, "col-sm-0", "col-sm-12", 'class -> "form-control-static") { implicit ifc =>
       @if(owners.nonEmpty) {
-        @owners.toSeq.sorted.map { owner =>
-          <div class="clearfix" @if(owners.last == owner){ data-field-history-field="owners" }>
-            <input type="hidden" name="owners[]" value="@owner.usercode.string">
-            @owner.safeFullName
-            <a role="button" href="@submit" data-toggle="confirm-submit remove-submit" data-target="div" data-message="Are you sure you want to remove this owner?" aria-label="Remove owner">@*
-              *@<i class="fas fa-times-circle"></i>@*
-            *@</a>
-          </div>
+        @b3.horizontal.formCSRF(submit, "col-sm-0", "col-sm-12", 'class -> "form-control-static") { implicit ifc =>
+          @owners.toSeq.sorted.map { owner =>
+            <div class="clearfix" @if(owners.last == owner){ data-field-history-field="owners" }>
+              <input type="hidden" name="owners[]" value="@owner.usercode.string">
+              @owner.safeFullName
+              <a role="button" href="@submit" data-toggle="confirm-submit remove-submit" data-target="div" data-message="Are you sure you want to remove this owner?" aria-label="Remove owner">@*
+                *@<i class="fas fa-times-circle"></i>@*
+              *@</a>
+            </div>
+          }
         }
       } else {
         <div>None</div>
@@ -30,29 +33,41 @@
           Add an owner
         </a>
       </div>
+      @content
+      @views.b3.wellbeing.vertical.formCSRF(submit) { implicit ifc =>
+        <div class="modal fade" id="add-owner-modal" tabindex="-1" role="dialog" aria-labelledby="add-owner-modal-label">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="add-owner-modal-label">Add an owner</h4>
+              </div>
+              <div class="modal-body">
 
-      <div class="modal fade" id="add-owner-modal" tabindex="-1" role="dialog" aria-labelledby="add-owner-modal-label">
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header">
-              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-              <h4 class="modal-title" id="add-owner-modal-label">Add an owner</h4>
-            </div>
-            <div class="modal-body">
-              @b3.free() {
-                @tags.memberPicker(values = Nil, name = "owners[]", placeholder = "Search for a user")
-              }
-            </div>
-            <div class="modal-footer spaced-buttons">
-              @if(!owners.map(_.usercode).contains(context.user.get.usercode)) {
-                <button type="submit" class="btn btn-primary" formaction="@submitSelf">Add me</button>
-              }
-              <button type="submit" class="btn btn-primary">Add owner</button>
-              <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                @owners.toSeq.sorted.map { owner =>  <input type="hidden" name="owners[]" value="@owner.usercode.string"> }
+
+                @b3.free('_label -> "Owners") {
+                  @tags.picker(pickerType = "member", values = Nil, name = "owners[]", placeholder = "Search for a user")
+                }
+                @form.map { f =>
+                  @b3.textarea(
+                    f("message"),
+                    '_label -> "New owner note",
+                    '_help -> "(why are new owners being added to this case?)",
+                    'helpOnTop -> true
+                  )
+                }
+              </div>
+              <div class="modal-footer spaced-buttons">
+                @if(!owners.map(_.usercode).contains(context.user.get.usercode)) {
+                  <button type="submit" class="btn btn-primary" formaction="@submitSelf">Add me</button>
+                }
+                <button type="submit" class="btn btn-primary">Add owner</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    }
+      }
   </div>
 </div>

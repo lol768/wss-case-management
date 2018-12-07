@@ -12,6 +12,7 @@ import warwick.accesslog.LogbackAccessModule
 import routes.EmptyRouter
 import services.{NotificationService, NullNotificationService}
 import services.tabula.ProfileService
+import uk.ac.warwick.util.virusscan.VirusScanService
 import warwick.sso._
 
 import scala.reflect._
@@ -72,6 +73,9 @@ object TestApplications extends MockitoSugar {
 
         // Don't try and send notifications
         bind[NotificationService].to[NullNotificationService],
+
+        // Don't try and virus scan files
+        bind[VirusScanService].to[MockVirusScanService],
       )
 
   def full(defaultUser: Option[User] = None, additionalConfiguration: Map[String, Any] = Map.empty): Application =

@@ -36,8 +36,7 @@ object DataGenerationController {
     EnquiryDisabilityRate: Double = 0.25, // Proportion of enquiries that will be reassigned to disability
     EnquiryMentalHealthRate: Double = 0.25, // Proportion of enquiries that will be reassigned to mental health
     EnquiryToCaseRate: Double = 0.7, // Proportion of enquiries that will become cases
-    HighMentalHealthRiskSetRate: Double = 0.1, // Proportion of clients with a high mental health risk set
-    HighMentalHealthRiskRate: Double = 0.3, // Proportion of clients with a high mental health risk (of the above)
+    HighRiskSetRate: Double = 0.1, // Proportion of clients with a high mental health risk set
     ReasonableAdjustmentRate: Double = 0.1, // Proportion of clients with reasonable adjustments
     DisabilityRate: Double = 0.1, // Proportion of clients who declare a disability
     MedicationRate: Double = 0.2, // Proportion of clients who declare medications
@@ -72,8 +71,7 @@ object DataGenerationController {
         "EnquiryDisabilityRate" -> EnquiryDisabilityRate,
         "EnquiryMentalHealthRate" -> EnquiryMentalHealthRate,
         "EnquiryToCaseRate" -> EnquiryToCaseRate,
-        "HighMentalHealthRiskSetRate" -> HighMentalHealthRiskSetRate,
-        "HighMentalHealthRiskRate" -> HighMentalHealthRiskRate,
+        "HighRiskSetRate" -> HighRiskSetRate,
         "ReasonableAdjustmentRate" -> ReasonableAdjustmentRate,
         "DisabilityRate" -> DisabilityRate,
         "MedicationRate" -> MedicationRate,
@@ -122,8 +120,7 @@ object DataGenerationController {
         EnquiryDisabilityRate = getDoubleOrDefault("EnquiryDisabilityRate", defaults.EnquiryDisabilityRate),
         EnquiryMentalHealthRate = getDoubleOrDefault("EnquiryMentalHealthRate", defaults.EnquiryMentalHealthRate),
         EnquiryToCaseRate = getDoubleOrDefault("EnquiryToCaseRate", defaults.EnquiryToCaseRate),
-        HighMentalHealthRiskSetRate = getDoubleOrDefault("HighMentalHealthRiskSetRate", defaults.HighMentalHealthRiskSetRate),
-        HighMentalHealthRiskRate = getDoubleOrDefault("HighMentalHealthRiskRate", defaults.HighMentalHealthRiskRate),
+        HighRiskSetRate = getDoubleOrDefault("HighRiskSetRate", defaults.HighRiskSetRate),
         ReasonableAdjustmentRate = getDoubleOrDefault("ReasonableAdjustmentRate", defaults.ReasonableAdjustmentRate),
         DisabilityRate = getDoubleOrDefault("DisabilityRate", defaults.DisabilityRate),
         MedicationRate = getDoubleOrDefault("MedicationRate", defaults.MedicationRate),
@@ -321,7 +318,7 @@ class DataGenerationJob @Inject()(
     configuration.get[Seq[String]]("wellbeing.testAdmins")
       .map(Usercode.apply)
 
-  private[this] val initialTeam: Team = Teams.fromId(configuration.get[String]("app.enquiries.initialTeamId"))
+  private[this] val registrationInvitesEnabled = configuration.get[Boolean]("wellbeing.features.registrationInvites")
 
   private[this] implicit class FutureServiceResultOps[A](f: Future[ServiceResult[A]]) {
     // Convenient way to block on a Future[ServiceResult[_]] that you expect
@@ -371,7 +368,7 @@ class DataGenerationJob @Inject()(
           val client = randomClient()
           implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
 
-          val enquiry = EnquirySave(client, dummyWords(Random.nextInt(5) + 3), initialTeam, IssueState.Open)
+          val enquiry = EnquirySave(client, dummyWords(Random.nextInt(5) + 3), randomTeam(), IssueState.Open)
           val initialMessage = MessageSave(dummyWords(Random.nextInt(200)), MessageSender.Client, None)
 
           enquiries.save(enquiry, initialMessage, randomAttachments(options.MessageAttachmentRate)).serviceValue
@@ -381,7 +378,7 @@ class DataGenerationJob @Inject()(
       // Re-assign some enquiries
       generatedEnquiries = generatedEnquiries.map { enquiry =>
         withMockDateTime(randomFutureDateTime(base = enquiry.created)) { _ =>
-          val teamMember = randomTeamMember(initialTeam)
+          val teamMember = randomTeamMember(enquiry.team)
           implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
           val note = EnquiryNoteSave(dummyWords(Random.nextInt(50)), teamMember)
@@ -406,7 +403,7 @@ class DataGenerationJob @Inject()(
             case 0 => Set()
             case 1 => Set(randomTeamMember(enquiry.team))
             case 2 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team))
-            case 3 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team), randomTeamMember(initialTeam))
+            case 3 => Set(randomTeamMember(enquiry.team), randomTeamMember(enquiry.team), randomTeamMember(randomTeam()))
           }
 
           if (owners.nonEmpty) {
@@ -439,21 +436,11 @@ class DataGenerationJob @Inject()(
         implicit val ac: AuditLogContext = auditLogContext(randomTeamMember(randomTeam()))
         withMockDateTime(randomPastDateTime()) { _ =>
           val summary = ClientSummarySave(
-            highMentalHealthRisk =
-              if ((options.HighMentalHealthRiskSetRate / Random.nextDouble()).toInt > 0) {
-                if ((options.HighMentalHealthRiskRate / Random.nextDouble()).toInt > 0) {
-                  Some(true)
-                } else {
-                  Some(false)
-                }
-              } else {
-                None
-              },
             notes = dummyWords(Random.nextInt(30)),
             alternativeContactNumber = f"07${Random.nextInt(999999999)}%09d",
             alternativeEmailAddress = s"${Random.alphanumeric.take(Random.nextInt(10) + 10).mkString("")}@gmail.com",
             riskStatus =
-              if ((options.HighMentalHealthRiskSetRate / Random.nextDouble()).toInt > 0) {
+              if ((options.HighRiskSetRate / Random.nextDouble()).toInt > 0) {
                 Some(randomEnum(ClientRiskStatus))
               } else {
                 None
@@ -474,39 +461,41 @@ class DataGenerationJob @Inject()(
         }
       }
 
-      // Generate registrations
-      val generatedRegistration: Seq[Option[Registration]] = allClients.map { client =>
-        if ((options.RegistrationRate / Random.nextDouble()).toInt > 0) Some {
-          implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
-          withMockDateTime(randomPastDateTime()) { _ =>
-            val registration = RegistrationData(
-              gp = s"Dr. ${dummyWords(Random.nextInt(2))}",
-              tutor = s"Prof. ${dummyWords(Random.nextInt(2))}",
-              disabilities =
-                (1 to (options.DisabilityRate / Random.nextDouble()).toInt).map { _ =>
-                  randomEnum(Disabilities)
-                }.toSet,
-              medications =
-                (1 to (options.MedicationRate / Random.nextDouble()).toInt).map { _ =>
-                  randomEnum(Medications)
-                }.toSet,
-              appointmentAdjustments = dummyWords(Random.nextInt(10)),
-              referrals =
-                (1 to (options.ReferralRate / Random.nextDouble()).toInt).map { _ =>
-                  randomEnum(RegistrationReferrals)
-                }.toSet,
-              consentPrivacyStatement = Some(true)
-            )
+      if (registrationInvitesEnabled) {
+        // Generate registrations
+        allClients.map { client =>
+          if ((options.RegistrationRate / Random.nextDouble()).toInt > 0) Some {
+            implicit val ac: AuditLogContext = auditLogContext(Usercode(s"u${client.string}"))
+            withMockDateTime(randomPastDateTime()) { _ =>
+              val registration = RegistrationData(
+                gp = s"Dr. ${dummyWords(Random.nextInt(2))}",
+                tutor = s"Prof. ${dummyWords(Random.nextInt(2))}",
+                disabilities =
+                  (1 to (options.DisabilityRate / Random.nextDouble()).toInt).map { _ =>
+                    randomEnum(Disabilities)
+                  }.toSet,
+                medications =
+                  (1 to (options.MedicationRate / Random.nextDouble()).toInt).map { _ =>
+                    randomEnum(Medications)
+                  }.toSet,
+                appointmentAdjustments = dummyWords(Random.nextInt(10)),
+                referrals =
+                  (1 to (options.ReferralRate / Random.nextDouble()).toInt).map { _ =>
+                    randomEnum(RegistrationReferrals)
+                  }.toSet,
+                consentPrivacyStatement = Some(true)
+              )
 
-            registrations.get(client).serviceValue match {
-              case Some(existing) =>
-                registrations.register(client, registration, existing.updatedDate).serviceValue
-              case _ =>
-                val newRegistration = registrations.invite(client).serviceValue
-                registrations.register(client, registration, newRegistration.updatedDate).serviceValue
+              registrations.get(client).serviceValue match {
+                case Some(existing) =>
+                  registrations.register(client, registration, existing.updatedDate).serviceValue
+                case _ =>
+                  val newRegistration = registrations.invite(client).serviceValue
+                  registrations.register(client, registration, newRegistration.updatedDate).serviceValue
+              }
             }
-          }
-        } else None
+          } else None
+        }
       }
 
       // Generate cases
@@ -536,7 +525,13 @@ class DataGenerationJob @Inject()(
                   else None
                 },
                 cause = randomEnum(CaseCause),
-                clientRiskTypes = Set() // TODO Could add some here
+                // TODO parameterise the rates
+                clientRiskTypes = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(ClientRiskType)).toSet,
+                counsellingServicesIssues = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CounsellingServicesIssue)).toSet,
+                studentSupportIssueTypes = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(StudentSupportIssueType)).toSet,
+                medications = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CaseMedication)).toSet,
+                severityOfProblem = if ((0.8 / Random.nextDouble()).toInt > 0) Some(randomEnum(SeverityOfProblem)) else None,
+                duty = (0.1 / Random.nextDouble()).toInt > 0,
               ),
               Set(enquiry.client.universityID),
               (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
@@ -553,7 +548,8 @@ class DataGenerationJob @Inject()(
             // Copy enquiry owners to case owners
             cases.setOwners(
               c.id,
-              enquiries.getOwners(Set(enquiry.id)).serviceValue.values.toSet.flatten.map(_.usercode)
+              enquiries.getOwners(Set(enquiry.id)).serviceValue.values.toSet.flatten.map(_.usercode),
+              None
             ).serviceValue
 
             c -> Set(enquiry.client.universityID)
@@ -593,7 +589,13 @@ class DataGenerationJob @Inject()(
                 else None
               },
               cause = randomEnum(CaseCause),
-              clientRiskTypes = Set() // TODO Could add some here
+              // TODO parameterise the rates
+              clientRiskTypes = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(ClientRiskType)).toSet,
+              counsellingServicesIssues = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CounsellingServicesIssue)).toSet,
+              studentSupportIssueTypes = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(StudentSupportIssueType)).toSet,
+              medications = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(CaseMedication)).toSet,
+              severityOfProblem = if ((0.8 / Random.nextDouble()).toInt > 0) Some(randomEnum(SeverityOfProblem)) else None,
+              duty = (0.1 / Random.nextDouble()).toInt > 0,
             ),
             clients,
             (1 to (options.CaseTagRate / Random.nextDouble()).toInt).map { _ =>
@@ -608,11 +610,11 @@ class DataGenerationJob @Inject()(
             case 0 => Set()
             case 1 => Set(randomTeamMember(team))
             case 2 => Set(randomTeamMember(team), randomTeamMember(team))
-            case 3 => Set(randomTeamMember(team), randomTeamMember(team), randomTeamMember(initialTeam))
+            case 3 => Set(randomTeamMember(team), randomTeamMember(team), randomTeamMember(randomTeam()))
           }
 
           if (owners.nonEmpty) {
-            cases.setOwners(c.id, owners).serviceValue
+            cases.setOwners(c.id, owners, None).serviceValue
           }
 
           c -> clients
@@ -629,7 +631,7 @@ class DataGenerationJob @Inject()(
 
           val newTeam = randomTeam()
           if (newTeam != c.team && (options.CaseReassignRate / Random.nextDouble()).toInt > 0) {
-            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember, None)
 
             cases.reassign(
               c,
@@ -654,7 +656,7 @@ class DataGenerationJob @Inject()(
 
           val other = generatedCases(Random.nextInt(generatedCases.size))._1
           if (other != c && (options.CaseLinkRate / Random.nextDouble()).toInt > 0) {
-            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember, None)
 
             cases.addLink(CaseLinkType.Related, c.id, other.id, note).serviceValue
           }
@@ -672,7 +674,7 @@ class DataGenerationJob @Inject()(
 
             val document = CaseDocumentSave(randomEnum(CaseDocumentType), teamMember)
             val attachment = randomAttachment()
-            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember, None)
 
             cases.addDocument(c.id, document, attachment._1, attachment._2, note).serviceValue
           }
@@ -707,7 +709,7 @@ class DataGenerationJob @Inject()(
             val teamMember = randomTeamMember(c.team)
             implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
-            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember)
+            val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember, None)
 
             cases.addGeneralNote(c.id, note).serviceValue
           }
@@ -844,7 +846,7 @@ class DataGenerationJob @Inject()(
             val teamMember = randomTeamMember(appointment.team)
             implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
-          val cancellationNote = Some(CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember))
+          val cancellationNote = Some(CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember, Some(appointment.id)))
           val a = appointments.cancel(appointment.id, randomEnum(AppointmentCancellationReason), cancellationNote, teamMember, appointment.lastUpdated).serviceValue
 
             a -> clients
@@ -859,21 +861,30 @@ class DataGenerationJob @Inject()(
             val teamMember = randomTeamMember(appointment.team)
             implicit val ac: AuditLogContext = auditLogContext(teamMember)
 
-            val attendance: Map[UniversityID, (AppointmentState, Option[AppointmentCancellationReason])] =
+            val attendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])] =
               clients.map { client =>
                 if ((options.AppointmentAttendedRate / Random.nextDouble()).toInt > 0) {
-                  (client, (AppointmentState.Attended, None))
+                  (client, (AppointmentClientAttendanceState.Attended, None))
                 } else {
-                  (client, (AppointmentState.Cancelled, Some(randomEnum(AppointmentCancellationReason))))
+                  (client, (AppointmentClientAttendanceState.values(Random.nextInt(AppointmentClientAttendanceState.values.size - 1) + 1), Some(randomEnum(AppointmentCancellationReason))))
                 }
               }.toMap
 
-            val note = Some(CaseNoteSave(dummyWords(Random.nextInt(200)), teamMember))
+            val note = Some(CaseNoteSave(dummyWords(Random.nextInt(200)), teamMember, Some(appointment.id)))
 
             appointments.recordOutcomes(
               appointment.id,
               attendance,
-              Set(randomEnum(AppointmentOutcome)),
+              AppointmentOutcomesSave(
+                Set(randomEnum(AppointmentOutcome)),
+                dsaSupportAccessed = {
+                  val typesForTeam = AppointmentDSASupportAccessed.valuesFor(appointment.team)
+                  if (typesForTeam.nonEmpty) Some(typesForTeam(Random.nextInt(typesForTeam.size)))
+                  else None
+                },
+                // TODO parameterise the rates
+                dsaActionPoints = (1 to (0.8 / Random.nextDouble()).toInt).map(_ => randomEnum(AppointmentDSAActionPoint)).toSet,
+              ),
               note,
               appointment.lastUpdated,
             ).serviceValue -> clients

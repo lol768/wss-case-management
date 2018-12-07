@@ -2,10 +2,12 @@
 @import domain.{AppointmentCancellationReason, AppointmentClient, AppointmentRender, SitsProfile}
 @import warwick.core.helpers.JavaTime
 
+@import domain.AppointmentState
 @(
   a: AppointmentRender,
   profiles: Map[AppointmentClient, Option[SitsProfile]],
   cancelForm: Form[CancelAppointmentData],
+  canEdit: Boolean
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
@@ -74,7 +76,7 @@
             @a.appointment.state
           </span>
 
-          @if(a.appointment.state.nonTerminal) {
+          @if(canEdit && a.appointment.state.nonTerminal) {
             &nbsp;
             @b3.horizontal.formCSRF(controllers.admin.routes.AppointmentController.cancel(a.appointment.key), "col-sm-3", "col-sm-9", 'class -> "inline-form") { implicit ifc =>
               <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#cancel-modal">@tags.icons.appointmentCancel() Cancel</button>
@@ -128,24 +130,47 @@
             </ul>
           }
         }
+
+        @a.appointment.dsaSupportAccessed.map { dsaSupportAccessed =>
+          @tags.sectioned.detail("DSA type of support accessed") {
+            @dsaSupportAccessed.description
+          }
+        }
+
+        @if(a.appointment.dsaActionPoints.nonEmpty) {
+          @tags.sectioned.detail("DSA action points") {
+            <ul class="list-unstyled">
+              @a.appointment.dsaActionPoints.map { dsaActionPoint =>
+                <li>@dsaActionPoint.description</li>
+              }
+            </ul>
+          }
+        }
       </div>
-      <div class="col-sm-6 col-md-4">
-        <div class="row form-horizontal">
-          <div class="col-sm-4 control-label">
-            Actions
-          </div>
-          <div class="col-sm-8">
-            <p>
-              <a class="btn btn-default btn-block" href="@controllers.admin.routes.AppointmentController.editForm(a.appointment.key)">Edit appointment</a>
-            </p>
-            <p>
-              <a class="btn @if(a.appointment.start.isBefore(JavaTime.offsetDateTime) && a.appointment.state.nonTerminal) {btn-primary} else {btn-default} btn-block" href="@controllers.admin.routes.AppointmentOutcomesController.outcomesForm(a.appointment.key)">
-                Appointment outcomes
-              </a>
-            </p>
+      @if(canEdit) {
+        <div class="col-sm-6 col-md-4">
+          <div class="row form-horizontal">
+            <div class="col-sm-4 control-label">
+              Actions
+            </div>
+            <div class="col-sm-8">
+              <p>
+                <a class="btn btn-default btn-block" href="@controllers.admin.routes.AppointmentController.editForm(a.appointment.key)">Edit appointment</a>
+              </p>
+              @if(a.appointment.state.nonTerminal) {
+                <p>
+                  <a class="btn @if(a.clients.exists(_.state == AppointmentState.Cancelled)) {btn-primary} else {btn-default} btn-block" href="@controllers.admin.routes.AppointmentController.rescheduleForm(a.appointment.key)">Reschedule appointment</a>
+                </p>
+              }
+              <p>
+                <a class="btn @if(a.appointment.start.isBefore(JavaTime.offsetDateTime) && a.appointment.state.nonTerminal) {btn-primary} else {btn-default} btn-block" href="@controllers.admin.routes.AppointmentOutcomesController.outcomesForm(a.appointment.key)">
+                  Appointment outcomes
+                </a>
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      }
     </div>
   </div>
 }

@@ -37,7 +37,10 @@ class TabulaMemberSearchServiceImpl @Inject()(
   private val tabulaQueryUrl = configuration.get[String]("wellbeing.tabula.query")
 
   override def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Seq[TabulaResponseParsers.TabulaMemberSearchResult]]] = time(TimingCategory) {
-    val request = ws.url(tabulaQueryUrl).withQueryStringParameters(("query", query))
+    val request = ws.url(tabulaQueryUrl).withQueryStringParameters(
+      "query" -> query,
+      "fields" -> TabulaResponseParsers.memberSearchFields.mkString(","),
+    )
 
     val trustedHeaders = TrustedApplicationUtils.getRequestHeaders(
       trustedApplicationsManager.getCurrentApplication,

@@ -58,7 +58,9 @@ class ProfileServiceImpl @Inject()(
   override def getProfile(universityID: UniversityID)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Option[SitsProfile]]]] = time(TimingCategory) {
     wrappedCache.getOrElseUpdateElement(s"tabulaprofile:${universityID.string}", CacheOptions.default) {
       val url = s"$tabulaProfileUrl/${universityID.string}"
-      val request = ws.url(url)
+      val request = ws.url(url).addQueryStringParameters(
+        "fields" -> TabulaResponseParsers.TabulaProfileData.memberFields.mkString(",")
+      )
 
       val trustedHeaders = TrustedApplicationUtils.getRequestHeaders(
         trustedApplicationsManager.getCurrentApplication,
@@ -82,8 +84,6 @@ class ProfileServiceImpl @Inject()(
                 val tabulaProfile = data.toUserProfile
                 Right(Some(tabulaProfile.copy(
                   photo = Some(photoService.photoUrl(universityID)),
-                  personalTutors = tabulaProfile.personalTutors.map { p => p.copy(photo = Some(photoService.photoUrl(p.universityID))) },
-                  researchSupervisors = tabulaProfile.researchSupervisors.map { p => p.copy(photo = Some(photoService.photoUrl(p.universityID))) }
                 )))
               }
             )

@@ -8,11 +8,12 @@ import controllers.admin.AppointmentController._
 import controllers.refiners._
 import controllers.{API, BaseController}
 import domain._
-import helpers.ServiceResults.{ServiceError, ServiceResult}
+import enumeratum.{EnumEntry, PlayEnum}
+import helpers.ServiceResults.ServiceResult
 import helpers.{FormHelpers, ServiceResults}
 import javax.inject.{Inject, Singleton}
-import play.api.data.{Form, FormError}
 import play.api.data.Forms._
+import play.api.data.{Form, FormError}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent, Result}
@@ -23,11 +24,21 @@ import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 import warwick.sso._
 
+import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Try
 
 object AppointmentController {
+  sealed trait Mode extends EnumEntry
+  object Mode extends PlayEnum[Mode] {
+    case object Create extends Mode
+    case object Edit extends Mode
+    case object Reschedule extends Mode
+
+    override def values: immutable.IndexedSeq[Mode] = findValues
+  }
+
   case class AppointmentFormData(
     clients: Set[UniversityID],
     teamMembers: Set[Usercode],
@@ -43,9 +54,9 @@ object AppointmentController {
     permissionService: PermissionService,
     locationService: LocationService,
     existingClients: Set[Client],
+    isRescheduling: Boolean,
     existingVersion: Option[OffsetDateTime] = None
   )(implicit t: TimingContext, executionContext: ExecutionContext): Form[AppointmentFormData] = {
-
     def isValid(u: UniversityID, existing: Set[Client]): Boolean =
       existing.exists(_.universityID == u) ||
         Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
@@ -74,10 +85,10 @@ object AppointmentController {
             .verifying("error.appointment.teamMember.invalid", u => u.isEmpty || u.exists { usercode => isValidTeamMember(usercode) })
         ).transform[Set[Usercode]](_.flatten, _.map(Some.apply)).verifying("error.required", _.nonEmpty),
         "cases" -> set(
-          optional(uuid.verifying("error.required", id => isValidCase(id)))
+          optional(uuid.verifying("error.appointment.cases.invalid", id => isValidCase(id)))
         ).transform[Set[UUID]](_.flatten, _.map(Some.apply)).verifying("error.appointment.cases.nonEmpty", _.nonEmpty),
         "appointment" -> mapping(
-          "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", _.isAfter(JavaTime.offsetDateTime)),
+          "start" -> FormHelpers.offsetDateTime.verifying("error.appointment.start.inPast", dt => (existingVersion.nonEmpty && !isRescheduling) || dt.isAfter(JavaTime.offsetDateTime)),
           "duration" -> number(min = 60, max = 120 * 60).transform[Duration](n => Duration.ofSeconds(n.toLong), _.getSeconds.toInt),
           "roomID" -> optional(uuid.verifying("error.required", id => isValidRoom(id))),
           "appointmentType" -> AppointmentType.formField,
@@ -165,6 +176,7 @@ class AppointmentController @Inject()(
   freeBusyService: FreeBusyService,
   clients: ClientService,
   members: MemberService,
+  permissionService: PermissionService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   appointmentActionFilters: AppointmentActionFilters,
@@ -175,14 +187,19 @@ class AppointmentController @Inject()(
   import canViewTeamActionRefiner._
 
   private def renderAppointment(appointmentKey: IssueKey, cancelForm: Form[CancelAppointmentData])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
-    appointments.findForRender(appointmentKey).successFlatMap { render =>
+    ServiceResults.zip(
+      appointments.findForRender(appointmentKey),
+      permissionService.canEditAppointment(currentUser().usercode, request.appointment.id)
+    )
+   .successFlatMap { case (render, canEdit) =>
       profiles.getProfiles(render.clients.map(_.client.universityID)).successMap { clientProfiles =>
         val clients = render.clients.map(c => c -> clientProfiles.get(c.client.universityID)).toMap
 
         Ok(views.html.admin.appointments.view(
           render,
           clients,
-          cancelForm
+          cancelForm,
+          canEdit
         ))
       }
     }
@@ -206,7 +223,7 @@ class AppointmentController @Inject()(
   }
 
   def createForm(teamId: String, forCase: Option[IssueKey], client: Option[UniversityID], start: Option[OffsetDateTime], duration: Option[Duration]): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    val baseForm = form(teamRequest.team, profiles, cases, permissions, locations, Set())
+    val baseForm = form(teamRequest.team, profiles, cases, permissions, locations, Set(), isRescheduling = false)
     val baseBind = Map("teamMembers[0]" -> teamRequest.context.user.get.usercode.string)
 
     if (forCase.nonEmpty && client.nonEmpty) {
@@ -247,7 +264,7 @@ class AppointmentController @Inject()(
   }
 
   def create(teamId: String): Action[AnyContent] = CanViewTeamAction(teamId).async { implicit teamRequest =>
-    val boundForm = form(teamRequest.team, profiles, cases, permissions, locations, Set()).bindFromRequest
+    val boundForm = form(teamRequest.team, profiles, cases, permissions, locations, Set(), isRescheduling = false).bindFromRequest
     boundForm.fold(
       formWithErrors => {
         locations.availableRooms.successMap { availableRooms =>
@@ -276,23 +293,26 @@ class AppointmentController @Inject()(
     )
   }
 
+  private def appointmentSave(a: AppointmentRender): AppointmentSave =
+    AppointmentSave(
+      a.appointment.start,
+      a.appointment.duration,
+      a.room.map(_.id),
+      a.appointment.appointmentType,
+      a.appointment.purpose,
+    )
+
   def editForm(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
     ServiceResults.zip(appointments.findForRender(appointmentKey), locations.availableRooms).successMap { case (a, availableRooms) =>
       Ok(
         views.html.admin.appointments.edit(
-          a.appointment,
-          form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), Some(a.appointment.lastUpdated))
+          a,
+          form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), isRescheduling = false, Some(a.appointment.lastUpdated))
             .fill(AppointmentFormData(
               a.clients.map(_.client.universityID),
               a.teamMembers.map(_.member.usercode),
               a.clientCases.map(_.id),
-              AppointmentSave(
-                a.appointment.start,
-                a.appointment.duration,
-                a.room.map(_.id),
-                a.appointment.appointmentType,
-                a.appointment.purpose,
-              ),
+              appointmentSave(a),
               Some(a.appointment.lastUpdated)
             )),
           availableRooms
@@ -303,9 +323,9 @@ class AppointmentController @Inject()(
 
   def edit(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
     ServiceResults.zip(appointments.findForRender(appointmentKey), locations.availableRooms).successFlatMap { case (a, availableRooms) =>
-      val boundForm = form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), Some(a.appointment.lastUpdated)).bindFromRequest
+      val boundForm = form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), isRescheduling = false, Some(a.appointment.lastUpdated)).bindFromRequest
       boundForm.fold(
-        formWithErrors => Future.successful(Ok(views.html.admin.appointments.edit(a.appointment, formWithErrors, availableRooms))),
+        formWithErrors => Future.successful(Ok(views.html.admin.appointments.edit(a, formWithErrors, availableRooms))),
         data => {
           val clients = data.clients.filter(_.string.nonEmpty)
           val linkedCases = data.cases.filter(_.toString.nonEmpty)
@@ -315,10 +335,19 @@ class AppointmentController @Inject()(
             if (nonCaseClients.nonEmpty) {
               val formWithErrors = boundForm.withError(FormError("clients", "error.appointment.clients.invalid", Seq(nonCaseClients.map(_.string).mkString(", "))))
               locations.availableRooms.successMap { availableRooms =>
-                Ok(views.html.admin.appointments.edit(a.appointment, formWithErrors, availableRooms))
+                Ok(views.html.admin.appointments.edit(a, formWithErrors, availableRooms))
               }
             } else {
-              appointments.update(a.appointment.id, data.appointment, linkedCases, clients, data.teamMembers, currentUser().usercode, data.version.get).successMap { updated =>
+              // Don't allow re-scheduling here
+              val updates = AppointmentSave(
+                start = a.appointment.start,
+                duration = a.appointment.duration,
+                roomID = a.room.map(_.id),
+                appointmentType = data.appointment.appointmentType,
+                purpose = data.appointment.purpose,
+              )
+
+              appointments.update(a.appointment.id, updates, linkedCases, clients, data.teamMembers, currentUser().usercode, data.version.get).successMap { updated =>
                 Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
                   .flashing("success" -> Messages("flash.appointment.updated"))
               }
@@ -402,6 +431,68 @@ class AppointmentController @Inject()(
     )
   }
 
+  def rescheduleForm(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
+    ServiceResults.zip(appointments.findForRender(appointmentKey), locations.availableRooms).successMap { case (a, availableRooms) =>
+      // Don't allow rescheduling appointments that are in a terminal state
+      if (a.appointment.state.isTerminal)
+        Redirect(controllers.admin.routes.AppointmentController.view(a.appointment.key))
+      else
+        Ok(
+          views.html.admin.appointments.reschedule(
+            a,
+            form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), isRescheduling = true, Some(a.appointment.lastUpdated))
+              .fill(AppointmentFormData(
+                a.clients.map(_.client.universityID),
+                a.teamMembers.map(_.member.usercode),
+                a.clientCases.map(_.id),
+                AppointmentSave(
+                  a.appointment.start,
+                  a.appointment.duration,
+                  a.room.map(_.id),
+                  a.appointment.appointmentType,
+                  a.appointment.purpose,
+                ),
+                Some(a.appointment.lastUpdated)
+              )),
+            availableRooms
+          )
+        )
+    }
+  }
+
+  def reschedule(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
+    ServiceResults.zip(appointments.findForRender(appointmentKey), locations.availableRooms).successFlatMap { case (a, availableRooms) =>
+      // Don't allow rescheduling appointments that are in a terminal state
+      if (a.appointment.state.isTerminal) {
+        Future.successful(Redirect(controllers.admin.routes.AppointmentController.view(a.appointment.key)))
+      } else {
+        val boundForm = form(a.appointment.team, profiles, cases, permissions, locations, a.clients.map(_.client), isRescheduling = true, Some(a.appointment.lastUpdated)).bindFromRequest
+        boundForm.fold(
+          formWithErrors => Future.successful(Ok(views.html.admin.appointments.reschedule(a, formWithErrors, availableRooms))),
+          data => {
+            val updates = AppointmentSave(
+              start = data.appointment.start,
+              duration = data.appointment.duration,
+              roomID = data.appointment.roomID,
+              appointmentType = a.appointment.appointmentType,
+              purpose = a.appointment.purpose,
+            )
+
+            if (updates == appointmentSave(a)) {
+              // no-op, don't send notifications unnecessarily
+              Future.successful(Redirect(controllers.admin.routes.AppointmentController.view(a.appointment.key)))
+            } else {
+              appointments.reschedule(a.appointment.id, updates, currentUser().usercode, data.version.get).successMap { updated =>
+                Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
+                  .flashing("success" -> Messages("flash.appointment.updated"))
+              }
+            }
+          }
+        )
+      }
+    }
+  }
+
   def cancel(appointmentKey: IssueKey): Action[AnyContent] = CanEditAppointmentAction(appointmentKey).async { implicit request =>
     val appointment = request.appointment
 
@@ -411,7 +502,7 @@ class AppointmentController @Inject()(
         formWithErrors
       ),
       data => {
-        val note = data.message.map(CaseNoteSave(_, currentUser().usercode))
+        val note = data.message.map(CaseNoteSave(_, currentUser().usercode, Some(appointment.id)))
         appointments.cancel(appointment.id, data.cancellationReason, note, currentUser().usercode, data.version).successMap { updated =>
           Redirect(controllers.admin.routes.AppointmentController.view(updated.key))
             .flashing("success" -> Messages("flash.appointment.cancelled"))

@@ -72,3 +72,7 @@ play.mailer {
   user = "..."
   password = "..."
 }
+
+# Get this from one of the live/test servers, all talk to the live virus scan service
+# or generate a new one and put it in https://repo.elab.warwick.ac.uk/projects/SYSAD/repos/puppet3/browse/hieradata/deployments/virusscan/app/prod.eyaml
+virusscan.api.key=some-key

@@ -4,18 +4,22 @@
 @import warwick.core.helpers.JavaTime
 @import warwick.sso.UniversityID
 
+@import play.api.libs.json.Json
 @(
   universityID: UniversityID,
   profile: Option[SitsProfile],
   registration: Option[Registration],
   clientSummary: Option[ClientSummary],
+  clientSummaryHistory: ClientSummaryHistory,
   enquiries: Seq[EnquiryListRender],
-  cases: Seq[CaseListRender],
+  openCases: Int,
+  closedCases: Int,
   appointments: Seq[AppointmentRender],
   owners: Map[UUID, Set[Member]],
   form: Form[ClientSummarySave],
   inMentalHealthTeam: Boolean,
-  success: Option[String] = None
+  registrationInvitesEnabled: Boolean,
+  success: Option[String] = None,
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("Client profile") {
@@ -46,7 +50,7 @@
               </div>
             </div>
           }
-          <div class="col-xs-7 col-sm-9 col-md-10">
+          <div class="col-xs-7 col-sm-9 col-md-10 field-history" data-field-history="@Json.stringify(Json.toJson(clientSummaryHistory)(ClientSummaryHistory.writer))">
             @tags.sectioned.detail("Department") {
               @profile.department.name
             }
@@ -162,81 +166,92 @@
               }
             }
 
-            @if(inMentalHealthTeam && clientSummary.exists(_.highMentalHealthRisk.contains(true))) {
-              @tags.sectioned.detail("Mental health risk") {
-                <span class="label label-danger">High mental health risk</span>
+            @if(clientSummary.exists(_.riskStatus.nonEmpty) || clientSummaryHistory.riskStatus.size > 1) {
+              @tags.sectioned.detail("Risk status") {
+                <div data-field-history-field="riskStatus">
+                  @clientSummary.flatMap(_.riskStatus).map {
+                    case ClientRiskStatus.Low => {
+                      <span class="label label-success">Low risk status</span>
+                    }
+                    case ClientRiskStatus.Medium => {
+                      <span class="label label-warning">Medium risk status</span>
+                    }
+                    case ClientRiskStatus.High => {
+                      <span class="label label-danger">High risk status</span>
+                    }
+                  }.getOrElse(clientSummaryHistory.riskStatus.find(_._1.nonEmpty).map(_._1).map {
+                    case Some(ClientRiskStatus.Low) => {
+                        <span class="label label-success"><s>Low risk status</s></span>
+                    }
+                    case Some(ClientRiskStatus.Medium) => {
+                        <span class="label label-warning"><s>Medium risk status</s></span>
+                    }
+                    case Some(ClientRiskStatus.High) => {
+                        <span class="label label-danger"><s>High risk status</s></span>
+                    }
+                    case _ => {}
+                  })
+                </div>
               }
-            }
-
-            @clientSummary.flatMap(_.riskStatus).map { status =>
-              @tags.sectioned.detail("Risk status") { @status match {
-                case ClientRiskStatus.Low => {
-                  <span class="label label-success">Low risk status</span>
-                }
-                case ClientRiskStatus.Medium => {
-                  <span class="label label-warning">Medium risk status</span>
-                }
-                case ClientRiskStatus.High => {
-                  <span class="label label-danger">High risk status</span>
-                }
-              }}
             }
           </div>
         </div>
       </div>
     }
 
-    <div class="client-profile--registration">
-      <div class="client-profile--registration--header">
-        <h2>Registration</h2>
-      </div>
+    @if(registrationInvitesEnabled || registration.flatMap(_.data).nonEmpty) {
+      <div class="client-profile--registration">
+        <div class="client-profile--registration--header">
+          <h2>Registration</h2>
+        </div>
 
-      <section class="client-profile--registration--fields indent">
-        @registration.flatMap(_.data).map { registrationData =>
-          <div class="field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(universityID)">
-            @tags.sectioned.detail("Registered") {
-              @JavaTime.Relative(registration.get.updatedDate)
-            }
+        <section class="client-profile--registration--fields indent">
+          @registration.flatMap(_.data).map { registrationData =>
+            <div class="field-history" data-href="@controllers.admin.routes.ClientController.registrationHistory(universityID)">
+              @tags.sectioned.detail("Registered") {
+                @JavaTime.Relative(registration.get.updatedDate)
+              }
 
-            @tags.sectioned.detail("GP") {
-              <div data-field-history-field="gp">@registrationData.gp</div>
-            }
+              @tags.sectioned.detail("GP") {
+                <div data-field-history-field="gp">@registrationData.gp</div>
+              }
 
-            @tags.sectioned.detail("Tutor") {
-              <div data-field-history-field="tutor">@registrationData.tutor</div>
-            }
+              @tags.sectioned.detail("Tutor") {
+                <div data-field-history-field="tutor">@registrationData.tutor</div>
+              }
 
-            @tags.sectioned.detail("Disabilities") {
-              <div data-field-history-field="disabilities">@registrationData.disabilities.map(_.description).mkString(", ")</div>
-            }
+              @tags.sectioned.detail("Disabilities") {
+                <div data-field-history-field="disabilities">@registrationData.disabilities.map(_.description).mkString(", ")</div>
+              }
 
-            @tags.sectioned.detail("Medication") {
-              <div data-field-history-field="medications">@registrationData.medications.map(_.description).mkString(", ")</div>
-            }
+              @tags.sectioned.detail("Medication") {
+                <div data-field-history-field="medications">@registrationData.medications.map(_.description).mkString(", ")</div>
+              }
 
-            @tags.sectioned.detail("Appointment adjustments") {
-              <div data-field-history-field="appointmentAdjustments">@views.utils.nl2br(registrationData.appointmentAdjustments)</div>
-            }
+              @tags.sectioned.detail("Appointment adjustments") {
+                <div data-field-history-field="appointmentAdjustments">@views.utils.nl2br(registrationData.appointmentAdjustments)</div>
+              }
 
-            @tags.sectioned.detail("Referrals") {
-              <div data-field-history-field="referrals">@registrationData.referrals.map(_.description).mkString(", ")</div>
-            }
-          </div>
-        }.getOrElse {
-          <em>
-            Client is not currently registered
-            @registration.map { r =>
-              (last invited @JavaTime.Relative(r.lastInvited, lowercaseToday = true))
-            }
-          </em>
-          @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(universityID)) { implicit ifc =>
-            @b3.submit('class -> "btn btn-default") {
-              Invite to register
+              @tags.sectioned.detail("Referrals") {
+                <div data-field-history-field="referrals">@registrationData.referrals.map(_.description).mkString(", ")</div>
+              }
+            </div>
+          }.getOrElse {
+            <em>
+              Client is not currently registered
+              @registration.map { r =>
+                (last invited @JavaTime.Relative(r.lastInvited, lowercaseToday = true))
+              }
+            </em>
+            @b3.inline.formCSRF(controllers.admin.routes.ClientController.invite(universityID)) { implicit ifc =>
+              @b3.submit('class -> "btn btn-default") {
+                Invite to register
+              }
             }
           }
-        }
-      </section>
-    </div>
+        </section>
+      </div>
+    }
 
     <div class="client-profile--summary">
       <div class="client-profile--summary--header">
@@ -244,82 +259,29 @@
       </div>
 
       <section class="client-profile--summary--issues indent">
-        @if(cases.isEmpty) {
+        @if((openCases + closedCases) == 0) {
           <p>No open or closed cases</p>
         } else {
           <p>
             @tags.p(
-              number = cases.count(_.clientCase.state != IssueState.Closed),
+              number = openCases,
               singular = "open case"
             )(
               plural = "open cases",
               zero = "No"
             ),
             @tags.p(
-              number = cases.count(_.clientCase.state == IssueState.Closed),
+              number = closedCases,
               singular = "closed case"
             )(
               plural = "closed cases",
               zero = "no"
             )
-            <button class="toggle-element btn btn-default btn-xs" data-target="#case-tables" data-shown-label="hide">show</button>
+            <button class="toggle-element btn btn-default btn-xs" data-target="#case-tables" data-shown-label="hide" data-href="@controllers.admin.routes.ClientController.cases(universityID)">show</button>
           </p>
 
           <div class="hidden" id="case-tables">
-            @if(cases.exists(_.clientCase.state != IssueState.Closed )) {
-              <table class="table table-condensed">
-                <caption>Open cases</caption>
-                <thead>
-                  <tr>
-                    <th class="col-sm-1">Case ID</th>
-                    <th class="col-sm-5">Subject</th>
-                    <th class="col-sm-2">Owner</th>
-                    <th class="col-sm-2">Team</th>
-                    <th class="col-sm-2">Last updated</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @defining(cases.filter(_.clientCase.state != IssueState.Closed )) { open: Seq[CaseListRender] =>
-                    @open.map { caseListRender: CaseListRender =>
-                      <tr>
-                        <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key)" target="_blank">@caseListRender.clientCase.key.string</a></td>
-                        <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key)" target="_blank">@caseListRender.clientCase.subject</a></td>
-                        <td>@owners.get(caseListRender.clientCase.id).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
-                        <td>@caseListRender.clientCase.team.name</td>
-                        <td>@JavaTime.Relative(caseListRender.lastUpdated.toLocalDate).capitalize</td>
-                      </tr>
-                    }
-                  }
-                </tbody>
-              </table>
-            }
-            @if(cases.exists(_.clientCase.state == IssueState.Closed )) {
-              <table class="table table-condensed">
-                <caption>Closed cases</caption>
-                <thead>
-                  <tr>
-                    <th class="col-sm-1">Case ID</th>
-                    <th class="col-sm-5">Subject</th>
-                    <th class="col-sm-2">Owner</th>
-                    <th class="col-sm-2">Team</th>
-                    <th class="col-sm-2">Closed</th>
-                  </tr>
-                </thead>
-                <tbody>
-                @defining(cases.filter(_.clientCase.state == IssueState.Closed )) { closed: Seq[CaseListRender] =>
-                  @closed.map { caseListRender: CaseListRender =>
-                    <tr>
-                      <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key)" target="_blank">@caseListRender.clientCase.key.string</a></td>
-                      <td><a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key)" target="_blank">@caseListRender.clientCase.subject</a></td>
-                      <td>@owners.get(caseListRender.clientCase.id).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
-                      <td>@caseListRender.clientCase.team.name</td>
-                      <td>@JavaTime.Relative(caseListRender.clientCase.lastUpdated.toLocalDate).capitalize</td>
-                    </tr>
-                  }
-                }
-                </tbody>
-              </table>
-            }
+            @tags.icons.loadingSpinner() Loading&hellip;
           </div>
         }
 
@@ -355,10 +317,10 @@
               <tbody>
                 @appointments.map { a =>
                   <tr>
-                    <td><a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)" target="_blank">@a.appointment.key.string</a></td>
+                    <td><a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)">@a.appointment.key.string</a></td>
                     <td>
                       @tags.icons.appointmentState(a.appointment.state)
-                      <a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)" target="_blank">@a.appointment.subject(None, None)</a>
+                      <a href="@controllers.admin.routes.AppointmentController.view(a.appointment.key)">@a.appointment.subject(None, None)</a>
                     </td>
                     <td>@JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))</td>
                     <td>
@@ -422,8 +384,8 @@
                   @defining(enquiries.filter { r => r.enquiry.state != IssueState.Closed }) { open: Seq[EnquiryListRender] =>
                     @open.map { case render =>
                       <tr>
-                        <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.key.string</a></td>
-                        <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.subject</a></td>
+                        <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)">@render.enquiry.key.string</a></td>
+                        <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)">@render.enquiry.subject</a></td>
                         <td>@owners.get(render.enquiry.id).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
                         <td>@render.enquiry.team.name</td>
                         <td>@JavaTime.Relative(render.lastUpdated.toLocalDate).capitalize</td>
@@ -449,8 +411,8 @@
                 @defining(enquiries.filter { r => r.enquiry.state == IssueState.Closed }) { closed: Seq[EnquiryListRender] =>
                   @closed.map { render =>
                     <tr>
-                      <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.key.string</a></td>
-                      <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)" target="_blank">@render.enquiry.subject</a></td>
+                      <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)">@render.enquiry.key.string</a></td>
+                      <td><a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)">@render.enquiry.subject</a></td>
                       <td>@owners.get(render.enquiry.id).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
                       <td>@render.enquiry.team.name</td>
                       <td>@JavaTime.Relative(render.enquiry.lastUpdated.toLocalDate).capitalize</td>
@@ -490,38 +452,14 @@
             </div>
           </div>
 
-          @b3.free('_label -> "Academic reasonable adjustments",
-            '_class -> form("reasonable-adjustments").error.map(_ => "has-error").getOrElse("")
-          ) {
-            @ReasonableAdjustment.partioned.map { case (left, right) =>
-              <div class="row checkbox-condensed">
-                <div class="col-sm-6">
-                  @left.map { item =>
-                    @b3.checkbox(form(s"reasonable-adjustments[]"),
-                      'id -> s"reasonable-adjustment-${item.id}",
-                      'value -> item.id,
-                      '_text -> item.description,
-                      'checked -> form("reasonable-adjustments").indexes.exists(i => form(s"reasonable-adjustments[$i]").value.contains(item.id))
-                    )(b3.clear.fieldConstructorSpecific, messagesProvider)
-                  }
-                </div>
-                <div class="col-sm-6">
-                  @right.map { item =>
-                    @b3.checkbox(form(s"reasonable-adjustments[]"),
-                      'id -> s"reasonable-adjustment-${item.id}",
-                      'value -> item.id,
-                      '_text -> item.description,
-                      'checked -> form("reasonable-adjustments").indexes.exists(i => form(s"reasonable-adjustments[$i]").value.contains(item.id))
-                    )(b3.clear.fieldConstructorSpecific, messagesProvider)
-                  }
-                </div>
-              </div>
-            }
-
-            @form("reasonable-adjustments").error.map { error =>
-              <span class="help-block">@error.format</span>
-            }
-          }
+          @b3.checkboxGroup(
+            label = "Academic reasonable adjustments",
+            items = ReasonableAdjustment.values,
+            form = form,
+            field = "reasonable-adjustments",
+            idPrefix = "reasonable-adjustment",
+            columns = 2
+          )
 
           <div class="row">
             <div class="col-sm-3">
@@ -529,13 +467,6 @@
                 options = ("", "") +: ClientRiskStatus.values.map { s => s.entryName -> s.entryName },
                 '_label -> "Risk status"
               )
-            </div>
-            <div class="col-sm-3 col-sm-offset-3">
-              @if(inMentalHealthTeam) {
-                @b3.select(form("high-mental-health-risk"), options = Seq("" -> "Not specified", "true" -> "Yes", "false" -> "No"),
-                  '_label -> "High mental health risk"
-                )
-              }
             </div>
           </div>
 

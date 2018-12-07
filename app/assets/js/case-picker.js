@@ -52,7 +52,7 @@ export default function CasePicker(element) {
           </div>
           <div class="media-body">
             <span class="title">${_.escape(item.key)}</span>
-            <span class="type">${_.escape(item.team)}</span>
+            <span class="type">${_.escape(item.clients)}</span>
             <div class="description">${_.escape(item.subject)}</div>
           </div>
         </div>`,
@@ -63,7 +63,7 @@ export default function CasePicker(element) {
     afterSelect: (item) => {
       if (item) {
         const text = displayItem(item);
-        richResultField.store(item.id, _.escape(text));
+        richResultField.store(item.id, text, item.url);
         $element.data('item', item);
       }
     },
@@ -78,6 +78,6 @@ export default function CasePicker(element) {
         log.error(e);
         return [];
       })
-      .then(response => richResultField.storeText(`${_.escape(displayItem(response.data.results[0]))}`));
+      .then(response => richResultField.storeText(displayItem(response.data.results[0])));
   }
 }

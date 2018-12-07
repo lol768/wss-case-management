@@ -36,7 +36,7 @@ package object utils {
       form(s"$fieldName[$i]").value
     }
 
-  def nl2br(text: String): Content = HtmlFormat.fill(text.split("\n").flatMap { line =>
+  def nl2br(text: String): Content = HtmlFormat.fill(text.trim.split("\n").flatMap { line =>
     Seq(HtmlFormat.escape(line), BR)
   }.toList)
 }

@@ -1,0 +1,18 @@
+@(
+  field: Field,
+  options: Seq[(String, String)],
+  args: (Symbol, Any)*
+)(implicit handler: b3.B3FieldConstructor, messages: Messages)
+
+@b3.free(args: _*) {
+  <div class="btn-group radiosAsButtons" data-toggle="buttons">
+    @defining(b3.B3FieldInfo(field, withFeedback = false, withLabelFor = false, args, messages)) { fieldInfo =>
+      @options.map { case (v, k) =>
+        <label class="btn @if(fieldInfo.value == Some(v)) {btn-primary active} else {btn-default}">
+          <input type="radio" name="@fieldInfo.name" value="@v" @if(fieldInfo.value == Some(v)){checked}>
+          @k
+        </label>
+      }
+    }
+  </div>
+}

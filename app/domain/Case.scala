@@ -3,13 +3,13 @@ package domain
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import domain.CaseHistory.FieldHistory
 import domain.DatabaseOperation.Delete
+import domain.History._
 import domain.dao.CaseDao._
 import domain.dao.DSADao.{StoredDSAApplicationVersion, StoredDSAFundingType, StoredDSAFundingTypeVersion}
 import enumeratum.{EnumEntry, PlayEnum}
 import helpers.ServiceResults.ServiceResult
-import play.api.libs.json.{JsValue, Json, Writes}
+import play.api.libs.json.{Json, Writes}
 import services.{AuditLogContext, CaseService, ClientService}
 import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, User, UserLookupService, Usercode}
@@ -28,7 +28,7 @@ case class Case(
   caseType: Option[CaseType],
   cause: CaseCause,
   dsaApplication: Option[UUID],
-  clientRiskTypes: Set[ClientRiskType],
+  fields: CaseFields,
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
 ) extends Issue
@@ -39,6 +39,15 @@ case class CaseIncident(
   notifiedPolice: Boolean,
   notifiedAmbulance: Boolean,
   notifiedFire: Boolean,
+)
+
+case class CaseFields(
+  clientRiskTypes: Set[ClientRiskType],
+  counsellingServicesIssues: Set[CounsellingServicesIssue],
+  studentSupportIssueTypes: Set[StudentSupportIssueType],
+  medications: Set[CaseMedication],
+  severityOfProblem: Option[SeverityOfProblem],
+  duty: Boolean,
 )
 
 object Case {
@@ -58,7 +67,12 @@ case class CaseSave(
   incident: Option[CaseIncident],
   caseType: Option[CaseType],
   cause: CaseCause,
-  clientRiskTypes: Set[ClientRiskType]
+  clientRiskTypes: Set[ClientRiskType],
+  counsellingServicesIssues: Set[CounsellingServicesIssue],
+  studentSupportIssueTypes: Set[StudentSupportIssueType],
+  medications: Set[CaseMedication],
+  severityOfProblem: Option[SeverityOfProblem],
+  duty: Boolean,
 )
 
 object CaseSave {
@@ -68,14 +82,19 @@ object CaseSave {
       c.incident,
       c.caseType,
       c.cause,
-      c.clientRiskTypes
+      c.fields.clientRiskTypes,
+      c.fields.counsellingServicesIssues,
+      c.fields.studentSupportIssueTypes,
+      c.fields.medications,
+      c.fields.severityOfProblem,
+      c.fields.duty,
     )
 }
 
 case class CaseRender(
   clientCase: Case,
   messages: Seq[MessageRender],
-  notes: Seq[CaseNote]
+  notes: Seq[CaseNote],
 ) {
   def toIssue = IssueRender(
     clientCase,
@@ -169,9 +188,19 @@ case class CaseNote(
   lastUpdated: OffsetDateTime = JavaTime.offsetDateTime,
 )
 
+case class CaseNoteRender(
+  note: CaseNote,
+  appointment: Option[AppointmentRender],
+)
+
 object CaseNote {
   // oldest first
   val dateOrdering: Ordering[CaseNote] = Ordering.by[CaseNote, OffsetDateTime](_.created)(JavaTime.dateTimeOrdering)
+}
+
+object CaseNoteRender {
+  // delegates to CaseNote.dateOrdering
+  val dateOrdering: Ordering[CaseNoteRender] = Ordering.by[CaseNoteRender, CaseNote](_.note)(CaseNote.dateOrdering)
 }
 
 /**
@@ -180,7 +209,8 @@ object CaseNote {
   */
 case class CaseNoteSave(
   text: String,
-  teamMember: Usercode
+  teamMember: Usercode,
+  appointmentID: Option[UUID],
 )
 
 sealed abstract class CaseNoteType(val description: String) extends EnumEntry
@@ -191,6 +221,7 @@ object CaseNoteType extends PlayEnum[CaseNoteType] {
   case object CaseClosed extends CaseNoteType("Case closed")
   case object CaseReopened extends CaseNoteType("Case reopened")
   case object GeneralNote extends CaseNoteType("General note")
+  case object OwnerNote extends CaseNoteType("Owner added")
   case object Referral extends CaseNoteType("Referral")
 
   override def values: immutable.IndexedSeq[CaseNoteType] = findValues
@@ -228,17 +259,14 @@ object CaseDocumentType extends PlayEnum[CaseDocumentType] {
   case object SpecificLearningDifficultyDocument extends CaseDocumentType("Specific Learning Difficulty Document")
   case object WellbeingSupportInformationForm extends CaseDocumentType("Wellbeing Support Information Form")
   case object UIRForm extends CaseDocumentType("UIR Form")
+  case object EmailCorrespondence extends CaseDocumentType("Email correspondence")
+  case object Referral extends CaseDocumentType("Referral")
   case object Other extends CaseDocumentType("Other")
 
   override def values: immutable.IndexedSeq[CaseDocumentType] = findValues
 }
 
 object CaseHistory {
-
-  private type FieldHistory[A] = Seq[(A, OffsetDateTime, Option[Either[Usercode, User]])]
-
-  private def optionalHistory[A](emptyMessage: String, history: FieldHistory[Option[A]], toHistoryDescription: A => String) =
-    history.map{ case (value, v, u) => (value.map(toHistoryDescription).getOrElse(emptyMessage), v, u) }
 
   private def incidentHistory[A](history: FieldHistory[Option[A]], toHistoryDescription: A => String) =
     optionalHistory("Not linked to incident", history, toHistoryDescription)
@@ -268,7 +296,11 @@ object CaseHistory {
       "dsaFundingTypes" -> toJson(r.dsaFundingTypes.map { case (tags, v, u) => (tags.map(_.description).toSeq.sorted.mkString(", "), v, u) }),
       "dsaConfirmationDate" -> toJson(dsaHistory[Option[OffsetDateTime]](r.dsaConfirmationDate, date => date.map(JavaTime.Relative.apply(_)).getOrElse("Decision date removed"))),
       "dsaIneligibilityReason" -> toJson(dsaHistory[Option[DSAIneligibilityReason]](r.dsaIneligibilityReason, reason => reason.map(_.description).getOrElse("Ineligibility reason removed"))),
-      "clientRiskTypes" -> toJson(r.clientRiskTypes.map { case (clientRiskType, v, u) => (clientRiskType.map(_.description), v, u) })
+      "clientRiskTypes" -> toJson(r.clientRiskTypes.map { case (clientRiskType, v, u) => (clientRiskType.map(_.description), v, u) }),
+      "counsellingServicesIssues" -> toJson(r.counsellingServicesIssues.map { case (counsellingServicesIssue, v, u) => (counsellingServicesIssue.map(_.description), v, u) }),
+      "studentSupportIssueTypes" -> toJson(r.studentSupportIssueTypes.map { case (studentSupportIssueType, v, u) => (studentSupportIssueType.map(_.description), v, u) }),
+      "medications" -> toJson(r.medications.map { case (medication, v, u) => (medication.map(_.description), v, u) }),
+      "severityOfProblem" -> toJson(r.severityOfProblem.map { case (severityOfProblem, v, u) => (severityOfProblem.map(_.description), v, u) })
     )
 
   def apply(
@@ -282,13 +314,7 @@ object CaseHistory {
     clientService: ClientService
   )(implicit ac: AuditLogContext, ec: ExecutionContext): Future[ServiceResult[CaseHistory]] = {
     val usercodes = Seq(history, rawTagHistory, rawOwnerHistory, rawClientHistory).flatten.flatMap(_.auditUser) ++ rawOwnerHistory.map(_.userId)
-    val usersByUsercode = userLookupService.getUsers(usercodes.distinct).toOption.getOrElse(Map())
-    def toUsercodeOrUser(u: Usercode): Either[Usercode, User] = usersByUsercode.get(u).map(Right.apply).getOrElse(Left(u))
-
-    def simpleFieldHistory[A](getValue: StoredCaseVersion => A): FieldHistory[A] =
-      flatten(history.map(c => (getValue(c), c.version, c.auditUser))).map {
-        case (c,v,u) => (c, v, u.map(toUsercodeOrUser))
-      }
+    implicit val usersByUsercode: Map[Usercode, User] = userLookupService.getUsers(usercodes.distinct).toOption.getOrElse(Map())
 
     def dsaFieldHistory[A](getValue: StoredDSAApplicationVersion => A): FieldHistory[Option[A]] = {
       val history = rawDSAHistory.map(dsa => {
@@ -298,19 +324,21 @@ object CaseHistory {
       flatten(history).map { case (c,v,u) => (c, v, u.map(toUsercodeOrUser))}
     }
 
+    def typedSimpleFieldHistory[A](f: StoredCaseVersion => A) = simpleFieldHistory[StoredCase, StoredCaseVersion, A](history, f)
+
     clientService.getOrAddClients(rawClientHistory.map(_.universityID).toSet).map(_.map(clients =>
       CaseHistory(
-        subject = simpleFieldHistory(_.subject),
-        team = simpleFieldHistory(_.team),
-        state = simpleFieldHistory(_.state),
-        incidentDate = simpleFieldHistory(_.incidentDate),
-        onCampus = simpleFieldHistory(_.onCampus),
-        notifiedPolice = simpleFieldHistory(_.notifiedPolice),
-        notifiedAmbulance = simpleFieldHistory(_.notifiedAmbulance),
-        notifiedFire = simpleFieldHistory(_.notifiedFire),
-        originalEnquiry = simpleFieldHistory(_.originalEnquiry),
-        caseType = simpleFieldHistory(_.caseType),
-        cause = simpleFieldHistory(_.cause),
+        subject = typedSimpleFieldHistory(_.subject),
+        team = typedSimpleFieldHistory(_.team),
+        state = typedSimpleFieldHistory(_.state),
+        incidentDate = typedSimpleFieldHistory(_.incidentDate),
+        onCampus = typedSimpleFieldHistory(_.onCampus),
+        notifiedPolice = typedSimpleFieldHistory(_.notifiedPolice),
+        notifiedAmbulance = typedSimpleFieldHistory(_.notifiedAmbulance),
+        notifiedFire = typedSimpleFieldHistory(_.notifiedFire),
+        originalEnquiry = typedSimpleFieldHistory(_.originalEnquiry),
+        caseType = typedSimpleFieldHistory(_.caseType),
+        cause = typedSimpleFieldHistory(_.cause),
         tags = flattenCollection[StoredCaseTag, StoredCaseTagVersion](rawTagHistory)
           .map { case (tags, v, u) => (tags.map(_.caseTag), v, u.map(toUsercodeOrUser))},
         owners = flattenCollection[Owner, OwnerVersion](rawOwnerHistory)
@@ -323,58 +351,14 @@ object CaseHistory {
         dsaFundingTypes = flattenCollection[StoredDSAFundingType, StoredDSAFundingTypeVersion](rawDSAFundingTypeHistory)
           .map { case (fundingTypes, v, u) => (fundingTypes.map(_.fundingType), v, u.map(toUsercodeOrUser))},
         dsaIneligibilityReason = dsaFieldHistory(_.ineligibilityReason),
-        clientRiskTypes = simpleFieldHistory(_.clientRiskTypes.map(ClientRiskType.withName).toSet)
+        clientRiskTypes = typedSimpleFieldHistory(_.fields.clientRiskTypes.map(ClientRiskType.withName).toSet),
+        counsellingServicesIssues = typedSimpleFieldHistory(_.fields.counsellingServicesIssues.map(CounsellingServicesIssue.withName).toSet),
+        studentSupportIssueTypes = typedSimpleFieldHistory(c => StudentSupportIssueType.apply(c.fields.studentSupportIssueTypes, c.fields.studentSupportIssueTypeOther)),
+        medications = typedSimpleFieldHistory(c => CaseMedication.apply(c.fields.medications, c.fields.medicationOther)),
+        severityOfProblem = typedSimpleFieldHistory(_.fields.severityOfProblem),
       )
     ))
   }
-
-  private def flatten[A](items: Seq[(A, OffsetDateTime, Option[Usercode])]): Seq[(A, OffsetDateTime, Option[Usercode])] = (items.toList match {
-    case Nil => Nil
-    case head :: Nil => Seq(head)
-    case head :: tail => tail.foldLeft(Seq(head)) { (foldedItems, item) =>
-      if (foldedItems.last._1 != item._1) {
-        foldedItems :+ item
-      } else {
-        foldedItems
-      }
-    }
-  }).reverse
-
-  private def flattenCollection[A <: Versioned[A], B <: StoredVersion[A]](items: Seq[B]): Seq[(Set[A], OffsetDateTime, Option[Usercode])] = {
-    def toSpecificItem(item: B): A = item match {
-      case tag: StoredCaseTagVersion => StoredCaseTag(tag.caseId, tag.caseTag, tag.version).asInstanceOf[A]
-      case owner: OwnerVersion => Owner(owner.entityId, owner.entityType, owner.userId, owner.outlookId, owner.version).asInstanceOf[A]
-      case client: StoredCaseClientVersion => StoredCaseClient(client.caseId, client.universityID, client.version).asInstanceOf[A]
-      case ft: StoredDSAFundingTypeVersion => StoredDSAFundingType(ft.dsaApplicationID, ft.fundingType, ft.version).asInstanceOf[A]
-      case _ => throw new IllegalArgumentException("Unsupported versioned item")
-    }
-    val result = items.toList.sortBy(_.timestamp) match {
-      case Nil => Nil
-      case head :: Nil => List((Set(toSpecificItem(head)), head.version, head.auditUser))
-      case head :: tail => tail.foldLeft[Seq[(Set[A], OffsetDateTime, Option[Usercode])]](Seq((Set(toSpecificItem(head)), head.version, head.auditUser))) { (result, item) =>
-        if (item.operation == DatabaseOperation.Insert) {
-          result.:+((result.last._1 + toSpecificItem(item), item.timestamp, item.auditUser))
-        } else {
-          result.:+((result.last._1 - toSpecificItem(item), item.timestamp, item.auditUser))
-        }
-      }
-    }
-    result
-      // Group by identical timestamp and take the last one so bulk operations show as a single action
-      .groupBy { case (_, t, _) => t }.mapValues(_.last).values.toSeq
-      .sortBy { case (_, t, _) => t }
-      .reverse
-  }
-
-  private def toJson[A](items: FieldHistory[A])(implicit itemWriter: Writes[A]): JsValue =
-    Json.toJson(items.map { case (item, version, auditUser) => Json.obj(
-      "value" -> Json.toJson(item),
-      "version" -> version,
-      "user" -> auditUser.map(_.fold(
-        usercode => usercode.string,
-        user => user.name.full.getOrElse(user.usercode.string)
-      ))
-    )})
 
 }
 
@@ -399,5 +383,9 @@ case class CaseHistory(
   dsaConfirmationDate: FieldHistory[Option[Option[OffsetDateTime]]],
   dsaFundingTypes: FieldHistory[Set[DSAFundingType]],
   dsaIneligibilityReason: FieldHistory[Option[Option[DSAIneligibilityReason]]],
-  clientRiskTypes: FieldHistory[Set[ClientRiskType]]
+  clientRiskTypes: FieldHistory[Set[ClientRiskType]],
+  counsellingServicesIssues: FieldHistory[Set[CounsellingServicesIssue]],
+  studentSupportIssueTypes: FieldHistory[Set[StudentSupportIssueType]],
+  medications: FieldHistory[Set[CaseMedication]],
+  severityOfProblem: FieldHistory[Option[SeverityOfProblem]]
 )

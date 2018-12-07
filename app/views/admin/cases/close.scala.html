@@ -6,7 +6,7 @@
   form: Form[CaseNoteFormData]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@defining(if (c.state != IssueState.Closed) "Close" else "Reopen") { verb =>
+@defining(if (c.state != IssueState.Closed) "Close" else "Reopen") { verb: String =>
   @main(s"$verb ${c.key.string}") {
     @views.b3.wellbeing.vertical.formCSRF(controllers.admin.routes.CaseController.close(c.key)) { implicit fc =>
 
@@ -16,7 +16,10 @@
         form("text"),
         '_colClass -> "col-md-6",
         '_label -> "Associated case note",
-        '_help -> s"(why is this case being ${verb}ed?)",
+        '_help -> "(why is this case being %s%sd?)".format(
+          verb.toLowerCase,
+          if (verb.toCharArray.last == 'e') "" else "e"
+        ),
         'helpOnTop -> true
       )
 

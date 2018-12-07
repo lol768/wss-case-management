@@ -69,8 +69,9 @@ class NavigationServiceImpl @Inject() (
   private lazy val sysadmin =
     NavigationDropdown("Sysadmin", Call("GET", "/sysadmin"), Seq(
       Some(masquerade),
+      Some(NavigationPage("Email queue", controllers.sysadmin.routes.EmailQueueController.queued())),
       Some(NavigationPage("Dummy data generation", controllers.sysadmin.routes.DataGenerationController.generateForm()))
-        .filter(_ => dataGenerationEnabled)
+        .filter(_ => dataGenerationEnabled),
     ).flatten)
 
   private def teamHome(team: Team) = NavigationPage(team.name, controllers.admin.routes.AdminController.teamHome(team.id))

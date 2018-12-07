@@ -87,6 +87,9 @@ trait EnquiryService {
 
   def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]]
 
+  def getLastUpdatedMessageDate(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[OffsetDateTime]]
+  def getLastUpdatedMessageDates(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, OffsetDateTime]]]
+
 }
 
 @Singleton
@@ -134,7 +137,7 @@ class EnquiryServiceImpl @Inject() (
           _ <- addMessageDBIO(e.universityID, e.team, id, message, files)
         } yield e).map(enquiry =>
           // FIXME - disable/enable with a feature flag when implementing CASE-355
-          // notificationService.newEnquiry(enquiry.key).map(_.right.map(_ => enquiry.asEnquiry(clients.head)))
+          // notificationService.newEnquiry(enquiry.key, enquiry.team).map(_.right.map(_ => enquiry.asEnquiry(clients.head)))
           ServiceResults.success(enquiry.asEnquiry(clients.head))
         )
       )
@@ -398,6 +401,24 @@ class EnquiryServiceImpl @Inject() (
 
   override def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]] =
     daoRunner.run(enquiryDao.getLastUpdatedForClients(clients)).map(r => Right(r.toMap.withDefaultValue(None)))
+
+  override def getLastUpdatedMessageDate(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[OffsetDateTime]] =
+    daoRunner.run(
+      enquiryDao.findByKeyQuery(enquiryKey)
+        .join(Message.lastUpdatedEnquiryMessage)
+        .on { case (e, (m, _)) => e.id === m }
+        .map { case (_, (_, d)) => d }
+        .result.head
+    ).map(r => Right(r.get))
+
+  override def getLastUpdatedMessageDates(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, OffsetDateTime]]] =
+    daoRunner.run(
+      enquiryDao.findByIDsQuery(ids)
+        .join(Message.lastUpdatedEnquiryMessage)
+        .on { case (e, (m, _)) => e.id === m }
+        .map { case (e, (_, d)) => (e.id, d) }
+        .result
+    ).map(r => Right(r.toMap.mapValues(_.get)))
 }
 
 object EnquiryService {

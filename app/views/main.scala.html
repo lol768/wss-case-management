@@ -5,7 +5,7 @@
 )(content: Html)(implicit context: RequestContext)
 
 <!DOCTYPE html>
-<html lang="en-GB" class="no-js"> <!-- class="id7-non-branded" to remove Warwick branding -->
+<html lang="en-GB" class="no-js">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -24,16 +24,13 @@
     <meta name="msapplication-config" content="@routes.Assets.versioned("images/browserconfig.xml")">
     <meta name="theme-color" content="#a14418">
 
-    <title>Wellbeing at Warwick@if(!title.isEmpty) { - @title}</title>
+    <title>@if(!title.isEmpty){@title - }Wellbeing at Warwick</title>
 
     <!-- Lato web font -->
     <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css">
 
     <!-- ID7 -->
     <link rel='stylesheet' href='@routes.Assets.versioned("style.css")'>
-
-    <script type='text/javascript' src='@routes.Assets.versioned("lib/id7/js/id7-bundle.min.js")'></script>
-    <script type='text/javascript' src='@routes.Assets.versioned("main.js")'></script>
   </head>
   <body>
     <div class="id7-left-border"></div>
@@ -163,5 +160,8 @@
       </footer>
     </div>
     <div class="id7-right-border"></div>
+
+    <script type='text/javascript' src='@routes.Assets.versioned("lib/id7/js/id7-bundle.js")'></script>
+    <script type='text/javascript' src='@routes.Assets.versioned("main.js")'></script>
   </body>
 </html>

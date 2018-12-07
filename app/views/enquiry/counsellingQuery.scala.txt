@@ -1,0 +1,7 @@
+@import controllers.enquiries.EnquiryController.CounsellingEnquiryFormData
+
+@(data: CounsellingEnquiryFormData)
+
+Face to face counselling? @tags.threeStateBoolean(data.faceToFace)
+Group therapy? @tags.threeStateBoolean(data.therapy)
+Email counselling? @tags.threeStateBoolean(data.online)

@@ -6,7 +6,7 @@ name := """case-management"""
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.7"
 
 javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 
@@ -36,9 +36,9 @@ lazy val main = (project in file("."))
     javaOptions in Test += "-Dlogger.resource=test-logging.xml"
   )
 
-val playUtilsVersion = "1.24"
+val playUtilsVersion = "1.25"
 val ssoClientVersion = "2.57"
-val warwickUtilsVersion = "20180831"
+val warwickUtilsVersion = "20181130"
 val enumeratumVersion = "1.5.13"
 val enumeratumSlickVersion = "1.5.15"
 
@@ -55,15 +55,15 @@ val appDeps = Seq(
   "com.typesafe.play" %% "play-mailer-guice" % "6.0.1",
 
   "com.typesafe.slick" %% "slick" % "3.2.3",
-  "org.postgresql" % "postgresql" % "42.2.4",
+  "org.postgresql" % "postgresql" % "42.2.5",
   "com.github.tminglei" %% "slick-pg" % "0.16.3",
 
   // in-memory JNDI context used by Play to pass DataSource to Quartz
   "tyrex" % "tyrex" % "1.0.1",
   "org.quartz-scheduler" % "quartz" % "2.3.0",
 
-  "net.codingwell" %% "scala-guice" % "4.1.0",
-  "com.google.inject.extensions" % "guice-multibindings" % "4.1.0",
+  "net.codingwell" %% "scala-guice" % "4.2.1",
+  "com.google.inject.extensions" % "guice-multibindings" % "4.2.2",
   "com.adrianhurt" %% "play-bootstrap" % "1.2-P26-B3",
 
   "uk.ac.warwick.sso" %% "sso-client-play" % ssoClientVersion,
@@ -77,32 +77,33 @@ val appDeps = Seq(
   "uk.ac.warwick.util" % "warwickutils-core" % warwickUtilsVersion,
   "uk.ac.warwick.util" % "warwickutils-mywarwick" % warwickUtilsVersion exclude("uk.ac.warwick.sso", "sso-client"),
   "uk.ac.warwick.util" % "warwickutils-service" % warwickUtilsVersion,
+  "uk.ac.warwick.util" % "warwickutils-virusscan" % warwickUtilsVersion,
 
-  "com.github.mumoshu" %% "play2-memcached-play26" % "0.9.3-warwick",
+  "com.github.mumoshu" %% "play2-memcached-play26" % "0.9.3",
 
   "com.beachape" %% "enumeratum" % enumeratumVersion,
   "com.beachape" %% "enumeratum-play" % enumeratumVersion,
   "com.beachape" %% "enumeratum-play-json" % enumeratumVersion,
   "com.beachape" %% "enumeratum-slick" % enumeratumSlickVersion,
 
-  "org.apache.jclouds.api" % "filesystem" % "2.1.0",
+  "org.apache.jclouds.api" % "filesystem" % "2.1.1",
 
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
 
   "org.dom4j" % "dom4j" % "2.1.1",
-  "org.apache.tika" % "tika-core" % "1.19",
-  "org.apache.tika" % "tika-parsers" % "1.19"
+  "org.apache.tika" % "tika-core" % "1.19.1",
+  "org.apache.tika" % "tika-parsers" % "1.19.1"
 )
 
 val testDeps = Seq(
   "org.mockito" % "mockito-all" % "1.10.19",
-  "org.scalatest" %% "scalatest" % "3.0.3",
-  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.0",
-  "com.typesafe.akka" %% "akka-testkit" % "2.4.19",
+  "org.scalatest" %% "scalatest" % "3.0.5",
+  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2",
+  "com.typesafe.akka" %% "akka-testkit" % "2.5.18",
   "uk.ac.warwick.sso" %% "sso-client-play-testing" % ssoClientVersion,
-  "org.seleniumhq.selenium" % "selenium-java" % "3.14.0",
-  "org.seleniumhq.selenium" % "selenium-chrome-driver" % "3.14.0",
-  "com.opentable.components" % "otj-pg-embedded" % "0.12.1",
+  "org.seleniumhq.selenium" % "selenium-java" % "3.141.59",
+  "org.seleniumhq.selenium" % "selenium-chrome-driver" % "3.141.59",
+  "com.opentable.components" % "otj-pg-embedded" % "0.12.5",
   "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.22",
   "jaxen" % "jaxen" % "1.1.6"
 ).map(_ % Test)

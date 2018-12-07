@@ -2,18 +2,20 @@ package controllers
 
 import java.time.OffsetDateTime
 
+import controllers.MessagesController.MessageFormData
 import controllers.refiners.AnyTeamActionRefiner
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
+import play.api.data.Form
 import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.{Action, AnyContent}
 import services._
 import services.tabula.ProfileService
 import warwick.core.helpers.JavaTime
-import warwick.sso.{AuthenticatedRequest, Usercode}
+import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -48,7 +50,7 @@ class IndexController @Inject()(
     }
   }
 
-  def enquiries: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+  def enquiries: Action[AnyContent] = AnyTeamMemberRequiredAjaxAction.async { implicit request =>
     val usercode = currentUser().usercode
     ServiceResults.zip(
       enquiryService.countEnquiriesNeedingReply(usercode),
@@ -104,7 +106,7 @@ class IndexController @Inject()(
     }
   }
 
-  def cases: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+  def cases: Action[AnyContent] = AnyTeamMemberRequiredAjaxAction.async { implicit request =>
     val usercode = currentUser().usercode
     ServiceResults.zip(
       caseService.countOpenCases(usercode),
@@ -157,12 +159,12 @@ class IndexController @Inject()(
   def atRiskClients: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     Future.successful(permissions.teams(currentUser().usercode)).successFlatMap(teams =>
       clientSummaries.findAtRisk(teams.contains(Teams.MentalHealth)).successMap(clients =>
-        Ok(views.html.admin.atRiskClients(clients, teams.contains(Teams.MentalHealth)))
+        Ok(views.html.admin.atRiskClients(clients))
       )
     )
   }
 
-  def appointmentsTab: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
+  def appointmentsTab: Action[AnyContent] = AnyTeamMemberRequiredAjaxAction.async { implicit request =>
     ServiceResults.zip(
       appointments.countForSearch(appointmentsNeedingOutcomesSearch),
       userPreferences.get(currentUser().usercode),
@@ -219,21 +221,38 @@ class IndexController @Inject()(
       registrations.get(client),
       profiles.getProfile(client).map(_.value),
     ).successFlatMapTo { case (clientEnquiries, clientCases, registration, profile) =>
-      val issues = (clientEnquiries.map(_.toIssue) ++ clientCases.map(_.toIssue)).sortBy(_.lastUpdatedDate)(JavaTime.dateTimeOrdering).reverse
+      ServiceResults.zip(
+        enquiryService.getLastUpdatedMessageDates(clientEnquiries.map(_.enquiry.id).toSet),
+        caseService.getLastUpdatedMessageDates(clientCases.map(_.clientCase.id).toSet),
+      ).successFlatMapTo { case (enquiryLastMessageMap, caseLastMessageMap) =>
+        val enquiryIssues = clientEnquiries.map(_.toIssue)
+        val caseIssues = clientCases.map(_.toIssue)
 
-      val result = Future.successful(Right(Ok(views.html.messagesTab(
-        issues,
-        registration,
-        uploadedFileControllerHelper.supportedMimeTypes,
-        canMakeEnquiry = clientUserTypes.contains(profile.map(_.userType).getOrElse(UserType(currentUser()))),
-      ))))
+        val messageForms: Map[IssueRender, Form[MessageFormData]] =
+          enquiryIssues.map(issue => issue -> MessagesController.messageForm(enquiryLastMessageMap.get(issue.issue.id)).fill(MessageFormData("", enquiryLastMessageMap.get(issue.issue.id)))).toMap ++
+          caseIssues.map { issue =>
+            val lastMessageDate = caseLastMessageMap.getOrElse(issue.issue.id, Map()).get(client)
+            issue -> MessagesController.messageForm(lastMessageDate).fill(MessageFormData("", lastMessageDate))
+          }
 
-      // Record an EnquiryView or CaseView event for the first issue
-      issues.headOption.map(issue => issue.issue match {
-        case e: Enquiry => audit.audit('EnquiryView, e.id.toString, 'Enquiry, Json.obj())(result)
-        case c: Case => audit.audit('CaseView, c.id.toString, 'Case, Json.obj())(result)
-        case _ => result
-      }).getOrElse(result)
+        val allIssues = (enquiryIssues ++ caseIssues).sortBy(_.lastUpdatedDate)(JavaTime.dateTimeOrdering).reverse
+
+
+        val result = Future.successful(Right(Ok(views.html.messagesTab(
+          allIssues,
+          registration,
+          uploadedFileControllerHelper.supportedMimeTypes,
+          canMakeEnquiry = clientUserTypes.contains(profile.map(_.userType).getOrElse(UserType(currentUser()))),
+          messageForms
+        ))))
+
+        // Record an EnquiryView or CaseView event for the first issue
+        allIssues.headOption.map(issue => issue.issue match {
+          case e: Enquiry => audit.audit('EnquiryView, e.id.toString, 'Enquiry, Json.obj())(result)
+          case c: Case => audit.audit('CaseView, c.id.toString, 'Case, Json.obj())(result)
+          case _ => result
+        }).getOrElse(result)
+      }
     }.successMap(r => r)
   }
 

@@ -8,9 +8,11 @@ import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain.QueryHelpers._
-import domain.{Case, _}
 import domain.dao.CaseDao._
 import domain.dao.ClientDao.StoredClient
+import domain.dao.ClientDao.StoredClient.Clients
+import domain.dao.MemberDao.StoredMember.Members
+import domain.{Case, _}
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -102,20 +104,24 @@ class CaseDaoImpl @Inject()(
       .map { case (c, _, _) => c }
 
   override def searchQuery(q: CaseSearchQuery): Query[Cases, StoredCase, Seq] = {
-    def queries(c: Cases, n: Rep[Option[CaseNotes]], o: Rep[Option[Owner.Owners]]): Seq[Rep[Option[Boolean]]] =
+    def queries(c: Cases, client: Clients, n: Rep[Option[CaseNotes]], tm: Rep[Option[Members]]): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
-          val query = prefixTsQuery(queryStr.bind)
-
-          // Need to search CaseNote fields separately otherwise the @+ will stop it matching cases
-          // with no notes
-          (c.searchableId @+ c.searchableKey @+ c.searchableSubject) @@ query ||
-          n.map(_.searchableText) @@ query
+          (
+            c.searchableId @+
+            c.searchableKey @+
+            c.searchableSubject @+
+            client.searchableUniversityID @+
+            client.searchableFullName @+
+            n.map(_.searchableText).orEmptyTsVector @+
+            tm.map(_.searchableUsercode).orEmptyTsVector @+
+            tm.map(_.searchableFullName).orEmptyTsVector
+          ).? @@ prefixTsQuery(queryStr.bind)
         },
         q.createdAfter.map { d => c.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => c.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.team.map { team => c.team.? === team },
-        q.member.map { member => o.map(_.userId === member) },
+        q.member.map { member => tm.map(_.usercode === member) },
         q.caseType.map { caseType => c.caseType === caseType },
         q.state.flatMap {
           case IssueStateFilter.All => None
@@ -125,11 +131,14 @@ class CaseDaoImpl @Inject()(
       ).flatten
 
     cases.table
-      .withNotes
-      .joinLeft(Owner.owners.table)
-      .on { case ((e, _), o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Case:Owner.EntityType) }
-      .filter { case ((c, n), o) => queries(c, n, o).reduce(_ && _) }
-      .map { case ((c, _), _) => (c, c.isOpen) }
+      .withClients
+      .joinLeft(caseNotes.table)
+      .on { case ((c, _, _), n) => c.id === n.caseId }
+      .joinLeft(Owner.owners.table.join(MemberDao.members.table).on(_.userId === _.usercode))
+      .on { case (((c, _, _), _), (o, _)) => c.id === o.entityId && o.entityType === (Owner.EntityType.Case: Owner.EntityType) }
+      .map { case (((c, _, client), n), o) => (c, client, n, o.map { case (_, tm) => tm }) }
+      .filter { case (c, client, n, tm) => queries(c, client, n, tm).reduce(_ && _) }
+      .map { case (c, _, _, _) => (c, c.isOpen) }
       .sortBy { case (c, isOpen) => (isOpen.desc, c.created.desc) }
       .distinct
       .map { case (c, _) => c }
@@ -231,17 +240,7 @@ class CaseDaoImpl @Inject()(
     })
   }
 
-  override def getHistory(id: UUID): DBIO[Seq[StoredCaseVersion]] = {
-    cases.versionsTable
-      .filter(c =>
-        c.id === id && (
-          c.operation === (DatabaseOperation.Insert:DatabaseOperation) ||
-          c.operation === (DatabaseOperation.Update:DatabaseOperation)
-        )
-      )
-      .sortBy(_.timestamp)
-      .result
-  }
+  override def getHistory(id: UUID): DBIO[Seq[StoredCaseVersion]] = cases.history(_.id === id)
 
   override def getTagHistory(caseID: UUID): DBIO[Seq[StoredCaseTagVersion]] = {
     caseTags.versionsTable.filter(t => t.caseId === caseID).result
@@ -319,7 +318,7 @@ object CaseDao {
     caseType: Option[CaseType],
     cause: CaseCause,
     dsaApplication: Option[UUID],
-    clientRiskTypes: List[String]
+    fields: StoredCaseFields,
   ) extends Versioned[StoredCase] {
     def asCase: Case =
       Case(
@@ -341,7 +340,7 @@ object CaseDao {
         caseType = caseType,
         cause = cause,
         dsaApplication = dsaApplication,
-        clientRiskTypes = clientRiskTypes.toSet.map(ClientRiskType.withName),
+        fields = fields.asCaseFields,
         created = created,
         lastUpdated = version,
       )
@@ -365,11 +364,34 @@ object CaseDao {
         caseType,
         cause,
         dsaApplication,
-        clientRiskTypes,
+        fields,
         operation,
         timestamp,
         ac.usercode
       ).asInstanceOf[B]
+  }
+
+  /**
+    * Not a table directly; used to get around the tuple arity limit
+    */
+  case class StoredCaseFields(
+    clientRiskTypes: List[String],
+    counsellingServicesIssues: List[String],
+    studentSupportIssueTypes: List[String],
+    studentSupportIssueTypeOther: Option[String],
+    medications: List[String],
+    medicationOther: Option[String],
+    severityOfProblem: Option[SeverityOfProblem],
+    duty: Boolean,
+  ) {
+    def asCaseFields: CaseFields = CaseFields(
+      clientRiskTypes = clientRiskTypes.toSet.map(ClientRiskType.withName),
+      counsellingServicesIssues = counsellingServicesIssues.toSet.map(CounsellingServicesIssue.withName),
+      studentSupportIssueTypes = StudentSupportIssueType(studentSupportIssueTypes, studentSupportIssueTypeOther),
+      medications = CaseMedication(medications, medicationOther),
+      severityOfProblem = severityOfProblem,
+      duty = duty,
+    )
   }
 
   case class StoredCaseVersion(
@@ -389,7 +411,7 @@ object CaseDao {
     caseType: Option[CaseType],
     cause: CaseCause,
     dsaApplication: Option[UUID],
-    clientRiskTypes: List[String],
+    fields: StoredCaseFields,
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
@@ -414,6 +436,15 @@ object CaseDao {
     def cause = column[CaseCause]("cause")
     def dsaApplication = column[Option[UUID]]("dsa_application")
     def clientRiskTypes = column[List[String]]("client_risk_types")
+    def counsellingServicesIssues = column[List[String]]("counselling_services_issues")
+    def studentSupportIssueTypes = column[List[String]]("student_support_issue_types")
+    def studentSupportIssueTypeOther = column[Option[String]]("student_support_issue_type_other")
+    def medications = column[List[String]]("medications")
+    def medicationOther = column[Option[String]]("medication_other")
+    def severityOfProblem = column[Option[SeverityOfProblem]]("severity_of_problem")
+    def duty = column[Boolean]("duty")
+
+    protected def fieldsProjection = (clientRiskTypes, counsellingServicesIssues, studentSupportIssueTypes, studentSupportIssueTypeOther, medications, medicationOther, severityOfProblem, duty).mapTo[StoredCaseFields]
   }
 
   class Cases(tag: Tag) extends Table[StoredCase](tag, "client_case")
@@ -426,7 +457,7 @@ object CaseDao {
     def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 
     override def * : ProvenShape[StoredCase] =
-      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes).mapTo[StoredCase]
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, fieldsProjection).mapTo[StoredCase]
     def idx = index("idx_client_case_key", key, unique = true)
   }
 
@@ -439,7 +470,7 @@ object CaseDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseVersion] =
-      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, clientRiskTypes, operation, timestamp, auditUser).mapTo[StoredCaseVersion]
+      (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, fieldsProjection, operation, timestamp, auditUser).mapTo[StoredCaseVersion]
   }
 
   implicit class CaseExtensions[C[_]](val q: Query[Cases, StoredCase, C]) extends AnyVal {
@@ -702,6 +733,7 @@ object CaseDao {
     noteType: CaseNoteType,
     text: String,
     teamMember: Usercode,
+    appointmentId: Option[UUID],
     created: OffsetDateTime,
     version: OffsetDateTime
   ) extends Versioned[StoredCaseNote] {
@@ -723,6 +755,7 @@ object CaseDao {
         noteType,
         text,
         teamMember,
+        appointmentId,
         created,
         version,
         operation,
@@ -737,6 +770,7 @@ object CaseDao {
     noteType: CaseNoteType,
     text: String,
     teamMember: Usercode,
+    appointmentId: Option[UUID],
     created: OffsetDateTime,
     version: OffsetDateTime,
     operation: DatabaseOperation,
@@ -750,6 +784,7 @@ object CaseDao {
     def text = column[String]("text")
     def searchableText = toTsVector(text, Some("english"))
     def teamMember = column[Usercode]("team_member")
+    def appointmentId = column[Option[UUID]]("appointment_id")
     def created = column[OffsetDateTime]("created_utc")
     def version = column[OffsetDateTime]("version_utc")
   }
@@ -761,9 +796,11 @@ object CaseDao {
     def id = column[UUID]("id", O.PrimaryKey)
 
     override def * : ProvenShape[StoredCaseNote] =
-      (id, caseId, noteType, text, teamMember, created, version).mapTo[StoredCaseNote]
+      (id, caseId, noteType, text, teamMember, appointmentId, created, version).mapTo[StoredCaseNote]
     def fk = foreignKey("fk_case_note", caseId, cases.table)(_.id)
     def idx = index("idx_case_note", caseId)
+    def appointmentFK = foreignKey("fk_case_note_appointment", appointmentId, AppointmentDao.appointments.table)(_.id.?)
+    def appointmentIndex = index("idx_case_note_appointment", appointmentId)
   }
 
   class CaseNoteVersions(tag: Tag) extends Table[StoredCaseNoteVersion](tag, "client_case_note_version")
@@ -775,7 +812,7 @@ object CaseDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredCaseNoteVersion] =
-      (id, caseId, noteType, text, teamMember, created, version, operation, timestamp, auditUser).mapTo[StoredCaseNoteVersion]
+      (id, caseId, noteType, text, teamMember, appointmentId, created, version, operation, timestamp, auditUser).mapTo[StoredCaseNoteVersion]
     def pk = primaryKey("pk_case_note_version", (id, timestamp))
     def idx = index("idx_case_note_version", (id, version))
   }

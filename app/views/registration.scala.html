@@ -36,7 +36,8 @@
       items = Disabilities.values,
       form = form,
       field = "disabilities",
-      idPrefix = "disability"
+      idPrefix = "disability",
+      inModal = false
     )
 
     @b3.checkboxGroup(
@@ -44,7 +45,8 @@
       items = Medications.values,
       form = form,
       field = "medications",
-      idPrefix = "medication"
+      idPrefix = "medication",
+      inModal = false
     )
 
     @b3.textarea(form("appointment-adjustments"),
@@ -58,7 +60,8 @@
       items = RegistrationReferrals.values,
       form = form,
       field = "referrals",
-      idPrefix = "referral"
+      idPrefix = "referral",
+      inModal = false
     )
 
     @b3.free() {

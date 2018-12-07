@@ -1,0 +1,32 @@
+@(
+  pickerType: String,
+  values: Seq[String],
+  name: String,
+  placeholder: String = "",
+  multiple: Boolean = false,
+  autoMultiple: Boolean = true
+)
+
+@if(multiple) {
+  <div class="@pickerType-picker-collection" data-automatic="@autoMultiple" data-containers="@pickerType-picker-container">
+}
+
+@for(value <- values) {
+  <div class="@pickerType-picker-container">
+    <input type="text" class="@pickerType-picker form-control" name="@name" placeholder="@placeholder"
+      value="@value" autocomplete="off" aria-label="@placeholder"
+    />
+  </div>
+}
+
+@if(values.isEmpty || (multiple && autoMultiple)) {
+  <div class="@pickerType-picker-container">
+    <input type="text" class="@pickerType-picker form-control" name="@name" placeholder="@placeholder"
+      autocomplete="off" aria-label="@placeholder"
+    />
+  </div>
+}
+
+@if(multiple) {
+  </div>
+}

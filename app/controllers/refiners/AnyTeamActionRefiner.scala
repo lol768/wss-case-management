@@ -21,4 +21,7 @@ class AnyTeamActionRefiner @Inject()(
   def AnyTeamMemberRequiredAction: ActionBuilder[AuthenticatedRequest, AnyContent] =
     securityService.SigninRequiredAction andThen AnyTeamMember
 
+  def AnyTeamMemberRequiredAjaxAction: ActionBuilder[AuthenticatedRequest, AnyContent] =
+    securityService.SigninRequiredAjaxAction andThen AnyTeamMember
+
 }

@@ -1,0 +1,70 @@
+@import domain.CaseListRender
+@import domain.IssueState
+@import warwick.core.helpers.JavaTime
+@import java.util.UUID
+@import domain.Member
+@import domain.Case
+@(cases: Seq[CaseListRender], owners: Map[UUID, Set[Member]], canEdit: Map[CaseListRender, Boolean])
+
+@wrapEditLink(caseListRender: CaseListRender)(content: Html) = {
+  @if(canEdit(caseListRender)) {
+    <a href="@controllers.admin.routes.CaseController.view(caseListRender.clientCase.key)">@content</a>
+  } else {
+    @content
+  }
+}
+
+@if(cases.exists(_.clientCase.state != IssueState.Closed )) {
+  <table class="table table-condensed">
+    <caption>Open cases</caption>
+    <thead>
+      <tr>
+        <th class="col-sm-1">Case ID</th>
+        <th class="col-sm-5">Subject</th>
+        <th class="col-sm-2">Owner</th>
+        <th class="col-sm-2">Team</th>
+        <th class="col-sm-2">Last updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      @defining(cases.filter(_.clientCase.state != IssueState.Closed )) { open: Seq[CaseListRender] =>
+        @open.map { caseListRender: CaseListRender =>
+          <tr>
+            <td>@wrapEditLink(caseListRender){@caseListRender.clientCase.key.string}</td>
+            <td>@wrapEditLink(caseListRender){@caseListRender.clientCase.subject}</td>
+            <td>@owners.get(caseListRender.clientCase.id).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
+            <td>@caseListRender.clientCase.team.name</td>
+            <td>@JavaTime.Relative(caseListRender.lastUpdated.toLocalDate).capitalize</td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+}
+@if(cases.exists(_.clientCase.state == IssueState.Closed )) {
+  <table class="table table-condensed">
+    <caption>Closed cases</caption>
+    <thead>
+      <tr>
+        <th class="col-sm-1">Case ID</th>
+        <th class="col-sm-5">Subject</th>
+        <th class="col-sm-2">Owner</th>
+        <th class="col-sm-2">Team</th>
+        <th class="col-sm-2">Closed</th>
+      </tr>
+    </thead>
+    <tbody>
+    @defining(cases.filter(_.clientCase.state == IssueState.Closed )) { closed: Seq[CaseListRender] =>
+      @closed.map { caseListRender: CaseListRender =>
+        <tr>
+          <td>@wrapEditLink(caseListRender){@caseListRender.clientCase.key.string}</td>
+          <td>@wrapEditLink(caseListRender){@caseListRender.clientCase.subject}</td>
+          <td>@owners.get(caseListRender.clientCase.id).map(_.map(_.safeFullName).mkString(", ")).getOrElse("")</td>
+          <td>@caseListRender.clientCase.team.name</td>
+          <td>@JavaTime.Relative(caseListRender.clientCase.lastUpdated.toLocalDate).capitalize</td>
+        </tr>
+      }
+    }
+    </tbody>
+  </table>
+}

@@ -12,6 +12,7 @@
 )(implicit messagesProvider: MessagesProvider, requestHeader: RequestHeader)
 
 @b3.vertical.formCSRF(action, 'enctype -> "multipart/form-data", 'class -> "no-double-submit-protection") { implicit ifc =>
+  @b3.validatedHidden(messageForm, "lastMessage")
   @b3.free('_label -> "Add a message", '_class -> messageForm("text").error.map(_ => "has-error").getOrElse("")) {
     <div class="flex">
       @b3.textarea(messageForm("text"), 'rows -> 1, 'id -> s"${issueID.toString}-${client.string}-text", Symbol("aria-label") -> "Add a message")(b3.clear.fieldConstructorSpecific, messagesProvider)
@@ -19,12 +20,18 @@
       @tags.messages.attachButton(supportedMimeTypes, s"${issueID.toString}-${client.string}-file")
     </div>
 
-    @if(messageForm("text").hasErrors) {
+    @if(messageForm.hasErrors) {
       <div class="help-block">
-      @messageForm("text").errors.map { error =>
-        @error.format
-      }
+        @messageForm.errors.map { error =>
+          @error.format
+        }
       </div>
     }
   }
+
+  <div class="alert alert-danger error hidden"></div>
+  <div class="alert alert-danger needs-refresh hidden">
+    <p>A new message has been sent but is not shown above. Update the messages and then re-send your message.</p>
+    <button type="button" class="btn btn-primary">Update messages</button>
+  </div>
 }

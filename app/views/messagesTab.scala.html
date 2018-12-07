@@ -3,11 +3,13 @@
 @import play.api.data.Forms._
 @import warwick.core.helpers.JavaTime
 
+@import controllers.MessagesController.MessageFormData
 @(
   issues: Seq[IssueRender],
   registration: Option[Registration],
   supportedMimeTypes: Seq[MediaType],
   canMakeEnquiry: Boolean,
+  messageForms: Map[IssueRender, Form[MessageFormData]]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @registration.map { r =>
@@ -40,13 +42,13 @@
 
   <div class="panel-group message-threads" id="enquiries-accordion" role="tablist" aria-multiselectable="true">
   @issues.map { issueRender: IssueRender =>
-    <div class="panel panel-default thread thread--client state-@issueRender.issue.state.entryName">
+    <div class="panel panel-default thread thread--client state-@issueRender.issue.state.entryName" data-href="@controllers.routes.ClientMessagesController.messages(issueRender.issue.id)">
 
       <div class="panel-heading" role="tab" id="heading-@issueRender.issue.id.toString">
         <h4 class="panel-title">
           <a class="@if(issues.head.issue != issueRender.issue){collapsed}" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-@issueRender.issue.id.toString" aria-expanded="true" aria-controls="collapse-@issueRender.issue.id.toString">
             <div class="pull-right">
-              @JavaTime.Relative(issueRender.lastUpdatedDate)
+              <span class="lastMessageRelative">@JavaTime.Relative(issueRender.lastUpdatedDate)</span>
               <i class="fas fa-fw fa-angle-down"></i>
               <i class="fas fa-fw fa-angle-up"></i>
             </div>
@@ -77,9 +79,7 @@
           </div>
         <div class="panel-footer">
           @if(issueRender.issue.state != IssueState.Closed) {
-            @defining(Form(single("message" -> nonEmptyText))){ form: Form[String] =>
-              @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), form, supportedMimeTypes, issueRender.issue.id, context.user.get.universityId.get)
-            }
+            @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), messageForms(issueRender), supportedMimeTypes, issueRender.issue.id, context.user.get.universityId.get)
           } else {
             <p>
               We think this enquiry is now resolved, so we've marked it as closed.

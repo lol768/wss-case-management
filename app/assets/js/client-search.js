@@ -55,7 +55,6 @@ export default function ClientSearch(container) {
     changeInputOnSelect: false,
     changeInputOnMove: false,
     followLinkOnSelect: true,
-    openLinkInNewTab: true,
     selectOnBlur: false,
     showHintOnFocus: true,
     itemLink: item => `/team/client/${_.escape(item.value)}`,
