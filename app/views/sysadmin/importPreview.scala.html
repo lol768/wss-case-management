@@ -1,11 +1,11 @@
 @import controllers.admin.CaseController.CaseFormData
 @import controllers.sysadmin.SpreadsheetContentsHandler.Row
-@import controllers.sysadmin.DataImportJob.JobData
+@import controllers.sysadmin.DataImportJob.{JobData, ParsedSpreadsheet}
 @import domain.{CaseNoteSave, OwnerSave, Team}
 
 @(
-  invalid: Seq[((String, Row), (Team, Form[CaseFormData], Option[Form[OwnerSave]], Seq[CaseNoteSave]))],
-  valid: Seq[((String, Row), (Team, Form[CaseFormData], Option[Form[OwnerSave]], Seq[CaseNoteSave]))],
+  invalid: ParsedSpreadsheet,
+  valid: ParsedSpreadsheet,
   form: Option[Form[JobData]],
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
@@ -34,7 +34,7 @@
                   <li>@error.key: @error.format</li>
                 }
 
-                @row._2._3.map { f => @f.errors.map { error =>
+                @row._2._4.map { f => @f.errors.map { error =>
                   <li>@error.key: @error.format</li>
                 }}
               </ul>
@@ -57,6 +57,7 @@
           <th>Team</th>
           <th>Subject</th>
           <th>Cause</th>
+          <th>State</th>
           <th>Case owner</th>
           <th>Notes</th>
         </tr>
@@ -70,10 +71,11 @@
             <td>@row._2._1.name</td>
             <td>@{row._2._2.get.`case`.subject}</td>
             <td>@{row._2._2.get.`case`.cause.description}</td>
-            <td>@row._2._3.map(_.get.usercodes.map(_.string).mkString)</td>
+            <td>@row._2._3</td>
+            <td>@row._2._4.map(_.get.usercodes.map(_.string).mkString)</td>
             <td>
               <ul>
-                @row._2._4.map { note =>
+                @row._2._5.map { note =>
                   <li>@views.utils.nl2br(note.text)</li>
                 }
               </ul>
