@@ -2,7 +2,7 @@
 
 @(data: DisabilityEnquiryFormData)
 
-Reasonable adjustments (including special exam arrangements)? @tags.threeStateBoolean(data.reasonableAdjustments)
-Specialist mentoring? @tags.threeStateBoolean(data.specialistMentoring)
-Screening for SpLDs such as dyslexia? @tags.threeStateBoolean(data.disabilityScreening)
-General advice and support? @tags.threeStateBoolean(data.generalAdvice)
+Reasonable adjustments (including special exam arrangements)? @if(data.reasonableAdjustments) {YES} else {NO}
+Specialist mentoring? @if(data.specialistMentoring) {YES} else {NO}
+Screening for SpLDs such as dyslexia? @if(data.disabilityScreening) {YES} else {NO}
+General advice and support? @if(data.generalAdvice) {YES} else {NO}
