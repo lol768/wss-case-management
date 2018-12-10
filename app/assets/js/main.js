@@ -386,6 +386,22 @@ function bindTo($scope) {
       });
     });
   });
+
+  $('.collapse', $scope)
+    .on('show.bs.collapse', (e) => {
+      const $collapse = $(e.target);
+      if ($collapse.attr('aria-labelledby')) {
+        const $header = $(`#${$collapse.attr('aria-labelledby')}`);
+        $header.find('.fa-chevron-right').addClass('fa-chevron-down').removeClass('fa-chevron-right');
+      }
+    })
+    .on('hide.bs.collapse', (e) => {
+      const $collapse = $(e.target);
+      if ($collapse.attr('aria-labelledby')) {
+        const $header = $(`#${$collapse.attr('aria-labelledby')}`);
+        $header.find('.fa-chevron-down').addClass('fa-chevron-right').removeClass('fa-chevron-down');
+      }
+    });
 }
 
 $(() => {

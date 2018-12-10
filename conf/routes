@@ -64,7 +64,10 @@ GET         /messages/:id/:fileId                   @controllers.ClientMessagesC
 ## Enquiries ##
 
 GET         /enquiry                                @controllers.enquiries.EnquiryController.form()
-POST        /enquiry                                @controllers.enquiries.EnquiryController.submit()
+POST        /enquiry/mentalhealth                   @controllers.enquiries.EnquiryController.submitMentalHealth()
+POST        /enquiry/counselling                    @controllers.enquiries.EnquiryController.submitCounselling()
+POST        /enquiry/disability                     @controllers.enquiries.EnquiryController.submitDisability()
+POST        /enquiry/wellbeing                      @controllers.enquiries.EnquiryController.submitWellbeing()
 
 ## Appointments ##
 
