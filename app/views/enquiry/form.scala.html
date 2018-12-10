@@ -1,6 +1,5 @@
-@import controllers.enquiries.EnquiryController._
+@import controllers.enquiries.EnquiryController.{CounsellingEnquiryFormData, DisabilityEnquiryFormData, MentalHealthEnquiryFormData}
 @import org.apache.tika.mime.MediaType
-@import play.twirl.api._
 
 @(
   mentalHealthForm: Form[MentalHealthEnquiryFormData],
@@ -34,7 +33,7 @@
     </div>
   }
 
-  <p>
+  <p class="lead">
     To help us get your enquiry to the team best placed to help you, please select the option that
     best fits your needs:
   </p>
@@ -44,7 +43,7 @@
       <div class="panel-heading" role="tab" id="mental-health-form-heading">
         <a role="button" data-toggle="collapse" data-parent="#enquiry-forms" href="#mental-health-form" aria-expanded="true" aria-controls="mental-health-form">
           <i class="fal fa-fw fa-chevron-@if(mentalHealthForm.data.nonEmpty || mentalHealthForm.hasErrors) {down} else {right}"></i>@*
-          *@Are you looking for support for mental health disabilities?
+          *@Support for mental health disabilities
         </a>
       </div>
       <div id="mental-health-form" class="panel-collapse collapse @if(mentalHealthForm.data.nonEmpty || mentalHealthForm.hasErrors) {in}" role="tabpanel" aria-labelledby="mental-health-form-heading">
@@ -53,29 +52,35 @@
           'enctype -> "multipart/form-data",
         ) { implicit vfc =>
           <div class="panel-body">
-            @b3.free('_label -> "Subject") {
-              <p class="form-control-static">Mental health query</p>
-            }
+            @b3.free('_label -> "Subject:") {
+              <span class="form-control-static">Mental health query</span>
+            }(b3.inline.fieldConstructorSpecific, messagesProvider)
 
-            @b3.free('_label -> "Select all that apply") {
-              @b3.checkbox(mentalHealthForm("reasonableAdjustments"), '_text -> "I'm looking for help with reasonable adjustments (including special exam arrangements)")(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
-              @b3.checkbox(mentalHealthForm("studySkills"), '_text -> "I'm looking for specialist mentoring")(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
-              @b3.checkbox(mentalHealthForm("generalAdvice"), '_text -> "I'm looking for general advice and support on mental health? (eg self help, liaising with statutory services)")(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
+            @b3.free('_label -> "Select any of the following that apply (or leave them all unticked if not)", '_class -> "checkboxGroup") {
+              @b3.checkbox(mentalHealthForm("reasonableAdjustments"), '_text -> "I'm looking for help with reasonable adjustments (including special exam arrangements)")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+              @b3.checkbox(mentalHealthForm("studySkills"), '_text -> "I'm looking for specialist mentoring")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+              @b3.checkbox(mentalHealthForm("generalAdvice"), '_text -> "I'm looking for general advice and support on mental health (eg self help, liaising with statutory services)")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
             }
 
             @b3.free('_label -> "Do you have any documents you can upload that might help us understand your situation?", '_class -> mentalHealthForm.error("file").map(_ => "has-error")) {
               <input type="file" id="mentalHealthForm_file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" aria-label="Attach a file">
               @b3.errors(mentalHealthForm("file"))
             }
-
-            @b3.free() {
-              The information you send us will be seen only by Wellbeing Support staff and used only for
-              the purpose of responding to your enquiry.
-              <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Read our full privacy statement</a>
-            }(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
           </div>
           <div class="panel-footer">
-            <button type="submit" class="btn btn-primary">Submit enquiry</button>
+            <div class="row">
+              <div class="col-sm-9 col-md-10 col-sm-push-3 col-md-push-2">
+                <p>
+                  The information you send us will be seen only by Wellbeing Support staff and used only for
+                  the purpose of responding to your enquiry.
+                  <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Read our full privacy statement</a>
+                </p>
+              </div>
+              <div class="col-sm-3 col-md-2 col-sm-pull-9 col-md-pull-10">
+                <br class="visible-xs-block">
+                <button type="submit" class="btn btn-primary btn-block">Submit enquiry</button>
+              </div>
+            </div>
           </div>
         }
       </div>
@@ -85,7 +90,7 @@
       <div class="panel-heading" role="tab" id="counselling-form-heading">
         <a role="button" data-toggle="collapse" data-parent="#enquiry-forms" href="#counselling-form" aria-expanded="true" aria-controls="counselling-form">
           <i class="fal fa-fw fa-chevron-@if(counsellingForm.data.nonEmpty || counsellingForm.hasErrors) {down} else {right}"></i>@*
-          *@Are you looking for counselling for emotional or psychological issues?
+          *@Counselling for emotional or psychological issues
         </a>
       </div>
       <div id="counselling-form" class="panel-collapse collapse @if(counsellingForm.data.nonEmpty || counsellingForm.hasErrors) {in}" role="tabpanel" aria-labelledby="counselling-form-heading">
@@ -94,29 +99,35 @@
           'enctype -> "multipart/form-data",
         ) { implicit vfc =>
           <div class="panel-body">
-            @b3.free('_label -> "Subject") {
-              <p class="form-control-static">Counselling query</p>
-            }
+            @b3.free('_label -> "Subject:") {
+              <span class="form-control-static">Counselling query</span>
+            }(b3.inline.fieldConstructorSpecific, messagesProvider)
 
-            @b3.free('_label -> "Select all that apply") {
-              @b3.checkbox(counsellingForm("faceToFace"), '_text -> "I'm interested in face to face counselling")(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
-              @b3.checkbox(counsellingForm("therapy"), '_text -> "I'm interested in group therapy")(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
-              @b3.checkbox(counsellingForm("online"), '_text -> "I'm interested in email counselling")(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
+            @b3.free('_label -> "Select any of the following that apply (or leave them all unticked if not)", '_class -> "checkboxGroup") {
+              @b3.checkbox(counsellingForm("faceToFace"), '_text -> "I'm interested in face to face counselling")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+              @b3.checkbox(counsellingForm("therapy"), '_text -> "I'm interested in group therapy")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+              @b3.checkbox(counsellingForm("online"), '_text -> "I'm interested in email counselling")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
             }
 
             @b3.free('_label -> "Do you have any documents you can upload that might help us understand your situation?", '_class -> counsellingForm.error("file").map(_ => "has-error")) {
               <input type="file" id="counsellingForm_file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" aria-label="Attach a file">
               @b3.errors(counsellingForm("file"))
             }
-
-            @b3.free() {
-              The information you send us will be seen only by Wellbeing Support staff and used only for
-              the purpose of responding to your enquiry.
-              <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Read our full privacy statement</a>
-            }(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
           </div>
           <div class="panel-footer">
-            <button type="submit" class="btn btn-primary">Submit enquiry</button>
+            <div class="row">
+              <div class="col-sm-9 col-md-10 col-sm-push-3 col-md-push-2">
+                <p>
+                  The information you send us will be seen only by Wellbeing Support staff and used only for
+                  the purpose of responding to your enquiry.
+                  <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Read our full privacy statement</a>
+                </p>
+              </div>
+              <div class="col-sm-3 col-md-2 col-sm-pull-9 col-md-pull-10">
+                <br class="visible-xs-block">
+                <button type="submit" class="btn btn-primary btn-block">Submit enquiry</button>
+              </div>
+            </div>
           </div>
         }
       </div>
@@ -126,7 +137,7 @@
       <div class="panel-heading" role="tab" id="disability-form-heading">
         <a role="button" data-toggle="collapse" data-parent="#enquiry-forms" href="#disability-form" aria-expanded="true" aria-controls="disability-form">
           <i class="fal fa-fw fa-chevron-@if(disabilityForm.data.nonEmpty || disabilityForm.hasErrors) {down} else {right}"></i>@*
-          *@Are you looking for support with disabilities such as mobility or dyslexia or autism spectrum?
+          *@Support with disabilities such as mobility or dyslexia or autism spectrum
         </a>
       </div>
       <div id="disability-form" class="panel-collapse collapse @if(disabilityForm.data.nonEmpty || disabilityForm.hasErrors) {in}" role="tabpanel" aria-labelledby="disability-form-heading">
@@ -135,30 +146,36 @@
           'enctype -> "multipart/form-data",
         ) { implicit vfc =>
           <div class="panel-body">
-            @b3.free('_label -> "Subject") {
-              <p class="form-control-static">Disability query</p>
-            }
+            @b3.free('_label -> "Subject:") {
+              <span class="form-control-static">Disability query</span>
+            }(b3.inline.fieldConstructorSpecific, messagesProvider)
 
-            @b3.free('_label -> "Select all that apply") {
-              @b3.checkbox(disabilityForm("reasonableAdjustments"), '_text -> "I'm looking for advice on reasonable adjustments (including special exam arrangements)")(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
-              @b3.checkbox(disabilityForm("specialistMentoring"), '_text -> "I'm looking for specialist mentoring and advice on study skills?")(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
-              @b3.checkbox(disabilityForm("disabilityScreening"), '_text -> "I'm looking for screening for SpLDs such as dyslexia?")(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
-              @b3.checkbox(disabilityForm("generalAdvice"), '_text -> "I'm looking for general advice and support on disability?")(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
+            @b3.free('_label -> "Select any of the following that apply (or leave them all unticked if not)", '_class -> "checkboxGroup") {
+              @b3.checkbox(disabilityForm("reasonableAdjustments"), '_text -> "I'm looking for advice on reasonable adjustments (including special exam arrangements)")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+              @b3.checkbox(disabilityForm("specialistMentoring"), '_text -> "I'm looking for specialist mentoring and advice on study skills")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+              @b3.checkbox(disabilityForm("disabilityScreening"), '_text -> "I'm looking for screening for SpLDs such as dyslexia")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+              @b3.checkbox(disabilityForm("generalAdvice"), '_text -> "I'm looking for general advice and support on disability")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
             }
 
             @b3.free('_label -> "Do you have any documents you can upload that might help us understand your situation?", '_class -> disabilityForm.error("file").map(_ => "has-error")) {
               <input type="file" id="disabilityForm_file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" aria-label="Attach a file">
               @b3.errors(disabilityForm("file"))
             }
-
-            @b3.free() {
-              The information you send us will be seen only by Wellbeing Support staff and used only for
-              the purpose of responding to your enquiry.
-              <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Read our full privacy statement</a>
-            }(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
           </div>
           <div class="panel-footer">
-            <button type="submit" class="btn btn-primary">Submit enquiry</button>
+            <div class="row">
+              <div class="col-sm-9 col-md-10 col-sm-push-3 col-md-push-2">
+                <p>
+                  The information you send us will be seen only by Wellbeing Support staff and used only for
+                  the purpose of responding to your enquiry.
+                  <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Read our full privacy statement</a>
+                </p>
+              </div>
+              <div class="col-sm-3 col-md-2 col-sm-pull-9 col-md-pull-10">
+                <br class="visible-xs-block">
+                <button type="submit" class="btn btn-primary btn-block">Submit enquiry</button>
+              </div>
+            </div>
           </div>
         }
       </div>
@@ -168,7 +185,7 @@
       <div class="panel-heading" role="tab" id="wellbeing-form-heading">
         <a role="button" data-toggle="collapse" data-parent="#enquiry-forms" href="#wellbeing-form" aria-expanded="true" aria-controls="wellbeing-form">
           <i class="fal fa-fw fa-chevron-@if(wellbeingForm.data.nonEmpty || wellbeingForm.hasErrors) {down} else {right}"></i>@*
-          *@Other
+          *@Other issues
         </a>
       </div>
       <div id="wellbeing-form" class="panel-collapse collapse @if(wellbeingForm.data.nonEmpty || wellbeingForm.hasErrors) {in}" role="tabpanel" aria-labelledby="wellbeing-form-heading">
@@ -178,18 +195,17 @@
         ) { implicit vfc =>
           <div class="panel-body">
             <p>
-              It seems as though you might be looking for more general practical advice and support.
-              (This might include matters such as accommodation, safety, crime (including sexual violence),
-              complaints or wellbeing). If so, please could you briefly summarise what you're hoping to get
-              help with?
+              If you’re looking for more general practical advice and support (eg issues such as
+              accommodation, safety, crime (including sexual violence), complaints or wellbeing),
+              please could you briefly summarise what you’re hoping to get help with?
             </p>
 
-            @b3.free('_label -> "Subject") {
-              <p class="form-control-static">Wellbeing query</p>
-            }
+            @b3.free('_label -> "Subject:") {
+              <span class="form-control-static">Wellbeing query</span>
+            }(b3.inline.fieldConstructorSpecific, messagesProvider)
 
             @b3.textarea(wellbeingForm("text"),
-              '_label -> html"""Message<br /><span class="hint">(please tell us as much as you need to about your enquiry)</span>""",
+              '_label -> "Message",
               'rows -> 10
             )
 
@@ -197,15 +213,21 @@
               <input type="file" id="wellbeingForm_file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" aria-label="Attach a file">
               @b3.errors(wellbeingForm("file"))
             }
-
-            @b3.free() {
-              The information you send us will be seen only by Wellbeing Support staff and used only for
-              the purpose of responding to your enquiry.
-              <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Read our full privacy statement</a>
-            }(b3.inline.fieldConstructorSpecific, messagesProvider.messages)
           </div>
           <div class="panel-footer">
-            <button type="submit" class="btn btn-primary">Submit enquiry</button>
+            <div class="row">
+              <div class="col-sm-9 col-md-10 col-sm-push-3 col-md-push-2">
+                <p>
+                  The information you send us will be seen only by Wellbeing Support staff and used only for
+                  the purpose of responding to your enquiry.
+                  <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Read our full privacy statement</a>
+                </p>
+              </div>
+              <div class="col-sm-3 col-md-2 col-sm-pull-9 col-md-pull-10">
+                <br class="visible-xs-block">
+                <button type="submit" class="btn btn-primary btn-block">Submit enquiry</button>
+              </div>
+            </div>
           </div>
         }
       </div>

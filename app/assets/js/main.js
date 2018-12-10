@@ -20,7 +20,6 @@ import AppointmentCalendar from './appointment-calendar';
 import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
 import * as dateTimePicker from './date-time-picker';
 import PaginatingTable from './paginating-table';
-import EnquiryQuestionsForm from './enquiry-questions-form';
 import QuickFilter from './quick-filter';
 import { fetchWithCredentials } from './serverpipe';
 
@@ -111,10 +110,6 @@ function bindTo($scope) {
 
   $('.datetimepicker-inline', $scope).each((i, container) => {
     dateTimePicker.InlineDateTimePicker(container);
-  });
-
-  $('.enquiry-questions-form', $scope).each((i, container) => {
-    EnquiryQuestionsForm.bindTo(container);
   });
 
   $('.quick-filter-container', $scope).each((i, container) => {
