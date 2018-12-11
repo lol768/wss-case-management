@@ -73,7 +73,7 @@
   </p>
 
   <div class="panel-group" id="enquiry-forms" role="tablist" aria-multiselectable="true">
-    @panel(Teams.MentalHealth, "Support for mental health disabilities", mentalHealthForm, controllers.enquiries.routes.EnquiryController.submitMentalHealth()) { implicit vfc =>
+    @panel(Teams.MentalHealth, "Support for mental health conditions", mentalHealthForm, controllers.enquiries.routes.EnquiryController.submitMentalHealth()) { implicit vfc =>
       @b3.free('_label -> "Subject:") {
         <span class="form-control-static">Mental health query</span>
       }(b3.inline.fieldConstructorSpecific, messagesProvider)
@@ -129,7 +129,7 @@
       <p>
         If you’re looking for more general practical advice and support (e.g. issues such as
         accommodation, safety, crime (including sexual violence), complaints or wellbeing),
-        please could you briefly summarise what you’re hoping to get help with?
+        briefly describe what help you need.
       </p>
 
       @b3.free('_label -> "Subject:") {
