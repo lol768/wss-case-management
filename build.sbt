@@ -183,7 +183,7 @@ import scala.sys.process.Process
 
 lazy val webpack = taskKey[Unit]("Run webpack when packaging the application")
 
-def runAudit(file: File): Int = Process("npm audit", file).!
+def runAudit(file: File): Int = Process("npm audit --production", file).!
 def runWebpack(file: File): Int = Process("npm run build", file).!
 
 webpack := {
