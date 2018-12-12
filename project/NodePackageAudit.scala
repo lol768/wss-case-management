@@ -41,12 +41,12 @@ object NodePackageAudit {
         results("advisories").asInstanceOf[Map[String, Map[String, Any]]].toSeq.map { case (id, advisory) =>
           <testcase name={ id } classname="npm.audit" time={ timeTakenSecs.formatted("%.3f") }>
             <failure message={ advisory("title").asInstanceOf[String] } type={ advisory("severity").asInstanceOf[String] }>
-              Package: { advisory("module_name").asInstanceOf[String] }
-              Patched in: { advisory("patched_versions").asInstanceOf[String] }
-              Path: { advisory("findings").asInstanceOf[Seq[Map[String, Any]]].head("paths").asInstanceOf[Seq[String]].head }
-              More info: { advisory("url").asInstanceOf[String] }
+Package: { advisory("module_name").asInstanceOf[String] }
+Patched in: { advisory("patched_versions").asInstanceOf[String] }
+Path: { advisory("findings").asInstanceOf[Seq[Map[String, Any]]].head("paths").asInstanceOf[Seq[String]].head }
+More info: { advisory("url").asInstanceOf[String] }
 
-              { advisory("overview").asInstanceOf[String] }
+{ advisory("overview").asInstanceOf[String] }
             </failure>
           </testcase>
         }
