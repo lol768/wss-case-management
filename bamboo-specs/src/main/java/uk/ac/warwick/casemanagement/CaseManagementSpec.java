@@ -62,7 +62,11 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
                     .location(ScriptTaskProperties.Location.FILE)
                     .fileFromPath("sbt")
                     .argument("clean test:compile test universal:packageZipTarball")
-                    .environmentVariables("PATH=/usr/nodejs/8/bin")
+                    .environmentVariables("PATH=/usr/nodejs/8/bin"),
+                  new NpmTask()
+                    .description("JS Tests")
+                    .nodeExecutable("Node 8")
+                    .command("run bamboo")
                 )
                 .finalTasks(
                   new TestParserTask(TestParserTaskProperties.TestType.JUNIT)
