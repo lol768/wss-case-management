@@ -7,7 +7,7 @@
   form: Form[RoomFormData],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@main("Edit building") {
+@main("Edit room") {
   @b3.vertical.formCSRF(controllers.locations.routes.LocationsController.editRoom(room.id)) { implicit ifc =>
     @b3.validatedHidden(form, "version")
 
