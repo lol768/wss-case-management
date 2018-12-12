@@ -186,14 +186,17 @@ export default function AppointmentFreeBusyForm(form) {
               if (resource.type === 'room' && $roomSelect.length) {
                 const $select = $roomSelect.clone()
                   .removeAttr('id')
+                  .removeAttr('name')
                   .addClass('input-sm')
-                  .val($roomSelect.val())
+                  .val(roomIDs[0])
                   .on('change', () => {
-                    $roomSelect.val($select.val());
+                    $modal.data('roomID', $select.val());
                     roomIDs = [$select.val()];
                     $calendar.fullCalendar('refetchResources');
                     $calendar.fullCalendar('refetchEvents');
                   });
+
+                $select.find('option[value=""]').remove();
 
                 $cell.empty().append($select);
               } else {
@@ -220,9 +223,13 @@ export default function AppointmentFreeBusyForm(form) {
     $modal.find(':button[data-toggle="select"]').on('click', () => {
       const start = $modal.data('start');
       const duration = $modal.data('duration');
+      const roomID = $modal.data('roomID');
 
       dateTimePicker.date(start);
       $form.find(`:input[name="appointment.duration"][value="${duration}"]`).prop('checked', true);
+      if (roomID) {
+        $form.find(':input[name="appointment.roomID"]').val(roomID);
+      }
 
       $modal.modal('hide');
     });
