@@ -1,4 +1,5 @@
 import chai from 'chai';
+import jsdom from 'jsdom';
 
 global.expect = chai.expect;
 global.should = chai.should();
@@ -8,9 +9,10 @@ global.sinon = require('sinon');
 // chai assertion plugins
 chai.use(require('sinon-chai'));
 
-global.document = require('jsdom').jsdom();
-global.window = global.document.defaultView;
-global.navigator = global.window.navigator;
+const dom = new jsdom.JSDOM();
+global.window = dom.window;
+global.document = dom.window.document;
+global.navigator = dom.window.navigator;
 
 // Do helpful things with Spies.  Use inside a test suite `describe` block.
 global.spy = function spy(object, method) {
