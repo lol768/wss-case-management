@@ -53,13 +53,9 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
                     .description("Checkout source from default repository")
                     .checkoutItems(new CheckoutItem().defaultRepository()),
                   new NpmTask()
-                    .description("prune")
-                    .nodeExecutable("Node 8")
-                    .command("prune"),
-                  new NpmTask()
                     .description("dependencies")
                     .nodeExecutable("Node 8")
-                    .command("install -d"),
+                    .command("ci"),
                   new ScriptTask()
                     .description("Run tests and package")
                     .interpreter(ScriptTaskProperties.Interpreter.BINSH_OR_CMDEXE)
