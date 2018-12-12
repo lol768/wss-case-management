@@ -1,6 +1,3 @@
-import warwick.Gulp
-import warwick.Testing._
-
 organization := "uk.ac.warwick"
 name := """case-management"""
 
@@ -183,14 +180,15 @@ import scala.sys.process.Process
 
 lazy val webpack = taskKey[Unit]("Run webpack when packaging the application")
 
-def runAudit(file: File): Int = Process("npm audit --production", file).!
 def runWebpack(file: File): Int = Process("npm run build", file).!
 
+lazy val npmAudit = taskKey[Unit]("Run npm audit and parse the results as JUnit XML")
+npmAudit := NodePackageAudit.audit(baseDirectory.value)
+
 webpack := {
-  // FIXME actually care about the result of npm audit again once Modernizr resolves issue with build
-  /*if (*/runAudit(baseDirectory.value)/* != 0) throw new Exception("Some npm dependencies have problems that need fixing.")*/
   if (runWebpack(baseDirectory.value) != 0) throw new Exception("Something went wrong when running webpack.")
 }
+webpack := webpack.dependsOn(npmAudit).value
 
 // Generate a new AES key for object store encryption
 lazy val newEncryptionKey = taskKey[Unit]("Generate and print a new encryption key")

@@ -69,7 +69,7 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
                     .command("run bamboo")
                 )
                 .finalTasks(
-                  new TestParserTask(TestParserTaskProperties.TestType.JUNIT)
+                  TestParserTask.createJUnitParserTask()
                     .description("Parse test results")
                     .resultDirectories("**/test-reports/*.xml"),
                   TestParserTask.createMochaParserTask()
