@@ -65,7 +65,7 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
                     .environmentVariables("PATH=/usr/nodejs/8/bin")
                 )
                 .finalTasks(
-                  new TestParserTask(TestParserTaskProperties.TestType.JUNIT)
+                  TestParserTask.createJUnitParserTask()
                     .description("Parse test results")
                     .resultDirectories("**/test-reports/*.xml"),
                   TestParserTask.createMochaParserTask()
