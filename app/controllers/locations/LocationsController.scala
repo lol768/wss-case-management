@@ -16,6 +16,7 @@ import play.api.mvc.{Action, AnyContent}
 import services.LocationService
 import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
+import warwick.sso.Usercode
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -51,7 +52,8 @@ object LocationsController {
         "building" -> uuid.verifying("error.required", id => isValidBuilding(id)),
         "name" -> nonEmptyText(maxLength = Room.NameMaxLength),
         "wai2GoID" -> optional(number),
-        "available" -> boolean
+        "available" -> boolean,
+        "o365Usercode" -> optional(nonEmptyText).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string)),
       )(RoomSave.apply)(RoomSave.unapply),
       "version" -> optional(JavaTime.offsetDateTimeFormField).verifying("error.optimisticLocking", _ == existingVersion)
     )(RoomFormData.apply)(RoomFormData.unapply))
@@ -143,7 +145,7 @@ class LocationsController @Inject()(
   def editRoomForm(id: UUID): Action[AnyContent] = AdminRequiredAction.async { implicit request =>
     ServiceResults.zip(
       locations.findRoom(id),
-      locations.allBuildings
+      locations.allBuildings,
     ).successMap { case (room, buildings) =>
       Ok(views.html.locations.editRoom(
         room,
@@ -151,7 +153,7 @@ class LocationsController @Inject()(
         roomForm(locations, Some(room.lastUpdated))
           .fill(
             RoomFormData(
-              RoomSave(room.building.id, room.name, Some(room.wai2GoID).filterNot(_ == room.building.wai2GoID), room.available),
+              RoomSave(room.building.id, room.name, Some(room.wai2GoID).filterNot(_ == room.building.wai2GoID), room.available, room.o365Usercode),
               Some(room.lastUpdated)
             )
           )

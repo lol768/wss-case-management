@@ -380,7 +380,7 @@ object AppointmentDao {
       .on(_.roomID === _.id)
       .join(LocationDao.buildings.table)
       .on(_._2.buildingID === _.id)
-      .map { case ((a, r), b) => (a, (r.id, b.building, r.name, r.wai2GoID.getOrElse(b.wai2GoID), r.available, r.created, r.version).mapTo[Room]) }
+      .map { case ((a, r), b) => (a, (r.id, b.building, r.name, r.wai2GoID.getOrElse(b.wai2GoID), r.available, r.o365Usercode, r.created, r.version).mapTo[Room]) }
     def withTeamMembers = q
       .join(Owner.owners.table)
       .on { case (a, o) => a.id === o.entityId && o.entityType === (Owner.EntityType.Appointment: Owner.EntityType) }

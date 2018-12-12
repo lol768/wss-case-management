@@ -142,6 +142,7 @@ object LocationDao {
     name: String,
     wai2GoID: Option[Int],
     available: Boolean,
+    o365Usercode: Option[Usercode],
     created: OffsetDateTime,
     version: OffsetDateTime,
   ) extends Versioned[StoredRoom] {
@@ -151,6 +152,7 @@ object LocationDao {
       name,
       wai2GoID.getOrElse(building.wai2GoID),
       available,
+      o365Usercode,
       created,
       version
     )
@@ -164,6 +166,7 @@ object LocationDao {
         name,
         wai2GoID,
         available,
+        o365Usercode,
         created,
         version,
         operation,
@@ -178,6 +181,7 @@ object LocationDao {
     name: String,
     wai2GoID: Option[Int],
     available: Boolean,
+    o365Usercode: Option[Usercode],
     created: OffsetDateTime,
     version: OffsetDateTime,
 
@@ -191,6 +195,7 @@ object LocationDao {
     def name = column[String]("name")
     def wai2GoID = column[Option[Int]]("wai2go_id")
     def available = column[Boolean]("is_available")
+    def o365Usercode = column[Option[Usercode]]("office365_usercode")
     def created = column[OffsetDateTime]("created_utc")
     def version = column[OffsetDateTime]("version_utc")
   }
@@ -202,7 +207,7 @@ object LocationDao {
     def id = column[UUID]("id", O.PrimaryKey)
 
     override def * : ProvenShape[StoredRoom] =
-      (id, buildingID, name, wai2GoID, available, created, version).mapTo[StoredRoom]
+      (id, buildingID, name, wai2GoID, available, o365Usercode, created, version).mapTo[StoredRoom]
     def fk = foreignKey("fk_location_room_building", buildingID, buildings.table)(_.id)
     def idx = index("idx_location_room_building", buildingID)
   }
@@ -216,7 +221,7 @@ object LocationDao {
     def auditUser = column[Option[Usercode]]("version_user")
 
     override def * : ProvenShape[StoredRoomVersion] =
-      (id, buildingID, name, wai2GoID, available, created, version, operation, timestamp, auditUser).mapTo[StoredRoomVersion]
+      (id, buildingID, name, wai2GoID, available, o365Usercode, created, version, operation, timestamp, auditUser).mapTo[StoredRoomVersion]
     def pk = primaryKey("pk_room_version", (id, timestamp))
     def idx = index("idx_room_version", (id, version))
   }
@@ -230,7 +235,7 @@ object LocationDao {
   implicit class RoomBuildingExtensions[C[_]](q: Query[(Rooms, Buildings), (StoredRoom, StoredBuilding), C]) {
     def mapToRoom = q
       .map { case (r, b) =>
-        (r.id, b.building, r.name, r.wai2GoID.getOrElse(b.wai2GoID), r.available, r.created, r.version).mapTo[Room]
+        (r.id, b.building, r.name, r.wai2GoID.getOrElse(b.wai2GoID), r.available, r.o365Usercode, r.created, r.version).mapTo[Room]
       }
   }
 }
