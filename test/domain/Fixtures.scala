@@ -214,12 +214,13 @@ object Fixtures {
       JavaTime.offsetDateTime,
     )
 
-    def newRoom(buildingID: UUID, name: String = "R0.21", wai2GoID: Option[Int] = None): StoredRoom = StoredRoom(
+    def newRoom(buildingID: UUID, name: String = "R0.21", wai2GoID: Option[Int] = None, o365Usercode: Option[Usercode] = None): StoredRoom = StoredRoom(
       UUID.randomUUID(),
       buildingID,
       name,
       wai2GoID,
       available = true,
+      o365Usercode,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
     )
