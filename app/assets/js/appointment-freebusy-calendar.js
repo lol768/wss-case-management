@@ -87,7 +87,7 @@ export default function AppointmentFreeBusyForm(form) {
         // Get clients
         const clients = getFormValuesArray('clients');
         const teamMembers = getFormValuesArray('teamMembers');
-        const roomIDs = getFormValues('appointment.roomID');
+        let roomIDs = getFormValues('appointment.roomID');
 
         $calendar.fullCalendar({
           ...CommonFullCalendarOptions,
@@ -182,7 +182,25 @@ export default function AppointmentFreeBusyForm(form) {
           },
           resourceRender: (resource, $cell) => {
             if (resource.type) {
-              $cell.append($('<br />')).append($('<span />').addClass('hint').text(`(${resource.type})`));
+              const $roomSelect = $('#appointment_roomID');
+              if (resource.type === 'room' && $roomSelect.length) {
+                const $select = $roomSelect.clone()
+                  .removeAttr('id')
+                  .addClass('input-sm')
+                  .val($roomSelect.val())
+                  .on('change', () => {
+                    $roomSelect.val($select.val());
+                    roomIDs = [$select.val()];
+                    $calendar.fullCalendar('refetchResources');
+                    $calendar.fullCalendar('refetchEvents');
+                  });
+
+                $cell.empty().append($select);
+              } else {
+                $cell.append($('<br />'));
+              }
+
+              $cell.append($('<span />').addClass('hint').text(`(${resource.type})`));
             }
           },
           selectable: true,
