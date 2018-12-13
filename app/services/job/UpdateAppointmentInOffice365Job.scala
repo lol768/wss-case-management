@@ -2,10 +2,10 @@ package services.job
 import java.time.Instant
 import java.util.{Date, UUID}
 
-import _root_.helpers.ServiceResults
-import _root_.helpers.ServiceResults.ServiceResult
-import _root_.helpers.StringUtils._
 import domain.{AppointmentRender, AppointmentState}
+import helpers.ServiceResults
+import helpers.ServiceResults.ServiceResult
+import helpers.StringUtils._
 import javax.inject.Inject
 import org.quartz._
 import play.api.Configuration
@@ -42,7 +42,8 @@ class UpdateAppointmentInOffice365Job @Inject()(
   config: Configuration
 )(implicit ec: ExecutionContext) extends Job with Logging {
 
-  private lazy val domain: String = config.get[String]("domain")
+  private[this] lazy val domain: String = config.get[String]("domain")
+  private[this] lazy val office365Domain: String = config.get[String]("office365.domain")
 
   object OwnerAndOutlookId {
     def fromMap(input: Map[String, String]): Set[OwnerAndOutlookId] =
@@ -183,6 +184,21 @@ class UpdateAppointmentInOffice365Job @Inject()(
     "Location" -> Json.obj(
       "DisplayName" -> a.room.map(r => s"${r.name}, ${r.building.name}").getOrElse[String](""),
       "Address" -> JsNull
+    ),
+    "Attendees" -> (
+      if (a.room.exists(_.o365Usercode.nonEmpty))
+        Json.arr(
+          a.room.flatMap { room => room.o365Usercode.map { usercode =>
+            Json.obj(
+              "EmailAddress" -> Json.obj(
+                "Address" -> s"${usercode.string}@$office365Domain",
+                "Name" -> s"${room.name}, ${room.building.name}"
+              ),
+              "Type" -> "Resource"
+            )
+          }}
+        )
+      else Json.arr()
     )
   )
 }
