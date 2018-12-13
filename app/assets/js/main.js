@@ -120,7 +120,7 @@ function bindTo($scope) {
     .not('.no-dirty-check')
     .areYouSure()
     .end()
-    .not('no-double-submit-protection')
+    .not('.no-double-submit-protection')
     .on('submit', (e) => {
       $(e.target).find('button[type=submit]').prop('disabled', true);
     });

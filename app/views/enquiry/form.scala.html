@@ -20,7 +20,7 @@
       </a>
     </div>
     <div id="@{team.id}-form" class="panel-collapse collapse @if(form.data.nonEmpty || form.hasErrors) {in}" role="tabpanel" aria-labelledby="@{team.id}-form-heading">
-      @b3.vertical.formCSRF(route, 'enctype -> "multipart/form-data") { implicit vfc =>
+      @b3.vertical.formCSRF(route, 'enctype -> "multipart/form-data", 'class -> "no-dirty-check") { implicit vfc =>
         <div class="panel-body">
           @body(vfc)
         </div>
