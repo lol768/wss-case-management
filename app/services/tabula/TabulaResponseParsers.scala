@@ -1,7 +1,7 @@
 package services.tabula
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime, OffsetDateTime}
+import java.time.{LocalDate, LocalDateTime}
 
 import domain._
 import play.api.libs.functional.syntax._
@@ -15,14 +15,14 @@ object TabulaResponseParsers {
     case class StudentCourseYearDetails(
       academicYear: String,
       yearOfStudy: Int,
-      studyLevel: String,
+      studyLevel: Option[String],
       modeOfAttendance: String,
       enrolmentDepartment: SitsDepartment
     )
     val studentCourseYearDetailsReads: Reads[StudentCourseYearDetails] = (
       (__ \ "academicYear").read[String] and
       (__ \ "yearOfStudy").read[Int] and
-      (__ \ "studyLevel").read[String] and
+      (__ \ "studyLevel").readNullable[String] and
       (__ \ "modeOfAttendance" \ "code").read[String] and
       (__ \ "enrolmentDepartment").read[SitsDepartment](departmentReads)
     )(StudentCourseYearDetails.apply _)
@@ -32,23 +32,25 @@ object TabulaResponseParsers {
     case class StudentCourseDetails(
       mostSignificant: Boolean,
       beginDate: LocalDate,
-      endDate: LocalDate,
+      endDate: Option[LocalDate],
+      expectedEndDate: Option[LocalDate],
       courseType: String,
       course: Course,
-      level: String,
+      level: Option[String],
       studentCourseYearDetails: Seq[StudentCourseYearDetails],
     )
     val studentCourseDetailsReads: Reads[StudentCourseDetails] = (
       (__ \ "mostSignificant").read[Boolean] and
       (__ \ "beginDate").read[LocalDate] and
-      (__ \ "expectedEndDate").read[LocalDate] and
+      (__ \ "endDate").readNullable[LocalDate] and
+      (__ \ "expectedEndDate").readNullable[LocalDate] and
       (__ \ "course" \ "type").read[String] and
       (__ \ "course").read[Course](courseReads) and
-      (__ \ "levelCode").read[String] and
+      (__ \ "levelCode").readNullable[String] and
       (__ \ "studentCourseYearDetails").read[Seq[StudentCourseYearDetails]](Reads.seq(studentCourseYearDetailsReads))
     )(StudentCourseDetails.apply _)
     val studentCourseDetailsFields: Seq[String] =
-      Seq("mostSignificant", "beginDate", "expectedEndDate", "course", "levelCode") ++
+      Seq("mostSignificant", "beginDate", "endDate", "expectedEndDate", "course", "levelCode") ++
         studentCourseYearDetailsFields.map(f => s"studentCourseYearDetails.$f")
 
     case class Member(
@@ -88,7 +90,7 @@ object TabulaResponseParsers {
           group = latestScd.map(_.courseType).flatMap(StudentGroup.withNameOption),
           yearOfStudy = latestScyd.map(scyd => YearOfStudy(scyd.yearOfStudy, scyd.studyLevel)),
           startDate = latestScd.map(_.beginDate),
-          endDate = latestScd.map(_.endDate),
+          endDate = latestScd.flatMap { scd => scd.endDate.orElse(scd.expectedEndDate) },
           nationality = nationality,
           dualNationality = secondNationality,
           tier4VisaRequired = tier4VisaRequirement,

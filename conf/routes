@@ -64,7 +64,10 @@ GET         /messages/:id/:fileId                   @controllers.ClientMessagesC
 ## Enquiries ##
 
 GET         /enquiry                                @controllers.enquiries.EnquiryController.form()
-POST        /enquiry                                @controllers.enquiries.EnquiryController.submit()
+POST        /enquiry/mentalhealth                   @controllers.enquiries.EnquiryController.submitMentalHealth()
+POST        /enquiry/counselling                    @controllers.enquiries.EnquiryController.submitCounselling()
+POST        /enquiry/disability                     @controllers.enquiries.EnquiryController.submitDisability()
+POST        /enquiry/wellbeing                      @controllers.enquiries.EnquiryController.submitWellbeing()
 
 ## Appointments ##
 
@@ -177,6 +180,9 @@ GET         /sysadmin/data-generation               @controllers.sysadmin.DataGe
 POST        /sysadmin/data-generation               @controllers.sysadmin.DataGenerationController.generate()
 GET         /sysadmin/emails                        @controllers.sysadmin.EmailQueueController.queued()
 POST        /sysadmin/emails/:id                    @controllers.sysadmin.EmailQueueController.enqueue(id: java.util.UUID)
+GET         /sysadmin/import                        @controllers.sysadmin.DataImportController.importForm()
+POST        /sysadmin/import/preview                @controllers.sysadmin.DataImportController.importCasesPreview()
+POST        /sysadmin/import                        @controllers.sysadmin.DataImportController.scheduleJob()
 
 ## Fallbacks ##
 

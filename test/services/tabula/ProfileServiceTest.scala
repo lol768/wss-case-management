@@ -87,7 +87,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       studentProfile.course mustBe Some(Course("RBSA-C1PH","RBSA-C1PH Ardea Herodias Studies"))
       studentProfile.attendance mustBe Some(Attendance.FullTime)
       studentProfile.group mustBe Some(StudentGroup.PGR)
-      studentProfile.yearOfStudy mustBe Some(YearOfStudy(4, "M2"))
+      studentProfile.yearOfStudy mustBe Some(YearOfStudy(4, Some("M2")))
       studentProfile.startDate mustBe Some(LocalDate.parse("2015-10-05"))
       studentProfile.endDate mustBe Some(LocalDate.parse("2019-09-30"))
       studentProfile.nationality mustBe Some("British")

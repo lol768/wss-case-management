@@ -1,12 +1,9 @@
-import warwick.Gulp
-import warwick.Testing._
-
 organization := "uk.ac.warwick"
 name := """case-management"""
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.12.7"
+scalaVersion := "2.12.8"
 
 javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 
@@ -37,7 +34,7 @@ lazy val main = (project in file("."))
   )
 
 val playUtilsVersion = "1.25"
-val ssoClientVersion = "2.57"
+val ssoClientVersion = "2.60"
 val warwickUtilsVersion = "20181130"
 val enumeratumVersion = "1.5.13"
 val enumeratumSlickVersion = "1.5.15"
@@ -92,7 +89,11 @@ val appDeps = Seq(
 
   "org.dom4j" % "dom4j" % "2.1.1",
   "org.apache.tika" % "tika-core" % "1.19.1",
-  "org.apache.tika" % "tika-parsers" % "1.19.1"
+  "org.apache.tika" % "tika-parsers" % "1.19.1",
+
+  "org.apache.poi" % "poi" % "4.0.1",
+  "org.apache.poi" % "poi-ooxml" % "4.0.1",
+  "org.apache.poi" % "poi-ooxml-schemas" % "4.0.1"
 )
 
 val testDeps = Seq(
@@ -179,13 +180,15 @@ import scala.sys.process.Process
 
 lazy val webpack = taskKey[Unit]("Run webpack when packaging the application")
 
-def runAudit(file: File): Int = Process("npm audit", file).!
 def runWebpack(file: File): Int = Process("npm run build", file).!
 
+lazy val npmAudit = taskKey[Unit]("Run npm audit and parse the results as JUnit XML")
+npmAudit := NodePackageAudit.audit(baseDirectory.value)
+
 webpack := {
-  if (runAudit(baseDirectory.value) != 0) throw new Exception("Some npm dependencies have problems that need fixing.")
   if (runWebpack(baseDirectory.value) != 0) throw new Exception("Something went wrong when running webpack.")
 }
+webpack := webpack.dependsOn(npmAudit).value
 
 // Generate a new AES key for object store encryption
 lazy val newEncryptionKey = taskKey[Unit]("Generate and print a new encryption key")

@@ -20,7 +20,6 @@ import AppointmentCalendar from './appointment-calendar';
 import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
 import * as dateTimePicker from './date-time-picker';
 import PaginatingTable from './paginating-table';
-import EnquiryQuestionsForm from './enquiry-questions-form';
 import QuickFilter from './quick-filter';
 import { fetchWithCredentials } from './serverpipe';
 
@@ -113,10 +112,6 @@ function bindTo($scope) {
     dateTimePicker.InlineDateTimePicker(container);
   });
 
-  $('.enquiry-questions-form', $scope).each((i, container) => {
-    EnquiryQuestionsForm.bindTo(container);
-  });
-
   $('.quick-filter-container', $scope).each((i, container) => {
     QuickFilter(container);
   });
@@ -125,7 +120,7 @@ function bindTo($scope) {
     .not('.no-dirty-check')
     .areYouSure()
     .end()
-    .not('no-double-submit-protection')
+    .not('.no-double-submit-protection')
     .on('submit', (e) => {
       $(e.target).find('button[type=submit]').prop('disabled', true);
     });
@@ -386,6 +381,22 @@ function bindTo($scope) {
       });
     });
   });
+
+  $('.collapse', $scope)
+    .on('show.bs.collapse', (e) => {
+      const $collapse = $(e.target);
+      if ($collapse.attr('aria-labelledby')) {
+        const $header = $(`#${$collapse.attr('aria-labelledby')}`);
+        $header.find('.fa-chevron-right').addClass('fa-chevron-down').removeClass('fa-chevron-right');
+      }
+    })
+    .on('hide.bs.collapse', (e) => {
+      const $collapse = $(e.target);
+      if ($collapse.attr('aria-labelledby')) {
+        const $header = $(`#${$collapse.attr('aria-labelledby')}`);
+        $header.find('.fa-chevron-down').addClass('fa-chevron-right').removeClass('fa-chevron-down');
+      }
+    });
 }
 
 $(() => {

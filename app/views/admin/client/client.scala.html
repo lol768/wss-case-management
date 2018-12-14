@@ -5,6 +5,7 @@
 @import warwick.sso.UniversityID
 
 @import play.api.libs.json.Json
+
 @(
   universityID: UniversityID,
   profile: Option[SitsProfile],
@@ -56,32 +57,7 @@
             }
 
             @tags.sectioned.detail("Status") {
-              @profile.userType match {
-                case UserType.Student => {
-                  @profile.yearOfStudy.map(_.level) match {
-                    case Some("1") => {
-                      First year
-                    }
-                    case Some("2") => {
-                      Second year
-                    }
-                    case Some("3") => {
-                      Third year
-                    }
-                    case Some("4") => {
-                      Fourth year
-                    }
-                    case Some(level) => {
-                      @{level}th year
-                    }
-                    case _ => {}
-                  }
-                  @profile.group.map(_.description.toLowerCase) student, @profile.attendance.map(_.description.toLowerCase)
-                }
-                case _ => {
-                  @profile.userType
-                }
-              }
+              @views.tags.profiles.typeAndAttendance(profile)
             }
 
             @if(profile.userType == UserType.Staff || profile.userType == UserType.EmeritusAcademic) {

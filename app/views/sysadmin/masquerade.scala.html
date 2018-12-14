@@ -137,20 +137,7 @@
 
                     @client.fullName,
                     <a href="@controllers.admin.routes.ClientController.client(client.universityID)">@client.universityID.string</a>,
-                    @client.userType match {
-                      case UserType.Student => {
-                        @client.yearOfStudy.map(_.level) match {
-                          case Some("1") => {First year}
-                          case Some("2") => {Second year}
-                          case Some("3") => {Third year}
-                          case Some("4") => {Fourth year}
-                          case Some(level) => {@{level}th year}
-                          case _ => {}
-                        }
-                        @client.group student
-                      }
-                      case _ => {@client.userType}
-                    }
+                    @views.tags.profiles.typeAndAttendance(client)
                   </li>
                 }
               </ul>

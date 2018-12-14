@@ -114,7 +114,7 @@ case class NoteAndCase(
 )
 
 case class CaseMessages(data: Seq[MessageRender]) {
-  lazy val byClient: Map[UniversityID, Seq[MessageRender]] = data.groupBy(_.message.client)
+  lazy val byClient: Map[UniversityID, Seq[MessageRender]] = data.groupBy(_.message.client).withDefaultValue(Nil)
   lazy val length: Int = data.length
 }
 

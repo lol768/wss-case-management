@@ -53,23 +53,23 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
                     .description("Checkout source from default repository")
                     .checkoutItems(new CheckoutItem().defaultRepository()),
                   new NpmTask()
-                    .description("prune")
-                    .nodeExecutable("Node 8")
-                    .command("prune"),
-                  new NpmTask()
                     .description("dependencies")
                     .nodeExecutable("Node 8")
-                    .command("install -d"),
+                    .command("ci"),
                   new ScriptTask()
                     .description("Run tests and package")
                     .interpreter(ScriptTaskProperties.Interpreter.BINSH_OR_CMDEXE)
                     .location(ScriptTaskProperties.Location.FILE)
                     .fileFromPath("sbt")
                     .argument("clean test:compile test universal:packageZipTarball")
-                    .environmentVariables("PATH=/usr/nodejs/8/bin")
+                    .environmentVariables("PATH=/usr/nodejs/8/bin"),
+                  new NpmTask()
+                    .description("JS Tests")
+                    .nodeExecutable("Node 8")
+                    .command("run bamboo")
                 )
                 .finalTasks(
-                  new TestParserTask(TestParserTaskProperties.TestType.JUNIT)
+                  TestParserTask.createJUnitParserTask()
                     .description("Parse test results")
                     .resultDirectories("**/test-reports/*.xml"),
                   TestParserTask.createMochaParserTask()

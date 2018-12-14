@@ -320,7 +320,7 @@ export default function AppointmentCalendar(container) {
         type: 'basic',
         duration: { weeks: 4 },
         buttonText: 'next 4 weeks',
-        columnFormat: 'ddd D/MM',
+        columnFormat: 'dddd',
         displayEventEnd: true,
       },
       agendaDay: {

@@ -87,7 +87,7 @@ export default function AppointmentFreeBusyForm(form) {
         // Get clients
         const clients = getFormValuesArray('clients');
         const teamMembers = getFormValuesArray('teamMembers');
-        const roomIDs = getFormValues('appointment.roomID');
+        let roomIDs = getFormValues('appointment.roomID');
 
         $calendar.fullCalendar({
           ...CommonFullCalendarOptions,
@@ -182,7 +182,28 @@ export default function AppointmentFreeBusyForm(form) {
           },
           resourceRender: (resource, $cell) => {
             if (resource.type) {
-              $cell.append($('<br />')).append($('<span />').addClass('hint').text(`(${resource.type})`));
+              const $roomSelect = $('#appointment_roomID');
+              if (resource.type === 'room' && $roomSelect.length) {
+                const $select = $roomSelect.clone()
+                  .removeAttr('id')
+                  .removeAttr('name')
+                  .addClass('input-sm')
+                  .val(roomIDs[0])
+                  .on('change', () => {
+                    $modal.data('roomID', $select.val());
+                    roomIDs = [$select.val()];
+                    $calendar.fullCalendar('refetchResources');
+                    $calendar.fullCalendar('refetchEvents');
+                  });
+
+                $select.find('option[value=""]').remove();
+
+                $cell.empty().append($select);
+              } else {
+                $cell.append($('<br />'));
+              }
+
+              $cell.append($('<span />').addClass('hint').text(`(${resource.type})`));
             }
           },
           selectable: true,
@@ -202,9 +223,13 @@ export default function AppointmentFreeBusyForm(form) {
     $modal.find(':button[data-toggle="select"]').on('click', () => {
       const start = $modal.data('start');
       const duration = $modal.data('duration');
+      const roomID = $modal.data('roomID');
 
       dateTimePicker.date(start);
       $form.find(`:input[name="appointment.duration"][value="${duration}"]`).prop('checked', true);
+      if (roomID) {
+        $form.find(':input[name="appointment.roomID"]').val(roomID);
+      }
 
       $modal.modal('hide');
     });

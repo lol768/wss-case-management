@@ -2,6 +2,6 @@
 
 @(data: MentalHealthEnquiryFormData)
 
-Help with reasonable adjustments? @tags.threeStateBoolean(data.reasonableAdjustments)
-Specialist mentoring and advice on study skills? @tags.threeStateBoolean(data.reasonableAdjustments)
-General advice and support on mental health? @tags.threeStateBoolean(data.generalAdvice)
+Help with reasonable adjustments? @if(data.reasonableAdjustments) {YES} else {NO}
+Specialist mentoring and advice on study skills? @if(data.reasonableAdjustments) {YES} else {NO}
+General advice and support on mental health? @if(data.generalAdvice) {YES} else {NO}

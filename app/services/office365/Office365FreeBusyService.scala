@@ -5,11 +5,12 @@ import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import helpers.ServiceResults.{ServiceError, ServiceResult}
+import helpers.ServiceResults.Implicits._
 import helpers.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
 import javax.inject.{Inject, Singleton}
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
-import services.FreeBusyService
+import services.{FreeBusyService, LocationService}
 import services.FreeBusyService.{FreeBusyPeriod, FreeBusyStatus}
 import services.office365.Office365FreeBusyService.Office365FreeBusyServiceError
 import system.TimingCategories
@@ -34,6 +35,7 @@ class Office365FreeBusyServiceImpl @Inject()(
   office365: O365Service,
   cache: AsyncCacheApi,
   userLookupService: UserLookupService,
+  locations: LocationService,
   timing: TimingService,
 )(implicit ec: ExecutionContext) extends Office365FreeBusyService with Logging {
   import timing._
@@ -88,11 +90,22 @@ class Office365FreeBusyServiceImpl @Inject()(
     }
   }
 
-  // TODO Can we actually return free-busy from O365 for rooms?
   override def findFreeBusyPeriods(roomID: UUID, start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[CacheElement[ServiceResult[Seq[FreeBusyPeriod]]]] =
-    Future.successful {
-      val now = JavaTime.instant
-      CacheElement(Right(Nil), now.getEpochSecond, now.getEpochSecond, now.getEpochSecond)
+    locations.findRoom(roomID).flatMap {
+      case Left(errors) =>
+        Future.successful {
+          val now = JavaTime.instant
+          CacheElement(Left(errors), now.getEpochSecond, now.getEpochSecond, now.getEpochSecond)
+        }
+
+      case Right(room) if room.o365Usercode.isEmpty =>
+        Future.successful {
+          val now = JavaTime.instant
+          CacheElement(Right(Nil), now.getEpochSecond, now.getEpochSecond, now.getEpochSecond)
+        }
+
+      case Right(room) =>
+        findFreeBusyPeriods(room.o365Usercode.get, start, end)
     }
 
   private def handleValidationError(json: JsValue, errors: Seq[(JsPath, Seq[JsonValidationError])]): ServiceResult[Seq[FreeBusyPeriod]] = {

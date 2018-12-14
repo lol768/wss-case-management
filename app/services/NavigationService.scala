@@ -70,6 +70,7 @@ class NavigationServiceImpl @Inject() (
     NavigationDropdown("Sysadmin", Call("GET", "/sysadmin"), Seq(
       Some(masquerade),
       Some(NavigationPage("Email queue", controllers.sysadmin.routes.EmailQueueController.queued())),
+      Some(NavigationPage("Import data", controllers.sysadmin.routes.DataImportController.importForm())),
       Some(NavigationPage("Dummy data generation", controllers.sysadmin.routes.DataGenerationController.generateForm()))
         .filter(_ => dataGenerationEnabled),
     ).flatten)

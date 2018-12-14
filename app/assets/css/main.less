@@ -13,7 +13,6 @@
 @import "flexi-picker";
 @import "icons";
 @import "calendars";
-@import "enquiry-questions-form";
 
 @id7-ignore-id6-legacy: true;
 @id7-image-root-dir: './lib/id7/images';
@@ -417,6 +416,8 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
     }
 
     summary {
+      clear: left;
+
       &:first-of-type {
         list-style-type: none;
       }
@@ -669,6 +670,10 @@ s {
 .checkboxGroup {
   label {
     margin-bottom: 0;
+
+    + .checkbox {
+      margin-top: (@grid-gutter-width / 4);
+    }
   }
   .selected-items {
     &__item {
@@ -699,4 +704,13 @@ s {
     color: white !important;
     border-color: darken(@brand-colour, 20%);
   }
+}
+
+.panel-group .panel + .panel {
+  margin-top: (@grid-gutter-width / 2);
+}
+
+// Fix "No files selected" being mis-aligned on Chrome/macOS
+input[type="file"] {
+  line-height: 1;
 }

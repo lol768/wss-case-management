@@ -25,7 +25,10 @@ const CommonFullCalendarOptions = {
   viewRender: (view, element) => {
     if (view.type === 'agendaDay' && view.start.isSame(new Date(), 'day')) {
       const $header = $(element).closest('.fc').find('.fc-header-toolbar h2');
-      $header.text(`${$header.text()} (today)`);
+      // Check we haven't already done this otherwise refetching will add multiple times
+      if (!$header.text().endsWith('(today)')) {
+        $header.text(`${$header.text()} (today)`);
+      }
     }
   },
 };

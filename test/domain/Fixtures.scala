@@ -93,7 +93,7 @@ object Fixtures {
       course = None,
       attendance = None,
       group = Some(StudentGroup.Undergraduate),
-      yearOfStudy = Some(YearOfStudy(1, "1")),
+      yearOfStudy = Some(YearOfStudy(1, Some("1"))),
       startDate = None,
       endDate = None,
       nationality = None,
@@ -214,12 +214,13 @@ object Fixtures {
       JavaTime.offsetDateTime,
     )
 
-    def newRoom(buildingID: UUID, name: String = "R0.21", wai2GoID: Option[Int] = None): StoredRoom = StoredRoom(
+    def newRoom(buildingID: UUID, name: String = "R0.21", wai2GoID: Option[Int] = None, o365Usercode: Option[Usercode] = None): StoredRoom = StoredRoom(
       UUID.randomUUID(),
       buildingID,
       name,
       wai2GoID,
       available = true,
+      o365Usercode,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
     )

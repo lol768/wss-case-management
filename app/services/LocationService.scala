@@ -82,6 +82,7 @@ class LocationServiceImpl @Inject()(
       room.name,
       room.wai2GoID,
       room.available,
+      room.o365Usercode,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime
     )
@@ -108,6 +109,7 @@ class LocationServiceImpl @Inject()(
             room.name,
             room.wai2GoID,
             room.available,
+            room.o365Usercode,
             existing.created,
             JavaTime.offsetDateTime
           ),
