@@ -2,9 +2,9 @@ package controllers
 
 import controllers.API.Response._
 import controllers.CaseSearchController._
-import controllers.refiners.{AnyTeamActionRefiner, CanViewCaseActionRefiner}
-import domain.dao.CaseDao.CaseSearchQuery
+import controllers.refiners.AnyTeamActionRefiner
 import domain._
+import domain.dao.CaseDao.CaseSearchQuery
 import helpers.ServiceResults
 import helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
@@ -33,13 +33,13 @@ object CaseSearchController {
 @Singleton
 class CaseSearchController @Inject()(
   anyTeamActionRefiner: AnyTeamActionRefiner,
-  viewCaseActionRefiner: CanViewCaseActionRefiner,
-  cases: CaseService,
   permissions: PermissionService
-)(implicit executionContext: ExecutionContext) extends BaseController {
+)(implicit
+  cases: CaseService,
+  executionContext: ExecutionContext
+) extends BaseController {
 
   import anyTeamActionRefiner._
-  import viewCaseActionRefiner._
 
   def search: Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     form.bindFromRequest().fold(
@@ -65,7 +65,7 @@ class CaseSearchController @Inject()(
     )
   }
 
-  def lookup(caseKeyorId: String): Action[AnyContent] = CanViewCaseAction(caseKeyorId).async { implicit caseRequest =>
+  def lookup(caseKeyorId: String): Action[AnyContent] = AnyTeamMemberRequiredAction.andThen(refiners.WithCase(caseKeyorId)).async { implicit caseRequest =>
     cases.getClients(caseRequest.`case`.id).successMap { clients =>
       Ok(Json.toJson(API.Success(data = Json.obj(
         "results" -> Seq(toJson(caseRequest.`case`, clients))
