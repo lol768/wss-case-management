@@ -3,5 +3,5 @@
 @(user: User, team: Team, url: String)
 
 @email(user.name.first) {
-  The @team.name team has sent you a message: @url
+  The @team.name has sent you a message: @url
 }
