@@ -4,6 +4,7 @@ import WebpackNotifierPlugin from 'webpack-notifier';
 import RemovePlugin from 'remove-files-webpack-plugin';
 import { ProvidePlugin } from 'webpack';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
+import MomentLocalesPlugin from 'moment-locales-webpack-plugin';
 
 import PlayFingerprintsPlugin from './build-tooling/PlayFingerprintsPlugin';
 import WatchEventsPlugin from './build-tooling/WatchEventsPlugin';
@@ -52,6 +53,7 @@ const commonConfig = merge([
           ],
         },
       }),
+      new MomentLocalesPlugin({ localesToKeep: ['es-gb'] }),
     ],
     resolve: {
       alias: {
