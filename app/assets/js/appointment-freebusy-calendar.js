@@ -31,8 +31,7 @@ export default function AppointmentFreeBusyForm(form) {
     $button.prop('disabled', ![...clients, ...teamMembers, ...rooms].length);
   });
 
-  $form.on('init.datetimepicker', (ev) => {
-    const $div = $(ev.target);
+  function init($div) {
     const dateTimePicker = $div.data('DateTimePicker');
 
     $div.find('.timepicker').append(
@@ -233,5 +232,13 @@ export default function AppointmentFreeBusyForm(form) {
 
       $modal.modal('hide');
     });
-  });
+  }
+
+  const $div = $form.find('.datepicker, .datetimepicker, .datepicker-inline, .datetimepicker-inline').find('> input[type="hidden"]:first-child + div');
+  if ($div.length && $div.data('DateTimePicker')) {
+    // Already initted
+    init($div);
+  } else {
+    $form.on('init.datetimepicker', ev => init($(ev.target)));
+  }
 }

@@ -19,7 +19,7 @@ const paths = {
   NODE_MODULES: path.join(__dirname, 'node_modules/id7'),
   ID7: path.join(__dirname, 'node_modules/id7'),
   ENTRY: './app/assets/js/main.js',
-  PUBLIC_PATH: '/assets',
+  PUBLIC_PATH: '/assets/',
 };
 
 const commonConfig = merge([

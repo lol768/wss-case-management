@@ -3,6 +3,7 @@ import './polyfills';
 
 import $ from 'jquery';
 import _ from 'lodash-es';
+import log from 'loglevel';
 import './jquery.are-you-sure';
 import FieldHistory from './field-history';
 import * as flexiPicker from './flexi-picker';
@@ -16,8 +17,6 @@ import MultiplePickers from './multiple-picker';
 import CaseSearch from './case-search';
 import EnquirySearch from './enquiry-search';
 import AppointmentSearch from './appointment-search';
-import AppointmentCalendar from './appointment-calendar';
-import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
 import * as dateTimePicker from './date-time-picker';
 import PaginatingTable from './paginating-table';
 import QuickFilter from './quick-filter';
@@ -88,13 +87,22 @@ function bindTo($scope) {
     AppointmentSearch(container);
   });
 
-  $('.appointment-calendar', $scope).each((i, container) => {
-    AppointmentCalendar(container);
-  });
+  if ($('.appointment-calendar', $scope).length > 0 || $('.appointment-freebusy-form', $scope).length > 0) {
+    import(/* webpackChunkName: "calendars-import" */'./calendars')
+      .then((c) => {
+        $('.appointment-calendar', $scope).each((i, container) => {
+          c.bindAppointmentCalendar(container);
+        });
 
-  $('.appointment-freebusy-form', $scope).each((i, container) => {
-    AppointmentFreeBusyForm(container);
-  });
+        $('.appointment-freebusy-form', $scope).each((i, container) => {
+          c.bindAppointmentFreeBusyForm(container);
+        });
+      })
+      .catch((e) => {
+        log.error(e);
+        throw e;
+      });
+  }
 
   $('.datepicker', $scope).each((i, container) => {
     dateTimePicker.DatePicker(container);
