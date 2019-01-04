@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import _ from 'lodash-es';
 import log from 'loglevel';
-import { fetchWithCredentials, postJsonWithCredentials, postMultipartFormWithCredentials } from './serverpipe';
+import { fetchWithCredentials, postJsonWithCredentials, postMultipartFormWithCredentials } from '@universityofwarwick/serverpipe';
 
 function updateAwaitingIcon($form, awaiting) {
   // Look for icon in panel group
