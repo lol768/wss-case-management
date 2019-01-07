@@ -33,7 +33,7 @@ lazy val main = (project in file("."))
     javaOptions in Test += "-Dlogger.resource=test-logging.xml"
   )
 
-val playUtilsVersion = "1.25"
+val playUtilsVersion = "1.26"
 val ssoClientVersion = "2.60"
 val warwickUtilsVersion = "20181130"
 val enumeratumVersion = "1.5.13"
@@ -53,7 +53,7 @@ val appDeps = Seq(
 
   "com.typesafe.slick" %% "slick" % "3.2.3",
   "org.postgresql" % "postgresql" % "42.2.5",
-  "com.github.tminglei" %% "slick-pg" % "0.16.3",
+  "com.github.tminglei" %% "slick-pg" % "0.17.0",
 
   // in-memory JNDI context used by Play to pass DataSource to Quartz
   "tyrex" % "tyrex" % "1.0.1",
