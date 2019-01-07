@@ -144,12 +144,6 @@ dependencyOverrides += "com.google.code.gson" % "gson" % "2.5"
 // Fix a dependency warning
 dependencyOverrides += "org.json" % "json" % "20171018"
 
-// https://github.com/sbt/sbt/issues/3618
-val workaround: Unit = {
-  sys.props += "packaging.type" -> "jar"
-  ()
-}
-
 // Make built output available as Play assets.
 unmanagedResourceDirectories in Assets += baseDirectory.value / "target/assets"
 
