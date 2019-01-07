@@ -88,8 +88,8 @@ val appDeps = Seq(
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
 
   "org.dom4j" % "dom4j" % "2.1.1",
-  "org.apache.tika" % "tika-core" % "1.19.1",
-  "org.apache.tika" % "tika-parsers" % "1.19.1",
+  "org.apache.tika" % "tika-core" % "1.20",
+  "org.apache.tika" % "tika-parsers" % "1.20",
 
   "org.apache.poi" % "poi" % "4.0.1",
   "org.apache.poi" % "poi-ooxml" % "4.0.1",
