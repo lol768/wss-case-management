@@ -686,7 +686,7 @@ class CaseServiceImpl @Inject() (
       } yield sc).map { sc => Right(sc.asCase) }
     }.flatMap(_.fold(
       errors => Future.successful(Left(errors)),
-      _ => notificationService.caseReassign(c).map(_.right.map(_ => c))
+      reassigned => notificationService.caseReassign(reassigned).map(_.right.map(_ => reassigned))
     ))
 
   override def getHistory(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseHistory]] = {

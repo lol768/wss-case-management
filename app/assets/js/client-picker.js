@@ -31,7 +31,7 @@ class ClientPicker extends AbstractPicker {
       <div class="client-search-result">
         <div class="media">
           <div class="media-left">
-              ${(item.photo) ? `<img class="media-object" src="${_.escape(item.photo)}" />` : ''}
+              ${(item.photo) ? `<img class="media-object" src="${_.escape(item.photo)}?s=60" />` : ''}
           </div>
           <div class="media-body">
             <span class="title">${_.escape(item.title)}</span>

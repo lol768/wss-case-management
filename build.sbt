@@ -33,7 +33,7 @@ lazy val main = (project in file("."))
     javaOptions in Test += "-Dlogger.resource=test-logging.xml"
   )
 
-val playUtilsVersion = "1.25"
+val playUtilsVersion = "1.26"
 val ssoClientVersion = "2.60"
 val warwickUtilsVersion = "20181130"
 val enumeratumVersion = "1.5.13"
@@ -53,7 +53,7 @@ val appDeps = Seq(
 
   "com.typesafe.slick" %% "slick" % "3.2.3",
   "org.postgresql" % "postgresql" % "42.2.5",
-  "com.github.tminglei" %% "slick-pg" % "0.16.3",
+  "com.github.tminglei" %% "slick-pg" % "0.17.0",
 
   // in-memory JNDI context used by Play to pass DataSource to Quartz
   "tyrex" % "tyrex" % "1.0.1",
@@ -88,8 +88,8 @@ val appDeps = Seq(
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
 
   "org.dom4j" % "dom4j" % "2.1.1",
-  "org.apache.tika" % "tika-core" % "1.19.1",
-  "org.apache.tika" % "tika-parsers" % "1.19.1",
+  "org.apache.tika" % "tika-core" % "1.20",
+  "org.apache.tika" % "tika-parsers" % "1.20",
 
   "org.apache.poi" % "poi" % "4.0.1",
   "org.apache.poi" % "poi-ooxml" % "4.0.1",
@@ -143,12 +143,6 @@ dependencyOverrides += "com.google.code.gson" % "gson" % "2.5"
 
 // Fix a dependency warning
 dependencyOverrides += "org.json" % "json" % "20171018"
-
-// https://github.com/sbt/sbt/issues/3618
-val workaround: Unit = {
-  sys.props += "packaging.type" -> "jar"
-  ()
-}
 
 // Make built output available as Play assets.
 unmanagedResourceDirectories in Assets += baseDirectory.value / "target/assets"

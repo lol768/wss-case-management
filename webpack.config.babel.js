@@ -4,6 +4,7 @@ import WebpackNotifierPlugin from 'webpack-notifier';
 import RemovePlugin from 'remove-files-webpack-plugin';
 import { ProvidePlugin } from 'webpack';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
+import MomentLocalesPlugin from 'moment-locales-webpack-plugin';
 
 import PlayFingerprintsPlugin from './build-tooling/PlayFingerprintsPlugin';
 import WatchEventsPlugin from './build-tooling/WatchEventsPlugin';
@@ -18,7 +19,7 @@ const paths = {
   NODE_MODULES: path.join(__dirname, 'node_modules/id7'),
   ID7: path.join(__dirname, 'node_modules/id7'),
   ENTRY: './app/assets/js/main.js',
-  PUBLIC_PATH: '/assets',
+  PUBLIC_PATH: '/assets/',
 };
 
 const commonConfig = merge([
@@ -52,6 +53,7 @@ const commonConfig = merge([
           ],
         },
       }),
+      new MomentLocalesPlugin({ localesToKeep: ['es-gb'] }),
     ],
     resolve: {
       alias: {

@@ -3,8 +3,9 @@ import './polyfills';
 
 import $ from 'jquery';
 import _ from 'lodash-es';
+import log from 'loglevel';
 import './jquery.are-you-sure';
-import FieldHistory from './field-history';
+import { fetchWithCredentials } from '@universityofwarwick/serverpipe';
 import * as flexiPicker from './flexi-picker';
 import MemberPicker from './member-picker';
 import ClientPicker from './client-picker';
@@ -15,13 +16,8 @@ import CasePicker from './case-picker';
 import MultiplePickers from './multiple-picker';
 import CaseSearch from './case-search';
 import EnquirySearch from './enquiry-search';
-import AppointmentSearch from './appointment-search';
-import AppointmentCalendar from './appointment-calendar';
-import AppointmentFreeBusyForm from './appointment-freebusy-calendar';
-import * as dateTimePicker from './date-time-picker';
 import PaginatingTable from './paginating-table';
 import QuickFilter from './quick-filter';
-import { fetchWithCredentials } from './serverpipe';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');
@@ -48,9 +44,18 @@ function bindTo($scope) {
 
   UserListPopovers($scope);
 
-  $('.field-history', $scope).each((i, container) => {
-    FieldHistory(container);
-  });
+  if ($('.field-history', $scope).length > 0) {
+    import(/* webpackChunkName: "field-history-import" */'./field-history')
+      .then(({ default: FieldHistory }) => {
+        $('.field-history', $scope).each((i, container) => {
+          FieldHistory(container);
+        });
+      })
+      .catch((e) => {
+        log.error(e);
+        throw e;
+      });
+  }
 
   $('.client-search', $scope).each((i, container) => {
     ClientSearch(container);
@@ -84,33 +89,51 @@ function bindTo($scope) {
     EnquirySearch(container);
   });
 
-  $('.appointment-search', $scope).each((i, container) => {
-    AppointmentSearch(container);
-  });
+  if ($('.appointment-search', $scope).length > 0) {
+    import(/* webpackChunkName: "appointment-search-import" */'./appointment-search')
+      .then(({ default: AppointmentSearch }) => {
+        $('.appointment-search', $scope).each((i, container) => {
+          AppointmentSearch(container);
+        });
+      })
+      .catch((e) => {
+        log.error(e);
+        throw e;
+      });
+  }
 
-  $('.appointment-calendar', $scope).each((i, container) => {
-    AppointmentCalendar(container);
-  });
+  if ($('.appointment-calendar, .appointment-freebusy-form, .datepicker, .datetimepicker, .datepicker-inline, .datetimepicker-inline', $scope).length > 0) {
+    import(/* webpackChunkName: "calendars-import" */'./calendars')
+      .then((c) => {
+        $('.appointment-calendar', $scope).each((i, container) => {
+          c.bindAppointmentCalendar(container);
+        });
 
-  $('.appointment-freebusy-form', $scope).each((i, container) => {
-    AppointmentFreeBusyForm(container);
-  });
+        $('.appointment-freebusy-form', $scope).each((i, container) => {
+          c.bindAppointmentFreeBusyForm(container);
+        });
 
-  $('.datepicker', $scope).each((i, container) => {
-    dateTimePicker.DatePicker(container);
-  });
+        $('.datepicker', $scope).each((i, container) => {
+          c.bindDatePicker(container);
+        });
 
-  $('.datetimepicker', $scope).each((i, container) => {
-    dateTimePicker.DateTimePicker(container);
-  });
+        $('.datetimepicker', $scope).each((i, container) => {
+          c.bindDateTimePicker(container);
+        });
 
-  $('.datepicker-inline', $scope).each((i, container) => {
-    dateTimePicker.InlineDatePicker(container);
-  });
+        $('.datepicker-inline', $scope).each((i, container) => {
+          c.bindInlineDatePicker(container);
+        });
 
-  $('.datetimepicker-inline', $scope).each((i, container) => {
-    dateTimePicker.InlineDateTimePicker(container);
-  });
+        $('.datetimepicker-inline', $scope).each((i, container) => {
+          c.bindInlineDateTimePicker(container);
+        });
+      })
+      .catch((e) => {
+        log.error(e);
+        throw e;
+      });
+  }
 
   $('.quick-filter-container', $scope).each((i, container) => {
     QuickFilter(container);

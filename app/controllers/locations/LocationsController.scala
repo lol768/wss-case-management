@@ -53,7 +53,7 @@ object LocationsController {
         "name" -> nonEmptyText(maxLength = Room.NameMaxLength),
         "wai2GoID" -> optional(number),
         "available" -> boolean,
-        "o365Usercode" -> optional(nonEmptyText).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string)),
+        "o365Usercode" -> optional(text).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string)),
       )(RoomSave.apply)(RoomSave.unapply),
       "version" -> optional(JavaTime.offsetDateTimeFormField).verifying("error.optimisticLocking", _ == existingVersion)
     )(RoomFormData.apply)(RoomFormData.unapply))
