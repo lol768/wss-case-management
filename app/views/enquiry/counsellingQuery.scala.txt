@@ -5,3 +5,4 @@
 Face to face counselling? @if(data.faceToFace) {YES} else {NO}
 Group therapy? @if(data.therapy) {YES} else {NO}
 Email counselling? @if(data.online) {YES} else {NO}
+Counselling but not sure which? @if(data.other) {YES} else {NO}
