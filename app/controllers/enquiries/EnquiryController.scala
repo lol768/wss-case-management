@@ -37,6 +37,7 @@ object EnquiryController {
     faceToFace: Boolean,
     therapy: Boolean,
     online: Boolean,
+    other: Boolean,
   ) {
     def enquiryText: String = views.txt.enquiry.counsellingQuery(this).toString.trim
   }
@@ -44,6 +45,7 @@ object EnquiryController {
     "faceToFace" -> boolean,
     "therapy" -> boolean,
     "online" -> boolean,
+    "other" -> boolean,
   )(CounsellingEnquiryFormData.apply)(CounsellingEnquiryFormData.unapply))
 
   case class DisabilityEnquiryFormData(
@@ -73,10 +75,10 @@ object EnquiryController {
 
       now.getDayOfWeek match {
         case DayOfWeek.MONDAY | DayOfWeek.TUESDAY | DayOfWeek.WEDNESDAY | DayOfWeek.THURSDAY =>
-          time.isBefore(LocalTime.of(9, 0)) || time.isAfter(LocalTime.of(17, 0))
+          time.isBefore(LocalTime.of(8, 30)) || time.isAfter(LocalTime.of(17, 0))
 
         case DayOfWeek.FRIDAY =>
-          time.isBefore(LocalTime.of(9, 0)) || time.isAfter(LocalTime.of(16, 0))
+          time.isBefore(LocalTime.of(8, 30)) || time.isAfter(LocalTime.of(16, 0))
 
         case _ => true
       }
