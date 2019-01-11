@@ -25,19 +25,44 @@
           @body(vfc)
         </div>
         <div class="panel-footer">
-          <div class="row">
-            <div class="col-sm-9 col-md-10 col-sm-push-3 col-md-push-2">
-              <p>
-                The information you send us will be seen only by Wellbeing Support staff and used only for
-                the purpose of responding to your enquiry.
-                <a target="_blank" href="https://warwick.ac.uk/wellbeing-privacy">Read our full privacy statement</a>
-              </p>
-            </div>
-            <div class="col-sm-3 col-md-2 col-sm-pull-9 col-md-pull-10">
-              <br class="visible-xs-block">
-              <button type="submit" class="btn btn-primary btn-block">Submit enquiry</button>
-            </div>
-          </div>
+          <p>
+            The University of Warwick will process personal data that you provide within this form,
+            which could include disability and medical related information for the purpose(s)
+            of offering you appropriate support that is suitable for your needs and ensuring the
+            wellbeing of the University community.
+          </p>
+
+          <p>
+            The legal basis for processing this personal data is consent, complying with a legal
+            obligation, legitimate interest of ensuring the efficient running of the University and
+            the performance of a contract.
+          </p>
+
+          <p>
+            Your personal data will not be shared or disclosed to any third parties external to the
+            University of Warwick without your consent, except with statutory services who will
+            process your personal data for the purpose(s) of wellbeing and safety in the case of
+            emergencies when there is a risk to self/others.
+          </p>
+
+          <p>
+            Except in the above situation, your personal data will not be transferred outside of the
+            EEA, will be kept securely by the University of Warwick and will be retained in
+            accordance with Wellbeing Support Services retention policy.
+          </p>
+
+          <p>
+            The University of Warwick is the Data Controller of this information and is committed to
+            protecting the rights of individuals in line with Data Protection Legislation. Please
+            visit the University's
+            <a target="_blank" href="https://warwick.ac.uk/dataprotection">Data Protection webpages</a>
+            for further information relating to your rights and how the University processes your
+            personal data. The University's Data Protection Officer, A Bajaj, can be contacted through
+            <a href="mailto:DPO@@warwick.ac.uk">DPO@@warwick.ac.uk</a> and any requests or complaints
+            should be made in writing to the University's Data Protection Officer.
+          </p>
+
+          <button type="submit" class="btn btn-primary">Submit enquiry</button>
         </div>
       }
     </div>
@@ -53,7 +78,7 @@
         </div>
         <div class="media-body">
           <p>The Wellbeing Support Service is not currently open; its hours are Monday to Thursday
-            9am to 5pm and Friday 9am until 4pm. You can still send us an enquiry, but it won't be
+            8:30am to 5pm and Friday 8:30am until 4pm. You can still send us an enquiry, but it won't be
             seen for some time.</p>
 
           <p>If you require immediate emergency support, please contact Campus Security (who are
@@ -68,7 +93,7 @@
   }
 
   <p class="lead">
-    To help us get your enquiry to the team best placed to help you, please select the option that
+    To help us get your enquiry to the right team, please select the option that
     best fits your needs:
   </p>
 
@@ -79,8 +104,8 @@
       }(b3.inline.fieldConstructorSpecific, messagesProvider)
 
       @b3.free('_label -> "Select any of the following that apply (or leave them all unticked if not)", '_class -> "checkboxGroup") {
-        @b3.checkbox(mentalHealthForm("reasonableAdjustments"), '_text -> "I'm looking for help with reasonable adjustments (including special exam arrangements)")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
-        @b3.checkbox(mentalHealthForm("studySkills"), '_text -> "I'm looking for specialist mentoring")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+        @b3.checkbox(mentalHealthForm("reasonableAdjustments"), '_text -> "I'm looking for help with reasonable adjustments for a mental health disability (including special exam arrangements)")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+        @b3.checkbox(mentalHealthForm("studySkills"), '_text -> "I'm looking for DSA specialist mentoring")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
         @b3.checkbox(mentalHealthForm("generalAdvice"), '_text -> "I'm looking for general advice and support on mental health (e.g. self-help, liaising with statutory services)")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
       }
 
@@ -99,6 +124,7 @@
         @b3.checkbox(counsellingForm("faceToFace"), '_text -> "I'm interested in face-to-face counselling")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
         @b3.checkbox(counsellingForm("therapy"), '_text -> "I'm interested in group therapy")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
         @b3.checkbox(counsellingForm("online"), '_text -> "I'm interested in email counselling")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+        @b3.checkbox(counsellingForm("other"), '_text -> "I’m interested in counselling but I’m not sure which option to select")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
       }
 
       @b3.free('_label -> "Do you have any documents you can upload that might help us understand your situation?", '_class -> counsellingForm.error("file").map(_ => "has-error")) {
@@ -107,7 +133,7 @@
       }
     }
 
-    @panel(Teams.Disability, "Support with disabilities or neurodiversities such as mobility or dyslexia or autism spectrum", disabilityForm, controllers.enquiries.routes.EnquiryController.submitDisability()) { implicit vfc =>
+    @panel(Teams.Disability, "Support with disabilities such as dyslexia, autism spectrum and mobility", disabilityForm, controllers.enquiries.routes.EnquiryController.submitDisability()) { implicit vfc =>
       @b3.free('_label -> "Subject:") {
         <span class="form-control-static">Disability query</span>
       }(b3.inline.fieldConstructorSpecific, messagesProvider)
@@ -125,7 +151,7 @@
       }
     }
 
-    @panel(Teams.WellbeingSupport, "Other issues", wellbeingForm, controllers.enquiries.routes.EnquiryController.submitWellbeing()) { implicit vfc =>
+    @panel(Teams.WellbeingSupport, "Wellbeing Support (other issues)", wellbeingForm, controllers.enquiries.routes.EnquiryController.submitWellbeing()) { implicit vfc =>
       <p>
         If you’re looking for more general practical advice and support (e.g. issues such as
         accommodation, safety, crime (including sexual violence), complaints or wellbeing),
