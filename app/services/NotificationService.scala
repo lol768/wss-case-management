@@ -31,7 +31,8 @@ object NotificationService {
     def build(implicit domain: Domain): String = route.absoluteURL(true, domain)
   }
 
-  val fromAddress = "no-reply@warwick.ac.uk"
+  val fromAddress = """"Wellbeing at Warwick" <Wellbeing.Services@warwick.ac.uk>"""
+  val replyAddress = "no-reply@warwick.ac.uk"
   val clientSubjectPrefix = "Wellbeing Support Services:"
   val teamSubjectPrefix = "Case Management:"
 
@@ -515,7 +516,12 @@ class NotificationServiceImpl @Inject()(
           Email(
             subject = subject,
             from = fromAddress,
-            bodyText = Some(body.toString.trim)
+            bodyText = Some(body.toString.trim),
+            replyTo = Seq(replyAddress),
+            bounceAddress = Some(replyAddress),
+            headers = Seq(
+              "X-Auto-Response-Suppress" -> "DR, OOF, AutoReply"
+            ),
           ),
           recipients
         )
