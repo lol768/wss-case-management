@@ -4,7 +4,7 @@ import 'fullcalendar';
 import 'fullcalendar-scheduler';
 import log from 'loglevel';
 import moment from 'moment-timezone';
-import { addQsToUrl, postJsonWithCredentials } from '@universityofwarwick/serverpipe';
+import { addQsToUrl, postJsonWithCredentials } from './serverpipe';
 import { formatDateMoment, formatTimeMoment } from './dateFormats';
 import CommonFullCalendarOptions from './common-fullcalendar-options';
 
