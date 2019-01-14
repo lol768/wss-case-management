@@ -110,12 +110,17 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
 
       val expectedEmail = Email(
         subject = "Case Management: New registration received",
-        from = "no-reply@warwick.ac.uk",
+        from = """"Wellbeing at Warwick" <Wellbeing.Services@warwick.ac.uk>""",
         bodyText = Some(
           """A new registration has been received: https://wss.warwick.ac.uk/team/client/0672089
             |
             |This email was sent from an automated system and replies to it will not reach a real person.""".stripMargin
-        )
+        ),
+        replyTo = Seq("no-reply@warwick.ac.uk"),
+        bounceAddress = Some("no-reply@warwick.ac.uk"),
+        headers = Seq(
+          "X-Auto-Response-Suppress" -> "DR, OOF, AutoReply"
+        ),
       )
 
       verify(emailService, times(1)).queue(expectedEmail, Seq(user1, user2))
@@ -146,7 +151,7 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
 
       val expectedEmail = Email(
         subject = "Register for Wellbeing Support Services",
-        from = "no-reply@warwick.ac.uk",
+        from = """"Wellbeing at Warwick" <Wellbeing.Services@warwick.ac.uk>""",
         bodyText = Some(
           """Dear Mathew,
             |
@@ -155,7 +160,12 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
             |Follow this link to complete your registration: https://wss.warwick.ac.uk/register
             |
             |This email was sent from an automated system and replies to it will not reach a real person.""".stripMargin
-        )
+        ),
+        replyTo = Seq("no-reply@warwick.ac.uk"),
+        bounceAddress = Some("no-reply@warwick.ac.uk"),
+        headers = Seq(
+          "X-Auto-Response-Suppress" -> "DR, OOF, AutoReply"
+        ),
       )
 
       verify(emailService, times(1)).queue(expectedEmail, Seq(profile.asUser))
