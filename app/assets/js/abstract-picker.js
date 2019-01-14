@@ -63,9 +63,13 @@ export default class AbstractPicker {
           log.error(e);
           return [];
         })
-        .then(response => richResultField.storeText(
-          this.constructor.displayItem(response.data.results[0]),
-        ));
+        .then((response) => {
+          if (response.data && response.data.results) {
+            richResultField.storeText(
+              this.constructor.displayItem(response.data.results[0]),
+            );
+          }
+        });
     }
   }
 
