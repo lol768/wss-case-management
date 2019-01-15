@@ -132,9 +132,6 @@ routesImport ++= Seq(
   "system.Binders._",
 )
 
-// https://bugs.elab.warwick.ac.uk/browse/SSO-1653
-dependencyOverrides += "xml-apis" % "xml-apis" % "1.4.01"
-
 // Because jclouds is terrible
 dependencyOverrides += "com.google.guava" % "guava" % "22.0"
 
