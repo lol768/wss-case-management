@@ -2,7 +2,7 @@ import $ from 'jquery';
 import log from 'loglevel';
 import _ from 'lodash-es';
 import 'bootstrap-3-typeahead';
-import { postJsonWithCredentials } from './serverpipe';
+import { postJsonWithCredentials } from '@universityofwarwick/serverpipe';
 import RichResultField from './rich-result-field';
 import MultiplePickers from './multiple-picker';
 
