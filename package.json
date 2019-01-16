@@ -46,6 +46,7 @@
     "webpack-stream": "5.2.1"
   },
   "dependencies": {
+    "@universityofwarwick/serverpipe": "1.0.1",
     "bootstrap-3-typeahead": "github:UniversityofWarwick/Bootstrap-3-Typeahead#acada2f8e5d9a70dbb37c1fd152895937a03f8d5",
     "core-js": "2.6.1",
     "eonasdan-bootstrap-datetimepicker": "4.17.47",
@@ -56,8 +57,7 @@
     "jquery": "3.3.1",
     "lodash-es": "4.17.11",
     "loglevel": "1.6.1",
-    "moment-timezone": "github:UniversityofWarwick/moment-timezone#0.5.23-london",
-    "@universityofwarwick/serverpipe": "1.0.1"
+    "moment-timezone": "github:UniversityofWarwick/moment-timezone#0.5.23-london"
   },
   "scripts": {
     "watch": "NODE_ENV=development webpack --mode development --watch",
