@@ -1,3 +1,2 @@
-gulpfile.js
-gulp/*
-test/assets/js/**/*.js
+**/*.js
+!/app/assets/js/**/*.js
