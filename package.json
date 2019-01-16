@@ -63,6 +63,7 @@
     "watch": "NODE_ENV=development webpack --mode development --watch",
     "dev": "NODE_ENV=development webpack --mode development",
     "build": "NODE_ENV=production webpack --mode production --env.production",
+    "test": "NODE_PATH=\"$PWD/app/assets/js:$PWD/test/assets/js\" node node_modules/mocha/bin/mocha -r @babel/register -r TestHelper --recursive test/assets/js",
     "bamboo": "NODE_PATH=\"$PWD/app/assets/js:$PWD/test/assets/js\" node node_modules/mocha/bin/mocha -R mocha-bamboo-reporter -r @babel/register -r TestHelper --recursive test/assets/js"
   }
 }
