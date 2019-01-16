@@ -19,7 +19,7 @@ const CommonFullCalendarOptions = {
   slotLabelInterval: '01:00:00',
   timeFormat: 'HH:mm',
   minTime: '08:00:00',
-  maxTime: '19:00:00',
+  maxTime: '20:00:00',
   weekends: true, // https://warwick.slack.com/archives/CD7FF54NR/p1540539939002200
   timezone: 'Europe/London',
   viewRender: (view, element) => {
