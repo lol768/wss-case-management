@@ -93,7 +93,9 @@ val appDeps = Seq(
 
   "org.apache.poi" % "poi" % "4.0.1",
   "org.apache.poi" % "poi-ooxml" % "4.0.1",
-  "org.apache.poi" % "poi-ooxml-schemas" % "4.0.1"
+  "org.apache.poi" % "poi-ooxml-schemas" % "4.0.1",
+
+  "org.slf4j" % "log4j-over-slf4j" % "1.7.25"
 )
 
 val testDeps = Seq(
