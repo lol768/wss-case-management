@@ -69,6 +69,10 @@ const commonConfig = merge([
     entry: {
       main: paths.ENTRY,
     },
+    include: [
+      /node_modules\/@universityofwarwick/,
+      /app\/assets\/js/,
+    ]
   }),
   tooling.copyNpmDistAssets({
     dest: path.join(paths.ASSETS, 'lib'),

@@ -4,7 +4,7 @@ import _ from 'lodash-es';
 import log from 'loglevel';
 import moment from 'moment-timezone';
 import 'fullcalendar';
-import { addQsToUrl, fetchWithCredentials, postJsonWithCredentials } from './serverpipe';
+import { addQsToUrl, fetchWithCredentials, postJsonWithCredentials } from '@universityofwarwick/serverpipe';
 import { formatDateMoment, formatTimeMoment } from './dateFormats';
 import CommonFullCalendarOptions from './common-fullcalendar-options';
 
