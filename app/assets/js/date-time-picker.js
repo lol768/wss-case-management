@@ -34,6 +34,7 @@ function PopupDatePicker(container, format) {
   const inputGroup = $(container).find('.input-group');
   const textField = inputGroup.find('input');
   const options = textField.data() || {};
+  delete options.aysOrig;
 
   let currentDate;
   if (hiddenField.val()) {
@@ -67,6 +68,7 @@ function InlinePicker(container, format) {
   const label = $(container).closest('.form-group').find('label.control-label');
   const div = hiddenField.next('div');
   const options = div.data() || {};
+  delete options.aysOrig;
 
   const updateLabel = (newDate) => {
     let span = label.find('span.current');
