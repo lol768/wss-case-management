@@ -15,7 +15,6 @@ import scala.concurrent.Future
 class CaseMessageControllerTest extends AbstractDaoTest {
 
   val controller = get[CaseMessageController]
-  val caseService = get[CaseService]
 
   "messages" should {
     "return good JSON" in {
