@@ -1,6 +1,6 @@
 package domain
 
-import java.time.{Duration, LocalDate}
+import java.time.{Duration, LocalDate, OffsetDateTime}
 import java.util.UUID
 
 import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
@@ -124,6 +124,18 @@ object Fixtures {
       team = team,
       ownerId = ownerId,
       ownerType = ownerType
+    )
+
+    def messageDataFromClient(
+      id: UniversityID,
+      sent: OffsetDateTime = OffsetDateTime.now
+    ) = MessageData(
+      "Hello",
+      MessageSender.Client,
+      id,
+      sent,
+      None,
+      None
     )
 
     def newEnquiryMessage(enquiry: UUID, client: UniversityID): Message = newMessage(

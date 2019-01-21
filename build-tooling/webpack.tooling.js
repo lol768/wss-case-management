@@ -27,7 +27,7 @@ const lintJS = () => ({
   },
 });
 
-const transpileJS = ({ entry } = {}) => ({
+const transpileJS = ({ entry, include } = {}) => ({
   entry,
   output: {
     chunkFilename: '[name].js',
@@ -37,6 +37,7 @@ const transpileJS = ({ entry } = {}) => ({
     rules: [
       {
         test: /\.js$/,
+        include,
         use: 'babel-loader',
       },
     ],

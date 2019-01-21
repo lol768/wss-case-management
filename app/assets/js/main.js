@@ -5,6 +5,7 @@ import $ from 'jquery';
 import _ from 'lodash-es';
 import log from 'loglevel';
 import './jquery.are-you-sure';
+import { fetchWithCredentials } from '@universityofwarwick/serverpipe';
 import * as flexiPicker from './flexi-picker';
 import MemberPicker from './member-picker';
 import ClientPicker from './client-picker';
@@ -17,7 +18,6 @@ import CaseSearch from './case-search';
 import EnquirySearch from './enquiry-search';
 import PaginatingTable from './paginating-table';
 import QuickFilter from './quick-filter';
-import { fetchWithCredentials } from './serverpipe';
 
 function closePopover($popover) {
   const $creator = $popover.data('creator');

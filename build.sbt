@@ -34,7 +34,7 @@ lazy val main = (project in file("."))
   )
 
 val playUtilsVersion = "1.26"
-val ssoClientVersion = "2.60"
+val ssoClientVersion = "2.61"
 val warwickUtilsVersion = "20181130"
 val enumeratumVersion = "1.5.13"
 val enumeratumSlickVersion = "1.5.15"
@@ -93,7 +93,9 @@ val appDeps = Seq(
 
   "org.apache.poi" % "poi" % "4.0.1",
   "org.apache.poi" % "poi-ooxml" % "4.0.1",
-  "org.apache.poi" % "poi-ooxml-schemas" % "4.0.1"
+  "org.apache.poi" % "poi-ooxml-schemas" % "4.0.1",
+
+  "org.slf4j" % "log4j-over-slf4j" % "1.7.25"
 )
 
 val testDeps = Seq(
@@ -131,9 +133,6 @@ routesGenerator := InjectedRoutesGenerator
 routesImport ++= Seq(
   "system.Binders._",
 )
-
-// https://bugs.elab.warwick.ac.uk/browse/SSO-1653
-dependencyOverrides += "xml-apis" % "xml-apis" % "1.4.01"
 
 // Because jclouds is terrible
 dependencyOverrides += "com.google.guava" % "guava" % "22.0"
