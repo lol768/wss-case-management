@@ -30,7 +30,7 @@ const lintJS = () => ({
 const transpileJS = ({ entry, include } = {}) => ({
   entry,
   output: {
-    chunkFilename: '[name].js',
+    chunkFilename: '[chunkhash]-[name].js',
     filename: '[name].js',
   },
   module: {
