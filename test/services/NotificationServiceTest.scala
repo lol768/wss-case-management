@@ -39,6 +39,7 @@ class NotificationServiceTest extends PlaySpec with MockitoSugar with ScalaFutur
       "wellbeing.features.notifications.newCaseOwner" -> true,
       "wellbeing.features.notifications.caseReassign" -> true,
       "wellbeing.features.notifications.caseMessageTeam" -> true,
+      "wellbeing.features.notifications.caseMessageTeamWholeTeam" -> false,
       "wellbeing.features.notifications.caseMessageClient" -> true,
       "wellbeing.features.notifications.clientNewAppointment" -> true,
       "wellbeing.features.notifications.clientCancelledAppointment" -> true,
