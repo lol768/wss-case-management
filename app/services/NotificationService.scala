@@ -49,6 +49,7 @@ object NotificationService {
     newCaseOwner: Boolean,
     caseReassign: Boolean,
     caseMessageTeam: Boolean,
+    caseMessageTeamWholeTeam: Boolean,
     caseMessageClient: Boolean,
     clientNewAppointment: Boolean,
     clientCancelledAppointment: Boolean,
@@ -77,6 +78,7 @@ object NotificationService {
         newCaseOwner = conf.get[Boolean]("newCaseOwner"),
         caseReassign = conf.get[Boolean]("caseReassign"),
         caseMessageTeam = conf.get[Boolean]("caseMessageTeam"),
+        caseMessageTeamWholeTeam = conf.get[Boolean]("caseMessageTeamWholeTeam"),
         caseMessageClient = conf.get[Boolean]("caseMessageClient"),
         clientNewAppointment = conf.get[Boolean]("clientNewAppointment"),
         clientCancelledAppointment = conf.get[Boolean]("clientCancelledAppointment"),
@@ -101,7 +103,7 @@ trait NotificationService {
   def enquiryReassign(enquiry: Enquiry)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def newCaseOwner(newOwners: Set[Usercode], clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def caseReassign(clientCase: Case)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
-  def caseMessage(`case`: Case, client: UniversityID, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
+  def caseMessage(`case`: Case, owners: Set[Usercode], client: UniversityID, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def clientNewAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def clientCancelledAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
   def clientChangedAppointment(clients: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Activity]]
@@ -233,15 +235,15 @@ class NotificationServiceImpl @Inject()(
     }
   }
 
-  override def caseMessage(c: Case, client: UniversityID, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
+  override def caseMessage(c: Case, owners: Set[Usercode], client: UniversityID, sender: MessageSender)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] =
     if (sender == MessageSender.Client) ifEnabled(_.caseMessageTeam) {
-      caseMessageToTeam(c)
+      caseMessageToTeam(c, owners)
     } else ifEnabled(_.caseMessageClient) {
       messageToClient(client, c.team, c.id)
     }
 
-  private def caseMessageToTeam(c: Case)(implicit ac: AuditLogContext) = {
-    withTeamUsers(c.team) { users =>
+  private def caseMessageToTeam(c: Case, owners: Set[Usercode])(implicit ac: AuditLogContext) = {
+    def message(users: Seq[User]) = {
       val url = controllers.admin.routes.CaseController.view(c.key).build
 
       queueEmailAndSendActivity(
@@ -255,6 +257,12 @@ class NotificationServiceImpl @Inject()(
           "case-message-from-client"
         )
       )
+    }
+
+    if (owners.isEmpty || notificationConfiguration.caseMessageTeamWholeTeam) {
+      withTeamUsers(c.team)(message)
+    } else {
+      withUsers(owners)(u => message(u.toSeq))
     }
   }
 

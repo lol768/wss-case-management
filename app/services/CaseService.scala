@@ -633,9 +633,11 @@ class CaseServiceImpl @Inject() (
     auditService.audit('CaseAddMessage, `case`.id.toString, 'Case, Json.obj("client" -> client.string)) {
       memberService.getOrAddMember(message.teamMember).successFlatMapTo(member =>
         daoRunner.run(addMessageDBIO(`case`, client, message, files, ac.usercode.get)).flatMap { case (m, file) =>
-          notificationService.caseMessage(`case`, client, m.sender).map(_.map(_ =>
-            (m.asMessageData(member), file)
-          ))
+          getOwners(Set(`case`.id)).successFlatMapTo(ownerMap =>
+            notificationService.caseMessage(`case`, ownerMap.getOrElse(`case`.id, Set.empty).map(_.usercode), client, m.sender).map(_.map(_ =>
+              (m.asMessageData(member), file)
+            ))
+          )
         }
       )
     }
