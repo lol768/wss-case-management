@@ -126,11 +126,6 @@
         @b3.checkbox(counsellingForm("online"), '_text -> "I'm interested in email counselling")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
         @b3.checkbox(counsellingForm("other"), '_text -> "I’m interested in counselling but I’m not sure which option to select")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
       }
-
-      @b3.free('_label -> "Do you have any documents you can upload that might help us understand your situation?", '_class -> counsellingForm.error("file").map(_ => "has-error")) {
-        <input type="file" id="counsellingForm_file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" aria-label="Attach a file">
-        @b3.errors(counsellingForm("file"))
-      }
     }
 
     @panel(Teams.Disability, "Support with disabilities such as dyslexia, autism spectrum and mobility", disabilityForm, controllers.enquiries.routes.EnquiryController.submitDisability()) { implicit vfc =>
