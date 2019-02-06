@@ -177,6 +177,8 @@ object AppointmentPurpose extends PlayEnum[AppointmentPurpose] {
   case object PreCounsellingSession extends AppointmentPurpose("Pre-counselling session")
   case object Screening extends AppointmentPurpose("Screening")
   case object AdviceAppointment extends AppointmentPurpose("Advice appointment")
+  case object Counselling extends AppointmentPurpose("Counselling")
+  case object FirstCounselling extends AppointmentPurpose("First counselling appointment")
 
   override def values: immutable.IndexedSeq[AppointmentPurpose] = findValues
 }
@@ -247,6 +249,7 @@ object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
   case object Further extends AppointmentOutcome("Further investigation")
   case object Disciplinary extends AppointmentOutcome("Disciplinary")
   case object Fitness extends AppointmentOutcome("Fitness to attend")
+  case object SessionBanked extends AppointmentOutcome("Session banked")
   case object NoFurtherAction extends AppointmentOutcome("No further action required")
   case object Referral extends AppointmentOutcome("Referred to another WSS team")
   case object Closed extends AppointmentOutcome("Case closed")
