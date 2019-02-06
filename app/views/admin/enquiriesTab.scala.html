@@ -1,12 +1,17 @@
-@import domain.{EnquiryListRender, Pagination}
+@import java.util.UUID
+
+@import domain.{EnquiryListRender, Member, Pagination}
 
 @(
   requiringAction: Seq[EnquiryListRender],
+  requiringActionOwners: Option[Map[UUID, Set[Member]]],
   requiringActionPagination: Pagination,
   awaitingClient: Seq[EnquiryListRender],
+  awaitingClientOwners: Option[Map[UUID, Set[Member]]],
   awaitingClientPagination: Pagination,
   closedEnquiries: Int,
   closedEnquiriesRoute: Call,
+  allOpenCaseOwners: Option[Seq[Member]],
   searchScope: String,
   searchScopeValue: String,
   placeholderSuffix: String
@@ -23,8 +28,8 @@
   }
 }
 
-@views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction, requiringActionPagination)
-@views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient, awaitingClientPagination)
+@views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction, requiringActionOwners, allOpenCaseOwners, None, requiringActionPagination)
+@views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient, awaitingClientOwners, allOpenCaseOwners, None, awaitingClientPagination)
 
 @if(closedEnquiries == 0) {
   <p>No closed enquiries to show</p>

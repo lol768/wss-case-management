@@ -1,12 +1,19 @@
-@import domain.{EnquiryListRender, Pagination}
+@import java.util.UUID
+
+@import controllers.admin.AdminController
+@import domain.{EnquiryListRender, IdAndDescription, Member, Pagination}
 @import warwick.core.helpers.JavaTime
+@import warwick.sso.Usercode
 
 @(
   title: Option[String],
   enquiries: Seq[EnquiryListRender],
+  owners: Option[Map[UUID, Set[Member]]],
+  allOwners: Option[Seq[Member]],
+  enquiryOwnersFilterForm: Option[Form[Set[Usercode]]],
   pagination: Pagination,
   emptyMessage: Option[String] = None,
-)(implicit context: RequestContext)
+)(implicit context: RequestContext, messages: MessagesProvider)
 
 @enquiryRow(render: EnquiryListRender) = {
   <tr>
@@ -16,23 +23,60 @@
     <td>
       <a href="@controllers.admin.routes.TeamEnquiryController.messages(render.enquiry.key)">@render.enquiry.key.string @render.enquiry.subject</a>
     </td>
+    @owners.map { ownersMap =>
+      <td>
+        @ownersMap.get(render.enquiry.id).map { enquiryOwners =>
+          <ul class="list-unstyled">
+            @enquiryOwners.toSeq.sorted.map { owner =>
+              <li>@owner.safeFullName</li>
+            }
+          </ul>
+        }
+      </td>
+    }
     <td>@JavaTime.Relative(render.lastUpdated)</td>
   </tr>
 }
 
 @if(enquiries.nonEmpty) {
   @if(pagination.isFirst) {
-    <table class="table table-default table-paginated">
+    <table class="table table-default table-paginated" data-pagination="@pagination.route">
       @title.map { t => <caption>@t</caption> }
       <thead>
         <tr>
           <th class="col-sm-3">Client</th>
-          <th class="col-sm-6">Subject</th>
+          @if(owners.nonEmpty) {
+            <th class="col-sm-4">Subject</th>
+            <th class="col-sm-2">
+              Owners
+              @allOwners.map { members =>
+                <button type="button" class="btn btn-link" data-toggle="filter">
+                  <i class="fal fa-filter"></i><span class="sr-only">Filter</span>
+                </button>
+                <div class="hidden filter" aria-hidden="true">
+                  @defining(enquiryOwnersFilterForm.getOrElse(AdminController.ownersFilterForm)) { form: Form[Set[Usercode]] =>
+                    @b3.checkboxGroup(
+                      label = "Filter owner",
+                      items = members.map { m => IdAndDescription(m.usercode.string, m.safeFullName) }.toIndexedSeq,
+                      form = form,
+                      field = "usercodes",
+                      idPrefix = "usercode",
+                      inModal = false
+                    )(b3.vertical.fieldConstructor, messages)
+
+                    <button type="submit" class="btn btn-primary"><i class="fal fa-filter"></i> Filter enquiries</button>
+                  }
+                </div>
+              }
+            </th>
+          } else {
+            <th class="col-sm-6">Subject</th>
+          }
           <th class="col-sm-3">Last updated</th>
         </tr>
       </thead>
       <tfoot>
-        @tags.tablePagination(pagination)
+        @tags.tablePagination(pagination, owners.fold(3)(_ => 4), enquiryOwnersFilterForm)
       </tfoot>
       <tbody>
         @enquiries.map(e => enquiryRow(e))
@@ -40,7 +84,7 @@
     </table>
   } else {
     @enquiries.map(e => enquiryRow(e))
-    @tags.tablePagination(pagination)
+    @tags.tablePagination(pagination, owners.fold(3)(_ => 4), enquiryOwnersFilterForm)
   }
 } else {
   @emptyMessage.map { m => <p>@m</p> }

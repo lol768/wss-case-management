@@ -2,7 +2,7 @@ package domain.dao
 
 import domain.ExtendedPostgresProfile.api._
 import domain._
-import domain.dao.CaseDao.{Cases, StoredCase}
+import domain.dao.CaseDao.{CaseFilter, Cases, StoredCase}
 import domain.dao.MemberDao.StoredMember
 import helpers.DataFixture
 import warwick.core.helpers.JavaTime
@@ -63,18 +63,14 @@ class CaseDaoTest extends AbstractDaoTest {
         def toKeys: Seq[Int] = exec(query.result).map(_.key.number)
       }
 
-      dao.listQuery(None, None, IssueStateFilter.All).toKeys.length mustBe 8
-      dao.listQuery(None, None, IssueStateFilter.Open).toKeys mustBe Seq(1, 3, 5, 7)
-      dao.listQuery(None, None, IssueStateFilter.Closed).toKeys mustBe Seq(2, 4, 6, 8)
+      dao.listQuery(CaseFilter(Teams.MentalHealth).withState(IssueStateFilter.Open)).toKeys mustBe Seq(1, 5)
+      dao.listQuery(CaseFilter(Teams.MentalHealth).withState(IssueStateFilter.Closed)).toKeys mustBe Seq(2, 6)
+      dao.listQuery(CaseFilter(Teams.MentalHealth)).toKeys mustBe Seq(1, 2, 5, 6)
 
-      dao.listQuery(Some(Teams.MentalHealth), None, IssueStateFilter.Open).toKeys mustBe Seq(1, 5)
-      dao.listQuery(Some(Teams.MentalHealth), None, IssueStateFilter.Closed).toKeys mustBe Seq(2, 6)
-      dao.listQuery(Some(Teams.MentalHealth), None, IssueStateFilter.All).toKeys mustBe Seq(1, 2, 5, 6)
-
-      dao.listQuery(Some(Teams.WellbeingSupport), None, IssueStateFilter.Open).toKeys mustBe Seq(3, 7)
-      dao.listQuery(Some(Teams.MentalHealth), Some(Usercode("u1234567")), IssueStateFilter.Open).toKeys mustBe Seq(5)
-      dao.listQuery(Some(Teams.MentalHealth), Some(Usercode("u1234567")), IssueStateFilter.All).toKeys mustBe Seq(5, 6)
-      dao.listQuery(None, Some(Usercode("u1234567")), IssueStateFilter.All).toKeys mustBe Seq(5, 6, 7, 8)
+      dao.listQuery(CaseFilter(Teams.WellbeingSupport).withState(IssueStateFilter.Open)).toKeys mustBe Seq(3, 7)
+      dao.listQuery(CaseFilter(Teams.MentalHealth, Usercode("u1234567")).withState(IssueStateFilter.Open)).toKeys mustBe Seq(5)
+      dao.listQuery(CaseFilter(Teams.MentalHealth, Usercode("u1234567"))).toKeys mustBe Seq(5, 6)
+      dao.listQuery(CaseFilter(Usercode("u1234567"))).toKeys mustBe Seq(5, 6, 7, 8)
     }
   }
 
