@@ -32,6 +32,9 @@ export default function PaginatingTable(element, bindTo) {
   // Filters
   $table.find('> thead [data-toggle="filter"]').each((i, btn) => {
     const $btn = $(btn);
+
+    if ($btn.hasClass('has-popover')) return;
+
     const $filter = $btn.next('.filter');
 
     if ($filter.length === 1) {
@@ -79,7 +82,7 @@ export default function PaginatingTable(element, bindTo) {
         });
       });
     } else {
-      $btn.hide();
+      $btn.remove();
     }
   });
 }
