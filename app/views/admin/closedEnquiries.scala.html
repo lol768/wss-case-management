@@ -1,5 +1,14 @@
-@import domain.{EnquiryListRender, Pagination}
+@import java.util.UUID
 
-@(enquiries: Seq[EnquiryListRender], pagination: Pagination)(implicit context: RequestContext)
+@import domain.{EnquiryListRender, Member, Pagination}
+@import warwick.sso.Usercode
 
-@views.html.admin.enquiryTable(None, enquiries, pagination, Some("There are no closed enquiries"))
+@(
+  enquiries: Seq[EnquiryListRender],
+  owners: Option[Map[UUID, Set[Member]]],
+  allOwners: Option[Seq[Member]],
+  enquiryOwnersFilterForm: Option[Form[Set[Usercode]]],
+  pagination: Pagination
+)(implicit context: RequestContext, messages: MessagesProvider)
+
+@views.html.admin.enquiryTable(None, enquiries, owners, allOwners, enquiryOwnersFilterForm, pagination, Some("There are no closed enquiries"))

@@ -1,16 +1,21 @@
 @import java.time.OffsetDateTime
 @import java.util.UUID
 
-@import domain.{Case, CaseListRender, Client, Pagination}
+@import controllers.admin.AdminController
+@import domain.{Case, CaseListRender, Client, IdAndDescription, Member, Pagination}
 @import warwick.core.helpers.JavaTime
+@import warwick.sso.Usercode
 
 @(
   title: Option[String],
   cases: Seq[CaseListRender],
   clients: Map[UUID, Set[Client]],
+  owners: Option[Map[UUID, Set[Member]]],
+  allOwners: Option[Seq[Member]],
+  caseOwnersFilterForm: Option[Form[Set[Usercode]]],
   pagination: Pagination,
   emptyMessage: Option[String] = None
-)(implicit context: RequestContext)
+)(implicit context: RequestContext, messages: MessagesProvider)
 
 @caseRow(clientCase: Case, lastUpdated: OffsetDateTime) = {
   <tr>
@@ -27,23 +32,61 @@
       @if(clientCase.fields.duty) { @tags.cases.dutyLabel() }
       <a href="@controllers.admin.routes.CaseController.view(clientCase.key)">@clientCase.key.string @clientCase.subject</a>
     </td>
+    @owners.map { ownersMap =>
+      <td>
+        @ownersMap.get(clientCase.id).map { caseOwners =>
+          <ul class="list-unstyled">
+            @caseOwners.toSeq.sorted.map { owner =>
+              <li>@owner.safeFullName</li>
+            }
+          </ul>
+        }
+      </td>
+    }
     <td>@JavaTime.Relative(lastUpdated)</td>
   </tr>
 }
 
 @if(cases.nonEmpty) {
   @if(pagination.isFirst) {
-    <table class="table table-default table-paginated">
+    <table class="table table-default table-paginated" data-pagination="@pagination.route">
       @title.map { t => <caption>@t</caption> }
       <thead>
         <tr>
           <th class="col-sm-3">Clients</th>
-          <th class="col-sm-6">Subject</th>
+          @if(owners.nonEmpty) {
+            <th class="col-sm-4">Subject</th>
+            <th class="col-sm-2">
+              Owners
+              @allOwners.map { members =>
+                <button type="button" class="btn btn-link" data-toggle="filter">
+                  <i class="fal fa-filter"></i><span class="sr-only">Filter</span>
+                </button>
+                <div class="hidden filter" aria-hidden="true">
+                  @defining(caseOwnersFilterForm.getOrElse(AdminController.ownersFilterForm)) { form: Form[Set[Usercode]] =>
+                    @b3.checkboxGroup(
+                      label = "Filter owner",
+                      items = members.map { m => IdAndDescription(m.usercode.string, m.safeFullName) }.toIndexedSeq,
+                      form = form,
+                      field = "usercodes",
+                      idPrefix = "usercode",
+                      columns = 2,
+                      inModal = false
+                    )(b3.vertical.fieldConstructor, messages)
+
+                    <button type="submit" class="btn btn-primary"><i class="fal fa-filter"></i> Filter cases</button>
+                  }
+                </div>
+              }
+            </th>
+          } else {
+            <th class="col-sm-6">Subject</th>
+          }
           <th class="col-sm-3">Last updated</th>
         </tr>
       </thead>
       <tfoot>
-        @tags.tablePagination(pagination)
+        @tags.tablePagination(pagination, owners.fold(3)(_ => 4), caseOwnersFilterForm)
       </tfoot>
       <tbody>
         @cases.map { r =>
@@ -55,7 +98,7 @@
     @cases.map { r =>
       @caseRow(r.clientCase, r.lastUpdated)
     }
-    @tags.tablePagination(pagination)
+    @tags.tablePagination(pagination, owners.fold(3)(_ => 4), caseOwnersFilterForm)
   }
 } else {
   @emptyMessage.map { m => <p>@m</p> }

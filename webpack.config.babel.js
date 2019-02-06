@@ -53,7 +53,7 @@ const commonConfig = merge([
           ],
         },
       }),
-      new MomentLocalesPlugin({ localesToKeep: ['es-gb'] }),
+      new MomentLocalesPlugin({ localesToKeep: ['en-gb'] }),
     ],
     resolve: {
       alias: {

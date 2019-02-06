@@ -4,7 +4,7 @@ import java.sql.{PreparedStatement, ResultSet}
 
 import com.github.tminglei.slickpg._
 import slick.ast.Library.SqlFunction
-import slick.ast.LiteralNode
+import slick.ast._
 import slick.basic.Capability
 import slick.jdbc.{JdbcCapabilities, JdbcType, PostgresProfile}
 import slick.lifted.OptionMapperDSL
@@ -15,33 +15,29 @@ trait ExtendedPgSearchSupport extends PgSearchSupport { driver: PostgresProfile 
   trait ExtendedSearchAssistants extends SearchAssistants {
     def prefixTsQuery[R](query: Rep[String], config: String = "english")(
       implicit tm1: JdbcType[TsVector], tm2: JdbcType[TsQuery], om: OptionMapperDSL.arg[String, String]#to[TsQuery, R]
-    ): Rep[R] =
+    ): Rep[R] = {
+
+      def or(conds: slick.ast.Node*) = om.column(SearchLibrary.Or, conds : _*).toNode
+      def trim(value: Node) = om.column(new SqlFunction("trim"), value).toNode
+      def replaceAll(source: Node, regex: String, replace: String) = om.column(
+        new SqlFunction("regexp_replace"), source, regex.toNode, replace.toNode, "g".toNode
+      ).toNode
+
       om.column(
         SearchLibrary.ToTsQuery,
         LiteralNode(config),
         // regexp_replace(regexp_replace(trim(?), '[^A-Za-z0-9_\s-]', ''), '\s+', ':* & ') || ':*'
-        om.column(SearchLibrary.Or,
-          // regexp_replace(regexp_replace(trim(?), '[^A-Za-z0-9_\s-]', ''), '\s+', ':* & ')
-          om.column(
-            new SqlFunction("regexp_replace"),
-            // regexp_replace(trim(?), '[^A-Za-z0-9_\s-]', '')
-            om.column(
-              new SqlFunction("regexp_replace"),
-              om.column(
-                new SqlFunction("trim"),
-                query.toNode
-              ).toNode,
-              "[^A-Za-z0-9_\\s-]".toNode,
-              "".toNode,
-              "g".toNode
-            ).toNode,
-            "\\s+".toNode,
-            ":* & ".toNode,
-            "g".toNode
-          ).toNode,
+        or(
+          replaceAll(
+            replaceAll( trim(query.toNode), "[^A-Za-z0-9_\\s-]", ""),
+            "\\s+",
+            ":* & "
+          ),
           ":*".bind.toNode
-        ).toNode
+        )
       )
+
+    }
 
     implicit class OptionTsVectorColumnExtensions(r: Rep[Option[TsVector]])(implicit tm: JdbcType[TsVector]) {
       def orEmptyTsVector: Rep[TsVector] = r.getOrElse("".bind.asColumnOf[TsVector])

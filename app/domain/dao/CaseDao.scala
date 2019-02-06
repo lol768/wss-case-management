@@ -60,7 +60,7 @@ trait CaseDao {
   def insertDocument(document: StoredCaseDocument)(implicit ac: AuditLogContext): DBIO[StoredCaseDocument]
   def deleteDocument(document: StoredCaseDocument, version: OffsetDateTime)(implicit ac: AuditLogContext): DBIO[Done]
   def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq]
-  def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, StoredCase, Seq]
+  def listQuery(filter: CaseFilter): Query[Cases, StoredCase, Seq]
   def getHistory(id: UUID): DBIO[Seq[StoredCaseVersion]]
   def getTagHistory(caseID: UUID): DBIO[Seq[StoredCaseTagVersion]]
   def getClientHistory(caseID: UUID): DBIO[Seq[StoredCaseClientVersion]]
@@ -222,16 +222,16 @@ class CaseDaoImpl @Inject()(
   override def findDocumentsQuery(caseID: UUID): Query[CaseDocuments, StoredCaseDocument, Seq] =
     caseDocuments.table.filter(_.caseId === caseID)
 
-  override def listQuery(team: Option[Team], owner: Option[Usercode], state: IssueStateFilter): Query[Cases, StoredCase, Seq] = {
-    owner.fold(cases.table.subquery)(u =>
+  override def listQuery(filter: CaseFilter): Query[Cases, StoredCase, Seq] = {
+    Option(filter.owner).filter(_.nonEmpty).fold(cases.table.subquery)(usercodes =>
       cases.table
         .join(Owner.owners.table)
         .on((c, o) => c.id === o.entityId && o.entityType === (Owner.EntityType.Case : Owner.EntityType))
-        .filter { case (_, o) => o.userId === u }
-        .map { case (e, _) => e }
+        .filter { case (_, o) => o.userId.inSet(usercodes) }
+        .map { case (c, _) => c }
     ).filter(c => {
-      val teamFilter = team.fold(true.bind)(c.team === _)
-      val stateFilter = state match {
+      val teamFilter = filter.team.fold(true.bind)(c.team === _)
+      val stateFilter = filter.state match {
         case IssueStateFilter.Open => c.isOpen
         case IssueStateFilter.Closed => !c.isOpen
         case IssueStateFilter.All => true.bind
@@ -480,9 +480,11 @@ object CaseDao {
       .join(ClientDao.clients.table)
       .on { case ((_, cc), client) => cc.universityID === client.universityID }
       .flattenJoin
+
     def withNotes = q
       .joinLeft(caseNotes.table)
       .on(_.id === _.caseId)
+
     def withMessages = q
       .joinLeft(
         Message.messages.table
@@ -494,7 +496,6 @@ object CaseDao {
       .on { case (c, (m, _, _)) =>
         c.id === m.ownerId && m.ownerType === (MessageOwner.Case: MessageOwner)
       }
-
 
     def withLastUpdated = q
       .joinLeft(Message.lastUpdatedCaseMessage)
@@ -933,11 +934,26 @@ object CaseDao {
       state.nonEmpty
   }
 
+  case class CaseFilter(
+    team: Option[Team] = None,
+    owner: Set[Usercode] = Set.empty,
+    state: IssueStateFilter = IssueStateFilter.All
+  ) {
+    require(team.nonEmpty || owner.nonEmpty, "One of team or owner must be set")
+
+    def withOwners(owners: Set[Usercode]): CaseFilter = copy(owner = owners)
+    def withState(state: IssueStateFilter): CaseFilter = copy(state = state)
+  }
+
+  object CaseFilter {
+    def apply(team: Team): CaseFilter = CaseFilter(team = Some(team))
+    def apply(owner: Usercode): CaseFilter = CaseFilter(owner = Set(owner))
+    def apply(team: Team, owner: Usercode): CaseFilter = CaseFilter(team = Some(team), owner = Set(owner))
+  }
+
   val lastUpdatedCaseNote =
     caseNotes.table
       .groupBy(_.caseId)
       .map { case (id, n) => (id, n.map(_.created).max) }
-
-
 
 }
