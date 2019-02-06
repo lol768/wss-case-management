@@ -32,10 +32,7 @@ trait EnquiryDao {
   def findByIDsQuery(ids: Set[UUID]): Query[Enquiries, StoredEnquiry, Seq]
   def findByKeyQuery(key: IssueKey): Query[Enquiries, StoredEnquiry, Seq]
   def findByClientQuery(client: UniversityID): Query[Enquiries, StoredEnquiry, Seq]
-  def findOpenQuery(team: Team): Query[Enquiries, StoredEnquiry, Seq]
-  def findOpenQuery(owner: Usercode): Query[Enquiries, StoredEnquiry, Seq]
-  def findClosedQuery(team: Team): Query[Enquiries, StoredEnquiry, Seq]
-  def findClosedQuery(owner: Usercode): Query[Enquiries, StoredEnquiry, Seq]
+  def findByFilterQuery(filter: EnquiryFilter, state: IssueStateFilter): Query[Enquiries, StoredEnquiry, Seq]
   def findNotesQuery(enquiryIDs: Set[UUID]): Query[EnquiryNotes, StoredEnquiryNote, Seq]
   def searchQuery(query: EnquirySearchQuery): Query[Enquiries, StoredEnquiry, Seq]
   def getLastUpdatedForClients(clients: Set[UniversityID]): DBIO[Seq[(UniversityID, Option[OffsetDateTime])]]
@@ -69,27 +66,22 @@ class EnquiryDaoImpl @Inject() (
   override def findByClientQuery(client: UniversityID): Query[Enquiries, StoredEnquiry, Seq] =
     enquiries.table.filter(_.universityId === client)
 
-  override def findOpenQuery(team: Team): Query[Enquiries, StoredEnquiry, Seq] =
-    enquiries.table
-      .filter(e => e.isOpen && e.team === team)
-
-  override def findOpenQuery(owner: Usercode): Query[Enquiries, StoredEnquiry, Seq] =
-    enquiries.table
-      .join(Owner.owners.table)
-      .on((e, o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Enquiry:Owner.EntityType))
-      .filter { case (e, o) => e.isOpen && o.userId === owner }
-      .map { case (e, _) => e }
-
-  override def findClosedQuery(team: Team): Query[Enquiries, StoredEnquiry, Seq] =
-    enquiries.table
-      .filter(e => !e.isOpen && e.team === team)
-
-  override def findClosedQuery(owner: Usercode): Query[Enquiries, StoredEnquiry, Seq] =
-    enquiries.table
-      .join(Owner.owners.table)
-      .on((e, o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Enquiry:Owner.EntityType))
-      .filter { case (e, o) => !e.isOpen && o.userId === owner }
-      .map { case (e, _) => e }
+  def findByFilterQuery(filter: EnquiryFilter, state: IssueStateFilter): Query[Enquiries, StoredEnquiry, Seq] =
+    Option(filter.owner).filter(_.nonEmpty).fold(enquiries.table.subquery)(usercodes =>
+      enquiries.table
+        .join(Owner.owners.table)
+        .on((e, o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Enquiry : Owner.EntityType))
+        .filter { case (_, o) => o.userId.inSet(usercodes) }
+        .map { case (e, _) => e }
+    ).filter(e => {
+      val teamFilter = filter.team.fold(true.bind)(e.team === _)
+      val stateFilter = state match {
+        case IssueStateFilter.Open => e.isOpen
+        case IssueStateFilter.Closed => !e.isOpen
+        case IssueStateFilter.All => true.bind
+      }
+      teamFilter && stateFilter
+    })
 
   override def findNotesQuery(enquiryIDs: Set[UUID]): Query[EnquiryNotes, StoredEnquiryNote, Seq] =
     enquiryNotes.table.filter(_.enquiryID.inSet(enquiryIDs))
@@ -394,5 +386,20 @@ object EnquiryDao {
         team.nonEmpty ||
         member.nonEmpty ||
         state.nonEmpty
+  }
+
+  case class EnquiryFilter(
+    team: Option[Team] = None,
+    owner: Set[Usercode] = Set.empty,
+  ) {
+    require(team.nonEmpty || owner.nonEmpty, "One of team or owner must be set")
+
+    def withOwners(owners: Set[Usercode]): EnquiryFilter = copy(owner = owners)
+  }
+
+  object EnquiryFilter {
+    def apply(team: Team): EnquiryFilter = EnquiryFilter(team = Some(team))
+    def apply(owner: Usercode): EnquiryFilter = EnquiryFilter(owner = Set(owner))
+    def apply(team: Team, owner: Usercode): EnquiryFilter = EnquiryFilter(team = Some(team), owner = Set(owner))
   }
 }

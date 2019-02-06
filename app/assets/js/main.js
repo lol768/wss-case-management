@@ -302,7 +302,7 @@ function bindTo($scope) {
     });
   });
 
-  $('table.table-paginated', $scope).each((i, container) => PaginatingTable(container));
+  $('table.table-paginated', $scope).each((i, container) => PaginatingTable(container, bindTo));
 
   function loadTabPanelContent($tabPanel) {
     if (!$tabPanel.data('tabPanelLoaded')) {

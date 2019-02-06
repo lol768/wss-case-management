@@ -1,12 +1,14 @@
 @import java.util.UUID
 
-@import domain.{CaseListRender, Client, Pagination}
+@import domain.{CaseListRender, Client, Member, Pagination}
 
 @(
   openCases: Seq[CaseListRender],
   pagination: Pagination,
   closedCases: Int,
   clients: Map[UUID, Set[Client]],
+  owners: Option[Map[UUID, Set[Member]]],
+  allOpenCaseOwners: Option[Seq[Member]],
   createRoute: Call,
   closedCasesRoute: Call,
   searchScope: String,
@@ -27,7 +29,7 @@
 
 <p><a href="@createRoute" class="btn btn-default">Create a new case</a></p>
 
-@views.html.admin.caseTable(Some("Open cases"), openCases, clients, pagination)
+@views.html.admin.caseTable(Some("Open cases"), openCases, clients, owners, allOpenCaseOwners, None, pagination)
 
 @if(closedCases == 0) {
   <p>No closed cases to show</p>
