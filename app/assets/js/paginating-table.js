@@ -41,9 +41,10 @@ export default function PaginatingTable(element, bindTo) {
       $btn.popover({
         trigger: 'manual',
         container: 'body',
+        template: '<div class="popover filter"><div class="arrow"></div><div class="popover-inner"><div class="popover-content"><p></p></div></div></div>',
         html: true,
         content: $filter.html(),
-        placement: 'auto bottom',
+        placement: 'bottom',
       }).addClass('has-popover');
 
       $filter.remove();
