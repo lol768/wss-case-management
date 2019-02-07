@@ -538,7 +538,10 @@ class NotificationServiceImpl @Inject()(
     queueEmail.successFlatMapTo(_ => sendAndHandleResponse(activity))
   }
 
-  private def buildActivity(users: Set[User], title: String, url: String, activityType: String, text: String = null): Activity =
+  private def buildActivity(users: Set[User], title: String, url: String, activityType: String): Activity =
+    buildActivity(users, title, url, activityType, null)
+
+  private def buildActivity(users: Set[User], title: String, url: String, activityType: String, text: String): Activity =
     new Activity(
       users.map(_.usercode.string).asJava,
       Set[String]().asJava,
@@ -548,7 +551,10 @@ class NotificationServiceImpl @Inject()(
       activityType
     )
 
-  private def buildActivity(team: Team, title: String, url: String, activityType: String, text: String = null): Activity =
+  private def buildActivity(team: Team, title: String, url: String, activityType: String): Activity =
+    buildActivity(team, title, url, activityType, null)
+
+  private def buildActivity(team: Team, title: String, url: String, activityType: String, text: String): Activity =
     new Activity(
       Set[String]().asJava,
       Set(permissionService.webgroupFor(team).string).asJava,
