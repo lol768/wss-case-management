@@ -251,7 +251,7 @@ class NotificationServiceImpl @Inject()(
         body = views.txt.emails.casemessagefromclient(url),
         recipients = users,
         activity = buildActivity(
-          c.team,
+          users.toSet,
           "Case message from client received",
           url,
           "case-message-from-client"
@@ -538,10 +538,7 @@ class NotificationServiceImpl @Inject()(
     queueEmail.successFlatMapTo(_ => sendAndHandleResponse(activity))
   }
 
-  private def buildActivity(users: Set[User], title: String, url: String, activityType: String): Activity =
-    buildActivity(users, title, url, activityType, null)
-
-  private def buildActivity(users: Set[User], title: String, url: String, activityType: String, text: String): Activity =
+  private def buildActivity(users: Set[User], title: String, url: String, activityType: String, text: String = null): Activity =
     new Activity(
       users.map(_.usercode.string).asJava,
       Set[String]().asJava,
@@ -551,10 +548,7 @@ class NotificationServiceImpl @Inject()(
       activityType
     )
 
-  private def buildActivity(team: Team, title: String, url: String, activityType: String): Activity =
-    buildActivity(team, title, url, activityType, null)
-
-  private def buildActivity(team: Team, title: String, url: String, activityType: String, text: String): Activity =
+  private def buildActivity(team: Team, title: String, url: String, activityType: String, text: String = null): Activity =
     new Activity(
       Set[String]().asJava,
       Set(permissionService.webgroupFor(team).string).asJava,
