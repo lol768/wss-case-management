@@ -34,7 +34,7 @@ lazy val main = (project in file("."))
   )
 
 val playUtilsVersion = "1.26"
-val ssoClientVersion = "2.61"
+val ssoClientVersion = "2.63"
 val warwickUtilsVersion = "20181130"
 val enumeratumVersion = "1.5.13"
 val enumeratumSlickVersion = "1.5.15"
@@ -76,7 +76,7 @@ val appDeps = Seq(
   "uk.ac.warwick.util" % "warwickutils-service" % warwickUtilsVersion,
   "uk.ac.warwick.util" % "warwickutils-virusscan" % warwickUtilsVersion,
 
-  "com.github.mumoshu" %% "play2-memcached-play26" % "0.9.3",
+  "com.github.mumoshu" %% "play2-memcached-play27" % "0.10.0-RC3",
 
   "com.beachape" %% "enumeratum" % enumeratumVersion,
   "com.beachape" %% "enumeratum-play" % enumeratumVersion,
