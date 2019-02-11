@@ -26,7 +26,7 @@ object CaseSearchController {
     "team" -> optional(Teams.formField),
     "member" -> optional(nonEmptyText).transform[Option[Usercode]](_.map(Usercode.apply), _.map(_.string)),
     "caseType" -> optional(CaseType.formField),
-    "state" -> optional(IssueStateFilter.formField)
+    "state" -> optional(IssueStateFilter.formField),
   )(CaseSearchQuery.apply)(CaseSearchQuery.unapply))
 }
 

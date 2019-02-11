@@ -9,7 +9,7 @@
   availableRooms: Seq[Room],
   mode: Mode,
   existing: Option[AppointmentRender],
-)(implicit messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
+)(implicit context: RequestContext, messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
 
 <div class="row">
   <div class="col-sm-6">
@@ -39,12 +39,12 @@
             @if(values.nonEmpty){
               @for(value <- values) {
                 <div class="case-picker-container">
-                  <input type="text" class="case-picker form-control" name="cases[]" value="@value" placeholder="Add a case" autocomplete="off" aria-label="Add a case" data-search-scope="team" data-search-scope-value="@team.id" />
+                  <input type="text" class="case-picker form-control" name="cases[]" value="@value" placeholder="Add a case" autocomplete="off" aria-label="Add a case" data-team="@team.id" data-member="@context.user.get.usercode.string" />
                 </div>
               }
             }
             <div class="case-picker-container">
-              <input type="text" class="case-picker form-control" name="cases[]" placeholder="Add a case" autocomplete="off" aria-label="Add a case" data-search-scope="team" data-search-scope-value="@team.id" />
+              <input type="text" class="case-picker form-control" name="cases[]" placeholder="Add a case" autocomplete="off" aria-label="Add a case" data-search-scope="team" data-team="@team.id" data-member="@context.user.get.usercode.string" />
             </div>
           }
         </div>
