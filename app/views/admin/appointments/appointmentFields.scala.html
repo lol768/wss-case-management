@@ -1,13 +1,10 @@
-@import java.time.LocalDateTime
-@import java.time.format.DateTimeFormatter
-
 @import controllers.admin.AppointmentController.{AppointmentFormData, Mode}
-@import domain.{Appointment, AppointmentPurpose, AppointmentRender, AppointmentType, Room}
-@import helpers.FormHelpers
+@import domain.{Appointment, AppointmentPurpose, AppointmentRender, AppointmentType, Room, Team}
 @import views.html.b3.B3FieldConstructor
 @import warwick.core.helpers.JavaTime
 
 @(
+  team: Team,
   form: Form[AppointmentFormData],
   availableRooms: Seq[Room],
   mode: Mode,
@@ -42,12 +39,12 @@
             @if(values.nonEmpty){
               @for(value <- values) {
                 <div class="case-picker-container">
-                  <input type="text" class="case-picker form-control" name="cases[]" value="@value" placeholder="Add a case" autocomplete="off" aria-label="Add a case" />
+                  <input type="text" class="case-picker form-control" name="cases[]" value="@value" placeholder="Add a case" autocomplete="off" aria-label="Add a case" data-search-scope="team" data-search-scope-value="@team.id" />
                 </div>
               }
             }
             <div class="case-picker-container">
-              <input type="text" class="case-picker form-control" name="cases[]" placeholder="Add a case" autocomplete="off" aria-label="Add a case" />
+              <input type="text" class="case-picker form-control" name="cases[]" placeholder="Add a case" autocomplete="off" aria-label="Add a case" data-search-scope="team" data-search-scope-value="@team.id" />
             </div>
           }
         </div>

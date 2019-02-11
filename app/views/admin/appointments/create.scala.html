@@ -14,7 +14,7 @@
     Symbol("data-freebusy") -> controllers.admin.routes.AppointmentController.freeBusy().url,
     Symbol("data-freebusyresources") -> controllers.admin.routes.AppointmentController.freeBusyResources().url
   ) { implicit ifc =>
-    @views.html.admin.appointments.appointmentFields(form, availableRooms, Mode.Create, None)
+    @views.html.admin.appointments.appointmentFields(team, form, availableRooms, Mode.Create, None)
 
     @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id).withFragment("appointments"))
   }
