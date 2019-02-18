@@ -16,7 +16,7 @@
   ) { implicit ifc =>
     @b3.validatedHidden(form, "version")
 
-    @views.html.admin.appointments.appointmentFields(form, availableRooms, Mode.Reschedule, Some(a))
+    @views.html.admin.appointments.appointmentFields(a.appointment.team, form, availableRooms, Mode.Reschedule, Some(a))
 
     @tags.submitOrCancel("Reschedule", controllers.admin.routes.AppointmentController.view(a.appointment.key))
   }
