@@ -120,8 +120,13 @@ class CaseDaoImpl @Inject()(
         },
         q.createdAfter.map { d => c.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => c.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
-        q.team.map { team => c.team.? === team },
-        q.member.map { member => tm.map(_.usercode === member) },
+        (q.team, q.member) match {
+          // CASE-465 This is intentionally an OR
+          case (Some(team), Some(member)) => Some(c.team.? === team || tm.map(_.usercode === member))
+          case (Some(team), _) => Some(c.team.? === team)
+          case (_, Some(member)) => Some(tm.map(_.usercode === member))
+          case _ => None
+        },
         q.caseType.map { caseType => c.caseType === caseType },
         q.state.flatMap {
           case IssueStateFilter.All => None
@@ -914,6 +919,9 @@ object CaseDao {
     def idx = index("idx_case_document_version", (id, version))
   }
 
+  /**
+    * Note that if you set team and member this is treated as an OR, not an AND.
+    */
   case class CaseSearchQuery(
     query: Option[String] = None,
     createdAfter: Option[LocalDate] = None,
