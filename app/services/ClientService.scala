@@ -14,6 +14,7 @@ import helpers.ServiceResults.Implicits._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import domain.ExtendedPostgresProfile.api._
+import helpers.ServiceResults
 import warwick.core.timing.TimingContext
 
 object ClientService {
@@ -22,6 +23,7 @@ object ClientService {
 
 @ImplementedBy(classOf[ClientServiceImpl])
 trait ClientService {
+  def find(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[Client]]]
   def getOrAddClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
   def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
   def updateClients(details: Map[UniversityID, Option[String]])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
@@ -33,6 +35,9 @@ class ClientServiceImpl @Inject()(
   daoRunner: DaoRunner,
   dao: ClientDao,
 )(implicit ec: ExecutionContext) extends ClientService {
+
+  override def find(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[Client]]] =
+    daoRunner.run(dao.get(universityID)).map { c => ServiceResults.success(c.map(_.asClient)) }
 
   override def getOrAddClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]] = {
     daoRunner.run(DBIOAction.sequence(universityIDs.toSeq.map(dao.get))).flatMap(_.partition(_.isEmpty) match {

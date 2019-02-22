@@ -1,6 +1,8 @@
 @* tooltip on the button only works when it's enabled, hence the span *@
+@(confirm: Option[String])
+
 <span class="btn-tooltip" title="Send">
-<button type="submit" class="btn btn-primary" aria-label="Send">
-  @tags.icons.messageSend()
-</button>
+  <button type="submit" class="btn btn-primary" aria-label="Send" @confirm.map { message => data-toggle="confirm-submit" data-message="@message" }>
+    @tags.icons.messageSend()
+  </button>
 </span>
