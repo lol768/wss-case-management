@@ -1,11 +1,10 @@
 @import java.time.OffsetDateTime
 
+@import controllers.MessagesController.MessageFormData
 @import domain.{Case, Enquiry, EnquiryNote, EnquiryNoteType, IssueState, Member, MessageRender, MessageSender, SitsProfile}
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
 
-@import controllers.MessagesController.MessageFormData
-@import domain.OwnerSave
 @(
   enquiry: Enquiry,
   profile: Option[SitsProfile],
@@ -205,7 +204,7 @@
         </div>
         @if(enquiry.state != IssueState.Closed) {
           <div class="panel-footer">
-            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key), messageForm, supportedMimeTypes, enquiry.id, enquiry.client.universityID)
+            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key), messageForm, supportedMimeTypes, enquiry, enquiry.client, MessageSender.Team)
           </div>
         }
       </div>

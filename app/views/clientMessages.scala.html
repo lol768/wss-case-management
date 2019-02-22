@@ -1,9 +1,10 @@
-@import domain.{Case, Enquiry, IssueRender, IssueState, MessageSender}
+@import controllers.MessagesController.MessageFormData
+@import domain.{Case, Client, Enquiry, IssueRender, IssueState, MessageSender}
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
 
-@import controllers.MessagesController.MessageFormData
 @(
+  client: Client,
   issueRender: IssueRender,
   f: Form[MessageFormData],
   supportedMimeTypes: Seq[MediaType],
@@ -41,7 +42,7 @@
       </div>
       <div class="panel-footer">
         @if(issueRender.issue.state != IssueState.Closed) {
-          @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), f, supportedMimeTypes, issueRender.issue.id, context.user.get.universityId.get)
+          @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), f, supportedMimeTypes, issueRender.issue, client, MessageSender.Client)
         } else {
           <p>
             We think this enquiry is now resolved, so we've marked it as closed.

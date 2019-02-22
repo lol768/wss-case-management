@@ -34,8 +34,8 @@ lazy val main = (project in file("."))
   )
 
 val playUtilsVersion = "1.26"
-val ssoClientVersion = "2.61"
-val warwickUtilsVersion = "20181130"
+val ssoClientVersion = "2.62"
+val warwickUtilsVersion = "20190221"
 val enumeratumVersion = "1.5.13"
 val enumeratumSlickVersion = "1.5.15"
 
@@ -87,7 +87,6 @@ val appDeps = Seq(
 
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
 
-  "org.dom4j" % "dom4j" % "2.1.1",
   "org.apache.tika" % "tika-core" % "1.20",
   "org.apache.tika" % "tika-parsers" % "1.20",
 
@@ -108,6 +107,7 @@ val testDeps = Seq(
   "org.seleniumhq.selenium" % "selenium-chrome-driver" % "3.141.59",
   "com.opentable.components" % "otj-pg-embedded" % "0.12.5",
   "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.22",
+  "org.dom4j" % "dom4j" % "2.1.1",
   "jaxen" % "jaxen" % "1.1.6"
 ).map(_ % Test)
 
