@@ -33,7 +33,7 @@ lazy val main = (project in file("."))
     javaOptions in Test += "-Dlogger.resource=test-logging.xml"
   )
 
-val playUtilsVersion = "1.26"
+val playUtilsVersion = "1.27"
 val ssoClientVersion = "2.62"
 val warwickUtilsVersion = "20190221"
 val enumeratumVersion = "1.5.13"
@@ -152,8 +152,7 @@ resolvers += "oauth" at "http://oauth.googlecode.com/svn/code/maven"
 resolvers += "softprops-maven" at "http://dl.bintray.com/content/softprops/maven"
 resolvers += "slack-client" at "https://mvnrepository.com/artifact/net.gpedro.integrations.slack/slack-webhook"
 resolvers += "SBT plugins" at "https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/"
-resolvers += "nexus" at "https://mvn.elab.warwick.ac.uk/nexus/content/groups/public"
-credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
+resolvers += "nexus" at "https://mvn.elab.warwick.ac.uk/nexus/repository/public-anonymous/"
 
 // Define a special test task which does not fail when any test fails, so sequential tasks will be performed no
 // matter the test result.
