@@ -283,11 +283,9 @@
             @if(!c.migrated) {
               <p>
               @if(c.state != IssueState.Closed) {
-                <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">
-                  Close case</a>
+                <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Close case</a>
               } else {
-                <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">
-                  Reopen case</a>
+                <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Reopen case</a>
               }
               </p>
             }
