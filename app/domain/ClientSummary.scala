@@ -56,8 +56,8 @@ object ClientRiskStatus extends PlayEnum[ClientRiskStatus] {
 
 case class AtRiskClient(
   summary: ClientSummary,
+  lastUpdatedCase: Option[OffsetDateTime],
   lastUpdatedEnquiry: Option[OffsetDateTime],
-  lastUpdatedCase: Option[OffsetDateTime]
 ) extends Ordered[AtRiskClient] {
   override def compare(that: AtRiskClient): Int = {
     if (this.summary.riskStatus.contains(High) && !that.summary.riskStatus.contains(High)) {
