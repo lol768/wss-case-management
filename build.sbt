@@ -45,19 +45,21 @@ val appDeps = Seq(
   cacheApi,
   filters,
 
-  // v3.0.0 is Play 2.6.x and Slick 3.1.x
+  // Don't upgrade to 4.x or you'll get Slick 3.3
   "com.typesafe.play" %% "play-slick" % "3.0.3",
   "com.typesafe.play" %% "play-slick-evolutions" % "3.0.3",
-  "com.typesafe.play" %% "play-mailer" % "6.0.1",
-  "com.typesafe.play" %% "play-mailer-guice" % "6.0.1",
 
+  // Intentionally Slick 3.2, not 3.3 - 3.3 has weird behaviour with our custom OffsetDateTime
   "com.typesafe.slick" %% "slick" % "3.2.3",
   "org.postgresql" % "postgresql" % "42.2.5",
-  "com.github.tminglei" %% "slick-pg" % "0.17.0",
+  "com.github.tminglei" %% "slick-pg" % "0.17.1", // Don't upgrade past 0.17.1 or you'll get Slick 3.3
+
+  "com.typesafe.play" %% "play-mailer" % "7.0.0",
+  "com.typesafe.play" %% "play-mailer-guice" % "7.0.0",
 
   // in-memory JNDI context used by Play to pass DataSource to Quartz
   "tyrex" % "tyrex" % "1.0.1",
-  "org.quartz-scheduler" % "quartz" % "2.3.0",
+  "org.quartz-scheduler" % "quartz" % "2.3.0" exclude("com.zaxxer", "HikariCP-java6"),
 
   "net.codingwell" %% "scala-guice" % "4.2.1",
   "com.google.inject.extensions" % "guice-multibindings" % "4.2.2",
@@ -92,20 +94,16 @@ val appDeps = Seq(
 
   "org.apache.poi" % "poi" % "4.0.1",
   "org.apache.poi" % "poi-ooxml" % "4.0.1",
-  "org.apache.poi" % "poi-ooxml-schemas" % "4.0.1",
-
-  "org.slf4j" % "log4j-over-slf4j" % "1.7.25"
+  "org.apache.poi" % "poi-ooxml-schemas" % "4.0.1"
 )
 
 val testDeps = Seq(
-  "org.mockito" % "mockito-all" % "1.10.19",
   "org.scalatest" %% "scalatest" % "3.0.5",
-  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2",
-  "com.typesafe.akka" %% "akka-testkit" % "2.5.18",
+  "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.1",
   "uk.ac.warwick.sso" %% "sso-client-play-testing" % ssoClientVersion,
   "org.seleniumhq.selenium" % "selenium-java" % "3.141.59",
   "org.seleniumhq.selenium" % "selenium-chrome-driver" % "3.141.59",
-  "com.opentable.components" % "otj-pg-embedded" % "0.12.5",
+  "com.opentable.components" % "otj-pg-embedded" % "0.13.1",
   "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.22",
   "org.dom4j" % "dom4j" % "2.1.1",
   "jaxen" % "jaxen" % "1.1.6"
@@ -134,14 +132,11 @@ routesImport ++= Seq(
   "system.Binders._",
 )
 
-// Because jclouds is terrible
-dependencyOverrides += "com.google.guava" % "guava" % "22.0"
+// https://bugs.elab.warwick.ac.uk/browse/SSO-1653
+dependencyOverrides += "xml-apis" % "xml-apis" % "1.4.01"
 
-// Because jclouds is terrible
+// JClouds requires v2.5 https://issues.apache.org/jira/browse/JCLOUDS-1166
 dependencyOverrides += "com.google.code.gson" % "gson" % "2.5"
-
-// Fix a dependency warning
-dependencyOverrides += "org.json" % "json" % "20171018"
 
 // Make built output available as Play assets.
 unmanagedResourceDirectories in Assets += baseDirectory.value / "target/assets"
