@@ -25,7 +25,7 @@ class CaseMessageControllerTest extends AbstractDaoTest {
 
       val expected = JavaTime.timeZone.getId match {
         case "Europe/London" => "2018-06-01T11:00:00.000+01"
-        case "Etc/UTC" | "Z" => "2018-06-01T10:00:00.000Z"
+        case "Etc/UTC" | "UTC" | "Z" => "2018-06-01T10:00:00.000Z"
       }
 
       (contentAsJson(result) \ "data" \ "lastMessage").as[String] mustBe expected

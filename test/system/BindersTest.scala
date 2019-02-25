@@ -37,7 +37,7 @@ class BindersTest extends PlaySpec {
 
       val expected = JavaTime.timeZone.getId match {
         case "Europe/London" => "start=2018-10-22T10%3A00%3A00.000%2B01"
-        case "Etc/UTC" | "Z" => "start=2018-10-22T09%3A00%3A00.000Z"
+        case "Etc/UTC" | "UTC" | "Z" => "start=2018-10-22T09%3A00%3A00.000Z"
       }
 
       binder.unbind("start", dt) mustBe expected
