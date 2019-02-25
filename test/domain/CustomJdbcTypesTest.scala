@@ -1,7 +1,7 @@
 package domain
 
 import java.sql.Timestamp
-import java.time.{OffsetDateTime, ZonedDateTime}
+import java.time.{OffsetDateTime, ZoneId, ZoneOffset, ZonedDateTime}
 import java.util.UUID
 
 import domain.ExtendedPostgresProfile.api._
@@ -33,7 +33,7 @@ class CustomJdbcTypesTest extends AbstractDaoTest {
 
   "OffsetDateTime mapper" should {
     "correctly map to UTC" in new DatabaseFixture {
-      val dt = ZonedDateTime.of(2018, 8, 17, 10, 44, 43, 182000000, JavaTime.timeZone).toOffsetDateTime
+      val dt = ZonedDateTime.of(2018, 8, 17, 10, 44, 43, 182000000, ZoneId.of("Europe/London")).toOffsetDateTime
 
       val entity = Entity(UUID.randomUUID(), dt)
 
@@ -41,7 +41,7 @@ class CustomJdbcTypesTest extends AbstractDaoTest {
 
       val inserted = execWithCommit(table.filter(_.id === entity.id).result.head)
       inserted.id mustBe entity.id
-      inserted.dt mustBe dt
+      inserted.dt.toInstant mustBe dt.toInstant
 
       val ts = execWithCommit(table.filter(_.id === entity.id).map(_.dtButItsATimestamp).result.head)
       ts.toString mustBe "2018-08-17 09:44:43.182" // Converted 10:44am BST to UTC
@@ -51,7 +51,7 @@ class CustomJdbcTypesTest extends AbstractDaoTest {
     }
 
     "work across DST boundaries" in new DatabaseFixture {
-      val dt1 = ZonedDateTime.of(2018, 10, 28, 0, 30, 0, 0, JavaTime.timeZone)
+      val dt1 = ZonedDateTime.of(2018, 10, 28, 0, 30, 0, 0, ZoneId.of("Europe/London"))
       val dt2 = dt1.plusHours(1).toOffsetDateTime
       val dt3 = dt1.plusHours(2).toOffsetDateTime
 
@@ -67,8 +67,15 @@ class CustomJdbcTypesTest extends AbstractDaoTest {
       execWithCommit(table.filter(_.id === entity2.id).map(_.dtButItsATimestamp).result.head).toString mustBe "2018-10-28 00:30:00.0"
       execWithCommit(table.filter(_.id === entity3.id).map(_.dtButItsATimestamp).result.head).toString mustBe "2018-10-28 01:30:00.0"
 
-      execWithCommit(table.filter(_.id === entity2.id).result.head) mustBe entity2
-      execWithCommit(table.filter(_.id === entity3.id).result.head) mustBe entity3
+      val fetchedEntity2 = execWithCommit(table.filter(_.id === entity2.id).result.head)
+      val fetchedEntity3 = execWithCommit(table.filter(_.id === entity3.id).result.head)
+
+      fetchedEntity2.id mustBe entity2.id
+      fetchedEntity2.dt.toInstant mustBe entity2.dt.toInstant
+
+      fetchedEntity3.id mustBe entity3.id
+      fetchedEntity3.dt.toInstant mustBe entity3.dt.toInstant
+
       execWithCommit(table.schema.drop)
     }
   }
