@@ -8,6 +8,7 @@ import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
+import domain.IssueKeyType.MigratedCase
 import domain.Pagination._
 import domain.QueryHelpers._
 import domain.dao.CaseDao._
@@ -348,10 +349,18 @@ class CaseServiceImpl @Inject() (
       case _ => throw new IllegalArgumentException(s"Invalid target state $targetState")
     }
 
+    def checkValidTransition(clientCase: StoredCase): Future[Unit] = Future.successful {
+      if (clientCase.key.keyType == MigratedCase) {
+        // Mostly to stop reopening but they shouldn't change at all.
+        throw new IllegalStateException("Migrated cases cannot be transitioned")
+      }
+    }
+
     auditService.audit(Symbol(s"Case${targetState.entryName}"), caseID.toString, 'Case, Json.obj()) {
       memberService.getOrAddMember(caseNote.teamMember).successFlatMapTo(_ =>
         daoRunner.run(for {
           clientCase <- dao.find(caseID)
+          _ <- DBIO.from(checkValidTransition(clientCase))
           updated <- dao.update(clientCase.copy(state = targetState), version)
           _ <- addNoteDBIO(caseID, noteType, caseNote)
         } yield updated).map { sc => Right(sc.asCase) }

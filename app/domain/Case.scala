@@ -31,7 +31,9 @@ case class Case(
   fields: CaseFields,
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
-) extends Issue
+) extends Issue {
+  def migrated = key.keyType == IssueKeyType.MigratedCase
+}
 
 case class CaseIncident(
   incidentDate: OffsetDateTime,
@@ -96,6 +98,8 @@ case class CaseRender(
   messages: Seq[MessageRender],
   notes: Seq[CaseNote],
 ) {
+  def migrated = clientCase.migrated
+
   def toIssue = IssueRender(
     clientCase,
     messages,

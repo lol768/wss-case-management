@@ -52,6 +52,7 @@ object IssueKey {
 sealed abstract class IssueKeyType(val code: String, val prefix: Char) extends EnumEntry
 object IssueKeyType extends Enum[IssueKeyType] {
   case object Case extends IssueKeyType("CAS", 'C')
+  case object MigratedCase extends IssueKeyType("MIG", 'M')
   case object Enquiry extends IssueKeyType("ENQ", 'E')
   case object Appointment extends IssueKeyType("APP", 'A')
 
