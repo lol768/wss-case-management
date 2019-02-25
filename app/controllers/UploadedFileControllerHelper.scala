@@ -137,7 +137,7 @@ class UploadedFileControllerHelperImpl @Inject()(
 
   // Yes, the actual value is supposed to include double quotes; such is the format for a strong Etag
   // Strong Etag means byte-for-byte the same, so it is allowed to process range requests from it etc.
-  private def toEtag(uploadedFile: UploadedFile) = s""""${uploadedFile.id.toString}"""".mkString("a")
+  private def toEtag(uploadedFile: UploadedFile) = s""""${uploadedFile.id.toString}""""
 
   private def isOversized(file: TemporaryUploadedFile): Boolean =
     file.metadata.contentLength > config.maxIndividualFileSizeBytes

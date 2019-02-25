@@ -2,7 +2,8 @@ package domain
 
 import java.time.OffsetDateTime
 
-import warwick.sso.UniversityID
+import warwick.core.helpers.JavaTime
+import warwick.sso.{UniversityID, User}
 
 case class Client(
   universityID: UniversityID,
@@ -21,4 +22,8 @@ case class Client(
     } else {
       this.fullName.get.compare(that.fullName.get)
     }
+}
+
+object Client {
+  def transient(user: User): Client = Client(user.universityId.get, user.name.full, JavaTime.offsetDateTime)
 }

@@ -7,13 +7,14 @@ import controllers.MessagesController.MessageFormData
 import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.refiners.{ClientIssueActionFilters, IssueSpecificRequest}
 import domain._
+import helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.tabula.ProfileService
-import services.{AuditService, CaseService, EnquiryService}
+import services.{AuditService, CaseService, ClientService, EnquiryService}
 import warwick.core.helpers.JavaTime
 import warwick.sso.UserLookupService
 
@@ -37,6 +38,7 @@ class ClientMessagesController @Inject()(
   enquiryService: EnquiryService,
   caseService: CaseService,
   profiles: ProfileService,
+  clients: ClientService,
   audit: AuditService,
   userLookupService: UserLookupService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
@@ -45,11 +47,14 @@ class ClientMessagesController @Inject()(
   import canClientViewIssueActionRefiner._
 
   private def renderMessages(issue: Issue, f: Form[MessageFormData])(implicit request: IssueSpecificRequest[_]): Future[Result] =
-    matchIssue(
-      issue,
-      _ => enquiryService.getForRender(issue.id).map(_.map(_.toIssue)),
-      _ => caseService.findForClient(issue.id, currentUser.universityId.get).map(_.map(_.toIssue))
-    ).successMap(issueRender =>
+    ServiceResults.zip(
+      clients.find(currentUser.universityId.get),
+      matchIssue(
+        issue,
+        e => enquiryService.getForRender(e.id).map(_.map(_.toIssue)),
+        c => caseService.findForClient(c.id, currentUser.universityId.get).map(_.map(_.toIssue))
+      )
+    ).successMap { case (client, issueRender) =>
       render {
         case Accepts.Json() =>
           val clientName = "You"
@@ -65,12 +70,13 @@ class ClientMessagesController @Inject()(
           ))))
         case _ =>
           Ok(views.html.clientMessages(
+            client.getOrElse(Client.transient(currentUser())),
             issueRender,
             f,
             uploadedFileControllerHelper.supportedMimeTypes
           ))
       }
-    )
+    }
 
   def messages(id: java.util.UUID): Action[AnyContent] = CanClientViewIssueAction(id).async { implicit request =>
     renderMessages(request.issue, MessagesController.messageForm(request.lastMessageDate).fill(MessageFormData("", request.lastMessageDate)))
@@ -81,8 +87,7 @@ class ClientMessagesController @Inject()(
       formWithErrors => {
         render.async {
           case Accepts.Json() =>
-            Future.successful(API.badRequestJson(formWithErrors)
-            )
+            Future.successful(API.badRequestJson(formWithErrors))
           case _ =>
             renderMessages(request.issue, formWithErrors)
         }

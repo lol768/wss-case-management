@@ -251,7 +251,7 @@ class NotificationServiceImpl @Inject()(
         body = views.txt.emails.casemessagefromclient(url),
         recipients = users,
         activity = buildActivity(
-          c.team,
+          users.toSet,
           "Case message from client received",
           url,
           "case-message-from-client"

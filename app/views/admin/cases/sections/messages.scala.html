@@ -1,8 +1,8 @@
-@import domain.{Case, CaseMessages, Client, IssueState, MessageRender, SitsProfile}
+@import controllers.MessagesController.MessageFormData
+@import domain.{Case, CaseMessages, Client, IssueState, MessageRender, MessageSender}
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
 
-@import controllers.MessagesController.MessageFormData
 @(
   c: Case,
   messages: CaseMessages,
@@ -65,7 +65,7 @@
           </div>
           <div class="panel-footer">
           @if(c.state != IssueState.Closed) {
-            @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.key, client.universityID), messageForms(client), supportedMimeTypes, c.id, client.universityID)
+            @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.key, client.universityID), messageForms(client), supportedMimeTypes, c, client, MessageSender.Team)
           }
           </div>
         </div>

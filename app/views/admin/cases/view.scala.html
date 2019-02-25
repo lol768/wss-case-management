@@ -55,6 +55,11 @@
   title = s"${c.key.string} ${c.subject}",
   icon = if (c.fields.duty) { tags.cases.dutyLabel() } else null,
 ) {
+  @if(c.migrated) {
+    <div class="alert alert-info">
+      This is a migrated case and cannot be reopened.
+    </div>
+  }
   <div class="case-details">
     <div class="case-details--header">
       @profiles.keySet.toSeq.sorted.map { client =>
@@ -275,13 +280,15 @@
             Actions
           </div>
           <div class="col-sm-8">
-            <p>
+            @if(!c.migrated) {
+              <p>
               @if(c.state != IssueState.Closed) {
                 <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Close case</a>
               } else {
                 <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Reopen case</a>
               }
-            </p>
+              </p>
+            }
             <p>
               <a href="@controllers.admin.routes.CaseController.editForm(c.key)" class="btn btn-default btn-block">Edit case</a>
             </p>

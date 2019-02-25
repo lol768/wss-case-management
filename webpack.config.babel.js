@@ -16,8 +16,8 @@ const paths = {
   ROOT: __dirname,
   RELATIVE_ASSETS: 'target/assets',
   ASSETS: path.join(__dirname, 'target/assets'),
-  NODE_MODULES: path.join(__dirname, 'node_modules/id7'),
-  ID7: path.join(__dirname, 'node_modules/id7'),
+  NODE_MODULES: path.join(__dirname, 'node_modules/@universityofwarwick/id7'),
+  ID7: path.join(__dirname, 'node_modules/@universityofwarwick/id7'),
   ENTRY: './app/assets/js/main.js',
   PUBLIC_PATH: '/assets/',
 };
@@ -53,7 +53,7 @@ const commonConfig = merge([
           ],
         },
       }),
-      new MomentLocalesPlugin({ localesToKeep: ['es-gb'] }),
+      new MomentLocalesPlugin({ localesToKeep: ['en-gb'] }),
     ],
     resolve: {
       alias: {
@@ -76,7 +76,7 @@ const commonConfig = merge([
   }),
   tooling.copyNpmDistAssets({
     dest: path.join(paths.ASSETS, 'lib'),
-    modules: ['id7'],
+    modules: ['@universityofwarwick/id7'],
   }),
   {
     plugins: [

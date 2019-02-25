@@ -11,7 +11,7 @@
   @b3.vertical.formCSRF(action = controllers.admin.routes.AppointmentController.edit(a.appointment.key)) { implicit ifc =>
     @b3.validatedHidden(form, "version")
 
-    @views.html.admin.appointments.appointmentFields(form, availableRooms, Mode.Edit, Some(a))
+    @views.html.admin.appointments.appointmentFields(a.appointment.team, form, availableRooms, Mode.Edit, Some(a))
 
     @tags.submitOrCancel("Update", controllers.admin.routes.AppointmentController.view(a.appointment.key))
   }

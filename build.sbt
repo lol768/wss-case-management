@@ -33,9 +33,9 @@ lazy val main = (project in file("."))
     javaOptions in Test += "-Dlogger.resource=test-logging.xml"
   )
 
-val playUtilsVersion = "1.26"
+val playUtilsVersion = "1.29"
 val ssoClientVersion = "2.63"
-val warwickUtilsVersion = "20181130"
+val warwickUtilsVersion = "20190221"
 val enumeratumVersion = "1.5.13"
 val enumeratumSlickVersion = "1.5.15"
 
@@ -87,7 +87,6 @@ val appDeps = Seq(
 
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
 
-  "org.dom4j" % "dom4j" % "2.1.1",
   "org.apache.tika" % "tika-core" % "1.20",
   "org.apache.tika" % "tika-parsers" % "1.20",
 
@@ -108,6 +107,7 @@ val testDeps = Seq(
   "org.seleniumhq.selenium" % "selenium-chrome-driver" % "3.141.59",
   "com.opentable.components" % "otj-pg-embedded" % "0.12.5",
   "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.22",
+  "org.dom4j" % "dom4j" % "2.1.1",
   "jaxen" % "jaxen" % "1.1.6"
 ).map(_ % Test)
 
@@ -152,8 +152,7 @@ resolvers += "oauth" at "http://oauth.googlecode.com/svn/code/maven"
 resolvers += "softprops-maven" at "http://dl.bintray.com/content/softprops/maven"
 resolvers += "slack-client" at "https://mvnrepository.com/artifact/net.gpedro.integrations.slack/slack-webhook"
 resolvers += "SBT plugins" at "https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/"
-resolvers += "nexus" at "https://mvn.elab.warwick.ac.uk/nexus/content/groups/public"
-credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
+resolvers += "nexus" at "https://mvn.elab.warwick.ac.uk/nexus/repository/public-anonymous/"
 
 // Define a special test task which does not fail when any test fails, so sequential tasks will be performed no
 // matter the test result.

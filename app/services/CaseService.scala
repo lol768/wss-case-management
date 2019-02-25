@@ -8,6 +8,7 @@ import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
+import domain.IssueKeyType.MigratedCase
 import domain.Pagination._
 import domain.QueryHelpers._
 import domain.dao.CaseDao._
@@ -64,15 +65,9 @@ trait CaseService {
   def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def deleteNote(caseID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
-  def listOpenCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
-  def countOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
-  def listOpenCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
-  def countOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
-
-  def listClosedCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
-  def countClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]]
-  def listClosedCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
-  def countClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def listCases(filter: CaseFilter, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
+  def countCases(filter: CaseFilter)(implicit t: TimingContext): Future[ServiceResult[Int]]
+  def getOwnersMatching(filter: CaseFilter)(implicit t: TimingContext): Future[ServiceResult[Seq[Member]]]
 
   def countOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def countClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
@@ -354,10 +349,18 @@ class CaseServiceImpl @Inject() (
       case _ => throw new IllegalArgumentException(s"Invalid target state $targetState")
     }
 
+    def checkValidTransition(clientCase: StoredCase): Future[Unit] = Future.successful {
+      if (clientCase.key.keyType == MigratedCase) {
+        // Mostly to stop reopening but they shouldn't change at all.
+        throw new IllegalStateException("Migrated cases cannot be transitioned")
+      }
+    }
+
     auditService.audit(Symbol(s"Case${targetState.entryName}"), caseID.toString, 'Case, Json.obj()) {
       memberService.getOrAddMember(caseNote.teamMember).successFlatMapTo(_ =>
         daoRunner.run(for {
           clientCase <- dao.find(caseID)
+          _ <- DBIO.from(checkValidTransition(clientCase))
           updated <- dao.update(clientCase.copy(state = targetState), version)
           _ <- addNoteDBIO(caseID, noteType, caseNote)
         } yield updated).map { sc => Right(sc.asCase) }
@@ -486,72 +489,42 @@ class CaseServiceImpl @Inject() (
       } yield done).map(Right.apply)
     }
 
-  override def listOpenCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] =
+  override def listCases(filter: CaseFilter, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] =
     daoRunner.run(
-      dao.listQuery(Some(team), None, IssueStateFilter.Open)
+      dao.listQuery(filter)
         .withLastUpdated
         .sortBy { case (_, lu) => lu.desc }
         .paginate(page)
         .result
     ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
 
-  override def countOpenCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
+  override def countCases(filter: CaseFilter)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
-      dao.listQuery(Some(team), None, IssueStateFilter.Open).length.result
+      dao.listQuery(filter).length.result
     ).map(Right.apply)
 
-  override def listOpenCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] =
+  override def getOwnersMatching(filter: CaseFilter)(implicit t: TimingContext): Future[ServiceResult[Seq[Member]]] =
     daoRunner.run(
-      dao.listQuery(None, Some(owner), IssueStateFilter.Open)
-        .withLastUpdated
-        .sortBy { case (_, lu) => lu.desc }
-        .paginate(page)
+      dao.listQuery(filter)
+        .join(Owner.owners.table)
+        .on { case (c, o) => c.id === o.entityId && o.entityType === (Owner.EntityType.Case: Owner.EntityType) }
+        .join(MemberDao.members.table)
+        .on { case ((_, o), m) => o.userId === m.usercode }
+        .map { case (_, m) => m }
+        .distinct
         .result
-    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
-
-  override def countOpenCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
-    daoRunner.run(
-      dao.listQuery(None, Some(owner), IssueStateFilter.Open).length.result
-    ).map(Right.apply)
-
-  override def listClosedCases(team: Team, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] =
-    daoRunner.run(
-      dao.listQuery(Some(team), None, IssueStateFilter.Closed)
-        .withLastUpdated
-        .sortBy { case (_, lu) => lu.desc }
-        .paginate(page)
-        .result
-    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
-
-  override def countClosedCases(team: Team)(implicit t: TimingContext): Future[ServiceResult[Int]] =
-    daoRunner.run(
-      dao.listQuery(Some(team), None, IssueStateFilter.Closed).length.result
-    ).map(Right.apply)
-
-  override def listClosedCases(owner: Usercode, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] =
-    daoRunner.run(
-      dao.listQuery(None, Some(owner), IssueStateFilter.Closed)
-        .withLastUpdated
-        .sortBy { case (_, lu) => lu.desc }
-        .paginate(page)
-        .result
-    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
-
-  override def countClosedCases(owner: Usercode)(implicit t: TimingContext): Future[ServiceResult[Int]] =
-    daoRunner.run(
-      dao.listQuery(None, Some(owner), IssueStateFilter.Closed).length.result
-    ).map(Right.apply)
+    ).map { results => Right(results.map(_.asMember).sorted) }
 
   override def countOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
-      dao.listQuery(Some(team), None, IssueStateFilter.Open)
+      dao.listQuery(CaseFilter(team).withState(IssueStateFilter.Open))
         .filter(_.created >= date)
         .length.result
     ).map(Right.apply)
 
   override def countClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
-      dao.listQuery(Some(team), None, IssueStateFilter.Closed)
+      dao.listQuery(CaseFilter(team).withState(IssueStateFilter.Closed))
         .filter(_.version >= date)
         .length.result
     ).map(Right.apply)
