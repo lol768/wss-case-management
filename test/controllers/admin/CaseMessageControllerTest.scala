@@ -1,14 +1,11 @@
 package controllers.admin
 
-import java.time.OffsetDateTime
+import java.time.{OffsetDateTime, ZoneId, ZoneOffset}
 
 import domain._
 import domain.dao.AbstractDaoTest
-import org.scalatestplus.play._
-import play.api.mvc._
-import play.api.test._
 import play.api.test.Helpers._
-import services.CaseService
+import warwick.core.helpers.JavaTime
 
 import scala.concurrent.Future
 
@@ -25,7 +22,13 @@ class CaseMessageControllerTest extends AbstractDaoTest {
         MessageRender(Fixtures.messages.messageDataFromClient(uniId, now), Nil)
       ))
       val result = Future.successful(controller.messagesResult(c, uniId, messages))
-      (contentAsJson(result)\"data"\"lastMessage").as[String] mustBe "2018-06-01T11:00:00.000+01"
+
+      val expected = JavaTime.timeZone.getId match {
+        case "Europe/London" => "2018-06-01T11:00:00.000+01"
+        case "Etc/UTC" | "Z" => "2018-06-01T10:00:00.000Z"
+      }
+
+      (contentAsJson(result) \ "data" \ "lastMessage").as[String] mustBe expected
     }
   }
 
