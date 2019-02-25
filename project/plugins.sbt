@@ -3,7 +3,7 @@ resolvers += "nexus" at "https://mvn.elab.warwick.ac.uk/nexus/repository/public-
 addSbtPlugin("uk.ac.warwick" % "play-warwick" % "0.8")
 
 // The Play plugin
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.6.20")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.7.0")
 
 // .tgz generator
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.18")

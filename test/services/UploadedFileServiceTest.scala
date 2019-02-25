@@ -10,7 +10,7 @@ import domain.UploadedFileSave
 import domain.dao.{AbstractDaoTest, DaoRunner, UploadedFileDao}
 import helpers.DataFixture
 import org.jclouds.http.HttpResponseException
-import org.mockito.Matchers._
+import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import warwick.core.timing.TimingService
 import warwick.objectstore.ObjectStorageService

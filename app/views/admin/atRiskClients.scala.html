@@ -14,15 +14,15 @@
       </tr>
     </thead>
     <tbody>
-    @clients.toSeq.sorted.map { case AtRiskClient(summary, lastCaseUpdated, lastEnquiryUpdated) =>
+    @clients.toSeq.sorted.map { atRisk =>
     <tr>
       <td>
-        <a href="@controllers.admin.routes.ClientController.client(summary.client.universityID)">
-          @summary.client.safeFullName
+        <a href="@controllers.admin.routes.ClientController.client(atRisk.summary.client.universityID)">
+          @atRisk.summary.client.safeFullName
         </a>
       </td>
       <td>
-        @summary.riskStatus.map {
+        @atRisk.summary.riskStatus.map {
           case ClientRiskStatus.Low => {
             <span class="label label-success">Low risk status</span>
           }
@@ -35,10 +35,10 @@
         }
       </td>
       <td>
-        @lastCaseUpdated.map(d => JavaTime.Relative(d))
+        @atRisk.lastUpdatedCase.map(d => JavaTime.Relative(d))
       </td>
       <td>
-        @lastEnquiryUpdated.map(d => JavaTime.Relative(d))
+        @atRisk.lastUpdatedEnquiry.map(d => JavaTime.Relative(d))
     </td>
     </tr>
     }

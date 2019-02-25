@@ -4,7 +4,7 @@ import java.util.UUID
 
 import domain.Owner.EntityType
 import domain.{AppointmentTeamMember, Member, Owner}
-import org.mockito.Matchers
+import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.quartz._
@@ -43,7 +43,7 @@ class Office365CalendarServiceTest extends PlaySpec with MockitoSugar with Scala
     "schedule a new job" in {
       var jobDetail: JobDetail = null
 
-      when(mockScheduler.scheduleJob(Matchers.any[JobDetail](), Matchers.any[Trigger]())).thenAnswer((invocation: InvocationOnMock) => {
+      when(mockScheduler.scheduleJob(any[JobDetail](), any[Trigger]())).thenAnswer((invocation: InvocationOnMock) => {
         jobDetail = invocation.getArguments.apply(0).asInstanceOf[JobDetail]
         null
       })
@@ -77,7 +77,7 @@ class Office365CalendarServiceTest extends PlaySpec with MockitoSugar with Scala
       when(mockScheduler.checkExists(jobKey)).thenReturn(true)
       when(mockScheduler.getJobDetail(jobKey)).thenReturn(existingJob)
 
-      when(mockScheduler.scheduleJob(Matchers.any[JobDetail](), Matchers.any[Trigger]())).thenAnswer((invocation: InvocationOnMock) => {
+      when(mockScheduler.scheduleJob(any[JobDetail](), any[Trigger]())).thenAnswer((invocation: InvocationOnMock) => {
         jobDetail = invocation.getArguments.apply(0).asInstanceOf[JobDetail]
         null
       })
@@ -103,7 +103,7 @@ class Office365CalendarServiceTest extends PlaySpec with MockitoSugar with Scala
     "handle both method signatures" in {
       var jobDetail: JobDetail = null
 
-      when(mockScheduler.scheduleJob(Matchers.any[JobDetail](), Matchers.any[Trigger]())).thenAnswer((invocation: InvocationOnMock) => {
+      when(mockScheduler.scheduleJob(any[JobDetail](), any[Trigger]())).thenAnswer((invocation: InvocationOnMock) => {
         jobDetail = invocation.getArguments.apply(0).asInstanceOf[JobDetail]
         null
       })

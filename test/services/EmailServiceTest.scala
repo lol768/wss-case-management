@@ -6,7 +6,7 @@ import domain.ExtendedPostgresProfile.api._
 import domain.dao.OutgoingEmailDao.PersistedOutgoingEmail
 import domain.dao.{DaoRunner, OutgoingEmailDao}
 import domain.{Fixtures, OutgoingEmail}
-import org.mockito.Matchers._
+import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.quartz.Scheduler
 import org.scalatest.concurrent.ScalaFutures
