@@ -6,7 +6,8 @@ import domain.ExtendedPostgresProfile.api._
 import domain.dao.OutgoingEmailDao.PersistedOutgoingEmail
 import domain.dao.{DaoRunner, OutgoingEmailDao}
 import domain.{Fixtures, OutgoingEmail}
-import org.mockito.Matchers._
+import helpers.DaoPatience
+import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.quartz.Scheduler
 import org.scalatest.concurrent.ScalaFutures
@@ -19,7 +20,7 @@ import warwick.sso.UserLookupService
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class EmailServiceTest extends PlaySpec with MockitoSugar with ScalaFutures with NoAuditLogging {
+class EmailServiceTest extends PlaySpec with MockitoSugar with ScalaFutures with NoAuditLogging with DaoPatience {
 
   private trait Fixture {
     val mockAuditService: AuditService = mock[AuditService](RETURNS_SMART_NULLS)

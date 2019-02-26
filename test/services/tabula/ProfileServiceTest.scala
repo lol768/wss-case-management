@@ -5,8 +5,8 @@ import java.time.LocalDate
 import domain._
 import helpers.OneAppPerSuite
 import helpers.caching.NeverExpiringMemoryAsyncCacheApi
-import org.mockito.Matchers
-import org.mockito.Mockito.when
+import org.mockito.ArgumentMatchers._
+import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.{Millis, Span}
@@ -49,7 +49,7 @@ class ProfileServiceTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
         val trustedApplicationsManager = mock[TrustedApplicationsManager]
         val currentApp = mock[CurrentApplication]
         val cert = mock[EncryptedCertificate]
-        when(currentApp.encode(Matchers.any(), Matchers.any())).thenReturn(cert)
+        when(currentApp.encode(any(), any())).thenReturn(cert)
         when(trustedApplicationsManager.getCurrentApplication).thenReturn(currentApp)
         val config = Configuration.from(Map(
           "wellbeing.tabula.user" -> "heron-user",

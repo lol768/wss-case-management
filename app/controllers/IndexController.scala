@@ -30,6 +30,7 @@ class IndexController @Inject()(
   registrations: RegistrationService,
   audit: AuditService,
   caseService: CaseService,
+  clients: ClientService,
   clientSummaries: ClientSummaryService,
   appointments: AppointmentService,
   userPreferences: UserPreferencesService,
@@ -227,13 +228,14 @@ class IndexController @Inject()(
   }
 
   def messages: Action[AnyContent] = SigninRequiredAction.async { implicit request =>
-    val client = currentUser().universityId.get
+    val universityID = currentUser().universityId.get
     ServiceResults.zip(
-      enquiryService.findAllEnquiriesForClient(client),
-      caseService.findAllForClient(client).map(_.map(_.filter(_.messages.nonEmpty))),
-      registrations.get(client),
-      profiles.getProfile(client).map(_.value),
-    ).successFlatMapTo { case (clientEnquiries, clientCases, registration, profile) =>
+      clients.find(universityID),
+      enquiryService.findAllEnquiriesForClient(universityID),
+      caseService.findAllForClient(universityID).map(_.map(_.filter(_.messages.nonEmpty))),
+      registrations.get(universityID),
+      profiles.getProfile(universityID).map(_.value),
+    ).successFlatMapTo { case (client, clientEnquiries, clientCases, registration, profile) =>
       ServiceResults.zip(
         enquiryService.getLastUpdatedMessageDates(clientEnquiries.map(_.enquiry.id).toSet),
         caseService.getLastUpdatedMessageDates(clientCases.map(_.clientCase.id).toSet),
@@ -244,14 +246,14 @@ class IndexController @Inject()(
         val messageForms: Map[IssueRender, Form[MessageFormData]] =
           enquiryIssues.map(issue => issue -> MessagesController.messageForm(enquiryLastMessageMap.get(issue.issue.id)).fill(MessageFormData("", enquiryLastMessageMap.get(issue.issue.id)))).toMap ++
           caseIssues.map { issue =>
-            val lastMessageDate = caseLastMessageMap.getOrElse(issue.issue.id, Map()).get(client)
+            val lastMessageDate = caseLastMessageMap.getOrElse(issue.issue.id, Map()).get(universityID)
             issue -> MessagesController.messageForm(lastMessageDate).fill(MessageFormData("", lastMessageDate))
           }
 
         val allIssues = (enquiryIssues ++ caseIssues).sortBy(_.lastUpdatedDate)(JavaTime.dateTimeOrdering).reverse
 
-
         val result = Future.successful(Right(Ok(views.html.messagesTab(
+          client.getOrElse(Client.transient(currentUser())),
           allIssues,
           registration,
           uploadedFileControllerHelper.supportedMimeTypes,

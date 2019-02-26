@@ -46,13 +46,13 @@
     "webpack-stream": "5.2.1"
   },
   "dependencies": {
+    "@universityofwarwick/id7": "2.2.3",
     "@universityofwarwick/serverpipe": "1.0.1",
     "bootstrap-3-typeahead": "github:UniversityofWarwick/Bootstrap-3-Typeahead#acada2f8e5d9a70dbb37c1fd152895937a03f8d5",
     "core-js": "2.6.1",
     "eonasdan-bootstrap-datetimepicker": "4.17.47",
     "fullcalendar": "github:UniversityofWarwick/fullcalendar#v3-csp",
     "fullcalendar-scheduler": "github:UniversityofWarwick/fullcalendar-scheduler#v1-csp",
-    "id7": "github:UniversityofWarwick/id7#v2.2.1",
     "isomorphic-fetch": "2.2.1",
     "jquery": "3.3.1",
     "lodash-es": "4.17.11",

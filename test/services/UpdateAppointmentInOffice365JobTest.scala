@@ -8,7 +8,7 @@ import domain.Owner.EntityType
 import domain.Teams.WellbeingSupport
 import domain._
 import helpers.ServiceResults
-import org.mockito.Matchers
+import org.mockito.ArgumentMatchers.{eq => isEqual, _}
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.quartz._
@@ -39,7 +39,7 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
     val mockO365Service: O365Service = mock[O365Service](RETURNS_SMART_NULLS)
     val mockPreferencesService: UserPreferencesService = mock[UserPreferencesService](RETURNS_SMART_NULLS)
 
-    when(mockPreferencesService.get(Matchers.any[Set[Usercode]])(Matchers.any())).thenAnswer((invocation: InvocationOnMock) => {
+    when(mockPreferencesService.get(any[Set[Usercode]])(any())).thenAnswer((invocation: InvocationOnMock) => {
       val usercodes = invocation.getArguments.apply(0).asInstanceOf[Set[Usercode]]
       Future.successful(Right(usercodes.map(u => u -> UserPreferences.default.copy(office365Enabled = true)).toMap))
     })
@@ -66,7 +66,7 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
     when(appointmentRender.clients).thenReturn(Set(AppointmentClient(Client(UniversityID("1234"), None, null), AppointmentState.Accepted, None, None)))
     when(appointmentRender.room).thenReturn(Some(Room(null, Building(null, "Building", 0, null, null), "Room", 0, available = true, Some(Usercode("room-in-building")), null, null)))
 
-    when(mockAppointmentService.findFull(Matchers.any(classOf[UUID]))(Matchers.any())).thenReturn(Future.successful(
+    when(mockAppointmentService.findFull(any(classOf[UUID]))(any())).thenReturn(Future.successful(
       ServiceResults.error[AppointmentRender](s"Could not find an Appointment with ID")
     ))
     when(mockAppointmentService.findFull(appointmentId)).thenReturn(Future.successful(Right(appointmentRender)))
@@ -133,7 +133,7 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
         job.execute(context)
       }
       exception.getMessage.indexOf("Could not find an Appointment with ID") mustBe 0
-      verify(mockScheduler, never()).scheduleJob(Matchers.any())
+      verify(mockScheduler, never()).scheduleJob(any())
     }
 
     "handle cancelled appointment (delete all O365 events with an ID)" in new Fixture {
@@ -146,8 +146,8 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
       private val cancelledRender = mock[AppointmentRender](RETURNS_SMART_NULLS)
       when(cancelledRender.appointment).thenReturn(cancelledAppointment)
 
-      when(mockAppointmentService.findFull(Matchers.eq(cancelledAppointmentId))(Matchers.any())).thenReturn(Future.successful(Right(cancelledRender)))
-      when(mockO365Service.deleteO365(Matchers.any(), Matchers.any(), Matchers.any())).thenReturn(Future.successful(Some(JsNull)))
+      when(mockAppointmentService.findFull(isEqual(cancelledAppointmentId))(any())).thenReturn(Future.successful(Right(cancelledRender)))
+      when(mockO365Service.deleteO365(any(), any(), any())).thenReturn(Future.successful(Some(JsNull)))
 
       private val context = setupContext(Map(
         "appointmentId" -> cancelledAppointmentId.toString,
@@ -157,8 +157,8 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
       job.execute(context)
       verify(mockO365Service, times(1)).deleteO365("cusfal", s"events/$outlookId1", Json.obj())
       verify(mockO365Service, times(1)).deleteO365("cusebr", s"events/$outlookId2", Json.obj())
-      verify(mockO365Service, never()).deleteO365(Matchers.eq("cuscao"), Matchers.any(), Matchers.any())
-      verify(mockScheduler, never()).scheduleJob(Matchers.any[JobDetail](), Matchers.any[Trigger]())
+      verify(mockO365Service, never()).deleteO365(isEqual("cuscao"), any(), any())
+      verify(mockScheduler, never()).scheduleJob(any[JobDetail](), any[Trigger]())
     }
 
     "handle appointment changes (1 owner added, 1 owner unchanged, 2 owners removed (1 previously pushed))" in new Fixture {
@@ -188,9 +188,9 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
 
       job.execute(context)
 
-      verify(mockO365Service, never()).deleteO365(Matchers.eq(owner4), Matchers.any(), Matchers.any())
-      verify(mockOwnerService, never()).setAppointmentOutlookId(Matchers.any(), Matchers.eq(Usercode(owner2)), Matchers.any())(Matchers.any())
-      verify(mockScheduler, never()).scheduleJob(Matchers.any[JobDetail](), Matchers.any[Trigger]())
+      verify(mockO365Service, never()).deleteO365(isEqual(owner4), any(), any())
+      verify(mockOwnerService, never()).setAppointmentOutlookId(any(), isEqual(Usercode(owner2)), any())(any())
+      verify(mockScheduler, never()).scheduleJob(any[JobDetail](), any[Trigger]())
     }
 
     "handle various errors" in new Fixture {
@@ -216,7 +216,7 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
 
       private var jobDetail: JobDetail = _
 
-      when(mockScheduler.scheduleJob(Matchers.any[JobDetail](), Matchers.any[Trigger]())).thenAnswer((invocation: InvocationOnMock) => {
+      when(mockScheduler.scheduleJob(any[JobDetail](), any[Trigger]())).thenAnswer((invocation: InvocationOnMock) => {
         jobDetail = invocation.getArguments.apply(0).asInstanceOf[JobDetail]
         null
       })
@@ -270,12 +270,12 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
 
       job.execute(context)
 
-      verify(mockO365Service, never()).postO365(Matchers.eq(owner1), Matchers.any(), Matchers.any()) // Owner 1 shouldn't be pushed even though they are added
-      verify(mockO365Service, times(1)).patchO365(Matchers.eq(owner2), Matchers.any(), Matchers.any()) // Owner 2 should be pushed
-      verify(mockO365Service, times(1)).deleteO365(Matchers.eq(owner3), Matchers.any(), Matchers.any()) // Owner 3 should be pushed as it's a delete and that should ignore that they're not enabled
+      verify(mockO365Service, never()).postO365(isEqual(owner1), any(), any()) // Owner 1 shouldn't be pushed even though they are added
+      verify(mockO365Service, times(1)).patchO365(isEqual(owner2), any(), any()) // Owner 2 should be pushed
+      verify(mockO365Service, times(1)).deleteO365(isEqual(owner3), any(), any()) // Owner 3 should be pushed as it's a delete and that should ignore that they're not enabled
 
-      verify(mockOwnerService, never()).setAppointmentOutlookId(Matchers.any(), Matchers.eq(Usercode(owner2)), Matchers.any())(Matchers.any())
-      verify(mockScheduler, never()).scheduleJob(Matchers.any[JobDetail](), Matchers.any[Trigger]())
+      verify(mockOwnerService, never()).setAppointmentOutlookId(any(), isEqual(Usercode(owner2)), any())(any())
+      verify(mockScheduler, never()).scheduleJob(any[JobDetail](), any[Trigger]())
     }
 
   }

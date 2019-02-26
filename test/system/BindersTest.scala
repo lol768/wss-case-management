@@ -34,7 +34,13 @@ class BindersTest extends PlaySpec {
       val dt = OffsetDateTime.parse("2018-10-22T10:00:00.000+01", JavaTime.iSO8601DateFormat)
 
       binder.bind("start", Map("start" -> Seq(dtAsString))) mustBe Some(Right(dt))
-      binder.unbind("start", dt) mustBe "start=2018-10-22T10%3A00%3A00.000%2B01"
+
+      val expected = JavaTime.timeZone.getId match {
+        case "Europe/London" => "start=2018-10-22T10%3A00%3A00.000%2B01"
+        case "Etc/UTC" | "UTC" | "Z" => "start=2018-10-22T09%3A00%3A00.000Z"
+      }
+
+      binder.unbind("start", dt) mustBe expected
     }
   }
 

@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets
 import akka.Done
 import com.google.common.io.ByteSource
 import domain.ExtendedPostgresProfile.api._
+import domain.IssueKeyType.MigratedCase
 import domain._
 import domain.dao.CaseDao.{CaseSearchQuery, StoredCaseClient}
 import domain.dao.ClientDao.StoredClient
@@ -17,14 +18,21 @@ import warwick.sso.{UniversityID, Usercode}
 
 class CaseServiceTest extends AbstractDaoTest {
 
+  import CaseDao.StoredCase
+
   private val service = get[CaseService]
   private val objectStorageService = get[ObjectStorageService]
 
-  class CaseFixture extends DataFixture[Case] {
+  private val migratedCase = {
+    val c = Fixtures.cases.newStoredCase()
+    c.copy(key = IssueKey(MigratedCase, 1234))
+  }
+
+  class CaseFixture(storedCase: StoredCase = Fixtures.cases.newStoredCase()) extends DataFixture[Case] {
     override def setup(): Case = {
       // Ensure that the case has a client, it's required and searching relies on it being a join not a left join
       val c = execWithCommit(
-        CaseDao.cases.insert(Fixtures.cases.newStoredCase())
+        CaseDao.cases.insert(storedCase)
       ).asCase
 
       execWithCommit(
@@ -188,6 +196,11 @@ class CaseServiceTest extends AbstractDaoTest {
 
       val c3 = service.updateState(c1.id, IssueState.Reopened, c2.lastUpdated, CaseNoteSave("Case reopened", Usercode("cuscav"), None)).serviceValue
       c3.state mustBe IssueState.Reopened
+    }
+
+    "not update a migrated case's state" in withData(new CaseFixture(migratedCase)) { c1 =>
+      val f = service.updateState(c1.id, IssueState.Reopened, c1.lastUpdated, CaseNoteSave("Case reopened", Usercode("cuscav"), None))
+      f.failed.futureValue mustBe an[IllegalStateException]
     }
 
     "get and set documents" in withData(new CaseFixture()) { c =>
