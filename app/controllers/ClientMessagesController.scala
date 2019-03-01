@@ -28,7 +28,7 @@ object MessagesController {
 
   def messageForm(lastMessageDate: Option[OffsetDateTime]) = Form(mapping(
     "text" -> nonEmptyText,
-    "lastMessage" -> optional(JavaTime.offsetDateTimeFormField), // Don't optimistic lock clients .verifying("error.optimisticLocking", _ == lastMessageDate)
+    "lastMessage" -> ignored[Option[OffsetDateTime]](None),
   )(MessageFormData.apply)(MessageFormData.unapply))
 }
 
