@@ -78,7 +78,7 @@ class DataImportController @Inject()(
       val forms: Seq[((String, Row), (Team, Form[CaseFormData], Option[Form[OwnerSave]], Seq[CaseNoteSave]))] =
         DataImportJob.parse(file.ref.in)
 
-      val (invalid, valid) = forms.partition { case (_, (_, caseForm, _, ownerForm, _)) =>
+      val (invalid, valid) = forms.partition { case (_, (_, caseForm, ownerForm, _)) =>
         caseForm.hasErrors || ownerForm.exists(_.hasErrors)
       }
 

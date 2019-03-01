@@ -1,6 +1,6 @@
 package services
 
-import java.time.OffsetDateTime
+import java.time.{OffsetDateTime, ZoneOffset}
 import java.util.UUID
 
 import akka.Done
@@ -184,7 +184,7 @@ class CaseServiceImpl @Inject() (
   }
 
   private[this] lazy val migratedCaseEpoch: OffsetDateTime =
-
+    OffsetDateTime.of(2018, 12, 31, 12, 0, 0, 0, ZoneOffset.UTC)
 
   override def importMigrated(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
     val id = UUID.randomUUID()
