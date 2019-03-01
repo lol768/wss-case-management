@@ -33,6 +33,7 @@ import scala.language.higherKinds
 @ImplementedBy(classOf[CaseServiceImpl])
 trait CaseService {
   def create(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team, originalEnquiry: Option[UUID], dsaApplication: Option[DSAApplicationSave])(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
+  def importMigrated(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
 
   def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Case]]
   def find(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
@@ -148,29 +149,58 @@ class CaseServiceImpl @Inject() (
       )
     )
 
+  private def insertCase(id: UUID, caseType: IssueKeyType, c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team, originalEnquiry: Option[UUID], application: Option[DSAApplicationSave])(implicit ac: AuditLogContext): DBIO[StoredCase] = {
+    assert(caseType == IssueKeyType.Case || caseType == IssueKeyType.MigratedCase)
+
+    val now = JavaTime.offsetDateTime
+
+    val dsaInsert: DBIO[Option[StoredDSAApplication]] =
+      application.map(a => dsaDao.insert(a.asStoredApplication(UUID.randomUUID(), now)).map(Some.apply)).getOrElse(DBIO.successful(None))
+
+    def fundingTypesInsert(newApplication: Option[UUID]): DBIO[Seq[StoredDSAFundingType]] = (for {
+      a <- application
+      na <- newApplication
+    } yield dsaDao.insertFundingTypes(a.fundingTypes.map { ft => StoredDSAFundingType(na, ft, now) })).getOrElse(DBIO.successful(Nil))
+
+    for {
+      nextId <- sql"SELECT nextval('SEQ_CASE_ID')".as[Int].head
+      dsa <- dsaInsert
+      _ <- fundingTypesInsert(dsa.map(_.id))
+      inserted <- dao.insert(createStoredCase(id, IssueKey(caseType, nextId), c, team, originalEnquiry, dsa.map(_.id)))
+      _ <- dao.insertClients(clients.map { universityId => StoredCaseClient(id, universityId, now) })
+      _ <- dao.insertTags(tags.map { t => StoredCaseTag(id, t, now) })
+    } yield inserted
+  }
+
   override def create(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team, originalEnquiry: Option[UUID], application: Option[DSAApplicationSave])(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
     val id = UUID.randomUUID()
 
     auditService.audit('CaseSave, id.toString, 'Case, Json.obj()) {
       clientService.getOrAddClients(clients).successFlatMapTo { _ =>
-        val now = JavaTime.offsetDateTime
+        daoRunner.run(insertCase(id, IssueKeyType.Case, c, clients, tags, team, originalEnquiry, application))
+          .map { sc => Right(sc.asCase) }
+      }
+    }
+  }
 
-        val dsaInsert: DBIO[Option[StoredDSAApplication]] =
-          application.map(a => dsaDao.insert(a.asStoredApplication(UUID.randomUUID(), now)).map(Some.apply)).getOrElse(DBIO.successful(None))
+  private[this] lazy val migratedCaseEpoch: OffsetDateTime =
 
-        def fundingTypesInsert(newApplication: Option[UUID]): DBIO[Seq[StoredDSAFundingType]] = (for {
-          a <- application
-          na <- newApplication
-        } yield dsaDao.insertFundingTypes(a.fundingTypes.map { ft => StoredDSAFundingType(na, ft, now) })).getOrElse(DBIO.successful(Nil))
 
+  override def importMigrated(c: CaseSave, clients: Set[UniversityID], tags: Set[CaseTag], team: Team)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] = {
+    val id = UUID.randomUUID()
+
+    auditService.audit('CaseImportMigrated, id.toString, 'Case, Json.obj()) {
+      clientService.getOrAddClients(clients).successFlatMapTo { _ =>
         daoRunner.run(for {
-          nextId <- sql"SELECT nextval('SEQ_CASE_ID')".as[Int].head
-          dsa <- dsaInsert
-          _ <- fundingTypesInsert(dsa.map(_.id))
-          inserted <- dao.insert(createStoredCase(id, IssueKey(IssueKeyType.Case, nextId), c, team, originalEnquiry, dsa.map(_.id)))
-          _ <- dao.insertClients(clients.map { universityId => StoredCaseClient(id, universityId, now) })
-          _ <- dao.insertTags(tags.map { t => StoredCaseTag(id, t, now) })
-        } yield inserted).map { sc => Right(sc.asCase) }
+          inserted <- insertCase(id, IssueKeyType.MigratedCase, c, clients, tags, team, None, None)
+          updated <- dao.update(inserted.copy(
+            state = IssueState.Closed,
+
+            // Transition back in time so these don't show up in stats
+            created = migratedCaseEpoch,
+          ), inserted.version)
+          _ <- addNoteDBIO(id, CaseNoteType.CaseClosed, CaseNoteSave("Case closed on migration", Usercode("system"), None))
+        } yield updated).map { sc => Right(sc.asCase) }
       }
     }
   }
