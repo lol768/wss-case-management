@@ -43,6 +43,7 @@ export default function PaginatingTable(element, bindTo) {
         container: 'body',
         template: '<div class="popover filter"><div class="arrow"></div><div class="popover-inner"><div class="popover-content"><p></p></div></div></div>',
         html: true,
+        sanitize: false,
         content: $filter.html(),
         placement: 'bottom',
       }).addClass('has-popover');

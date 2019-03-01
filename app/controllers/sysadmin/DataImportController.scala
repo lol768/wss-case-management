@@ -40,7 +40,6 @@ object DataImportController {
   val TeamColumnHeading = "Team"
   val NotesColumnHeading = "Notes"
   val CaseOwnerColumnHeading = "Case owner"
-  val IssueStateColumnHeading = "Case state"
 
   val ColumnMappings: Map[String, String] = Map(
     "Client" -> "clients[0]",
@@ -52,7 +51,7 @@ object DataImportController {
     "Cause" -> ((d: String) => CaseCause.values.find(_.description == d).map(_.entryName).getOrElse(d))
   )
 
-  val AllColumnHeadings: Seq[String] = Seq(TeamColumnHeading, NotesColumnHeading, CaseOwnerColumnHeading, IssueStateColumnHeading) ++ ColumnMappings.keys
+  val AllColumnHeadings: Seq[String] = Seq(TeamColumnHeading, NotesColumnHeading, CaseOwnerColumnHeading) ++ ColumnMappings.keys
 }
 
 @Singleton
@@ -76,10 +75,10 @@ class DataImportController @Inject()(
 
   def importCasesPreview(): Action[MultipartFormData[TemporaryUploadedFile]] = RequireSysadmin(uploadedFileControllerHelper.bodyParser) { implicit request =>
     request.body.file("file").map { file =>
-      val forms: Seq[((String, Row), (Team, Form[CaseFormData], IssueState, Option[Form[OwnerSave]], Seq[CaseNoteSave]))] =
+      val forms: Seq[((String, Row), (Team, Form[CaseFormData], Option[Form[OwnerSave]], Seq[CaseNoteSave]))] =
         DataImportJob.parse(file.ref.in)
 
-      val (invalid, valid) = forms.partition { case (_, (_, caseForm, _, ownerForm, _)) =>
+      val (invalid, valid) = forms.partition { case (_, (_, caseForm, ownerForm, _)) =>
         caseForm.hasErrors || ownerForm.exists(_.hasErrors)
       }
 
@@ -95,8 +94,8 @@ class DataImportController @Inject()(
           invalid,
           valid,
           Some(DataImportJob.form.fill(
-            valid.map { case ((sheetName, row), (team, caseForm, state, ownerForm, notes)) =>
-              ((sheetName, row), (team, caseForm.get, state, ownerForm.map(_.get), notes))
+            valid.map { case ((sheetName, row), (team, caseForm, ownerForm, notes)) =>
+              ((sheetName, row), (team, caseForm.get, ownerForm.map(_.get), notes))
             }
           ))
         ))
@@ -177,8 +176,8 @@ class SpreadsheetContentsHandler extends SheetContentsHandler {
 }
 
 object DataImportJob {
-  type ParsedSpreadsheet = Seq[((String, Row), (Team, Form[CaseFormData], IssueState, Option[Form[OwnerSave]], Seq[CaseNoteSave]))]
-  type JobData = Seq[((String, Row), (Team, CaseFormData, IssueState, Option[OwnerSave], Seq[CaseNoteSave]))]
+  type ParsedSpreadsheet = Seq[((String, Row), (Team, Form[CaseFormData], Option[Form[OwnerSave]], Seq[CaseNoteSave]))]
+  type JobData = Seq[((String, Row), (Team, CaseFormData, Option[OwnerSave], Seq[CaseNoteSave]))]
 
   implicit val universityIDFormat: Format[UniversityID] = Json.format[UniversityID]
   implicit val usercodeFormat: Format[Usercode] = Json.format[Usercode]
@@ -188,7 +187,7 @@ object DataImportJob {
   val ownerSaveFormat: Format[OwnerSave] = Json.format[OwnerSave]
   val caseNoteSaveFormat: Format[CaseNoteSave] = Json.format[CaseNoteSave]
 
-  val readsSingleRow: Reads[((String, Row), (Team, CaseFormData, IssueState, Option[OwnerSave], Seq[CaseNoteSave]))] =
+  val readsSingleRow: Reads[((String, Row), (Team, CaseFormData, Option[OwnerSave], Seq[CaseNoteSave]))] =
     (
       (
         (__ \ "sheetName").read[String] and
@@ -197,7 +196,6 @@ object DataImportJob {
       (
         (__ \ "team").read[Team](Teams.format) and
         (__ \ "caseFormData").read[CaseFormData](caseFormDataFormat) and
-        (__ \ "state").read[IssueState] and
         (__ \ "ownerFormData").readNullable[OwnerSave](ownerSaveFormat) and
         (__ \ "notes").read[Seq[CaseNoteSave]](Reads.seq(caseNoteSaveFormat))
       ).tupled
@@ -205,13 +203,12 @@ object DataImportJob {
 
   val jobDataFormat: Format[JobData] = Format(
     Reads.seq(readsSingleRow),
-    Writes.seq { case ((sheetName: String, row: Row), (team: Team, caseFormData: CaseFormData, state: IssueState, ownerFormData: Option[OwnerSave], notes: Seq[CaseNoteSave])) =>
+    Writes.seq { case ((sheetName: String, row: Row), (team: Team, caseFormData: CaseFormData, ownerFormData: Option[OwnerSave], notes: Seq[CaseNoteSave])) =>
       Json.obj(
         "sheetName" -> Json.toJson(sheetName),
         "row" -> Json.toJson(row)(SpreadsheetContentsHandler.rowFormat),
         "team" -> Json.toJson(team)(Teams.format),
         "caseFormData" -> Json.toJson(caseFormData)(caseFormDataFormat),
-        "state" -> Json.toJson(state),
         "ownerFormData" -> ownerFormData.map(Json.toJson(_)(ownerSaveFormat)),
         "notes" -> Json.toJson(notes)(Writes.seq(caseNoteSaveFormat)),
       )
@@ -283,11 +280,6 @@ object DataImportJob {
                 }
             )
 
-            val state =
-              row.values.get(IssueStateColumnHeading)
-                .flatMap { cell => IssueState.namesToValuesMap.get(cell.formattedValue) }
-                .getOrElse(IssueState.Open)
-
             // Has an owner been passed?
             val ownerForm =
               row.values.get(CaseOwnerColumnHeading)
@@ -324,7 +316,7 @@ object DataImportJob {
                 ))
               else None
 
-            ((sheetName, row), (team, form, state, ownerForm, Seq(generalNote, migrationNote).flatten))
+            ((sheetName, row), (team, form, ownerForm, Seq(generalNote, migrationNote).flatten))
           }
       }.seq
     }.seq
@@ -368,15 +360,8 @@ class DataImportJob @Inject()(
 
       implicit val ac: AuditLogContext = auditLogContext(Usercode("system"))
 
-      jobData.foreach { case (_, (team, caseData, state, ownerData, notes)) =>
-        val c = caseService.create(caseData.`case`, caseData.clients, Set.empty, team, None, None).serviceValue
-
-        state match {
-          case IssueState.Closed =>
-            caseService.updateState(c.id, IssueState.Closed, c.lastUpdated, CaseNoteSave("Case closed on migration", Usercode("system"), None)).serviceValue
-
-          case _ => // do nothing
-        }
+      jobData.foreach { case (_, (team, caseData, ownerData, notes)) =>
+        val c = caseService.importMigrated(caseData.`case`, caseData.clients, Set.empty, team).serviceValue
 
         ownerData.foreach { owner =>
           caseService.setOwners(c.id, owner.usercodes.toSet, None).serviceValue
