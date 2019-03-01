@@ -424,6 +424,7 @@ export default function AppointmentCalendar(container) {
           title: tooltip,
           placement: 'auto top',
           html: true,
+          sanitize: false,
           delay: {
             show: 500,
             hide: 100,

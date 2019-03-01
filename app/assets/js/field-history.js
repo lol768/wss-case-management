@@ -34,6 +34,7 @@ function handleData($container, data) {
               <div class="popover-content"></div>
             </div>`,
         html: true,
+        sanitize: false,
         trigger: 'manual',
         selector: true,
         placement: $i.parent().hasClass('pull-right') ? 'left' : 'right',

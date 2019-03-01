@@ -275,6 +275,7 @@ function bindTo($scope) {
       container: 'body',
       template: '<div class="popover wide"><div class="arrow"></div><div class="popover-inner"><div class="popover-content"><p></p></div></div></div>',
       html: true,
+      sanitize: false,
       content: `<iframe width="300" height="400" frameborder="0" src="${mapUrl}"></iframe>`,
       placement: 'auto bottom',
     });
