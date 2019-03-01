@@ -29,6 +29,7 @@ export default function UserListPopovers($container) {
               <div class="popover-content"></div>
             </div>`,
         html: true,
+        sanitize: false,
         trigger: 'manual',
         selector: true,
       }).addClass('has-popover').popover('show');
