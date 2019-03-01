@@ -59,6 +59,7 @@ POST        /register                               @controllers.registration.Re
 GET         /messages/:id                           @controllers.ClientMessagesController.messages(id: java.util.UUID)
 POST        /messages/:id                           @controllers.ClientMessagesController.addMessage(id: java.util.UUID)
 POST        /messages/:id/view                      @controllers.ClientMessagesController.auditView(id: java.util.UUID)
++nocsp
 GET         /messages/:id/:fileId                   @controllers.ClientMessagesController.download(id: java.util.UUID, fileId: java.util.UUID)
 
 ## Enquiries ##
@@ -105,6 +106,7 @@ POST        /team/enquiry/:enquiryKey/reassign                  @controllers.adm
 GET         /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquiryForm(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquirySubmit(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey/owners/self               @controllers.admin.OwnersController.enquirySubmitSelf(enquiryKey: domain.IssueKey)
++nocsp
 GET         /team/enquiry/:enquiryKey/:fileId                   @controllers.admin.TeamEnquiryController.download(enquiryKey: domain.IssueKey, fileId: java.util.UUID)
 
 GET         /team/case/create                       @controllers.admin.CaseController.createSelectTeam(fromEnquiry: Option[domain.IssueKey] ?= None, client: Option[warwick.sso.UniversityID] ?= None)
@@ -135,12 +137,14 @@ POST        /team/case/:caseKey/owners/self         @controllers.admin.OwnersCon
 GET         /team/case/:caseKey/documents           @controllers.admin.CaseController.documents(caseKey: domain.IssueKey)
 GET         /team/case/:caseKey/document            @controllers.admin.CaseDocumentController.addDocumentForm(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/document            @controllers.admin.CaseDocumentController.addDocument(caseKey: domain.IssueKey)
++nocsp
 GET         /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.download(caseKey: domain.IssueKey, id: java.util.UUID)
 POST        /team/case/:caseKey/document/:id/delete @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 DELETE      /team/case/:caseKey/document/:id        @controllers.admin.CaseDocumentController.delete(caseKey: domain.IssueKey, id: java.util.UUID)
 GET         /team/case/:caseKey/messages            @controllers.admin.CaseController.messages(caseKey: domain.IssueKey)
 GET         /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.messages(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
 POST        /team/case/:caseKey/messages/:client    @controllers.admin.CaseMessageController.addMessage(caseKey: domain.IssueKey, client: warwick.sso.UniversityID)
++nocsp
 GET         /team/case/:caseKey/attachments/:fileId @controllers.admin.CaseMessageController.download(caseKey: domain.IssueKey, fileId: java.util.UUID)
 GET         /team/case/:caseKey/appointments        @controllers.admin.CaseController.appointments(caseKey: domain.IssueKey)
 
