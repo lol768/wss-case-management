@@ -158,7 +158,7 @@
             @dsaApplication.map { dsa =>
               @tags.sectioned.detail("DSA application") {
 
-                @dsaField("Date of application"){
+                @dsaField("Date of DSA2 letter"){
                   <div data-field-history-field="dsaApplicationDate">
                     @dsa.applicationDate.map { applicationDate =>
                       @JavaTime.Relative(applicationDate)
@@ -180,7 +180,7 @@
 
                 @if(dsa.fundingApproved.isDefined) {
 
-                  @dsaField("Date of decision") {
+                  @dsaField("Date responded to") {
                     <div data-field-history-field="dsaConfirmationDate">
                       @dsa.confirmationDate.map { confirmationDate =>
                         @JavaTime.Relative(confirmationDate)
