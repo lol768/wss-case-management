@@ -82,7 +82,7 @@ object CaseController {
   val dsaForm: Form[Option[DSAApplicationSave]] = Form(
     single("dsaApplication" -> optional(
       mapping(
-        "customerReference" -> optional(text),
+        "customerReference" -> optional(text(maxLength = 1000)),
         "applicationDate" -> optional(FormHelpers.offsetDateTime),
         "fundingApproved" -> optional(boolean),
         "confirmationDate" -> optional(FormHelpers.offsetDateTime),
