@@ -89,6 +89,7 @@ object DSADao {
 
   case class StoredDSAApplication (
     id: UUID,
+    customerReference: Option[String],
     applicationDate: Option[OffsetDateTime],
     fundingApproved: Option[Boolean],
     confirmationDate: Option[OffsetDateTime],
@@ -101,6 +102,7 @@ object DSADao {
     override def storedVersion[B <: StoredVersion[StoredDSAApplication]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       StoredDSAApplicationVersion(
         id,
+        customerReference,
         applicationDate,
         fundingApproved,
         confirmationDate,
@@ -114,6 +116,7 @@ object DSADao {
 
   case class StoredDSAApplicationVersion(
     id: UUID,
+    customerReference: Option[String],
     applicationDate: Option[OffsetDateTime],
     fundingApproved: Option[Boolean],
     confirmationDate: Option[OffsetDateTime],
@@ -126,6 +129,7 @@ object DSADao {
 
     def asApplication = StoredDSAApplication(
       id,
+      customerReference,
       applicationDate,
       fundingApproved,
       confirmationDate,
@@ -135,6 +139,7 @@ object DSADao {
   }
 
   trait CommonDSAApplicationProperties { self: Table[_] =>
+    def customerReference = column[Option[String]]("customer_reference")
     def applicationDate = column[Option[OffsetDateTime]]("application_date_utc")
     def fundingApproved = column[Option[Boolean]]("funding_approved")
     def confirmationDate = column[Option[OffsetDateTime]]("confirmation_date_utc")
@@ -151,7 +156,7 @@ object DSADao {
     override def matchesPrimaryKey(other: StoredDSAApplication): Rep[Boolean] = id === other.id
 
     override def * : ProvenShape[StoredDSAApplication] =
-      (id, applicationDate, fundingApproved, confirmationDate, ineligibilityReason, version).mapTo[StoredDSAApplication]
+      (id, customerReference, applicationDate, fundingApproved, confirmationDate, ineligibilityReason, version).mapTo[StoredDSAApplication]
 
     def fk = foreignKey("fk_dsa_application", id, cases.table)(_.id)
   }
@@ -165,7 +170,7 @@ object DSADao {
     def timestamp = column[OffsetDateTime]("version_timestamp_utc")
     def auditUser = column[Option[Usercode]]("version_user")
 
-    override def * : ProvenShape[StoredDSAApplicationVersion] = (id, applicationDate, fundingApproved, confirmationDate, ineligibilityReason, version, operation, timestamp, auditUser).mapTo[StoredDSAApplicationVersion]
+    override def * : ProvenShape[StoredDSAApplicationVersion] = (id, customerReference, applicationDate, fundingApproved, confirmationDate, ineligibilityReason, version, operation, timestamp, auditUser).mapTo[StoredDSAApplicationVersion]
 
     def pk: PrimaryKey = primaryKey("pk_version_dsa_application", (id, timestamp))
     def idx: Index = index("idx_dsa_application_version", (id, version))
