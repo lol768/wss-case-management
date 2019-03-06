@@ -177,6 +177,7 @@ object Fixtures {
       )
 
     def newDSAApplicationSave() = DSAApplicationSave(
+      customerReference = None,
       applicationDate = None,
       fundingApproved = None,
       confirmationDate = None,
