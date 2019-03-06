@@ -25,7 +25,7 @@ object CaseDocumentController {
 
   val form = Form(mapping(
     "documentType" -> CaseDocumentType.formField,
-    "description" -> nonEmptyText
+    "description" -> text,
   )(DocumentForm.apply)(DocumentForm.unapply))
 
   def deleteForm(version: OffsetDateTime): Form[OffsetDateTime] = Form(single(
