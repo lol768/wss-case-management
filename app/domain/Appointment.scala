@@ -202,8 +202,8 @@ object AppointmentState extends PlayEnum[AppointmentState] {
 sealed abstract class AppointmentClientAttendanceState(val appointmentState: AppointmentState, val description: String) extends EnumEntry
 object AppointmentClientAttendanceState extends PlayEnum[AppointmentClientAttendanceState] {
   case object Attended extends AppointmentClientAttendanceState(AppointmentState.Attended, "Attended")
-  case object CancelledWithin24 extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "Cancelled (within 24 hours)")
-  case object CancelledOutside24 extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "Cancelled (outside of 24 hours)")
+  case object CancelledWithin24 extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "Cancelled (less than 24 hours)")
+  case object CancelledOutside24 extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "Cancelled (more than 24 hours)")
   case object DidNotAttend extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "Did not attend")
   case object DNAClaimable extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "DNA (claimable)")
   case object DNANonClaimable extends AppointmentClientAttendanceState(AppointmentState.Cancelled, "DNA (non-claimable)")

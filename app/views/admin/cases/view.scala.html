@@ -42,8 +42,8 @@
 
 @dsaField(label: String)(content: Html) = {
   <div class="row">
-    <div class="col-sm-4 control-label">@label</div>
-    <div class="col-sm-8">
+    <div class="col-sm-6 control-label">@label</div>
+    <div class="col-sm-6">
       <div class="form-control-static">
         @content
       </div>
@@ -157,6 +157,14 @@
           @if(dsaApplication.isDefined) {
             @dsaApplication.map { dsa =>
               @tags.sectioned.detail("DSA application") {
+
+                @dsaField("Customer reference number"){
+                  <div data-field-history-field="dsaCustomerReference">
+                  @dsa.customerReference.getOrElse {
+                    No customer reference
+                  }
+                  </div>
+                }
 
                 @dsaField("Date of DSA2 letter"){
                   <div data-field-history-field="dsaApplicationDate">
