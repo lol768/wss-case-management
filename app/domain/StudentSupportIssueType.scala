@@ -27,7 +27,7 @@ object StudentSupportIssueType extends PlayEnumWithOther[StudentSupportIssueType
   case object Prevent extends StudentSupportIssueType("Prevent")
   case object SafeAndWellCheck extends StudentSupportIssueType("Safe and Well check")
   case object SelfHarm extends StudentSupportIssueType("Self harm")
-  case object SexualAssault extends StudentSupportIssueType("Sexual assault")
+  case object SexualAssault extends StudentSupportIssueType("Sexual violence")
   case object Smoking extends StudentSupportIssueType("Smoking")
   case object UnauthorisedGuests extends StudentSupportIssueType("Unauthorised Guests/Party")
 
