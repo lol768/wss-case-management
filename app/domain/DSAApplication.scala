@@ -8,6 +8,7 @@ import enumeratum.{EnumEntry, PlayEnum}
 import scala.collection.immutable
 
 case class DSAApplication (
+  customerReference: Option[String],
   applicationDate: Option[OffsetDateTime],
   fundingApproved: Option[Boolean],
   confirmationDate: Option[OffsetDateTime],
@@ -18,6 +19,7 @@ case class DSAApplication (
   def asStoredApplication(id: UUID): StoredDSAApplication = {
     StoredDSAApplication(
       id = id,
+      customerReference = customerReference,
       applicationDate = applicationDate,
       fundingApproved = fundingApproved,
       confirmationDate = confirmationDate,
@@ -32,6 +34,7 @@ object DSAApplication {
 
   def apply(storedApplication: StoredDSAApplication, fundingTypes: Set[DSAFundingType]): DSAApplication = {
     DSAApplication(
+      customerReference = storedApplication.customerReference,
       applicationDate = storedApplication.applicationDate,
       fundingApproved = storedApplication.fundingApproved,
       confirmationDate = storedApplication.confirmationDate,
@@ -43,6 +46,7 @@ object DSAApplication {
 }
 
 case class DSAApplicationSave (
+  customerReference: Option[String],
   applicationDate: Option[OffsetDateTime],
   fundingApproved: Option[Boolean],
   confirmationDate: Option[OffsetDateTime],
@@ -53,6 +57,7 @@ case class DSAApplicationSave (
   def asStoredApplication(id: UUID, version: OffsetDateTime): StoredDSAApplication = {
     StoredDSAApplication(
       id = id,
+      customerReference = customerReference,
       applicationDate = applicationDate,
       fundingApproved = fundingApproved,
       confirmationDate = confirmationDate,
@@ -65,6 +70,7 @@ case class DSAApplicationSave (
 object DSAApplicationSave {
   def apply(dsa: DSAApplication): DSAApplicationSave = {
     DSAApplicationSave(
+      dsa.customerReference,
       dsa.applicationDate,
       dsa.fundingApproved,
       dsa.confirmationDate,

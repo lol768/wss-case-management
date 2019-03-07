@@ -295,6 +295,7 @@ object CaseHistory {
       "tags" -> toJson(r.tags.map { case (tags, v, u) => (tags.map(_.description).toSeq.sorted.mkString(", "), v, u) }),
       "owners" -> toJson(r.owners.map { case (owners, v, u) => (owners.map(o => o.map(user => user.name.full.getOrElse(user.usercode.string)).fold(_.string, n => n)).toSeq.sorted.mkString(", "), v, u) }),
       "clients" -> toJson(r.clients.map { case (clients, v, u) => (clients.map(c => c.safeFullName).toSeq.sorted.mkString(", "), v, u) }),
+      "dsaCustomerReference" -> toJson(dsaHistory[Option[String]](r.dsaCustomerReference, ref => ref.getOrElse("Reference removed"))),
       "dsaApplicationDate" -> toJson(dsaHistory[Option[OffsetDateTime]](r.dsaApplicationDate, date => date.map(JavaTime.Relative.apply(_)).getOrElse("Application date removed"))),
       "dsaFundingApproved" -> toJson(dsaHistory[Option[Boolean]](r.dsaFundingApproved, approved => approved.map(if (_) "Application approved" else "Application rejected").getOrElse("Application pending"))),
       "dsaFundingTypes" -> toJson(r.dsaFundingTypes.map { case (tags, v, u) => (tags.map(_.description).toSeq.sorted.mkString(", "), v, u) }),
@@ -349,6 +350,7 @@ object CaseHistory {
           .map { case (owners, v, u) => (owners.map(o => usersByUsercode.get(o.userId).map(Right.apply).getOrElse(Left(o.userId))), v, u.map(toUsercodeOrUser))},
         clients = flattenCollection[StoredCaseClient, StoredCaseClientVersion](rawClientHistory)
           .map { case (c, v, u) => (c.map(c => clients.find(_.universityID == c.universityID).get), v, u.map(toUsercodeOrUser))},
+        dsaCustomerReference = dsaFieldHistory(_.customerReference),
         dsaApplicationDate = dsaFieldHistory(_.applicationDate),
         dsaFundingApproved = dsaFieldHistory(_.fundingApproved),
         dsaConfirmationDate = dsaFieldHistory(_.confirmationDate),
@@ -382,6 +384,7 @@ case class CaseHistory(
   tags: FieldHistory[Set[CaseTag]],
   owners: Seq[(Set[Either[Usercode, User]], OffsetDateTime, Option[Either[Usercode, User]])],
   clients: FieldHistory[Set[Client]],
+  dsaCustomerReference: FieldHistory[Option[Option[String]]],
   dsaApplicationDate: FieldHistory[Option[Option[OffsetDateTime]]],
   dsaFundingApproved: FieldHistory[Option[Option[Boolean]]],
   dsaConfirmationDate: FieldHistory[Option[Option[OffsetDateTime]]],
