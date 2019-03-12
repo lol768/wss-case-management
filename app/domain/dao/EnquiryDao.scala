@@ -268,15 +268,33 @@ object EnquiryDao {
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
       .map { case ((e, c), mfm) => (e, c, mfm) }
-    def withLastUpdated = q
+    def withLastUpdatedFor(usercode: Usercode) = q
       .withClient
       .join(Message.lastUpdatedEnquiryMessage)
       .on { case ((e, _), (id, _)) => e.id === id }
-      .map { case ((e, c), (_, messageCreated)) =>
+      .map { case ((e, c), (_, lastMessage)) => (e, c, lastMessage) }
+      .join(Message.lastUpdatedEnquiryMessageFromClient)
+      .on { case ((e, _, _), (id, _)) => e.id === id }
+      .map { case ((e, c, lastMessage), (_, lastMessageFromClient)) => (e, c, lastMessage, lastMessageFromClient) }
+      .joinLeft(AuditEvent.latestEventsForUser('EnquiryView, usercode, 'Enquiry))
+      .on { case ((e, _, _, _), (targetId, _)) => e.id.asColumnOf[String] === targetId }
+      .map { case ((e, c, lastMessage, lastMessageFromClient), o) => (e, c, lastMessage, lastMessageFromClient, o.flatMap(_._2)) }
+      .map { case (e, c, lastMessage, lastMessageFromClient, lastViewed) =>
         val MinDate = OffsetDateTime.from(Instant.EPOCH.atOffset(ZoneOffset.UTC))
-        val lastModified = messageCreated.getOrElse(MinDate)
-        val mostRecentUpdate = slick.lifted.Case.If(lastModified > e.version).Then(lastModified).Else(e.version)
-        (e, c, mostRecentUpdate)
+        val lastModified = lastMessage.getOrElse(MinDate)
+        val mostRecentUpdate =
+          slick.lifted.Case.If(lastModified > e.version)
+            .Then(lastModified)
+            .Else(e.version)
+
+        // Only consider the last message from client if it's the most recent message in general
+        val latestMessageFromClient = lastMessageFromClient.getOrElse(MinDate)
+        val mostRecentMessageFromClient: Rep[Option[OffsetDateTime]] =
+          slick.lifted.Case.If(lastModified > latestMessageFromClient)
+            .Then(Option.empty[OffsetDateTime])
+            .Else(lastMessageFromClient)
+
+        (e, c, mostRecentUpdate, mostRecentMessageFromClient, lastViewed)
       }
   }
 

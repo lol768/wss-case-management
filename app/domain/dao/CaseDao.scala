@@ -502,14 +502,20 @@ object CaseDao {
         c.id === m.ownerId && m.ownerType === (MessageOwner.Case: MessageOwner)
       }
 
-    def withLastUpdated = q
+    def withLastUpdatedFor(usercode: Usercode) = q
       .joinLeft(Message.lastUpdatedCaseMessage)
       .on { case (c, (id, _)) => c.id === id }
       .map { case (c, o) => (c, o.flatMap(_._2)) }
       .joinLeft(CaseDao.lastUpdatedCaseNote)
       .on { case ((c, _), (id, _)) => c.id === id }
       .map { case ((c, messageCreated), o) => (c, messageCreated, o.flatMap(_._2)) }
-      .map { case (c, m, n) =>
+      .joinLeft(Message.lastUpdatedCaseMessageFromClient)
+      .on { case ((c, _, _), (id, _)) => c.id === id }
+      .map { case ((c, m, n), o) => (c, m, n, o.flatMap(_._2)) }
+      .joinLeft(AuditEvent.latestEventsForUser('CaseView, usercode, 'Case))
+      .on { case ((c, _, _, _), (targetId, _)) => c.id.asColumnOf[String] === targetId }
+      .map { case ((c, m, n, o), p) => (c, m, n, o, p.flatMap(_._2)) }
+      .map { case (c, m, n, lastMessageFromClient, lastViewed) =>
         // working out the most recent date is made easier if we deal with an arbitrary min date rather than handling the options
         val MinDate = OffsetDateTime.from(Instant.EPOCH.atOffset(ZoneOffset.UTC))
 
@@ -521,7 +527,14 @@ object CaseDao {
           .If((latestMessage > caseUpdated) && (latestMessage > latestNote)).Then(latestMessage)
           .Else(latestNote)
 
-        (c, mostRecentUpdate)
+        // Only consider the last message from client if it's the most recent message in general
+        val latestMessageFromClient = lastMessageFromClient.getOrElse(MinDate)
+        val mostRecentMessageFromClient: Rep[Option[OffsetDateTime]] =
+          slick.lifted.Case.If(latestMessage > latestMessageFromClient)
+            .Then(Option.empty[OffsetDateTime])
+            .Else(lastMessageFromClient)
+
+        (c, mostRecentUpdate, mostRecentMessageFromClient, lastViewed)
       }
   }
 
@@ -945,7 +958,7 @@ object CaseDao {
   case class CaseFilter(
     team: Option[Team] = None,
     owner: Set[Usercode] = Set.empty,
-    state: IssueStateFilter = IssueStateFilter.All
+    state: IssueStateFilter = IssueStateFilter.All,
   ) {
     require(team.nonEmpty || owner.nonEmpty, "One of team or owner must be set")
 
@@ -962,6 +975,6 @@ object CaseDao {
   val lastUpdatedCaseNote =
     caseNotes.table
       .groupBy(_.caseId)
-      .map { case (id, n) => (id, n.map(_.created).max) }
+      .map { case (id, n) => (id, n.map(_.version).max) }
 
 }

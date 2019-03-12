@@ -54,9 +54,9 @@ class AdminController @Inject()(
 
     ServiceResults.zip(
       enquiryService.countEnquiriesNeedingReply(filter),
-      enquiryService.findEnquiriesNeedingReply(filter, Pagination.firstPage()),
+      enquiryService.findEnquiriesNeedingReply(filter, IssueListFilter.empty, Pagination.firstPage()),
       enquiryService.countEnquiriesAwaitingClient(filter),
-      enquiryService.findEnquiriesAwaitingClient(filter, Pagination.firstPage()),
+      enquiryService.findEnquiriesAwaitingClient(filter, IssueListFilter.empty, Pagination.firstPage()),
       enquiryService.getOwnersMatching(filter, IssueStateFilter.Open),
       enquiryService.countClosedEnquiries(filter),
     ).successFlatMap { case (requiringActionCount, requiringAction, awaitingClientCount, awaitingClient, allOpenOwners, closedEnquiries) =>
@@ -87,14 +87,17 @@ class AdminController @Inject()(
     val baseFilter = EnquiryFilter(teamRequest.team)
     val filter = baseFilter.withOwners(form.value.getOrElse(Set.empty))
 
+    val issueListFilterForm = IssueListFilter.form.bindFromRequest()
+    val issueListFilter = issueListFilterForm.value.getOrElse(IssueListFilter.empty)
+
     ServiceResults.zip(
       enquiryService.countEnquiriesNeedingReply(filter),
-      enquiryService.findEnquiriesNeedingReply(filter, Pagination.asPage(page)),
+      enquiryService.findEnquiriesNeedingReply(filter, issueListFilter, Pagination.asPage(page)),
       enquiryService.getOwnersMatching(filter, IssueStateFilter.Open),
     ).successFlatMap { case (requiringActionCount, requiringAction, allOwners) =>
       val pagination = Pagination(requiringActionCount, page, controllers.admin.routes.AdminController.enquiriesNeedingReply(teamRequest.team.id))
       enquiryService.getOwners(requiringAction.map(_.enquiry.id).toSet).successMap { owners =>
-        Ok(views.html.admin.enquiriesNeedingReply(requiringAction, Some(owners), Some(allOwners), Some(form), pagination))
+        Ok(views.html.admin.enquiriesNeedingReply(requiringAction, Some(owners), Some(allOwners), Some(form), Some(issueListFilterForm), pagination))
       }
     }
   }
@@ -104,14 +107,17 @@ class AdminController @Inject()(
     val baseFilter = EnquiryFilter(teamRequest.team)
     val filter = baseFilter.withOwners(form.value.getOrElse(Set.empty))
 
+    val issueListFilterForm = IssueListFilter.form.bindFromRequest()
+    val issueListFilter = issueListFilterForm.value.getOrElse(IssueListFilter.empty)
+
     ServiceResults.zip(
       enquiryService.countEnquiriesAwaitingClient(filter),
-      enquiryService.findEnquiriesAwaitingClient(filter, Pagination.asPage(page)),
+      enquiryService.findEnquiriesAwaitingClient(filter, issueListFilter, Pagination.asPage(page)),
       enquiryService.getOwnersMatching(filter, IssueStateFilter.Open),
     ).successFlatMap { case (awaitingClientCount, awaitingClient, allOwners) =>
       val pagination = Pagination(awaitingClientCount, page, controllers.admin.routes.AdminController.enquiriesAwaitingClient(teamRequest.team.id))
       enquiryService.getOwners(awaitingClient.map(_.enquiry.id).toSet).successMap { owners =>
-        Ok(views.html.admin.enquiriesAwaitingClient(awaitingClient, Some(owners), Some(allOwners), Some(form), pagination))
+        Ok(views.html.admin.enquiriesAwaitingClient(awaitingClient, Some(owners), Some(allOwners), Some(form), Some(issueListFilterForm), pagination))
       }
     }
   }
@@ -121,14 +127,17 @@ class AdminController @Inject()(
     val baseFilter = EnquiryFilter(teamRequest.team)
     val filter = baseFilter.withOwners(form.value.getOrElse(Set.empty))
 
+    val issueListFilterForm = IssueListFilter.form.bindFromRequest()
+    val issueListFilter = issueListFilterForm.value.getOrElse(IssueListFilter.empty)
+
     ServiceResults.zip(
       enquiryService.countClosedEnquiries(filter),
-      enquiryService.findClosedEnquiries(filter, Pagination.asPage(page)),
+      enquiryService.findClosedEnquiries(filter, issueListFilter, Pagination.asPage(page)),
       enquiryService.getOwnersMatching(filter, IssueStateFilter.Open),
     ).successFlatMap { case (closed, closedEnquiries, allOwners) =>
       val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedEnquiries(teamRequest.team.id))
       enquiryService.getOwners(closedEnquiries.map(_.enquiry.id).toSet).successMap { owners =>
-        Ok(views.html.admin.closedEnquiries(closedEnquiries, Some(owners), Some(allOwners), Some(form), pagination))
+        Ok(views.html.admin.closedEnquiries(closedEnquiries, Some(owners), Some(allOwners), Some(form), Some(issueListFilterForm), pagination))
       }
     }
   }
@@ -140,7 +149,7 @@ class AdminController @Inject()(
 
     ServiceResults.zip(
       caseService.countCases(openCaseFilter),
-      caseService.listCases(openCaseFilter, Pagination.firstPage()),
+      caseService.listCases(openCaseFilter, IssueListFilter.empty, Pagination.firstPage()),
       caseService.countCases(closedCaseFilter),
       caseService.getOwnersMatching(openCaseFilter),
     ).successFlatMap { case (open, openCases, closedCases, allOpenCaseOwners) =>
@@ -171,9 +180,12 @@ class AdminController @Inject()(
     val baseFilter = CaseFilter(teamRequest.team).withState(IssueStateFilter.Open)
     val openCaseFilter = baseFilter.withOwners(form.value.getOrElse(Set.empty))
 
+    val issueListFilterForm = IssueListFilter.form.bindFromRequest()
+    val issueListFilter = issueListFilterForm.value.getOrElse(IssueListFilter.empty)
+
     ServiceResults.zip(
       caseService.countCases(openCaseFilter),
-      caseService.listCases(openCaseFilter, Pagination.asPage(page)),
+      caseService.listCases(openCaseFilter, issueListFilter, Pagination.asPage(page)),
       caseService.getOwnersMatching(baseFilter),
     ).successFlatMap { case (open, openCases, allOwners) =>
       val pagination = Pagination(open, page, controllers.admin.routes.AdminController.openCases(teamRequest.team.id))
@@ -181,7 +193,7 @@ class AdminController @Inject()(
         caseService.getClients(openCases.map(_.clientCase.id).toSet),
         caseService.getOwners(openCases.map(_.clientCase.id).toSet),
       ).successMap { case (clients, owners) =>
-        Ok(views.html.admin.openCases(openCases, clients, Some(owners), Some(allOwners), Some(form), pagination))
+        Ok(views.html.admin.openCases(openCases, clients, Some(owners), Some(allOwners), Some(form), Some(issueListFilterForm), pagination))
       }
     }
   }
@@ -191,9 +203,12 @@ class AdminController @Inject()(
     val baseFilter = CaseFilter(teamRequest.team).withState(IssueStateFilter.Closed)
     val closedCaseFilter = baseFilter.withOwners(form.value.getOrElse(Set.empty))
 
+    val issueListFilterForm = IssueListFilter.form.bindFromRequest()
+    val issueListFilter = issueListFilterForm.value.getOrElse(IssueListFilter.empty)
+
     ServiceResults.zip(
       caseService.countCases(closedCaseFilter),
-      caseService.listCases(closedCaseFilter, Pagination.asPage(page)),
+      caseService.listCases(closedCaseFilter, issueListFilter, Pagination.asPage(page)),
       caseService.getOwnersMatching(baseFilter),
     ).successFlatMap { case (closed, closedCases, allOwners) =>
       val pagination = Pagination(closed, page, controllers.admin.routes.AdminController.closedCases(teamRequest.team.id))
@@ -201,7 +216,7 @@ class AdminController @Inject()(
         caseService.getClients(closedCases.map(_.clientCase.id).toSet),
         caseService.getOwners(closedCases.map(_.clientCase.id).toSet),
       ).successMap { case (clients, owners) =>
-        Ok(views.html.admin.closedCases(closedCases, clients, Some(owners), Some(allOwners), Some(form), pagination))
+        Ok(views.html.admin.closedCases(closedCases, clients, Some(owners), Some(allOwners), Some(form), Some(issueListFilterForm), pagination))
       }
     }
   }

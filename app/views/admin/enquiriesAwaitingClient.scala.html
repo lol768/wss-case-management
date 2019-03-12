@@ -1,6 +1,6 @@
 @import java.util.UUID
 
-@import domain.{EnquiryListRender, Member, Pagination}
+@import domain.{EnquiryListRender, IssueListFilter, Member, Pagination}
 @import warwick.sso.Usercode
 
 @(
@@ -8,7 +8,8 @@
   owners: Option[Map[UUID, Set[Member]]],
   allOwners: Option[Seq[Member]],
   enquiryOwnersFilterForm: Option[Form[Set[Usercode]]],
+  issueListFilterForm: Option[Form[IssueListFilter]],
   pagination: Pagination
 )(implicit context: RequestContext, messages: MessagesProvider)
 
-@views.html.admin.enquiryTable(None, enquiries, owners, allOwners, enquiryOwnersFilterForm, pagination)
+@views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), enquiries, owners, allOwners, enquiryOwnersFilterForm, issueListFilterForm, pagination, Some("There are no enquiries awaiting client"))

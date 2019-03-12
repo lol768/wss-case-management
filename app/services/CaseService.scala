@@ -41,7 +41,7 @@ trait CaseService {
   def findAll(id: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Case]]]
   def findForView(caseKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[Case]]
   def findAllForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseRender]]]
-  def listForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
+  def listForClient(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[CaseListRender]]]
   def countOpenForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def countClosedForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def findForClient(id: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseRender]]
@@ -66,7 +66,7 @@ trait CaseService {
   def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def deleteNote(caseID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
-  def listCases(filter: CaseFilter, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]]
+  def listCases(filter: CaseFilter, listFilter: IssueListFilter, page: Page)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[CaseListRender]]]
   def countCases(filter: CaseFilter)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def getOwnersMatching(filter: CaseFilter)(implicit t: TimingContext): Future[ServiceResult[Seq[Member]]]
 
@@ -238,13 +238,15 @@ class CaseServiceImpl @Inject() (
     withClientMessagesAndNotes(universityID, dao.findByClientQuery(universityID)).map(Right.apply)
   }
 
-  override def listForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] = {
+  override def listForClient(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[CaseListRender]]] = {
     daoRunner.run(
       dao.findByClientQuery(universityID)
-        .withLastUpdated
-        .sortBy { case (_, lu) => lu.desc }
+        .withLastUpdatedFor(ac.usercode.orNull)
+        .sortBy { case (_, lu, _, _) => lu.desc }
         .result
-    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
+    ).map { results => Right(results.map { case (c, lastUpdated, lastMessageFromClient, lastViewed) =>
+      CaseListRender(c.asCase, lastUpdated, lastMessageFromClient, lastViewed) })
+    }
   }
 
   override def countOpenForClient(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Int]] = {
@@ -519,14 +521,26 @@ class CaseServiceImpl @Inject() (
       } yield done).map(Right.apply)
     }
 
-  override def listCases(filter: CaseFilter, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseListRender]]] =
+  override def listCases(filter: CaseFilter, listFilter: IssueListFilter, page: Page)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[CaseListRender]]] =
     daoRunner.run(
       dao.listQuery(filter)
-        .withLastUpdated
-        .sortBy { case (_, lu) => lu.desc }
+        .withLastUpdatedFor(ac.usercode.orNull)
+        .filter { case (_, lastUpdated, lastMessageFromClient, lastViewed) =>
+          val lastUpdatedAfterFilter = listFilter.lastUpdatedAfter.fold(true.bind)(lastUpdated > _)
+          val lastUpdatedBeforeFilter = listFilter.lastUpdatedBefore.fold(true.bind)(lastUpdated < _)
+          val hasUnreadsFilter = listFilter.hasUnreadClientMessages.fold(true.bind.?) {
+            case true => lastMessageFromClient.nonEmpty.? && (lastViewed.isEmpty.? || lastViewed < lastMessageFromClient)
+            case false => lastMessageFromClient.isEmpty.? || (lastViewed.nonEmpty.? && lastViewed >= lastMessageFromClient)
+          }
+
+          lastUpdatedAfterFilter && lastUpdatedBeforeFilter && hasUnreadsFilter
+        }
+        .sortBy { case (_, lu, _, _) => lu.desc }
         .paginate(page)
         .result
-    ).map { results => Right(results.map { case (c, lastUpdated) => CaseListRender(c.asCase, lastUpdated) }) }
+    ).map { results => Right(results.map { case (c, lastUpdated, lastMessageFromClient, lastViewed) =>
+      CaseListRender(c.asCase, lastUpdated, lastMessageFromClient, lastViewed) })
+    }
 
   override def countCases(filter: CaseFilter)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(

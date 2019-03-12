@@ -109,8 +109,10 @@ case class CaseRender(
 
 case class CaseListRender(
   clientCase: Case,
-  lastUpdated: OffsetDateTime
-)
+  lastUpdated: OffsetDateTime,
+  lastClientMessage: Option[OffsetDateTime],
+  lastViewed: Option[OffsetDateTime],
+) extends IssueListRender(clientCase)
 
 case class NoteAndCase(
   note: CaseNote,

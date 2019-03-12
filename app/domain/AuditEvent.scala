@@ -35,4 +35,10 @@ object AuditEvent {
   }
 
   val auditEvents = TableQuery[AuditEvents]
+
+  def latestEventsForUser(operation: Symbol, usercode: Usercode, targetType: Symbol): Query[(Rep[String], Rep[Option[OffsetDateTime]]), (String, Option[OffsetDateTime]), Seq] =
+    auditEvents
+      .filter(ae => ae.operation === operation && ae.usercode === usercode && ae.targetType === targetType)
+      .groupBy(_.targetId)
+      .map { case (targetId, ae) => (targetId, ae.map(_.date).max) }
 }

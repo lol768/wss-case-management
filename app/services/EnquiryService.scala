@@ -49,7 +49,7 @@ trait EnquiryService {
   def updateStateWithMessage(id: UUID, targetState: IssueState, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]]
 
   def findAllEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryRender]]]
-  def listEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]]
+  def listEnquiriesForClient(client: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryListRender]]]
 
   def get(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Enquiry]]
   def get(ids: Seq[UUID])(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]]
@@ -67,13 +67,13 @@ trait EnquiryService {
 
   def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
 
-  def findEnquiriesNeedingReply(filter: EnquiryFilter, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]]
+  def findEnquiriesNeedingReply(filter: EnquiryFilter, listFilter: IssueListFilter, page: Page)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryListRender]]]
   def countEnquiriesNeedingReply(filter: EnquiryFilter)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
-  def findEnquiriesAwaitingClient(filter: EnquiryFilter, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]]
+  def findEnquiriesAwaitingClient(filter: EnquiryFilter, listFilter: IssueListFilter, page: Page)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryListRender]]]
   def countEnquiriesAwaitingClient(filter: EnquiryFilter)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
-  def findClosedEnquiries(filter: EnquiryFilter, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]]
+  def findClosedEnquiries(filter: EnquiryFilter, listFilter: IssueListFilter, page: Page)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryListRender]]]
   def countClosedEnquiries(filter: EnquiryFilter)(implicit t: TimingContext): Future[ServiceResult[Int]]
 
   def getOwnersMatching(filter: EnquiryFilter, state: IssueStateFilter)(implicit t: TimingContext): Future[ServiceResult[Seq[Member]]]
@@ -216,15 +216,15 @@ class EnquiryServiceImpl @Inject() (
     }
   }
 
-  override def listEnquiriesForClient(client: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
+  override def listEnquiriesForClient(client: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
     daoRunner.run(
       enquiryDao.findByClientQuery(client)
-        .withLastUpdated
-        .sortBy { case (_, _, lu) => lu.desc }
+        .withLastUpdatedFor(ac.usercode.orNull)
+        .sortBy { case (_, _, lu, _, _) => lu.desc }
         .result
     ).map { tuples =>
-      Right(tuples.map { case (enquiry, c, lastUpdated) =>
-        EnquiryListRender(enquiry.asEnquiry(c.asClient), lastUpdated)
+      Right(tuples.map { case (enquiry, c, lastUpdated, lastMessageFromClient, lastViewed) =>
+        EnquiryListRender(enquiry.asEnquiry(c.asClient), lastUpdated, lastMessageFromClient, lastViewed)
       })
     }
 
@@ -292,20 +292,20 @@ class EnquiryServiceImpl @Inject() (
   override def setOwners(id: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] =
     ownerService.setEnquiryOwners(id, owners)
 
-  override def findEnquiriesNeedingReply(filter: EnquiryFilter, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
-    findEnquiriesWithLastSender(enquiryDao.findByFilterQuery(filter, IssueStateFilter.Open), MessageSender.Client, page)
+  override def findEnquiriesNeedingReply(filter: EnquiryFilter, listFilter: IssueListFilter, page: Page)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
+    findEnquiriesWithLastSender(enquiryDao.findByFilterQuery(filter, IssueStateFilter.Open), MessageSender.Client, listFilter, page)
 
   override def countEnquiriesNeedingReply(filter: EnquiryFilter)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     countEnquiriesWithLastSender(enquiryDao.findByFilterQuery(filter, IssueStateFilter.Open), MessageSender.Client)
 
-  override def findEnquiriesAwaitingClient(filter: EnquiryFilter, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
-    findEnquiriesWithLastSender(enquiryDao.findByFilterQuery(filter, IssueStateFilter.Open), MessageSender.Team, page)
+  override def findEnquiriesAwaitingClient(filter: EnquiryFilter, listFilter: IssueListFilter, page: Page)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
+    findEnquiriesWithLastSender(enquiryDao.findByFilterQuery(filter, IssueStateFilter.Open), MessageSender.Team, listFilter, page)
 
   override def countEnquiriesAwaitingClient(filter: EnquiryFilter)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     countEnquiriesWithLastSender(enquiryDao.findByFilterQuery(filter, IssueStateFilter.Open), MessageSender.Team)
 
-  override def findClosedEnquiries(filter: EnquiryFilter, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
-    findEnquiries(enquiryDao.findByFilterQuery(filter, IssueStateFilter.Closed), page)
+  override def findClosedEnquiries(filter: EnquiryFilter, listFilter: IssueListFilter, page: Page)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
+    findEnquiries(enquiryDao.findByFilterQuery(filter, IssueStateFilter.Closed), listFilter, page)
 
   override def countClosedEnquiries(filter: EnquiryFilter)(implicit t: TimingContext): Future[ServiceResult[Int]] =
     daoRunner.run(
@@ -337,19 +337,36 @@ class EnquiryServiceImpl @Inject() (
       .distinctOn { case (e, _, _) => e.id } // handle the slim possibility of two messages with exactly the same created date
       .filter { case (_, _, m) => m.sender === lastSender }
 
-  private def findEnquiriesWithLastSender(daoQuery: Query[Enquiries, StoredEnquiry, Seq], lastSender: MessageSender, page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
+  private def findEnquiriesWithLastSender(daoQuery: Query[Enquiries, StoredEnquiry, Seq], lastSender: MessageSender, listFilter: IssueListFilter, page: Page)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
     daoRunner.run(
       filterEnquiriesWithLastSender(daoQuery, lastSender)
         .map { case (e, c, m) =>
           val mostRecentUpdate = slick.lifted.Case.If(m.created > e.version).Then(m.created).Else(e.version)
-          (e, c, mostRecentUpdate)
+          val lastMessageFromClient: Rep[Option[OffsetDateTime]] =
+            if (lastSender == MessageSender.Client) m.created.?
+            else Option.empty[OffsetDateTime]
+
+          (e, c, mostRecentUpdate, lastMessageFromClient)
         }
-        .sortBy{ case (_, _, lu) => lu.desc }
+        .joinLeft(AuditEvent.latestEventsForUser('EnquiryView, ac.usercode.orNull, 'Enquiry))
+        .on { case ((e, _, _, _), (targetId, _)) => e.id.asColumnOf[String] === targetId }
+        .map { case ((e, c, lastMessage, lastMessageFromClient), o) => (e, c, lastMessage, lastMessageFromClient, o.flatMap(_._2)) }
+        .filter { case (_, _, lastUpdated, lastMessageFromClient, lastViewed) =>
+          val lastUpdatedAfterFilter = listFilter.lastUpdatedAfter.fold(true.bind)(lastUpdated > _)
+          val lastUpdatedBeforeFilter = listFilter.lastUpdatedBefore.fold(true.bind)(lastUpdated < _)
+          val hasUnreadsFilter = listFilter.hasUnreadClientMessages.fold(true.bind.?) {
+            case true => lastMessageFromClient.nonEmpty.? && (lastViewed.isEmpty.? || lastViewed < lastMessageFromClient)
+            case false => lastMessageFromClient.isEmpty.? || (lastViewed.nonEmpty.? && lastViewed >= lastMessageFromClient)
+          }
+
+          lastUpdatedAfterFilter && lastUpdatedBeforeFilter && hasUnreadsFilter
+        }
+        .sortBy { case (_, _, lu, _, _) => lu.desc }
         .paginate(page)
         .result
     ).map { pairs =>
-      Right(pairs.map { case (enquiry, client, lastUpdated) =>
-        EnquiryListRender(enquiry.asEnquiry(client.asClient), lastUpdated)
+      Right(pairs.map { case (enquiry, client, lastUpdated, lastMessageFromClient, lastViewed) =>
+        EnquiryListRender(enquiry.asEnquiry(client.asClient), lastUpdated, lastMessageFromClient, lastViewed)
       })
     }
 
@@ -360,16 +377,26 @@ class EnquiryServiceImpl @Inject() (
         .result
     ).map(Right.apply)
 
-  private def findEnquiries(daoQuery: Query[Enquiries, StoredEnquiry, Seq], page: Page)(implicit t: TimingContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
+  private def findEnquiries(daoQuery: Query[Enquiries, StoredEnquiry, Seq], listFilter: IssueListFilter, page: Page)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryListRender]]] =
     daoRunner.run(
       daoQuery
-        .withLastUpdated
-        .sortBy { case (_, _, lu) => lu.desc }
+        .withLastUpdatedFor(ac.usercode.orNull)
+        .filter { case (_, _, lastUpdated, lastMessageFromClient, lastViewed) =>
+          val lastUpdatedAfterFilter = listFilter.lastUpdatedAfter.fold(true.bind)(lastUpdated > _)
+          val lastUpdatedBeforeFilter = listFilter.lastUpdatedBefore.fold(true.bind)(lastUpdated < _)
+          val hasUnreadsFilter = listFilter.hasUnreadClientMessages.fold(true.bind.?) {
+            case true => lastMessageFromClient.nonEmpty.? && (lastViewed.isEmpty.? || lastViewed < lastMessageFromClient)
+            case false => lastMessageFromClient.isEmpty.? || (lastViewed.nonEmpty.? && lastViewed >= lastMessageFromClient)
+          }
+
+          lastUpdatedAfterFilter && lastUpdatedBeforeFilter && hasUnreadsFilter
+        }
+        .sortBy { case (_, _, lu, _, _) => lu.desc }
         .paginate(page)
         .result
     ).map { tuples =>
-      Right(tuples.map { case (enquiry, client, lastUpdated) =>
-        EnquiryListRender(enquiry.asEnquiry(client.asClient), lastUpdated)
+      Right(tuples.map { case (enquiry, client, lastUpdated, lastMessageFromClient, lastViewed) =>
+        EnquiryListRender(enquiry.asEnquiry(client.asClient), lastUpdated, lastMessageFromClient, lastViewed)
       })
     }
 

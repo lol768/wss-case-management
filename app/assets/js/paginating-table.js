@@ -40,7 +40,6 @@ export default function PaginatingTable(element, bindTo) {
     if ($filter.length === 1) {
       $btn.popover({
         trigger: 'manual',
-        container: 'body',
         template: '<div class="popover filter"><div class="arrow"></div><div class="popover-inner"><div class="popover-content"><p></p></div></div></div>',
         html: true,
         sanitize: false,
@@ -53,20 +52,9 @@ export default function PaginatingTable(element, bindTo) {
       $btn.on('click', () => $btn.popover('toggle'));
       $btn.on('shown.bs.popover', () => {
         const $popover = $btn.data('bs.popover').tip();
-        $popover.find('button[type="submit"]').on('click', () => {
-          let href = $table.data('pagination');
-          const values = $popover.find(':input').serializeArray()
-            .map(v => `${encodeURIComponent(v.name)}=${encodeURIComponent(v.value)}`)
-            .join('&');
+        bindTo($popover);
 
-          if (values) {
-            if (href.indexOf('?') !== -1) {
-              href += `&${values}`;
-            } else {
-              href += `?${values}`;
-            }
-          }
-
+        const doFetch = (href) => {
           fetchWithCredentials(href)
             .then((response) => {
               if (response.status === 200) {
@@ -81,6 +69,47 @@ export default function PaginatingTable(element, bindTo) {
             }).catch((err) => {
               log.error(err);
             });
+        };
+
+        $popover.find('button[type="submit"]').on('click', () => {
+          let href = $table.data('pagination');
+
+          let fields = $();
+          // Go through every popover for fields, not just this one
+          $table.find('> thead .has-popover[data-toggle="filter"]').each((j, button) => {
+            const $button = $(button);
+            const $tip = $button.data('bs.popover').tip();
+            const show = !$tip.hasClass('in');
+
+            if (show) {
+              // Initialise the popover's content
+              $button.popover('show');
+            }
+
+            fields = fields.add($tip.find(':input'));
+
+            if (show) {
+              $button.popover('hide');
+            }
+          });
+
+          const values = fields.serializeArray()
+            .map(v => `${encodeURIComponent(v.name)}=${encodeURIComponent(v.value)}`)
+            .join('&');
+
+          if (values) {
+            if (href.indexOf('?') !== -1) {
+              href += `&${values}`;
+            } else {
+              href += `?${values}`;
+            }
+          }
+
+          doFetch(href);
+        });
+
+        $popover.find('button[type="reset"]').on('click', () => {
+          doFetch($table.data('pagination'));
         });
       });
     } else {
