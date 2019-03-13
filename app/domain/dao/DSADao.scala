@@ -90,9 +90,9 @@ object DSADao {
   case class StoredDSAApplication (
     id: UUID,
     customerReference: Option[String],
-    applicationDate: Option[OffsetDateTime],
+    applicationDate: Option[LocalDate],
     fundingApproved: Option[Boolean],
-    confirmationDate: Option[OffsetDateTime],
+    confirmationDate: Option[LocalDate],
     ineligibilityReason: Option[DSAIneligibilityReason],
     version: OffsetDateTime = JavaTime.offsetDateTime
   ) extends Versioned[StoredDSAApplication] {
@@ -117,9 +117,9 @@ object DSADao {
   case class StoredDSAApplicationVersion(
     id: UUID,
     customerReference: Option[String],
-    applicationDate: Option[OffsetDateTime],
+    applicationDate: Option[LocalDate],
     fundingApproved: Option[Boolean],
-    confirmationDate: Option[OffsetDateTime],
+    confirmationDate: Option[LocalDate],
     ineligibilityReason: Option[DSAIneligibilityReason],
     version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
@@ -140,9 +140,9 @@ object DSADao {
 
   trait CommonDSAApplicationProperties { self: Table[_] =>
     def customerReference = column[Option[String]]("customer_reference")
-    def applicationDate = column[Option[OffsetDateTime]]("application_date_utc")
+    def applicationDate = column[Option[LocalDate]]("application_date_utc")
     def fundingApproved = column[Option[Boolean]]("funding_approved")
-    def confirmationDate = column[Option[OffsetDateTime]]("confirmation_date_utc")
+    def confirmationDate = column[Option[LocalDate]]("confirmation_date_utc")
     def ineligibilityReason = column[Option[DSAIneligibilityReason]]("ineligibility_reason")
     def version = column[OffsetDateTime]("version_utc")
   }
