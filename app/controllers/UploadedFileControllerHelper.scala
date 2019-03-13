@@ -114,8 +114,8 @@ class UploadedFileControllerHelperImpl @Inject()(
       HeaderNames.CACHE_CONTROL -> "private",
       HeaderNames.ETAG -> toEtag(uploadedFile),
 
-      // Restrictive CSP, just enough for Firefox/Chrome's PDF viewer to work
-      HeaderNames.CONTENT_SECURITY_POLICY -> "default-src 'none'; img-src 'self'; object-src 'self'; plugin-types application/pdf; style-src 'unsafe-inline'",
+      // Restrictive CSP, just enough for Firefox/Chrome's PDF viewer to work, plus audio/video
+      HeaderNames.CONTENT_SECURITY_POLICY -> "default-src 'none'; img-src 'self'; object-src 'self'; plugin-types application/pdf; style-src 'unsafe-inline'; media-src 'self'",
     )
 
     if (request.headers.get(HeaderNames.IF_NONE_MATCH).contains(toEtag(uploadedFile))) {
