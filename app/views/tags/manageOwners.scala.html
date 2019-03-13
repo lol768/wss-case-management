@@ -5,7 +5,8 @@
   owners: Set[Member],
   submit: Call,
   submitSelf: Call,
-  form: Option[Form[OwnerSave]] = None
+  form: Option[Form[OwnerSave]] = None,
+  readOnly: Boolean = false
 )(content: Html = Html(""))(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 <div class="row form-horizontal">
@@ -19,20 +20,24 @@
             <div class="clearfix" @if(owners.last == owner){ data-field-history-field="owners" }>
               <input type="hidden" name="owners[]" value="@owner.usercode.string">
               @owner.safeFullName
-              <a role="button" href="@submit" data-toggle="confirm-submit remove-submit" data-target="div" data-message="Are you sure you want to remove this owner?" aria-label="Remove owner">@*
-                *@<i class="fas fa-times-circle"></i>@*
-              *@</a>
+              @if(!readOnly) {
+                <a role="button" href="@submit" data-toggle="confirm-submit remove-submit" data-target="div" data-message="Are you sure you want to remove this owner?" aria-label="Remove owner">@*
+                  *@<i class="fas fa-times-circle"></i>@*
+                *@</a>
+              }
             </div>
           }
         }
       } else {
         <div>None</div>
       }
-      <div>
-        <a role="button" href="#add-owner-modal" data-toggle="modal" data-target="#add-owner-modal">
-          Add an owner
-        </a>
-      </div>
+      @if(!readOnly) {
+        <div>
+          <a role="button" href="#add-owner-modal" data-toggle="modal" data-target="#add-owner-modal">
+            Add an owner
+          </a>
+        </div>
+      }
       @content
       @views.b3.wellbeing.vertical.formCSRF(submit) { implicit ifc =>
         <div class="modal fade" id="add-owner-modal" tabindex="-1" role="dialog" aria-labelledby="add-owner-modal-label">
