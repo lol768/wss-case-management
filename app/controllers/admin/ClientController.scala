@@ -50,7 +50,7 @@ class ClientController @Inject()(
     "reasonable-adjustments" -> set(ReasonableAdjustment.formField)
   )(ClientSummarySave.apply)(ClientSummarySave.unapply))
 
-  private def clientInformation(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], ClientSummaryHistory, Seq[EnquiryListRender], Int, Int, Seq[AppointmentRender], Map[UUID, Set[Member]])]] = {
+  private def clientInformation(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], ClientSummaryHistory, Seq[EnquiryListRender], Int, Int, Seq[AppointmentRender], Map[UUID, Set[Member]])]] = {
     zip(
       profileService.getProfile(universityID).map(_.value),
       registrationService.get(universityID),

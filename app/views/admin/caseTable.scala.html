@@ -2,6 +2,7 @@
 @import java.util.UUID
 
 @import controllers.admin.AdminController
+@import domain.IssueListFilter
 @import domain.{Case, CaseListRender, Client, IdAndDescription, Member, Pagination}
 @import warwick.core.helpers.JavaTime
 @import warwick.sso.Usercode
@@ -13,11 +14,12 @@
   owners: Option[Map[UUID, Set[Member]]],
   allOwners: Option[Seq[Member]],
   caseOwnersFilterForm: Option[Form[Set[Usercode]]],
+  issueListFilterForm: Option[Form[IssueListFilter]],
   pagination: Pagination,
   emptyMessage: Option[String] = None
 )(implicit context: RequestContext, messages: MessagesProvider)
 
-@caseRow(clientCase: Case, lastUpdated: OffsetDateTime) = {
+@caseRow(clientCase: Case, lastUpdated: OffsetDateTime, hasUnreadClientMessage: Boolean) = {
   <tr>
     <td>
       @clients.get(clientCase.id).map { caseClients =>
@@ -43,12 +45,17 @@
         }
       </td>
     }
-    <td>@JavaTime.Relative(lastUpdated)</td>
+    <td>
+      @JavaTime.Relative(lastUpdated)
+      @if(hasUnreadClientMessage) {
+        @tags.icons.unreadClientMessage()
+      }
+    </td>
   </tr>
 }
 
-@if(cases.nonEmpty) {
-  @if(pagination.isFirst) {
+@if(pagination.isFirst) {
+  @if(cases.nonEmpty || caseOwnersFilterForm.exists(_.value.exists(_.nonEmpty)) || issueListFilterForm.exists(_.value.exists(_.nonEmpty))) {
     <table class="table table-default table-paginated" data-pagination="@pagination.route">
       @title.map { t => <caption>@t</caption> }
       <thead>
@@ -60,7 +67,7 @@
               Owners
               @allOwners.map { members =>
                 <button type="button" class="btn btn-link" data-toggle="filter">
-                  <i class="fal fa-filter"></i><span class="sr-only">Filter</span>
+                  <i class="@if(caseOwnersFilterForm.exists(_.value.exists(_.nonEmpty))) {fas} else {fal} fa-filter"></i><span class="sr-only">Filter</span>
                 </button>
                 <div class="hidden filter" aria-hidden="true">
                   @defining(caseOwnersFilterForm.getOrElse(AdminController.ownersFilterForm)) { form: Form[Set[Usercode]] =>
@@ -74,7 +81,10 @@
                       inModal = false
                     )(b3.vertical.fieldConstructor, messages)
 
-                    <button type="submit" class="btn btn-primary"><i class="fal fa-filter"></i> Filter cases</button>
+                    @b3.free('_class -> "spaced-buttons") {
+                      <button type="submit" class="btn btn-primary"><i class="fal fa-filter"></i> Filter cases</button>
+                      <button type="reset" class="btn btn-default">Clear filters</button>
+                    }(b3.vertical.fieldConstructor, messages)
                   }
                 </div>
               }
@@ -82,24 +92,59 @@
           } else {
             <th class="col-sm-6">Subject</th>
           }
-          <th class="col-sm-3">Last updated</th>
+          <th class="col-sm-3">
+            Last updated
+            <button type="button" class="btn btn-link" data-toggle="filter">
+              <i class="@if(issueListFilterForm.exists(_.value.exists(_.nonEmpty))) {fas} else {fal} fa-filter"></i><span class="sr-only">Filter</span>
+            </button>
+            <div class="hidden filter" aria-hidden="true">
+              @defining(issueListFilterForm.getOrElse(IssueListFilter.form.fill(IssueListFilter(lastUpdatedBefore = Some(JavaTime.offsetDateTime))))) { form: Form[IssueListFilter] =>
+                @b3.datePicker(form("lastUpdatedAfter"),
+                  '_label -> "Last updated after"
+                )(b3.vertical.fieldConstructor, messages.messages)
+
+                @b3.datePicker(form("lastUpdatedBefore"),
+                  '_label -> "Last updated before"
+                )(b3.vertical.fieldConstructor, messages.messages)
+
+                @b3.checkbox(form("hasUnreadClientMessages"),
+                  '_text -> "Has unread message(s) from client"
+                )(b3.vertical.fieldConstructor, messages)
+
+                @b3.free('_class -> "spaced-buttons") {
+                  <button type="submit" class="btn btn-primary"><i class="fal fa-filter"></i> Filter cases</button>
+                  <button type="reset" class="btn btn-default">Clear filters</button>
+                }(b3.vertical.fieldConstructor, messages)
+              }
+            </div>
+          </th>
         </tr>
       </thead>
       <tfoot>
-        @tags.tablePagination(pagination, owners.fold(3)(_ => 4), caseOwnersFilterForm)
+        @tags.tablePagination(pagination, owners.fold(3)(_ => 4), Seq(caseOwnersFilterForm, issueListFilterForm).flatten)
       </tfoot>
       <tbody>
         @cases.map { r =>
-          @caseRow(r.clientCase, r.lastUpdated)
+          @caseRow(r.clientCase, r.lastUpdated, r.hasUnreadClientMessage)
         }
       </tbody>
     </table>
   } else {
-    @cases.map { r =>
-      @caseRow(r.clientCase, r.lastUpdated)
-    }
-    @tags.tablePagination(pagination, owners.fold(3)(_ => 4), caseOwnersFilterForm)
+    @emptyMessage.map { m => <p>@m</p> }
   }
 } else {
-  @emptyMessage.map { m => <p>@m</p> }
+  @if(cases.nonEmpty) {
+    @cases.map { r =>
+      @caseRow(r.clientCase, r.lastUpdated, r.hasUnreadClientMessage)
+    }
+    @tags.tablePagination(pagination, owners.fold(3)(_ => 4), Seq(caseOwnersFilterForm, issueListFilterForm).flatten)
+  } else {
+    @emptyMessage.map { m =>
+      <tr>
+        <td colspan="@owners.fold(3)(_ => 4)">
+          @m
+        </td>
+      </tr>
+    }
+  }
 }

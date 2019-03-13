@@ -4,14 +4,16 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.mvc.{Action, AnyContent}
-import services.{SecurityService, UserPreferencesService}
+import services.{AppointmentService, SecurityService, UserPreferencesService}
 
 import scala.concurrent.{ExecutionContext, Future}
 import UserPreferencesController._
 import controllers.refiners.AnyTeamActionRefiner
 import domain.UserPreferences
+import domain.dao.AppointmentDao.AppointmentSearchQuery
 import play.api.i18n.Messages
 import play.api.libs.json.{JsValue, Json}
+import services.office365.Office365CalendarService
 
 object UserPreferencesController {
   val calendarViewForm = Form(single("calendarView" -> nonEmptyText))
@@ -25,6 +27,8 @@ object UserPreferencesController {
 class UserPreferencesController @Inject()(
   securityService: SecurityService,
   userPreferences: UserPreferencesService,
+  appointments: AppointmentService,
+  o365: Office365CalendarService,
   anyTeamActionRefiner: AnyTeamActionRefiner
 )(implicit executionContext: ExecutionContext) extends BaseController {
   import securityService._
@@ -41,9 +45,20 @@ class UserPreferencesController @Inject()(
       formWithErrors => Future.successful(Ok(views.html.preferences(formWithErrors))),
       enabled =>
         userPreferences.get(currentUser().usercode).successFlatMap { prefs =>
-          userPreferences.update(currentUser().usercode, prefs.copy(office365Enabled = enabled)).successMap(_ =>
-            Redirect(routes.IndexController.home()).flashing("success" -> Messages("flash.userPreferences.updated"))
-          )
+          userPreferences.update(currentUser().usercode, prefs.copy(office365Enabled = enabled)).successFlatMap { p =>
+            if (p.office365Enabled) {
+              appointments.findForSearch(AppointmentSearchQuery(teamMember = Some(currentUser().usercode)))
+                .successMap { appointments =>
+                  appointments.foreach { a =>
+                    o365.updateAppointment(a.appointment.id, a.teamMembers)
+                  }
+
+                  Redirect(routes.IndexController.home()).flashing("success" -> Messages("flash.userPreferences.updated"))
+                }
+            } else {
+               Future.successful(Redirect(routes.IndexController.home()).flashing("success" -> Messages("flash.userPreferences.updated")))
+            }
+          }
         }
     )
   }

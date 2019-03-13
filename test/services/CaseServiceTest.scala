@@ -8,7 +8,7 @@ import com.google.common.io.ByteSource
 import domain.ExtendedPostgresProfile.api._
 import domain.IssueKeyType.MigratedCase
 import domain._
-import domain.dao.CaseDao.{CaseSearchQuery, StoredCaseClient}
+import domain.dao.CaseDao.{CaseFilter, CaseSearchQuery, StoredCaseClient}
 import domain.dao.ClientDao.StoredClient
 import domain.dao.{AbstractDaoTest, CaseDao, ClientDao, UploadedFileDao}
 import helpers.DataFixture
@@ -254,6 +254,52 @@ class CaseServiceTest extends AbstractDaoTest {
       service.search(CaseSearchQuery(query = Some("assessment")), 5).serviceValue mustBe Seq(c)
       // Test prefix searching
       service.search(CaseSearchQuery(query = Some("asse")), 5).serviceValue mustBe Seq(c)
+    }
+
+    "list cases" in withData(new CaseFixture) { c =>
+      implicit def auditLogContext: AuditLogContext = super.auditLogContext.copy(usercode = Some(Usercode("cuscav")))
+
+      val filter = CaseFilter(Teams.MentalHealth).withState(IssueStateFilter.Open)
+
+      service.listCases(filter, IssueListFilter.empty, Pagination.firstPage()).serviceValue mustBe Seq(CaseListRender(c, c.lastUpdated, None, None))
+
+      // Add a new case note
+      val note = service.addGeneralNote(c.id, CaseNoteSave("Last updated date should now be the note's date", Usercode("cuscav"), None)).serviceValue
+
+      service.listCases(filter, IssueListFilter.empty, Pagination.firstPage()).serviceValue mustBe Seq(CaseListRender(c, note.lastUpdated, None, None))
+
+      // Add two new messages from the team
+      val (_, _) = service.addMessage(c, UniversityID("3344556"), MessageSave("The first message", MessageSender.Team, Some(Usercode("cuscav"))), Nil).serviceValue
+      val (message2, _) = service.addMessage(c, UniversityID("3344556"), MessageSave("The second message", MessageSender.Team, Some(Usercode("cuscav"))), Nil).serviceValue
+
+      service.listCases(filter, IssueListFilter.empty, Pagination.firstPage()).serviceValue mustBe Seq(CaseListRender(c, message2.created, None, None))
+
+      // Update the note
+      val updatedNote = service.updateNote(c.id, note.id, CaseNoteSave("Last updated should change when note updated", Usercode("cuscav"), None), note.lastUpdated).serviceValue
+
+      service.listCases(filter, IssueListFilter.empty, Pagination.firstPage()).serviceValue mustBe Seq(CaseListRender(c, updatedNote.lastUpdated, None, None))
+
+      // View the case
+      service.findForView(c.key).serviceValue
+
+      val renderWithLastViewed = service.listCases(filter, IssueListFilter.empty, Pagination.firstPage()).serviceValue.head
+      renderWithLastViewed.lastViewed must not be 'empty
+      renderWithLastViewed.lastViewed.exists(_.isAfter(updatedNote.lastUpdated)) mustBe true
+      renderWithLastViewed mustBe CaseListRender(c, updatedNote.lastUpdated, None, renderWithLastViewed.lastViewed)
+      renderWithLastViewed.hasUnreadClientMessage mustBe false
+
+      service.listCases(filter, IssueListFilter().withHasUnreadClientMessages(true), Pagination.firstPage()).serviceValue mustBe 'empty
+      service.listCases(filter, IssueListFilter().withHasUnreadClientMessages(false), Pagination.firstPage()).serviceValue mustBe Seq(renderWithLastViewed)
+
+      // Add a new message from the client
+      val (message3, _) = service.addMessage(c, UniversityID("3344556"), MessageSave("The third message", MessageSender.Client, None), Nil).serviceValue
+
+      val unreadRender = service.listCases(filter, IssueListFilter.empty, Pagination.firstPage()).serviceValue.head
+      unreadRender mustBe CaseListRender(c, message3.created, Some(message3.created), renderWithLastViewed.lastViewed)
+      unreadRender.hasUnreadClientMessage mustBe true
+
+      service.listCases(filter, IssueListFilter().withHasUnreadClientMessages(true), Pagination.firstPage()).serviceValue mustBe Seq(unreadRender)
+      service.listCases(filter, IssueListFilter().withHasUnreadClientMessages(false), Pagination.firstPage()).serviceValue mustBe 'empty
     }
   }
 }

@@ -1,12 +1,12 @@
 @import domain.Pagination
 @import java.net.URLEncoder.encode
 
-@(pagination: Pagination, columns: Int, filter: Option[Form[_]] = None)
+@(pagination: Pagination, columns: Int, filters: Seq[Form[_]] = Nil)
 
 @if(pagination.hasNext) {
   <tr class="pagination-row">
     <td colspan="@columns">
-      <a class="pagination-link btn btn-default" href="@{pagination.route}?@{pagination.paginationParam}=@{pagination.currentPage + 1}@filter.filter(_.data.nonEmpty).map(form => s"&${form.data.map { case (k, v) => s"${encode(k, "UTF-8")}=${encode(v, "UTF-8")}" }.mkString("&")}")">
+      <a class="pagination-link btn btn-default" href="@{pagination.route}?@{pagination.paginationParam}=@{pagination.currentPage + 1}@filters.filter(_.data.nonEmpty).map(form => s"&${form.data.map { case (k, v) => s"${encode(k, "UTF-8")}=${encode(v, "UTF-8")}" }.mkString("&")}")">
         <i class="fal fa-cloud-download"></i> Load more
       </a>
     </td>

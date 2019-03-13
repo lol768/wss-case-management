@@ -4,6 +4,7 @@ import java.time.OffsetDateTime
 
 import controllers.MessagesController.MessageFormData
 import controllers.refiners.AnyTeamActionRefiner
+import domain.AuditEvent._
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.CaseDao.CaseFilter
@@ -58,9 +59,9 @@ class IndexController @Inject()(
 
     ServiceResults.zip(
       enquiryService.countEnquiriesNeedingReply(filter),
-      enquiryService.findEnquiriesNeedingReply(filter, Pagination.firstPage()),
+      enquiryService.findEnquiriesNeedingReply(filter, IssueListFilter.empty, Pagination.firstPage()),
       enquiryService.countEnquiriesAwaitingClient(filter),
-      enquiryService.findEnquiriesAwaitingClient(filter, Pagination.firstPage()),
+      enquiryService.findEnquiriesAwaitingClient(filter, IssueListFilter.empty, Pagination.firstPage()),
       enquiryService.countClosedEnquiries(filter)
     ).successMap { case (requiringActionCount, requiringAction, awaitingClientCount, awaitingClient, closedEnquiries) =>
       Ok(views.html.admin.enquiriesTab(
@@ -82,34 +83,46 @@ class IndexController @Inject()(
 
   def enquiriesNeedingReply(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     val filter = EnquiryFilter(currentUser().usercode)
+
+    val issueListFilterForm = IssueListFilter.form.bindFromRequest()
+    val issueListFilter = issueListFilterForm.value.getOrElse(IssueListFilter.empty)
+
     ServiceResults.zip(
       enquiryService.countEnquiriesNeedingReply(filter),
-      enquiryService.findEnquiriesNeedingReply(filter, Pagination.asPage(page))
+      enquiryService.findEnquiriesNeedingReply(filter, issueListFilter, Pagination.asPage(page))
     ).successMap { case (requiringActionCount, requiringAction) =>
       val pagination = Pagination(requiringActionCount, page, controllers.routes.IndexController.enquiriesNeedingReply())
-      Ok(views.html.admin.enquiriesNeedingReply(requiringAction, None, None, None, pagination))
+      Ok(views.html.admin.enquiriesNeedingReply(requiringAction, None, None, None, Some(issueListFilterForm), pagination))
     }
   }
 
   def enquiriesAwaitingClient(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     val filter = EnquiryFilter(currentUser().usercode)
+
+    val issueListFilterForm = IssueListFilter.form.bindFromRequest()
+    val issueListFilter = issueListFilterForm.value.getOrElse(IssueListFilter.empty)
+
     ServiceResults.zip(
       enquiryService.countEnquiriesAwaitingClient(filter),
-      enquiryService.findEnquiriesAwaitingClient(filter, Pagination.asPage(page))
+      enquiryService.findEnquiriesAwaitingClient(filter, issueListFilter, Pagination.asPage(page))
     ).successMap { case (awaitingClientCount, awaitingClient) =>
       val pagination = Pagination(awaitingClientCount, page, controllers.routes.IndexController.enquiriesAwaitingClient())
-      Ok(views.html.admin.enquiriesAwaitingClient(awaitingClient, None, None, None, pagination))
+      Ok(views.html.admin.enquiriesAwaitingClient(awaitingClient, None, None, None, Some(issueListFilterForm), pagination))
     }
   }
 
   def closedEnquiries(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     val filter = EnquiryFilter(currentUser().usercode)
+
+    val issueListFilterForm = IssueListFilter.form.bindFromRequest()
+    val issueListFilter = issueListFilterForm.value.getOrElse(IssueListFilter.empty)
+
     ServiceResults.zip(
       enquiryService.countClosedEnquiries(filter),
-      enquiryService.findClosedEnquiries(filter, Pagination.asPage(page))
+      enquiryService.findClosedEnquiries(filter, issueListFilter, Pagination.asPage(page))
     ).successMap { case (closed, closedEnquiries) =>
       val pagination = Pagination(closed, page, controllers.routes.IndexController.closedEnquiries())
-      Ok(views.html.admin.closedEnquiries(closedEnquiries, None, None, None, pagination))
+      Ok(views.html.admin.closedEnquiries(closedEnquiries, None, None, None, Some(issueListFilterForm), pagination))
     }
   }
 
@@ -120,7 +133,7 @@ class IndexController @Inject()(
 
     ServiceResults.zip(
       caseService.countCases(openCaseFilter),
-      caseService.listCases(openCaseFilter, Pagination.firstPage()),
+      caseService.listCases(openCaseFilter, IssueListFilter.empty, Pagination.firstPage()),
       caseService.countCases(closedCaseFilter)
     ).successFlatMap { case (open, openCases, closedCases) =>
       val pagination = Pagination(open, 0, controllers.routes.IndexController.openCases())
@@ -145,13 +158,16 @@ class IndexController @Inject()(
   def openCases(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     val openCaseFilter = CaseFilter(currentUser().usercode).withState(IssueStateFilter.Open)
 
+    val issueListFilterForm = IssueListFilter.form.bindFromRequest()
+    val issueListFilter = issueListFilterForm.value.getOrElse(IssueListFilter.empty)
+
     ServiceResults.zip(
       caseService.countCases(openCaseFilter),
-      caseService.listCases(openCaseFilter, Pagination.asPage(page))
+      caseService.listCases(openCaseFilter, issueListFilter, Pagination.asPage(page))
     ).successFlatMap { case (open, openCases) =>
       val pagination = Pagination(open, page, controllers.routes.IndexController.openCases())
       caseService.getClients(openCases.map(_.clientCase.id).toSet).successMap { clients =>
-        Ok(views.html.admin.openCases(openCases, clients, None, None, None, pagination))
+        Ok(views.html.admin.openCases(openCases, clients, None, None, None, Some(issueListFilterForm), pagination))
       }
     }
   }
@@ -159,13 +175,16 @@ class IndexController @Inject()(
   def closedCases(page: Int): Action[AnyContent] = AnyTeamMemberRequiredAction.async { implicit request =>
     val closedCaseFilter = CaseFilter(currentUser().usercode).withState(IssueStateFilter.Closed)
 
+    val issueListFilterForm = IssueListFilter.form.bindFromRequest()
+    val issueListFilter = issueListFilterForm.value.getOrElse(IssueListFilter.empty)
+
     ServiceResults.zip(
       caseService.countCases(closedCaseFilter),
-      caseService.listCases(closedCaseFilter, Pagination.asPage(page))
+      caseService.listCases(closedCaseFilter, issueListFilter, Pagination.asPage(page))
     ).successFlatMap { case (closed, closedCases) =>
       val pagination = Pagination(closed, page, controllers.routes.IndexController.closedCases())
       caseService.getClients(closedCases.map(_.clientCase.id).toSet).successMap { clients =>
-        Ok(views.html.admin.closedCases(closedCases, clients, None, None, None, pagination))
+        Ok(views.html.admin.closedCases(closedCases, clients, None, None, None, Some(issueListFilterForm), pagination))
       }
     }
   }
@@ -263,8 +282,8 @@ class IndexController @Inject()(
 
         // Record an EnquiryView or CaseView event for the first issue
         allIssues.headOption.map(issue => issue.issue match {
-          case e: Enquiry => audit.audit('EnquiryView, e.id.toString, 'Enquiry, Json.obj())(result)
-          case c: Case => audit.audit('CaseView, c.id.toString, 'Case, Json.obj())(result)
+          case e: Enquiry => audit.audit(Operation.Enquiry.View, e.id.toString, Target.Enquiry, Json.obj())(result)
+          case c: Case => audit.audit(Operation.Case.View, c.id.toString, Target.Case, Json.obj())(result)
           case _ => result
         }).getOrElse(result)
       }

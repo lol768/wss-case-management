@@ -1,6 +1,6 @@
 @import java.util.UUID
 
-@import domain.{CaseListRender, Client, Member, Pagination}
+@import domain.{CaseListRender, Client, IssueListFilter, Member, Pagination}
 @import warwick.sso.Usercode
 
 @(
@@ -9,7 +9,8 @@
   owners: Option[Map[UUID, Set[Member]]],
   allOwners: Option[Seq[Member]],
   caseOwnersFilterForm: Option[Form[Set[Usercode]]],
+  issueListFilterForm: Option[Form[IssueListFilter]],
   pagination: Pagination,
 )(implicit context: RequestContext, messages: MessagesProvider)
 
-@views.html.admin.caseTable(None, cases, clients, owners, allOwners, caseOwnersFilterForm, pagination, Some("There are no open cases"))
+@views.html.admin.caseTable(Some("Open cases"), cases, clients, owners, allOwners, caseOwnersFilterForm, issueListFilterForm, pagination, Some("There are no open cases"))

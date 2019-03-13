@@ -1,5 +1,6 @@
 package services
 
+import domain.AuditEvent._
 import java.time.Duration
 
 import domain.ExtendedPostgresProfile.api._
@@ -118,10 +119,10 @@ class AppointmentServiceTest extends AbstractDaoTest {
 
       val auditService = get[AuditService]
 
-      auditService.audit('AppointmentView, a.id.toString, 'Appointment, Json.obj())(Future.successful(Right(()))).serviceValue
-      auditService.audit('AppointmentView, a.id.toString, 'Appointment, Json.obj())(Future.successful(Right(()))).serviceValue
-      auditService.audit('AppointmentView, a.id.toString, 'Appointment, Json.obj())(Future.successful(Right(()))).serviceValue
-      auditService.audit('AppointmentView, a.id.toString, 'Appointment, Json.obj())(Future.successful(Right(()))).serviceValue
+      auditService.audit(Operation.Appointment.View, a.id.toString, Target.Appointment, Json.obj())(Future.successful(Right(()))).serviceValue
+      auditService.audit(Operation.Appointment.View, a.id.toString, Target.Appointment, Json.obj())(Future.successful(Right(()))).serviceValue
+      auditService.audit(Operation.Appointment.View, a.id.toString, Target.Appointment, Json.obj())(Future.successful(Right(()))).serviceValue
+      auditService.audit(Operation.Appointment.View, a.id.toString, Target.Appointment, Json.obj())(Future.successful(Right(()))).serviceValue
 
       service.findRecentlyViewed(Usercode("cuscav"), 5).serviceValue mustBe Seq(a)
     }

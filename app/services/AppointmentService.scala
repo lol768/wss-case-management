@@ -5,6 +5,7 @@ import java.util.{Date, UUID}
 
 import akka.Done
 import com.google.inject.ImplementedBy
+import domain.AuditEvent._
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain.dao.AppointmentDao.{AppointmentCase, AppointmentSearchQuery, Appointments, StoredAppointment, StoredAppointmentClient}
@@ -136,7 +137,7 @@ class AppointmentServiceImpl @Inject()(
 
   override def create(appointment: AppointmentSave, clients: Set[UniversityID], teamMembers: Set[Usercode], team: Team, caseIDs: Set[UUID], currentUser: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
     val id = UUID.randomUUID()
-    auditService.audit('AppointmentSave, id.toString, 'Appointment, Json.obj()) {
+    auditService.audit(Operation.Appointment.Save, id.toString, Target.Appointment, Json.obj()) {
       ServiceResults.zip(
         clientService.getOrAddClients(clients),
         memberService.getOrAddMembers(teamMembers)
@@ -179,7 +180,7 @@ class AppointmentServiceImpl @Inject()(
   }
 
   override def update(id: UUID, changes: AppointmentSave, cases: Set[UUID], clients: Set[UniversityID], teamMembers: Set[Usercode], currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] = {
-    auditService.audit('AppointmentUpdate, id.toString, 'Appointment, Json.obj()) {
+    auditService.audit(Operation.Appointment.Update, id.toString, Target.Appointment, Json.obj()) {
       def newState(existing: StoredAppointment, clientResult: UpdateDifferencesResult[StoredAppointmentClient]): AppointmentState =
         if (existing.state == AppointmentState.Provisional || existing.state == AppointmentState.Cancelled || existing.state == AppointmentState.Attended)
           existing.state
@@ -310,7 +311,7 @@ class AppointmentServiceImpl @Inject()(
   }
 
   override def reschedule(id: UUID, changes: AppointmentSave, currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
-    auditService.audit('AppointmentReschedule, id.toString, 'Appointment, Json.obj()) {
+    auditService.audit(Operation.Appointment.Reschedule, id.toString, Target.Appointment, Json.obj()) {
       daoRunner.run(for {
         existing <- dao.findByIDQuery(id).result.head
         clients <- getClientsQuery(id).result
@@ -413,7 +414,7 @@ class AppointmentServiceImpl @Inject()(
     }
 
   override def findForRender(appointmentKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentRender]] =
-    auditService.audit('AppointmentView, (a: AppointmentRender) => a.appointment.id.toString, 'Appointment, Json.obj()) {
+    auditService.audit(Operation.Appointment.View, (a: AppointmentRender) => a.appointment.id.toString, Target.Appointment, Json.obj()) {
       val query = dao.findByKeyQuery(appointmentKey)
       listForRender(query).map(_.map(_.head)).recover {
         case _: NoSuchElementException => ServiceResults.error[AppointmentRender](s"Could not find an Appointment with key ${appointmentKey.string}")
@@ -440,7 +441,7 @@ class AppointmentServiceImpl @Inject()(
     listForRender(dao.findByCaseQuery(caseID))
 
   override def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Appointment]]] =
-    auditService.findRecentTargetIDsByOperation('AppointmentView, teamMember, limit).flatMap(_.fold(
+    auditService.findRecentTargetIDsByOperation(Operation.Appointment.View, teamMember, limit).flatMap(_.fold(
       errors => Future.successful(Left(errors)),
       ids => find(ids.map(UUID.fromString))
     ))
@@ -565,7 +566,7 @@ class AppointmentServiceImpl @Inject()(
     ownerService.getAppointmentOwners(Set(id)).successMapTo(_.getOrElse(id, Set()))
 
   override def clientAccept(appointmentID: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
-    auditService.audit('AppointmentAccept, appointmentID.toString, 'Appointment, Json.obj("universityID" -> universityID.string)) {
+    auditService.audit(Operation.Appointment.Accept, appointmentID.toString, Target.Appointment, Json.obj("universityID" -> universityID.string)) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
         client <-
@@ -595,7 +596,7 @@ class AppointmentServiceImpl @Inject()(
     }
 
   override def clientDecline(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
-    auditService.audit('AppointmentDecline, appointmentID.toString, 'Appointment, Json.obj("universityID" -> universityID.string, "reason" -> reason.entryName)) {
+    auditService.audit(Operation.Appointment.Decline, appointmentID.toString, Target.Appointment, Json.obj("universityID" -> universityID.string, "reason" -> reason.entryName)) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
         clients <- getClientsQuery(appointmentID).result
@@ -622,7 +623,7 @@ class AppointmentServiceImpl @Inject()(
     }
 
   override def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])], outcomes: AppointmentOutcomesSave, note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
-    auditService.audit('AppointmentOutcomes, appointmentID.toString, 'Appointment, Json.obj()) {
+    auditService.audit(Operation.Appointment.Outcomes, appointmentID.toString, Target.Appointment, Json.obj()) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).filter(_.version === version).result.head
         cases <- dao.findByIDQuery(appointmentID).withCases.map { case (_, c) => c }.result
@@ -677,7 +678,7 @@ class AppointmentServiceImpl @Inject()(
     }
 
   override def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, note: Option[CaseNoteSave], currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
-    auditService.audit('AppointmentCancel, appointmentID.toString, 'Appointment, Json.obj()) {
+    auditService.audit(Operation.Appointment.Cancel, appointmentID.toString, Target.Appointment, Json.obj()) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
         cases <- dao.findByIDQuery(appointmentID).withCases.map { case (_, c) => c }.result
@@ -734,7 +735,7 @@ class AppointmentServiceImpl @Inject()(
   }
 
   override def sendClientReminder(appointmentID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
-    auditService.audit('AppointmentSendClientReminder, appointmentID.toString, 'Appointment, Json.obj()) {
+    auditService.audit(Operation.Appointment.SendClientReminder, appointmentID.toString, Target.Appointment, Json.obj()) {
       daoRunner.run(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
         clients <- getClientsQuery(appointmentID).result

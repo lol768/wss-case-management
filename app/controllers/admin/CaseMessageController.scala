@@ -6,6 +6,7 @@ import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.refiners.{CanViewCaseActionRefiner, CaseMessageActionFilters}
 import controllers.{API, BaseController, MessagesController, UploadedFileControllerHelper}
 import domain._
+import domain.AuditEvent._
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
@@ -108,7 +109,7 @@ class CaseMessageController @Inject() (
   def download(caseKey: IssueKey, fileId: UUID): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit request =>
     caseService.getCaseMessages(request.`case`.id).successFlatMapTo(messages =>
       messages.data.flatMap(_.files).find(_.id == fileId)
-        .map(f => auditService.audit('CaseDocumentDownload, fileId.toString, 'CaseDocument, Json.obj()) {
+        .map(f => auditService.audit(Operation.Case.DownloadDocument, fileId.toString, Target.CaseDocument, Json.obj()) {
           uploadedFileControllerHelper.serveFile(f).map(Right.apply)
         })
         .getOrElse(Future.successful(Right(NotFound(views.html.errors.notFound()))))

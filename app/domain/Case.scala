@@ -1,6 +1,6 @@
 package domain
 
-import java.time.OffsetDateTime
+import java.time.{LocalDate, OffsetDateTime}
 import java.util.UUID
 
 import domain.DatabaseOperation.Delete
@@ -109,8 +109,10 @@ case class CaseRender(
 
 case class CaseListRender(
   clientCase: Case,
-  lastUpdated: OffsetDateTime
-)
+  lastUpdated: OffsetDateTime,
+  lastClientMessage: Option[OffsetDateTime],
+  lastViewed: Option[OffsetDateTime],
+) extends IssueListRender(clientCase)
 
 case class NoteAndCase(
   note: CaseNote,
@@ -296,10 +298,10 @@ object CaseHistory {
       "owners" -> toJson(r.owners.map { case (owners, v, u) => (owners.map(o => o.map(user => user.name.full.getOrElse(user.usercode.string)).fold(_.string, n => n)).toSeq.sorted.mkString(", "), v, u) }),
       "clients" -> toJson(r.clients.map { case (clients, v, u) => (clients.map(c => c.safeFullName).toSeq.sorted.mkString(", "), v, u) }),
       "dsaCustomerReference" -> toJson(dsaHistory[Option[String]](r.dsaCustomerReference, ref => ref.getOrElse("Reference removed"))),
-      "dsaApplicationDate" -> toJson(dsaHistory[Option[OffsetDateTime]](r.dsaApplicationDate, date => date.map(JavaTime.Relative.apply(_)).getOrElse("Application date removed"))),
+      "dsaApplicationDate" -> toJson(dsaHistory[Option[LocalDate]](r.dsaApplicationDate, date => date.map(JavaTime.Relative.apply).getOrElse("Application date removed"))),
       "dsaFundingApproved" -> toJson(dsaHistory[Option[Boolean]](r.dsaFundingApproved, approved => approved.map(if (_) "Application approved" else "Application rejected").getOrElse("Application pending"))),
       "dsaFundingTypes" -> toJson(r.dsaFundingTypes.map { case (tags, v, u) => (tags.map(_.description).toSeq.sorted.mkString(", "), v, u) }),
-      "dsaConfirmationDate" -> toJson(dsaHistory[Option[OffsetDateTime]](r.dsaConfirmationDate, date => date.map(JavaTime.Relative.apply(_)).getOrElse("Decision date removed"))),
+      "dsaConfirmationDate" -> toJson(dsaHistory[Option[LocalDate]](r.dsaConfirmationDate, date => date.map(JavaTime.Relative.apply).getOrElse("Decision date removed"))),
       "dsaIneligibilityReason" -> toJson(dsaHistory[Option[DSAIneligibilityReason]](r.dsaIneligibilityReason, reason => reason.map(_.description).getOrElse("Ineligibility reason removed"))),
       "clientRiskTypes" -> toJson(r.clientRiskTypes.map { case (clientRiskType, v, u) => (clientRiskType.map(_.description), v, u) }),
       "counsellingServicesIssues" -> toJson(r.counsellingServicesIssues.map { case (counsellingServicesIssue, v, u) => (counsellingServicesIssue.map(_.description), v, u) }),
@@ -385,9 +387,9 @@ case class CaseHistory(
   owners: Seq[(Set[Either[Usercode, User]], OffsetDateTime, Option[Either[Usercode, User]])],
   clients: FieldHistory[Set[Client]],
   dsaCustomerReference: FieldHistory[Option[Option[String]]],
-  dsaApplicationDate: FieldHistory[Option[Option[OffsetDateTime]]],
+  dsaApplicationDate: FieldHistory[Option[Option[LocalDate]]],
   dsaFundingApproved: FieldHistory[Option[Option[Boolean]]],
-  dsaConfirmationDate: FieldHistory[Option[Option[OffsetDateTime]]],
+  dsaConfirmationDate: FieldHistory[Option[Option[LocalDate]]],
   dsaFundingTypes: FieldHistory[Set[DSAFundingType]],
   dsaIneligibilityReason: FieldHistory[Option[Option[DSAIneligibilityReason]]],
   clientRiskTypes: FieldHistory[Set[ClientRiskType]],

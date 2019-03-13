@@ -148,6 +148,7 @@
           controllers.admin.routes.OwnersController.caseSubmit(c.key),
           controllers.admin.routes.OwnersController.caseSubmitSelf(c.key),
           Some(ownerForm),
+          readOnly = c.migrated
         ) {
           @viewSectionNotes(OwnerNote, "owner note")
         }
@@ -282,39 +283,39 @@
         }}
 
       </div>
-      <div class="col-sm-6 col-md-4">
-        <div class="row form-horizontal">
-          <div class="col-sm-4 control-label">
-            Actions
-          </div>
-          <div class="col-sm-8">
-            @if(!c.migrated) {
+      @if(!c.migrated) {
+        <div class="col-sm-6 col-md-4">
+          <div class="row form-horizontal">
+            <div class="col-sm-4 control-label">
+              Actions
+            </div>
+            <div class="col-sm-8">
               <p>
-              @if(c.state != IssueState.Closed) {
-                <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Close case</a>
-              } else {
-                <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Reopen case</a>
-              }
+                @if(c.state != IssueState.Closed) {
+                  <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Close case</a>
+                } else {
+                  <a href="@controllers.admin.routes.CaseController.closeForm(c.key)" class="btn btn-primary btn-block">Reopen case</a>
+                }
               </p>
-            }
-            <p>
-              <a href="@controllers.admin.routes.CaseController.editForm(c.key)" class="btn btn-default btn-block">Edit case</a>
-            </p>
-            <p>
-              <a href="@controllers.admin.routes.CaseDocumentController.addDocumentForm(c.key)" class="btn btn-default btn-block">Add a document</a>
-            </p>
-            <p>
-              <a href="@controllers.admin.routes.AppointmentController.createForm(c.team.id, forCase = Some(c.key))" class="btn btn-default btn-block">Create an appointment</a>
-            </p>
-            <p>
-              <a href="@controllers.admin.routes.CaseController.linkForm(c.key)" class="btn btn-default btn-block">Link to another case</a>
-            </p>
-            <p>
-              <a href="@controllers.admin.routes.CaseController.reassign(c.key)" class="btn btn-default btn-block">Assign to a different team</a>
-            </p>
+              <p>
+                <a href="@controllers.admin.routes.CaseController.editForm(c.key)" class="btn btn-default btn-block">Edit case</a>
+              </p>
+              <p>
+                <a href="@controllers.admin.routes.CaseDocumentController.addDocumentForm(c.key)" class="btn btn-default btn-block">Add a document</a>
+              </p>
+              <p>
+                <a href="@controllers.admin.routes.AppointmentController.createForm(c.team.id, forCase = Some(c.key))" class="btn btn-default btn-block">Create an appointment</a>
+              </p>
+              <p>
+                <a href="@controllers.admin.routes.CaseController.linkForm(c.key)" class="btn btn-default btn-block">Link to another case</a>
+              </p>
+              <p>
+                <a href="@controllers.admin.routes.CaseController.reassign(c.key)" class="btn btn-default btn-block">Assign to a different team</a>
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      }
     </div>
 
     @tags.sectioned.sectionAsync("case", "Case links", isCollapsible = true, url = controllers.admin.routes.CaseController.links(c.key), isOpen = true)
