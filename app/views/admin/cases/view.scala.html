@@ -148,6 +148,7 @@
           controllers.admin.routes.OwnersController.caseSubmit(c.key),
           controllers.admin.routes.OwnersController.caseSubmitSelf(c.key),
           Some(ownerForm),
+          readOnly = c.migrated
         ) {
           @viewSectionNotes(OwnerNote, "owner note")
         }
