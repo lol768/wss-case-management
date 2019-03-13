@@ -221,7 +221,7 @@ class EnquiryServiceImpl @Inject() (
     daoRunner.run(
       enquiryDao.findByClientQuery(client)
         .withLastUpdatedFor(ac.usercode.orNull)
-        .sortBy { case (_, _, lu, _, _) => lu.desc }
+        .sortBy { case (e, _, lu, _, _) => (lu.desc, e.key.desc) }
         .result
     ).map { tuples =>
       Right(tuples.map { case (enquiry, c, lastUpdated, lastMessageFromClient, lastViewed) =>
@@ -362,7 +362,7 @@ class EnquiryServiceImpl @Inject() (
 
           lastUpdatedAfterFilter && lastUpdatedBeforeFilter && hasUnreadsFilter
         }
-        .sortBy { case (_, _, lu, _, _) => lu.desc }
+        .sortBy { case (e, _, lu, _, _) => (lu.desc, e.key.desc) }
         .paginate(page)
         .result
     ).map { pairs =>
@@ -392,7 +392,7 @@ class EnquiryServiceImpl @Inject() (
 
           lastUpdatedAfterFilter && lastUpdatedBeforeFilter && hasUnreadsFilter
         }
-        .sortBy { case (_, _, lu, _, _) => lu.desc }
+        .sortBy { case (e, _, lu, _, _) => (lu.desc, e.key.desc) }
         .paginate(page)
         .result
     ).map { tuples =>
