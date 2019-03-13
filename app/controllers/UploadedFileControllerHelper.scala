@@ -1,7 +1,9 @@
 package controllers
 
+import java.util.{BitSet => JBitSet}
 import java.io.InputStream
-
+import java.lang.{StringBuilder => JStringBuilder}
+import akka.stream.scaladsl.FileIO
 import com.google.common.io.{ByteSource, Files}
 import com.google.inject.ImplementedBy
 import com.typesafe.config.ConfigMemorySize
@@ -114,8 +116,15 @@ class UploadedFileControllerHelperImpl @Inject()(
       HeaderNames.CACHE_CONTROL -> "private",
       HeaderNames.ETAG -> toEtag(uploadedFile),
 
-      // Restrictive CSP, just enough for Firefox/Chrome's PDF viewer to work, plus audio/video
-      HeaderNames.CONTENT_SECURITY_POLICY -> "default-src 'none'; img-src 'self'; object-src 'self'; plugin-types application/pdf; style-src 'unsafe-inline'; media-src 'self'",
+      // Restrictive CSP, just enough for viewing inline
+      HeaderNames.CONTENT_SECURITY_POLICY -> (
+        "default-src 'none'; " +
+        "img-src 'self' data:; " + // View images inline; allow data: for Safari media player
+        "object-src 'self'; " + // Allow plugins to load for the current context
+        "plugin-types application/pdf; " + // Only allow the PDF plugin
+        "style-src 'unsafe-inline'; " + // PDF viewer Chrome?
+        "media-src 'self'" // Needed to load the audio/video
+      ),
     )
 
     if (request.headers.get(HeaderNames.IF_NONE_MATCH).contains(toEtag(uploadedFile))) {
@@ -127,13 +136,22 @@ class UploadedFileControllerHelperImpl @Inject()(
 
         temporaryFile
       }(objectStorageExecutionContext).map { temporaryFile =>
-        Ok.sendFile(
-          content = temporaryFile.path.toFile,
-          inline = config.isServeInline(MediaType.parse(uploadedFile.contentType)),
-          fileName = _ => uploadedFile.fileName,
-          onClose = () => temporaryFileCreator.delete(temporaryFile))
-          .as(uploadedFile.contentType)
-          .withHeaders(cacheHeaders: _*)
+        RangeResult.ofSource(
+          entityLength = uploadedFile.contentLength,
+          source = FileIO.fromPath(temporaryFile.path).mapMaterializedValue(_.onComplete { _ =>
+            temporaryFileCreator.delete(temporaryFile)
+          }),
+          rangeHeader = request.headers.get(HeaderNames.RANGE),
+          fileName = None, // We handle this ourselves below, as Play forces Content-Disposition: attachment
+          contentType = Some(uploadedFile.contentType),
+        ).withHeaders(cacheHeaders: _*)
+         .withHeaders(HeaderNames.CONTENT_DISPOSITION -> {
+           val builder = new JStringBuilder
+           builder.append(if (config.isServeInline(MediaType.parse(uploadedFile.contentType))) "inline" else "attachment")
+           builder.append("; ")
+           HttpHeaderParameterEncoding.encodeToBuilder("filename", uploadedFile.fileName, builder)
+           builder.toString
+         })
       }
     }
   }
@@ -206,4 +224,148 @@ class UploadedFileControllerHelperImpl @Inject()(
 
   override def supportedMimeTypes: Seq[MediaType] = config.allowedMimeTypes
 
+}
+
+/**
+  * Grokked from play.core.utils.HttpHeaderParameterEncoding
+  *
+  * Support for rending HTTP header parameters according to RFC5987.
+  */
+private[controllers] object HttpHeaderParameterEncoding {
+  private def charSeqToBitSet(chars: Seq[Char]): JBitSet = {
+    val ints: Seq[Int] = chars.map(_.toInt)
+    val max = ints.fold(0)(Math.max)
+    assert(max <= 256) // We should only be dealing with 7 or 8 bit chars
+    val bitSet = new JBitSet(max)
+    ints.foreach(bitSet.set)
+    bitSet
+  }
+
+  // From https://tools.ietf.org/html/rfc2616#section-2.2
+  //
+  //   separators     = "(" | ")" | "<" | ">" | "@"
+  //                  | "," | ";" | ":" | "\" | <">
+  //                  | "/" | "[" | "]" | "?" | "="
+  //                  | "{" | "}" | SP | HT
+  //
+  // Rich: We exclude <">, "\" since they can be used for quoting/escaping and HT since it is
+  // rarely used and seems like it should be escaped.
+  private val Separators: Seq[Char] = Seq('(', ')', '<', '>', '@', ',', ';', ':', '/', '[', ']', '?', '=', '{', '}', ' ')
+
+  private val AlphaNum: Seq[Char] = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9')
+
+  // From https://tools.ietf.org/html/rfc5987#section-3.2.1:
+  //
+  // attr-char     = ALPHA / DIGIT
+  // / "!" / "#" / "$" / "&" / "+" / "-" / "."
+  // / "^" / "_" / "`" / "|" / "~"
+  // ; token except ( "*" / "'" / "%" )
+  private val AttrCharPunctuation: Seq[Char] = Seq('!', '#', '$', '&', '+', '-', '.', '^', '_', '`', '|', '~')
+
+  /**
+    * A subset of the 'qdtext' defined in https://tools.ietf.org/html/rfc2616#section-2.2. These are the
+    * characters which can be inside a 'quoted-string' parameter value. These should form a
+    * superset of the [[AttrChar]] set defined below. We exclude some characters which are technically
+    * valid, but might be problematic, e.g. "\" and "%" could be treated as escape characters by some
+    * clients. We can be conservative because we can express these characters clearly as an extended
+    * parameter.
+    */
+  private val PartialQuotedText: JBitSet = charSeqToBitSet(
+    AlphaNum ++ AttrCharPunctuation ++
+      // we include 'separators' plus some chars excluded from 'attr-char'
+      Separators ++ Seq('*', '\''))
+
+  /**
+    * The 'attr-char' values defined in https://tools.ietf.org/html/rfc5987#section-3.2.1. Should be a
+    * subset of [[PartialQuotedText]] defined above.
+    */
+  private val AttrChar: JBitSet = charSeqToBitSet(AlphaNum ++ AttrCharPunctuation)
+
+  private val PlaceholderChar: Char = '?'
+
+  /**
+    * Render a parameter name and value, handling character set issues as
+    * recommended in RFC5987.
+    *
+    * Examples:
+    * [[
+    * render("filename", "foo.txt") ==> "filename=foo.txt"
+    * render("filename", "naïve.txt") ==> "filename=na_ve.txt; filename*=utf8''na%C3%AFve.txt"
+    * ]]
+    */
+  def encodeToBuilder(name: String, value: String, builder: JStringBuilder): Unit = {
+    // This flag gets set if we encounter extended characters when rendering the
+    // regular parameter value.
+    var hasExtendedChars = false
+
+    // Render ASCII parameter
+    // E.g. naïve.txt --> "filename=na_ve.txt"
+
+    builder.append(name)
+    builder.append("=\"")
+
+    // Iterate over code points here, because we only want one
+    // ASCII character or placeholder per logical character. If
+    // we use the value's encoded bytes or chars then we might
+    // end up with multiple placeholders per logical character.
+    value.codePoints().forEach { codePoint =>
+      // We could support a wider range of characters here by using
+      // the 'token' or 'quoted printable' encoding, however it's
+      // simpler to use the subset of characters that is also valid
+      // for extended attributes.
+      if (codePoint >= 0 && codePoint <= 255 && PartialQuotedText.get(codePoint)) {
+        builder.append(codePoint.toChar)
+      } else {
+        // Set flag because we need to render an extended parameter.
+        hasExtendedChars = true
+        // Render a placeholder instead of the unsupported character.
+        builder.append(PlaceholderChar)
+      }
+    }
+
+    builder.append('"')
+
+    // Optionally render extended, UTF-8 encoded parameter
+    // E.g. naïve.txt --> "; filename*=utf8''na%C3%AFve.txt"
+    //
+    // Renders both regular and extended parameters, as suggested by:
+    // - https://tools.ietf.org/html/rfc5987#section-4.2
+    // - https://tools.ietf.org/html/rfc6266#section-4.3 (for Content-Disposition filename parameter)
+
+    if (hasExtendedChars) {
+      def hexDigit(x: Int): Char = (if (x < 10) x + '0' else x - 10 + 'a').toChar
+
+      // From https://tools.ietf.org/html/rfc5987#section-3.2.1:
+      //
+      // Producers MUST use either the "UTF-8" ([RFC3629]) or the "ISO-8859-1"
+      // ([ISO-8859-1]) character set.  Extension character sets (mime-
+
+      val CharacterSetName = "utf-8"
+
+      builder.append("; ")
+      builder.append(name)
+
+      builder.append("*=")
+      builder.append(CharacterSetName)
+      builder.append("''")
+
+      // From https://tools.ietf.org/html/rfc5987#section-3.2.1:
+      //
+      // Inside the value part, characters not contained in attr-char are
+      // encoded into an octet sequence using the specified character set.
+      // That octet sequence is then percent-encoded as specified in Section
+      // 2.1 of [RFC3986].
+
+      val bytes = value.getBytes(CharacterSetName)
+      for (b <- bytes) {
+        if (AttrChar.get(b & 0xFF)) {
+          builder.append(b.toChar)
+        } else {
+          builder.append('%')
+          builder.append(hexDigit((b >> 4) & 0xF))
+          builder.append(hexDigit(b & 0xF))
+        }
+      }
+    }
+  }
 }
