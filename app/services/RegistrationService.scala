@@ -1,5 +1,6 @@
 package services
 
+import domain.AuditEvent._
 import java.time.OffsetDateTime
 
 import com.google.inject.ImplementedBy
@@ -37,9 +38,9 @@ class RegistrationServiceImpl @Inject()(
 
   override def invite(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
     auditService.audit(
-      'InviteToRegister,
+      Operation.Registration.SendInvite,
       universityID.string,
-      'Registration,
+      Target.Registration,
       Json.obj()
     ) {
       get(universityID).successFlatMapTo { existing =>
@@ -55,9 +56,9 @@ class RegistrationServiceImpl @Inject()(
     get(universityID).successFlatMapTo(_.map(existing =>
       if (existing.data.isEmpty) {
         auditService.audit(
-          'SaveRegistration,
+          Operation.Registration.Save,
           universityID.string,
-          'Registration,
+          Target.Registration,
           Json.toJson(data)(RegistrationData.formatter)
         ) {
           daoRunner.run(dao.update(universityID, Some(data), existing.lastInvited, version)).map(_.parsed).map(Right.apply)
@@ -67,9 +68,9 @@ class RegistrationServiceImpl @Inject()(
         ))
       } else {
         auditService.audit(
-          'UpdateRegistration,
+          Operation.Registration.Update,
           universityID.string,
-          'Registration,
+          Target.Registration,
           Json.toJson(data)(RegistrationData.formatter)
         ) {
           daoRunner.run(dao.update(universityID, Some(data), existing.lastInvited, version)).map(_.parsed).map(Right.apply)

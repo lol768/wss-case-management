@@ -5,15 +5,16 @@ import java.util.UUID
 
 import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
+import domain.AuditEvent._
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain.Pagination._
+import domain._
 import domain.dao.ClientDao.StoredClient
 import domain.dao.EnquiryDao.{Enquiries, EnquiryFilter, EnquirySearchQuery, StoredEnquiry, StoredEnquiryNote}
 import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{DaoRunner, EnquiryDao, MemberDao, MessageDao}
-import domain._
 import helpers.ServiceResults
 import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
@@ -125,7 +126,7 @@ class EnquiryServiceImpl @Inject() (
   override def save(enquiry: EnquirySave, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
     require(message.sender == MessageSender.Client, "Initial message must be from the Client")
     val id = UUID.randomUUID()
-    auditService.audit('EnquirySave, id.toString, 'Enquiry, Json.obj()) {
+    auditService.audit(Operation.Enquiry.Save, id.toString, Target.Enquiry, Json.obj()) {
       clientService.getOrAddClients(Set(enquiry.universityID)).successFlatMapTo(clients =>
         daoRunner.run(for {
           nextId <- sql"SELECT nextval('SEQ_ENQUIRY_KEY')".as[Int].head
@@ -141,7 +142,7 @@ class EnquiryServiceImpl @Inject() (
   }
 
   override def addMessage(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(MessageData, Seq[UploadedFile])]] = {
-    auditService.audit('EnquiryAddMessage, enquiry.id.toString, 'Enquiry, Json.obj()) {
+    auditService.audit(Operation.Enquiry.AddMessage, enquiry.id.toString, Target.Enquiry, Json.obj()) {
       memberService.getOrAddMember(message.teamMember).successFlatMapTo(member =>
         daoRunner.run(for {
           (m, f) <- addMessageDBIO(enquiry.client.universityID, enquiry.team, enquiry.id, message, files)
@@ -155,7 +156,7 @@ class EnquiryServiceImpl @Inject() (
   }
 
   override def reassign(id: UUID, team: Team, note: EnquiryNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] =
-    auditService.audit('EnquiryReassign, id.toString, 'Enquiry, Json.obj("team" -> team.id)) {
+    auditService.audit(Operation.Enquiry.Reassign, id.toString, Target.Enquiry, Json.obj("team" -> team.id)) {
       memberService.getOrAddMember(note.teamMember).successFlatMapTo(_ =>
         daoRunner.run(for {
           (existing, client) <- enquiryDao.findByIDQuery(id).withClient.result.head
@@ -182,7 +183,7 @@ class EnquiryServiceImpl @Inject() (
     )
 
   override def updateState(id: UUID, targetState: IssueState, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
-    auditService.audit(Symbol(s"Enquiry${targetState.entryName}"), id.toString, 'Enquiry, Json.obj()) {
+    auditService.audit(Operation.Enquiry.transition(targetState), id.toString, Target.Enquiry, Json.obj()) {
       daoRunner.run(for {
         (existing, client) <- enquiryDao.findByIDQuery(id).withClient.result.head
         stored <- enquiryDao.update(existing.copy(state = targetState), version)
@@ -193,7 +194,7 @@ class EnquiryServiceImpl @Inject() (
   }
 
   def updateStateWithMessage(id: UUID, targetState: IssueState, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
-    auditService.audit(Symbol(s"Enquiry${targetState.entryName}WithMessage"), id.toString, 'Enquiry, Json.obj()) {
+    auditService.audit(Operation.Enquiry.transitionWithMessage(targetState), id.toString, Target.Enquiry, Json.obj()) {
       daoRunner.run(for {
         (existing, client) <- enquiryDao.findByIDQuery(id).withClient.result.head
         stored <- addMessageDBIO(client.universityID, existing.team, existing.id, message, files).andThen(
@@ -257,7 +258,7 @@ class EnquiryServiceImpl @Inject() (
     } yield (withClientAndMessages, notes)
 
   override def getForRender(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]] =
-    auditService.audit('EnquiryView, id.toString, 'Enquiry, Json.obj()) {
+    auditService.audit(Operation.Enquiry.View, id.toString, Target.Enquiry, Json.obj()) {
       val action = getWithClientAndMessagesAndNotes(enquiryDao.findByIDQuery(id))
 
       daoRunner.run(action).map { case (withMessages, notes) =>
@@ -266,7 +267,7 @@ class EnquiryServiceImpl @Inject() (
     }
 
   override def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]] =
-    auditService.audit[EnquiryRender]('EnquiryView, (r: EnquiryRender) => r.enquiry.id.toString, 'Enquiry, Json.obj()) {
+    auditService.audit[EnquiryRender](Operation.Enquiry.View, (r: EnquiryRender) => r.enquiry.id.toString, Target.Enquiry, Json.obj()) {
       val action = getWithClientAndMessagesAndNotes(enquiryDao.findByKeyQuery(enquiryKey))
 
       daoRunner.run(action).map { case (withMessages, notes) =>
@@ -275,13 +276,13 @@ class EnquiryServiceImpl @Inject() (
     }
 
   override def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]] =
-    auditService.findRecentTargetIDsByOperation('EnquiryView, teamMember, limit).flatMap(_.fold(
+    auditService.findRecentTargetIDsByOperation(Operation.Enquiry.View, teamMember, limit).flatMap(_.fold(
       errors => Future.successful(Left(errors)),
       ids => get(ids.map(UUID.fromString))
     ))
 
   override def findLastViewDate(enquiryID: UUID, usercode: Usercode)(implicit t: TimingContext): Future[ServiceResult[Option[OffsetDateTime]]] =
-    auditService.findLastEventDateForTargetID(enquiryID.toString, usercode, 'EnquiryView)
+    auditService.findLastEventDateForTargetID(enquiryID.toString, usercode, Operation.Enquiry.View)
 
   override def search(query: EnquirySearchQuery, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]] =
     daoRunner.run(enquiryDao.searchQuery(query).withClient.take(limit).result).map(_.map { case (e, c) => e.asEnquiry(c.asClient) }).map(Right.apply)
@@ -348,7 +349,7 @@ class EnquiryServiceImpl @Inject() (
 
           (e, c, mostRecentUpdate, lastMessageFromClient)
         }
-        .joinLeft(AuditEvent.latestEventsForUser('EnquiryView, ac.usercode.orNull, 'Enquiry))
+        .joinLeft(AuditEvent.latestEventsForUser(Operation.Enquiry.View, ac.usercode.orNull, Target.Enquiry))
         .on { case ((e, _, _, _), (targetId, _)) => e.id.asColumnOf[String] === targetId }
         .map { case ((e, c, lastMessage, lastMessageFromClient), o) => (e, c, lastMessage, lastMessageFromClient, o.flatMap(_._2)) }
         .filter { case (_, _, lastUpdated, lastMessageFromClient, lastViewed) =>

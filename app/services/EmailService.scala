@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.Done
 import com.google.inject.ImplementedBy
+import domain.AuditEvent._
 import domain.OutgoingEmail
 import domain.dao.{DaoRunner, OutgoingEmailDao}
 import helpers.ServiceResults
@@ -83,9 +84,9 @@ class EmailServiceImpl @Inject()(
 
     def send(e: OutgoingEmail, user: Option[User]): Future[ServiceResult[Done]] =
       auditService.audit(
-        'SendEmail,
+        Operation.OutgoingEmail.Send,
         e.id.map(_.toString).orNull,
-        'OutgoingEmail,
+        Target.OutgoingEmail,
         Json.toJson(e.email)(OutgoingEmail.emailFormatter)
       ) {
         val sendEmail = Future {

@@ -46,10 +46,10 @@
       </td>
     }
     <td>
+      @JavaTime.Relative(lastUpdated)
       @if(hasUnreadClientMessage) {
         @tags.icons.unreadClientMessage()
       }
-      @JavaTime.Relative(lastUpdated)
     </td>
   </tr>
 }

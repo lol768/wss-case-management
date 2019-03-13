@@ -5,6 +5,7 @@ import java.util.UUID
 import akka.Done
 import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
+import domain.AuditEvent._
 import domain.ExtendedPostgresProfile.api._
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{DaoRunner, UploadedFileDao}
@@ -76,12 +77,12 @@ class UploadedFileServiceImpl @Inject()(
     storeDBIO(UUID.randomUUID(), in, metadata, uploader, Some(ownerId), Some(ownerType))
 
   override def store(in: ByteSource, metadata: UploadedFileSave)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]] =
-    auditService.audit[UploadedFile]('UploadedFileStore, (f: UploadedFile) => f.id.toString, 'UploadedFile, Json.obj()) {
+    auditService.audit[UploadedFile](Operation.UploadedFile.Save, (f: UploadedFile) => f.id.toString, Target.UploadedFile, Json.obj()) {
       daoRunner.run(storeDBIO(in, metadata, ac.usercode.get)).map(Right.apply)
     }
 
   override def store(in: ByteSource, metadata: UploadedFileSave, ownerId: UUID, ownerType: UploadedFileOwner)(implicit ac: AuditLogContext): Future[ServiceResult[UploadedFile]] =
-    auditService.audit[UploadedFile]('UploadedFileStore, (f: UploadedFile) => f.id.toString, 'UploadedFile, Json.obj()) {
+    auditService.audit[UploadedFile](Operation.UploadedFile.Save, (f: UploadedFile) => f.id.toString, Target.UploadedFile, Json.obj()) {
       daoRunner.run(storeDBIO(in, metadata, ac.usercode.get, ownerId, ownerType)).map(Right.apply)
     }
 
@@ -92,7 +93,7 @@ class UploadedFileServiceImpl @Inject()(
     } yield done
 
   override def delete(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
-    auditService.audit('UploadedFileDelete, id.toString, 'UploadedFile, Json.obj()) {
+    auditService.audit(Operation.UploadedFile.Delete, id.toString, Target.UploadedFile, Json.obj()) {
       daoRunner.run(deleteDBIO(id)).map(Right.apply)
     }
 

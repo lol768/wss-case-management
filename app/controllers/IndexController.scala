@@ -4,6 +4,7 @@ import java.time.OffsetDateTime
 
 import controllers.MessagesController.MessageFormData
 import controllers.refiners.AnyTeamActionRefiner
+import domain.AuditEvent._
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.CaseDao.CaseFilter
@@ -281,8 +282,8 @@ class IndexController @Inject()(
 
         // Record an EnquiryView or CaseView event for the first issue
         allIssues.headOption.map(issue => issue.issue match {
-          case e: Enquiry => audit.audit('EnquiryView, e.id.toString, 'Enquiry, Json.obj())(result)
-          case c: Case => audit.audit('CaseView, c.id.toString, 'Case, Json.obj())(result)
+          case e: Enquiry => audit.audit(Operation.Enquiry.View, e.id.toString, Target.Enquiry, Json.obj())(result)
+          case c: Case => audit.audit(Operation.Case.View, c.id.toString, Target.Case, Json.obj())(result)
           case _ => result
         }).getOrElse(result)
       }

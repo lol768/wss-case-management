@@ -17,6 +17,7 @@ import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 
 import scala.concurrent.{ExecutionContext, Future}
+import domain.AuditEvent._
 
 @ImplementedBy(classOf[LocationServiceImpl])
 trait LocationService {
@@ -52,14 +53,14 @@ class LocationServiceImpl @Inject()(
 
   override def create(building: BuildingSave)(implicit ac: AuditLogContext): Future[ServiceResult[Building]] = {
     val id = UUID.randomUUID()
-    auditService.audit('BuildingSave, id.toString, 'Building, Json.obj()) {
+    auditService.audit(Operation.Building.Save, id.toString, Target.Building, Json.obj()) {
       daoRunner.run(dao.insert(createStoredBuilding(id, building)))
         .map { b => Right(b.asBuilding) }
     }
   }
 
   override def update(buildingID: UUID, building: BuildingSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Building]] =
-    auditService.audit('BuildingUpdate, buildingID.toString, 'Building, Json.obj()) {
+    auditService.audit(Operation.Building.Update, buildingID.toString, Target.Building, Json.obj()) {
       daoRunner.run(for {
         existing <- dao.findBuildingsQuery.filter(_.id === buildingID).result.head
         updated <- dao.update(
@@ -89,7 +90,7 @@ class LocationServiceImpl @Inject()(
 
   override def create(room: RoomSave)(implicit ac: AuditLogContext): Future[ServiceResult[Room]] = {
     val id = UUID.randomUUID()
-    auditService.audit('RoomSave, id.toString, 'Room, Json.obj()) {
+    auditService.audit(Operation.Room.Save, id.toString, Target.Room, Json.obj()) {
       daoRunner.run(for {
         created <- dao.insert(createStoredRoom(id, room))
         building <- dao.findBuildingsQuery.filter(_.id === room.buildingID).map(_.building).result.head
@@ -99,7 +100,7 @@ class LocationServiceImpl @Inject()(
   }
 
   override def update(roomID: UUID, room: RoomSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Room]] =
-    auditService.audit('RoomUpdate, roomID.toString, 'Room, Json.obj()) {
+    auditService.audit(Operation.Room.Update, roomID.toString, Target.Room, Json.obj()) {
       daoRunner.run(for {
         existing <- dao.findRoomsQuery.filter(_.id === roomID).result.head
         updated <- dao.update(

@@ -53,8 +53,8 @@ object IssueListFilter {
   val form: Form[IssueListFilter] = Form(
     mapping(
       // This seems convoluted but currently datePicker sends a time component (CASE-485)
-      "lastUpdatedAfter" -> optional(FormHelpers.offsetDateTime.transform[OffsetDateTime](_.toLocalDate.atTime(0, 0).atZone(JavaTime.timeZone).toOffsetDateTime, identity)),
-      "lastUpdatedBefore" -> optional(FormHelpers.offsetDateTime.transform[OffsetDateTime](_.toLocalDate.atTime(23, 59, 59, 999000000).atZone(JavaTime.timeZone).toOffsetDateTime, identity)),
+      "lastUpdatedAfter" -> optional(FormHelpers.offsetDateTime.transform[OffsetDateTime](_.toLocalDate.atStartOfDay(JavaTime.timeZone).toOffsetDateTime, identity)),
+      "lastUpdatedBefore" -> optional(FormHelpers.offsetDateTime.transform[OffsetDateTime](_.toLocalDate.plusDays(1).atStartOfDay(JavaTime.timeZone).minusNanos(1).toOffsetDateTime, identity)),
       "hasUnreadClientMessages" -> optional(boolean),
     )(IssueListFilter.apply)(IssueListFilter.unapply)
       .verifying(Constraint { filter: IssueListFilter =>

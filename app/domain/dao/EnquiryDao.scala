@@ -4,6 +4,7 @@ import java.time.{Instant, LocalDate, OffsetDateTime, ZoneOffset}
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
+import domain.AuditEvent._
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain.IssueState.{Open, Reopened}
@@ -276,7 +277,7 @@ object EnquiryDao {
       .join(Message.lastUpdatedEnquiryMessageFromClient)
       .on { case ((e, _, _), (id, _)) => e.id === id }
       .map { case ((e, c, lastMessage), (_, lastMessageFromClient)) => (e, c, lastMessage, lastMessageFromClient) }
-      .joinLeft(AuditEvent.latestEventsForUser('EnquiryView, usercode, 'Enquiry))
+      .joinLeft(AuditEvent.latestEventsForUser(Operation.Enquiry.View, usercode, Target.Enquiry))
       .on { case ((e, _, _, _), (targetId, _)) => e.id.asColumnOf[String] === targetId }
       .map { case ((e, c, lastMessage, lastMessageFromClient), o) => (e, c, lastMessage, lastMessageFromClient, o.flatMap(_._2)) }
       .map { case (e, c, lastMessage, lastMessageFromClient, lastViewed) =>

@@ -5,6 +5,7 @@ import java.util.UUID
 
 import akka.Done
 import com.google.inject.ImplementedBy
+import domain.AuditEvent._
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain.QueryHelpers._
@@ -512,7 +513,7 @@ object CaseDao {
       .joinLeft(Message.lastUpdatedCaseMessageFromClient)
       .on { case ((c, _, _), (id, _)) => c.id === id }
       .map { case ((c, m, n), o) => (c, m, n, o.flatMap(_._2)) }
-      .joinLeft(AuditEvent.latestEventsForUser('CaseView, usercode, 'Case))
+      .joinLeft(AuditEvent.latestEventsForUser(Operation.Case.View, usercode, Target.Case))
       .on { case ((c, _, _, _), (targetId, _)) => c.id.asColumnOf[String] === targetId }
       .map { case ((c, m, n, o), p) => (c, m, n, o, p.flatMap(_._2)) }
       .map { case (c, m, n, lastMessageFromClient, lastViewed) =>
