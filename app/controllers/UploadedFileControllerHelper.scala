@@ -1,8 +1,9 @@
 package controllers
 
-import java.util.{BitSet => JBitSet}
 import java.io.InputStream
 import java.lang.{StringBuilder => JStringBuilder}
+import java.util.{BitSet => JBitSet}
+
 import akka.stream.scaladsl.FileIO
 import com.google.common.io.{ByteSource, Files}
 import com.google.inject.ImplementedBy
