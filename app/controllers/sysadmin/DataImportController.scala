@@ -130,7 +130,7 @@ class DataImportController @Inject()(
 
 object SpreadsheetContentsHandler {
   type Sheet = Seq[Row]
-  case class Row(rowNumber: Int, values: Map[String, Cell])
+  case class Row(rowNumber: Int, values: Seq[(String, Cell)])
   case class Cell(cellReference: String, formattedValue: String)
 
   implicit val cellFormat: Format[Cell] = Json.format[Cell]
@@ -141,7 +141,7 @@ class SpreadsheetContentsHandler extends SheetContentsHandler {
 
   var parsedSheets: mutable.Map[String, Sheet] = mutable.Map.empty
   var parsedRows: mutable.ListBuffer[Row] = _
-  var currentItem: mutable.Map[String, Cell] = _
+  var currentItem: mutable.ListBuffer[(String, Cell)] = _
   var columns: mutable.Map[Short, String] = _
 
   def startSheet(name: String): Unit = {
@@ -156,10 +156,10 @@ class SpreadsheetContentsHandler extends SheetContentsHandler {
   override def headerFooter(text: String, isHeader: Boolean, tagName: String): Unit = {}
 
   override def startRow(rowNum: Int): Unit = {
-    currentItem = mutable.Map.empty
+    currentItem = mutable.ListBuffer.empty
   }
   override def endRow(rowNum: Int): Unit = {
-    if (rowNum > 0 && currentItem.nonEmpty) parsedRows += Row(rowNum + 1, currentItem.toMap)
+    if (rowNum > 0 && currentItem.nonEmpty) parsedRows += Row(rowNum + 1, currentItem)
   }
 
   override def cell(cellReference: String, formattedValue: String, comment: XSSFComment): Unit = {
@@ -170,7 +170,7 @@ class SpreadsheetContentsHandler extends SheetContentsHandler {
       // Header
       columns(col) = formattedValue
     } else if (columns.contains(col)) { // We ignore anything outside of the header columns
-      currentItem(columns(col)) = Cell(cellReference, formattedValue.replace("_x000D_", ""))
+      currentItem += ((columns(col), Cell(cellReference, formattedValue.replace("_x000D_", ""))))
     }
   }
 }
@@ -263,7 +263,7 @@ object DataImportJob {
     handler.parsedSheets.toSeq.par.flatMap { case (sheetName, rows) =>
       rows.par.flatMap { row =>
         // Need at least the team
-        row.values.get(TeamColumnHeading)
+        row.values.toMap.get(TeamColumnHeading)
           .flatMap { cell => Teams.all.find { t => t.id == cell.formattedValue || t.name == cell.formattedValue } }
           .map { team =>
             val form = CaseController.form(
@@ -273,7 +273,7 @@ object DataImportJob {
               Set.empty,
               None
             ).bind(
-              row.values.filterKeys(ColumnMappings.contains)
+              row.values.toMap.filterKeys(ColumnMappings.contains)
                 .map { case (k, cell) =>
                   val value = cell.formattedValue
                   ColumnMappings(k) -> ColumnTransforms.get(k).map(_(value)).getOrElse(value)
@@ -282,7 +282,7 @@ object DataImportJob {
 
             // Has an owner been passed?
             val ownerForm =
-              row.values.get(CaseOwnerColumnHeading)
+              row.values.toMap.get(CaseOwnerColumnHeading)
                 .flatMap { cell =>
                   if (cell.formattedValue.forall(_.isDigit)) {
                     val universityID = UniversityID(cell.formattedValue)
@@ -295,7 +295,7 @@ object DataImportJob {
                 }
 
             val generalNote: Option[CaseNoteSave] =
-              row.values.get(NotesColumnHeading)
+              row.values.toMap.get(NotesColumnHeading)
                 .filter(_.formattedValue.hasText)
                 .map { cell =>
                   CaseNoteSave(
@@ -305,12 +305,12 @@ object DataImportJob {
                   )
                 }
 
-            val extraValues = row.values.filterKeys(!AllColumnHeadings.contains(_))
+            val extraValues = row.values.filterNot { case (k, _) => AllColumnHeadings.contains(k) }
 
             val migrationNote: Option[CaseNoteSave] =
               if (extraValues.nonEmpty)
                 Some(CaseNoteSave(
-                  extraValues.map { case (k, cell) => s"$k: ${cell.formattedValue}" }.mkString("\n"),
+                  extraValues.map { case (k, cell) => s"**$k**: ${cell.formattedValue}" }.mkString("\n\n"),
                   Usercode("system"),
                   None
                 ))
