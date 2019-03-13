@@ -243,7 +243,7 @@ class CaseServiceImpl @Inject() (
     daoRunner.run(
       dao.findByClientQuery(universityID)
         .withLastUpdatedFor(ac.usercode.orNull)
-        .sortBy { case (_, lu, _, _) => lu.desc }
+        .sortBy { case (c, lu, _, _) => (lu.desc, c.key.desc) }
         .result
     ).map { results => Right(results.map { case (c, lastUpdated, lastMessageFromClient, lastViewed) =>
       CaseListRender(c.asCase, lastUpdated, lastMessageFromClient, lastViewed) })
@@ -536,7 +536,7 @@ class CaseServiceImpl @Inject() (
 
           lastUpdatedAfterFilter && lastUpdatedBeforeFilter && hasUnreadsFilter
         }
-        .sortBy { case (_, lu, _, _) => lu.desc }
+        .sortBy { case (c, lu, _, _) => (lu.desc, c.key.desc) }
         .paginate(page)
         .result
     ).map { results => Right(results.map { case (c, lastUpdated, lastMessageFromClient, lastViewed) =>
