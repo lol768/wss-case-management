@@ -55,7 +55,7 @@
 }
 
 @if(pagination.isFirst) {
-  @if(cases.nonEmpty) {
+  @if(cases.nonEmpty || caseOwnersFilterForm.exists(_.value.exists(_.nonEmpty)) || issueListFilterForm.exists(_.value.exists(_.nonEmpty))) {
     <table class="table table-default table-paginated" data-pagination="@pagination.route">
       @title.map { t => <caption>@t</caption> }
       <thead>
