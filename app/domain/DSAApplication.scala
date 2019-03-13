@@ -1,17 +1,18 @@
 package domain
 
-import java.time.OffsetDateTime
+import java.time.{LocalDate, OffsetDateTime}
 import java.util.UUID
 
 import domain.dao.DSADao.StoredDSAApplication
 import enumeratum.{EnumEntry, PlayEnum}
+
 import scala.collection.immutable
 
 case class DSAApplication (
   customerReference: Option[String],
-  applicationDate: Option[OffsetDateTime],
+  applicationDate: Option[LocalDate],
   fundingApproved: Option[Boolean],
-  confirmationDate: Option[OffsetDateTime],
+  confirmationDate: Option[LocalDate],
   ineligibilityReason: Option[DSAIneligibilityReason],
   fundingTypes: Set[DSAFundingType],
   lastUpdated: OffsetDateTime
@@ -47,9 +48,9 @@ object DSAApplication {
 
 case class DSAApplicationSave (
   customerReference: Option[String],
-  applicationDate: Option[OffsetDateTime],
+  applicationDate: Option[LocalDate],
   fundingApproved: Option[Boolean],
-  confirmationDate: Option[OffsetDateTime],
+  confirmationDate: Option[LocalDate],
   fundingTypes: Set[DSAFundingType],
   ineligibilityReason: Option[DSAIneligibilityReason]
 ) {

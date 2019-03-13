@@ -83,9 +83,9 @@ object CaseController {
     single("dsaApplication" -> optional(
       mapping(
         "customerReference" -> optional(text(maxLength = 1000)),
-        "applicationDate" -> optional(FormHelpers.offsetDateTime),
+        "applicationDate" -> optional(localDate),
         "fundingApproved" -> optional(boolean),
-        "confirmationDate" -> optional(FormHelpers.offsetDateTime),
+        "confirmationDate" -> optional(localDate),
         "fundingTypes" -> set(DSAFundingType.formField),
         "ineligibilityReason" ->  optional(DSAIneligibilityReason.formField)
       )(DSAApplicationSave.apply)(DSAApplicationSave.unapply)

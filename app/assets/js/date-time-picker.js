@@ -16,6 +16,7 @@ const icons = {
   close: 'fal fa-times',
 };
 
+const dateHiddenFieldFormat = 'YYYY-MM-DD';
 const dateTimeHiddenFieldFormat = 'YYYY-MM-DD[T]HH:mm';
 const dateTextFieldFormat = 'Do MMM YYYY';
 const dateTimeTextFieldFormat = 'Do MMM YYYY, HH:mm';
@@ -29,7 +30,7 @@ const commonOptions = {
   useCurrent: true,
 };
 
-function PopupDatePicker(container, format) {
+function PopupDatePicker(container, textFormat, hiddenFormat) {
   const hiddenField = $(container).find('input[type=hidden]');
   const inputGroup = $(container).find('.input-group');
   const textField = inputGroup.find('input');
@@ -38,19 +39,19 @@ function PopupDatePicker(container, format) {
 
   let currentDate;
   if (hiddenField.val()) {
-    currentDate = moment(hiddenField.val(), dateTimeHiddenFieldFormat);
-    textField.val(currentDate.format(dateTimeTextFieldFormat));
+    currentDate = moment(hiddenField.val(), hiddenFormat);
+    textField.val(currentDate.format(textFormat));
   }
 
   inputGroup.datetimepicker({
     ...commonOptions,
-    format,
+    format: textFormat,
     date: currentDate,
     allowInputToggle: true,
     ...options,
   }).on('dp.change', ({ date }) => {
     if (date) {
-      hiddenField.val(date.format(dateTimeHiddenFieldFormat));
+      hiddenField.val(date.format(hiddenFormat));
     } else {
       hiddenField.val('');
     }
@@ -58,11 +59,11 @@ function PopupDatePicker(container, format) {
 }
 
 export function DatePicker(container) {
-  PopupDatePicker(container, dateTextFieldFormat);
+  PopupDatePicker(container, dateTextFieldFormat, dateHiddenFieldFormat);
 }
 
 export function DateTimePicker(container) {
-  PopupDatePicker(container, dateTimeTextFieldFormat);
+  PopupDatePicker(container, dateTimeTextFieldFormat, dateTimeHiddenFieldFormat);
 }
 
 function InlinePicker(container, format) {

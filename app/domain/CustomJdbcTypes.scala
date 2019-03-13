@@ -1,6 +1,7 @@
 package domain
 
-import java.time.Duration
+import java.sql.Date
+import java.time.{Duration, LocalDate}
 
 import domain.ExtendedPostgresProfile.api._
 import enumeratum.SlickEnumSupport
@@ -43,6 +44,11 @@ object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
   implicit val symbolTypeMapper: JdbcType[Symbol] = MappedColumnType.base[Symbol, String](_.name, Symbol.apply)
 
   implicit val durationMapper: JdbcType[Duration] = MappedColumnType.base[Duration, Long](_.getSeconds, Duration.ofSeconds)
+
+  implicit val localDateColumnType: JdbcType[LocalDate] = MappedColumnType.base[LocalDate, Date](
+    ld => Date.valueOf(ld),
+    d => d.toLocalDate
+  )
 
   // Enum[] mappings
   implicit lazy val databaseOperationTypeMapper: JdbcType[DatabaseOperation] = mappedColumnTypeForEnum(DatabaseOperation)
