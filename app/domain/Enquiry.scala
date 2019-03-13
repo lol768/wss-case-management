@@ -43,8 +43,10 @@ case class EnquiryRender(
 
 case class EnquiryListRender(
   enquiry: Enquiry,
-  lastUpdated: OffsetDateTime
-)
+  lastUpdated: OffsetDateTime,
+  lastClientMessage: Option[OffsetDateTime],
+  lastViewed: Option[OffsetDateTime],
+) extends IssueListRender(enquiry)
 
 case class EnquiryNote(
   id: UUID,

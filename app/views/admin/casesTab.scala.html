@@ -29,7 +29,7 @@
 
 <p><a href="@createRoute" class="btn btn-default">Create a new case</a></p>
 
-@views.html.admin.caseTable(Some("Open cases"), openCases, clients, owners, allOpenCaseOwners, None, pagination)
+@views.html.admin.caseTable(Some("Open cases"), openCases, clients, owners, allOpenCaseOwners, None, None, pagination)
 
 @if(closedCases == 0) {
   <p>No closed cases to show</p>

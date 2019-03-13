@@ -116,6 +116,12 @@ object Message extends Versioning {
       .groupBy(_.ownerId)
       .map { case (id, m) => (id, m.map(_.created).max) }
 
+  val lastUpdatedCaseMessageFromClient =
+    Message.messages.table
+      .filter(m => m.ownerType === (MessageOwner.Case: MessageOwner) && m.sender === (MessageSender.Client: MessageSender))
+      .groupBy(_.ownerId)
+      .map { case (id, m) => (id, m.map(_.created).max) }
+
   val lastUpdatedCasePerClientMessage =
     Message.messages.table
       .filter(m => m.ownerType === (MessageOwner.Case: MessageOwner))
@@ -125,6 +131,12 @@ object Message extends Versioning {
   val lastUpdatedEnquiryMessage =
     Message.messages.table
       .filter(m => m.ownerType === (MessageOwner.Enquiry: MessageOwner))
+      .groupBy(_.ownerId)
+      .map { case (id, m) => (id, m.map(_.created).max) }
+
+  val lastUpdatedEnquiryMessageFromClient =
+    Message.messages.table
+      .filter(m => m.ownerType === (MessageOwner.Enquiry: MessageOwner) && m.sender === (MessageSender.Client: MessageSender))
       .groupBy(_.ownerId)
       .map { case (id, m) => (id, m.map(_.created).max) }
 

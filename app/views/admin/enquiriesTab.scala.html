@@ -28,8 +28,8 @@
   }
 }
 
-@views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction, requiringActionOwners, allOpenCaseOwners, None, requiringActionPagination)
-@views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient, awaitingClientOwners, allOpenCaseOwners, None, awaitingClientPagination)
+@views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction, requiringActionOwners, allOpenCaseOwners, None, None, requiringActionPagination)
+@views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient, awaitingClientOwners, allOpenCaseOwners, None, None, awaitingClientPagination)
 
 @if(closedEnquiries == 0) {
   <p>No closed enquiries to show</p>

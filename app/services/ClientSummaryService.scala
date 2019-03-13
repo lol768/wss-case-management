@@ -3,6 +3,7 @@ package services
 import java.time.OffsetDateTime
 
 import com.google.inject.ImplementedBy
+import domain.AuditEvent._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.ClientDao.StoredClient
@@ -55,9 +56,9 @@ class ClientSummaryServiceImpl @Inject()(
 
   override def save(universityID: UniversityID, summary: ClientSummarySave)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]] =
     auditService.audit(
-      'SaveClientSummary,
+      Operation.ClientSummary.Save,
       universityID.string,
-      'ClientSummary,
+      Target.ClientSummary,
       Json.toJson(summary)(ClientSummarySave.formatter)
     ) {
       clientService.getOrAddClients(Set(universityID)).successFlatMapTo(clients =>
@@ -72,9 +73,9 @@ class ClientSummaryServiceImpl @Inject()(
 
   override def update(universityID: UniversityID, summary: ClientSummarySave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]] =
     auditService.audit(
-      'UpdateClientSummary,
+      Operation.ClientSummary.Update,
       universityID.string,
-      'ClientSummary,
+      Target.ClientSummary,
       Json.toJson(summary)(ClientSummarySave.formatter)
     ) {
       clientService.getOrAddClients(Set(universityID)).successFlatMapTo(clients =>

@@ -52,6 +52,8 @@ function PopupDatePicker(container, textFormat, hiddenFormat) {
   }).on('dp.change', ({ date }) => {
     if (date) {
       hiddenField.val(date.format(hiddenFormat));
+    } else {
+      hiddenField.val('');
     }
   });
 }
@@ -78,7 +80,11 @@ function InlinePicker(container, format) {
       label.append(span);
     }
 
-    span.text(`: ${newDate.format(dayAndDateTimeTextFieldFormat)}`);
+    if (newDate) {
+      span.text(`: ${newDate.format(dayAndDateTimeTextFieldFormat)}`);
+    } else {
+      span.text('');
+    }
   };
 
   let currentDate;
@@ -96,6 +102,9 @@ function InlinePicker(container, format) {
     if (date) {
       hiddenField.val(date.format(dateTimeHiddenFieldFormat));
       updateLabel(date);
+    } else {
+      hiddenField.val('');
+      updateLabel();
     }
   }).trigger('init.datetimepicker').trigger('dp.change');
 

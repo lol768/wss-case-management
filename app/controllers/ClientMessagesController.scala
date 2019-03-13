@@ -1,5 +1,6 @@
 package controllers
 
+import domain.AuditEvent._
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -121,9 +122,9 @@ class ClientMessagesController @Inject()(
 
   def auditView(id: java.util.UUID): Action[AnyContent] = CanClientViewIssueAction(id).async { implicit request =>
     audit.audit(
-      matchIssue(request.issue, _ => 'EnquiryView, _ => 'CaseView),
+      matchIssue(request.issue, _ => Operation.Enquiry.View, _ => Operation.Case.View),
       request.issue.id.toString,
-      matchIssue(request.issue, _ => 'Enquiry, _ => 'Case),
+      matchIssue(request.issue, _ => Target.Enquiry, _ => Target.Case),
       Json.obj()
     ) {
       Future.successful(Right(

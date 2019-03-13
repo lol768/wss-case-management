@@ -3,7 +3,9 @@ package services
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
+import domain.AuditEvent._
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.MemberDao.StoredMember
 import domain.dao.MemberDao.StoredMember.Members
@@ -17,7 +19,6 @@ import warwick.core.timing.TimingContext
 import warwick.sso.Usercode
 
 import scala.concurrent.{ExecutionContext, Future}
-import ExtendedPostgresProfile.api._
 
 @ImplementedBy(classOf[OwnerServiceImpl])
 trait OwnerService {
@@ -63,7 +64,7 @@ class OwnerServiceImpl @Inject()(
 
   override def setCaseOwners(caseId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
     val now = JavaTime.offsetDateTime
-    auditService.audit('CaseSetOwners, caseId.toString, 'Case, Json.arr(owners.map(o => JsString(o.string)))) {
+    auditService.audit(Operation.Case.SetOwners, caseId.toString, Target.Case, Json.arr(owners.map(o => JsString(o.string)))) {
       setOwners(
         owners,
         ownerDao.findCaseOwnersQuery(Set(caseId)),
@@ -78,7 +79,7 @@ class OwnerServiceImpl @Inject()(
   }
 
   override def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
-    auditService.audit('EnquirySetOwners, enquiryId.toString, 'Enquiry, Json.arr(owners.map(o => JsString(o.string)))) {
+    auditService.audit(Operation.Enquiry.SetOwners, enquiryId.toString, Target.Enquiry, Json.arr(owners.map(o => JsString(o.string)))) {
       val now = JavaTime.offsetDateTime
       setOwners(
         owners,
@@ -94,7 +95,7 @@ class OwnerServiceImpl @Inject()(
   }
 
   override def setAppointmentOwners(appointmentID: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]] = {
-    auditService.audit('AppointmentSetOwners, appointmentID.toString, 'Appointment, Json.arr(owners.map(o => JsString(o.string)))) {
+    auditService.audit(Operation.Appointment.SetOwners, appointmentID.toString, Target.Appointment, Json.arr(owners.map(o => JsString(o.string)))) {
       val now = JavaTime.offsetDateTime
       setOwners(
         owners,
