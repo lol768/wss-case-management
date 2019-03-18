@@ -252,6 +252,8 @@ object AppointmentOutcome extends PlayEnum[AppointmentOutcome] {
   case object SessionBanked extends AppointmentOutcome("Session banked")
   case object NoFurtherAction extends AppointmentOutcome("No further action required")
   case object Referral extends AppointmentOutcome("Referred to another WSS team")
+  case object CentralBooking extends AppointmentOutcome("Referred to central booking service")
+  case object Security extends AppointmentOutcome("Security assistance required")
   case object Closed extends AppointmentOutcome("Case closed")
   case object Other extends AppointmentOutcome("Other")
 
