@@ -126,6 +126,8 @@ class UploadedFileControllerHelperImpl @Inject()(
         "style-src 'unsafe-inline'; " + // PDF viewer Chrome?
         "media-src 'self'" // Needed to load the audio/video
       ),
+
+      "Cross-Origin-Resource-Policy" -> "same-origin",
     )
 
     if (request.headers.get(HeaderNames.IF_NONE_MATCH).contains(toEtag(uploadedFile))) {
