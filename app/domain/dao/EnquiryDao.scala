@@ -3,6 +3,7 @@ package domain.dao
 import java.time.{Instant, LocalDate, OffsetDateTime, ZoneOffset}
 import java.util.UUID
 
+import com.github.tminglei.slickpg.TsVector
 import com.google.inject.ImplementedBy
 import domain.AuditEvent._
 import domain.CustomJdbcTypes._
@@ -212,12 +213,10 @@ object EnquiryDao {
     self: Table[_] =>
 
     def key = column[IssueKey]("enquiry_key")
-    def searchableKey = toTsVector(key.asColumnOf[String], Some("english"))
     def team = column[Team]("team_id")
     def version = column[OffsetDateTime]("version_utc")
     def universityId = column[UniversityID]("university_id")
     def subject = column[String]("subject")
-    def searchableSubject = toTsVector(subject, Some("english"))
     def state = column[IssueState]("state")
     def created = column[OffsetDateTime]("created_utc")
   }
@@ -226,6 +225,8 @@ object EnquiryDao {
     override def matchesPrimaryKey(other: StoredEnquiry): Rep[Boolean] = id === other.id
 
     def id = column[UUID]("id", O.PrimaryKey)
+    def searchableKey: Rep[TsVector] = column[TsVector]("enquiry_key_tsv")
+    def searchableSubject: Rep[TsVector] = column[TsVector]("subject_tsv")
 
     def * = (id, key, universityId, subject, team, state, version, created).mapTo[StoredEnquiry]
     def idx = index("idx_enquiry_key", key, unique = true)
@@ -351,7 +352,6 @@ object EnquiryDao {
     def enquiryID = column[UUID]("enquiry_id")
     def noteType = column[EnquiryNoteType]("note_type")
     def text = column[String]("text")
-    def searchableText = toTsVector(text, Some("english"))
     def teamMember = column[Usercode]("team_member")
     def created = column[OffsetDateTime]("created_utc")
     def version = column[OffsetDateTime]("version_utc")
@@ -362,6 +362,7 @@ object EnquiryDao {
     with CommonNoteProperties {
     override def matchesPrimaryKey(other: StoredEnquiryNote): Rep[Boolean] = id === other.id
     def id = column[UUID]("id", O.PrimaryKey)
+    def searchableText: Rep[TsVector] = column[TsVector]("text_tsv")
 
     override def * : ProvenShape[StoredEnquiryNote] =
       (id, enquiryID, noteType, text, teamMember, created, version).mapTo[StoredEnquiryNote]

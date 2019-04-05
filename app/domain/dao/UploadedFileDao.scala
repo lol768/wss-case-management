@@ -4,6 +4,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import akka.Done
+import com.github.tminglei.slickpg.TsVector
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
@@ -111,7 +112,6 @@ object UploadedFileDao {
 
   trait CommonProperties { self: Table[_] =>
     def fileName = column[String]("file_name")
-    def searchableFileName = toTsVector(fileName, Some("english"))
     def contentLength = column[Long]("content_length")
     def contentType = column[String]("content_type")
     def uploadedBy = column[Usercode]("uploaded_by")
@@ -126,6 +126,7 @@ object UploadedFileDao {
     with CommonProperties {
     override def matchesPrimaryKey(other: StoredUploadedFile): Rep[Boolean] = id === other.id
     def id = column[UUID]("id", O.PrimaryKey)
+    def searchableFileName: Rep[TsVector] = column[TsVector]("file_name_tsv")
 
     override def * : ProvenShape[StoredUploadedFile] =
       (id, fileName, contentLength, contentType, uploadedBy, ownerId, ownerType, created, version).mapTo[StoredUploadedFile]

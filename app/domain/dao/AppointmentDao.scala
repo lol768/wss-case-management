@@ -4,6 +4,7 @@ import java.time.{Duration, LocalDate, OffsetDateTime}
 import java.util.UUID
 
 import akka.Done
+import com.github.tminglei.slickpg.TsVector
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
@@ -134,7 +135,6 @@ class AppointmentDaoImpl @Inject()(
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
           (
-            a.searchableId @+
             a.searchableKey @+
             c.searchableUniversityID @+
             tm.searchableUsercode @+
@@ -298,7 +298,6 @@ object AppointmentDao {
 
   trait CommonAppointmentProperties { self: Table[_] =>
     def key = column[IssueKey]("appointment_key")
-    def searchableKey = toTsVector(key.asColumnOf[String], Some("english"))
     def start = column[OffsetDateTime]("start_utc")
     def duration = column[Duration]("duration_secs")
     def roomID = column[Option[UUID]]("room_id")
@@ -320,7 +319,7 @@ object AppointmentDao {
     with CommonAppointmentProperties {
     override def matchesPrimaryKey(other: StoredAppointment): Rep[Boolean] = id === other.id
     def id = column[UUID]("id", O.PrimaryKey)
-    def searchableId = toTsVector(id.asColumnOf[String], Some("english"))
+    def searchableKey: Rep[TsVector] = column[TsVector]("appointment_key_tsv")
 
     override def * : ProvenShape[StoredAppointment] =
       (id, key, start, duration, roomID, team, appointmentType, purpose, state, cancellationReason, outcome, dsaSupportAccessed, dsaActionPoints, dsaActionPointOther, created, version).mapTo[StoredAppointment]

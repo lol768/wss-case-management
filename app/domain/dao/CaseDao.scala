@@ -4,6 +4,7 @@ import java.time._
 import java.util.UUID
 
 import akka.Done
+import com.github.tminglei.slickpg.TsVector
 import com.google.inject.ImplementedBy
 import domain.AuditEvent._
 import domain.CustomJdbcTypes._
@@ -109,7 +110,6 @@ class CaseDaoImpl @Inject()(
       Seq[Option[Rep[Option[Boolean]]]](
         q.query.filter(_.nonEmpty).map { queryStr =>
           (
-            c.searchableId @+
             c.searchableKey @+
             c.searchableSubject @+
             client.searchableUniversityID @+
@@ -425,9 +425,7 @@ object CaseDao {
 
   trait CommonProperties { self: Table[_] =>
     def key = column[IssueKey]("case_key")
-    def searchableKey = toTsVector(key.asColumnOf[String], Some("english"))
     def subject = column[String]("subject")
-    def searchableSubject = toTsVector(subject, Some("english"))
     def created = column[OffsetDateTime]("created_utc")
     def team = column[Team]("team_id")
     def version = column[OffsetDateTime]("version_utc")
@@ -458,7 +456,8 @@ object CaseDao {
     with CommonProperties {
     override def matchesPrimaryKey(other: StoredCase): Rep[Boolean] = id === other.id
     def id = column[UUID]("id", O.PrimaryKey)
-    def searchableId = toTsVector(id.asColumnOf[String], Some("english"))
+    def searchableKey: Rep[TsVector] = column[TsVector]("case_key_tsv")
+    def searchableSubject: Rep[TsVector] = column[TsVector]("subject_tsv")
 
     def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
 
@@ -802,7 +801,6 @@ object CaseDao {
     def caseId = column[UUID]("case_id")
     def noteType = column[CaseNoteType]("note_type")
     def text = column[String]("text")
-    def searchableText = toTsVector(text, Some("english"))
     def teamMember = column[Usercode]("team_member")
     def appointmentId = column[Option[UUID]]("appointment_id")
     def created = column[OffsetDateTime]("created_utc")
@@ -814,6 +812,7 @@ object CaseDao {
     with CommonNoteProperties {
     override def matchesPrimaryKey(other: StoredCaseNote): Rep[Boolean] = id === other.id
     def id = column[UUID]("id", O.PrimaryKey)
+    def searchableText: Rep[TsVector] = column[TsVector]("text_tsv")
 
     override def * : ProvenShape[StoredCaseNote] =
       (id, caseId, noteType, text, teamMember, appointmentId, created, version).mapTo[StoredCaseNote]
