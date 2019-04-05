@@ -71,7 +71,10 @@ object AppointmentController {
 
     def isValidCase(id: UUID): Boolean =
       Try(Await.result(caseService.find(id), 5.seconds))
-        .toOption.exists(_.isRight)
+        .toOption.exists {
+          case Right(c) if c.state != IssueState.Closed => true
+          case _ => false
+        }
 
     def isValidRoom(id: UUID): Boolean =
       Try(Await.result(locationService.findRoom(id), 5.seconds))
@@ -236,14 +239,17 @@ class AppointmentController @Inject()(
         forCase.map { caseKey =>
           cases.find(caseKey).flatMap(_.fold(
             _ => Future.successful(Map.empty[String, String]),
-            clientCase => cases.getClients(clientCase.id).map(_.fold(
-              _ => Map("cases[0]" -> clientCase.id.toString),
-              clients => Map(
-                "cases[0]" -> clientCase.id.toString
-              ) ++ clients.toSeq.zipWithIndex.map { case (c, index) =>
-                s"clients[$index]" -> c.universityID.string
-              }.toMap
-            ))
+            {
+              case clientCase if clientCase.state != IssueState.Closed => cases.getClients(clientCase.id).map(_.fold(
+                _ => Map("cases[0]" -> clientCase.id.toString),
+                clients => Map(
+                  "cases[0]" -> clientCase.id.toString
+                ) ++ clients.toSeq.zipWithIndex.map { case (c, index) =>
+                  s"clients[$index]" -> c.universityID.string
+                }.toMap
+              ))
+              case _ => Future.successful(Map.empty[String, String])
+            }
           ))
         },
         client.map { universityID => Future.successful(Map("clients[0]" -> universityID.string)) },

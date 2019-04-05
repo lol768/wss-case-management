@@ -303,9 +303,11 @@
               <p>
                 <a href="@controllers.admin.routes.CaseDocumentController.addDocumentForm(c.key)" class="btn btn-default btn-block">Add a document</a>
               </p>
-              <p>
-                <a href="@controllers.admin.routes.AppointmentController.createForm(c.team.id, forCase = Some(c.key))" class="btn btn-default btn-block">Create an appointment</a>
-              </p>
+              @if(c.state != IssueState.Closed) {
+                <p>
+                  <a href="@controllers.admin.routes.AppointmentController.createForm(c.team.id, forCase = Some(c.key))" class="btn btn-default btn-block">Create an appointment</a>
+                </p>
+              }
               <p>
                 <a href="@controllers.admin.routes.CaseController.linkForm(c.key)" class="btn btn-default btn-block">Link to another case</a>
               </p>
