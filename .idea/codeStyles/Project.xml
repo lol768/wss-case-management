@@ -25,10 +25,12 @@
     </ScalaCodeStyleSettings>
     <SqlCodeStyleSettings version="2">
       <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
+      <option name="QUERY_ALIGN_ELEMENTS" value="false" />
+      <option name="INSERT_COLLAPSE_MULTI_ROW_VALUES" value="true" />
+      <option name="SET_ALIGN_EQUAL_SIGN" value="false" />
       <option name="SELECT_ALIGN_AS" value="false" />
       <option name="FROM_WRAP_JOIN_1" value="false" />
       <option name="FROM_WRAP_JOIN_2" value="false" />
-      <option name="FROM_INDENT_JOIN" value="false" />
       <option name="FROM_ONLY_JOIN_INDENT" value="1" />
       <option name="TABLE_OPENING" value="1" />
       <option name="TABLE_CONTENT" value="2" />
@@ -37,8 +39,14 @@
       <option name="TABLE_DEFAULTS_ALIGN" value="false" />
       <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
       <option name="TABLE_ALTER_INSTRUCTION_ALIGN" value="false" />
+      <option name="POST_OPT_WRAP_2" value="false" />
+      <option name="POST_OPT_ALIGN" value="false" />
       <option name="IMP_DECLARE_ALIGN_TYPE" value="false" />
       <option name="IMP_DECLARE_ALIGN_EQ" value="false" />
+      <option name="EXPR_CASE_END" value="1" />
+      <option name="INDEX_NAME_TEMPLATE" value="idx_{table}_{columns}_{unique?u:}" />
+      <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
+      <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
     </SqlCodeStyleSettings>
     <XML>
       <option name="XML_LEGACY_SETTINGS_IMPORTED" value="true" />
@@ -69,8 +77,11 @@
       </indentOptions>
     </codeStyleSettings>
     <codeStyleSettings language="SQL">
+      <option name="KEEP_FIRST_COLUMN_COMMENT" value="false" />
       <indentOptions>
+        <option name="INDENT_SIZE" value="2" />
         <option name="CONTINUATION_INDENT_SIZE" value="2" />
+        <option name="TAB_SIZE" value="2" />
       </indentOptions>
     </codeStyleSettings>
     <codeStyleSettings language="Scala">

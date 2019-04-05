@@ -36,8 +36,7 @@ module.exports = class PlayFingerprintsPlugin {
               size: () => hash.length,
             };
 
-            // don't really need this, but Play seems not to serve the file
-            // unless the non-fingerprinted version exists.
+            // don't really need this, but Play seems not to serve the file unless the non-fingerprinted version exists.
             assets[`${name}`] = assets[filename];
           } else {
             const hash = createHash('md5');
