@@ -66,19 +66,20 @@ object MemberDao {
   ) extends StoredVersion[StoredMember]
 
   object StoredMember extends Versioning {
-    def tupled: ((Usercode, Option[String], OffsetDateTime)) => StoredMember = (StoredMember.apply _).tupled
+    def tupled = (StoredMember.apply _).tupled
 
     sealed trait CommonProperties { self: Table[_] =>
       def fullName: Rep[Option[String]] = column[Option[String]]("full_name")
-      def searchableFullName: Rep[TsVector] = toTsVector(fullName, Some("english")).orEmptyTsVector
       def version: Rep[OffsetDateTime] = column[OffsetDateTime]("version_utc")
     }
 
     class Members(tag: Tag) extends Table[StoredMember](tag, "member") with VersionedTable[StoredMember] with CommonProperties {
       override def matchesPrimaryKey(other: StoredMember): Rep[Boolean] = usercode === other.usercode
 
+      def searchableFullName: Rep[TsVector] = column[TsVector]("full_name_tsv")
+
       def usercode: Rep[Usercode] = column[Usercode]("user_id", O.PrimaryKey)
-      def searchableUsercode: Rep[TsVector] = toTsVector(usercode.asColumnOf[String], Some("english"))
+      def searchableUsercode: Rep[TsVector] = column[TsVector]("user_id_tsv")
 
       def * : ProvenShape[StoredMember] = (usercode, fullName, version).mapTo[StoredMember]
     }

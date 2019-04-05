@@ -3,6 +3,7 @@ package domain
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import com.github.tminglei.slickpg.TsVector
 import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain.dao.UploadedFileDao
@@ -69,7 +70,6 @@ object Message extends Versioning {
 
   sealed trait CommonProperties { self: Table[_] =>
     def text = column[String]("text")
-    def searchableText = toTsVector(text, Some("english"))
     def sender = column[MessageSender]("sender")
     def client = column[UniversityID]("university_id")
     def teamMember = column[Option[Usercode]]("team_member")
@@ -84,6 +84,7 @@ object Message extends Versioning {
     override def matchesPrimaryKey(other: Message): Rep[Boolean] = id === other.id
 
     def id = column[UUID]("id", O.PrimaryKey)
+    def searchableText: Rep[TsVector] = column[TsVector]("text_tsv")
 
     def * = (id, text, sender, client, teamMember, team, ownerId, ownerType, created, version).mapTo[Message]
   }
