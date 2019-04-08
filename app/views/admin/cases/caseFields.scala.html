@@ -163,6 +163,15 @@
 )
 
 @b3.checkboxGroup(
+  label = "Mental health issues",
+  items = MentalHealthIssue.values,
+  form = form,
+  field = "case.mentalHealthIssues",
+  idPrefix = "mentalHealthIssue",
+  columns = 2
+)
+
+@b3.checkboxGroup(
   label = "Current medication",
   items = CaseMedication.values,
   form = form,

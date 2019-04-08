@@ -266,6 +266,18 @@
           }
         }
 
+        @if(c.fields.mentalHealthIssues.nonEmpty || history.mentalHealthIssues.size > 1) {
+          @tags.sectioned.detail("Mental health issues"){
+            <div data-field-history-field="mentalHealthIssues">
+              @if(c.fields.mentalHealthIssues.nonEmpty) {
+                @c.fields.mentalHealthIssues.toSeq.map(_.description).sorted.mkString(", ")
+              } else {
+                None
+              }
+            </div>
+          }
+        }
+
         @if(c.fields.medications.nonEmpty || history.medications.size > 1) {
           @tags.sectioned.detail("Current medication"){
             <div data-field-history-field="medications">
