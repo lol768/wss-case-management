@@ -90,8 +90,9 @@ class TeamEnquiryController @Inject()(
               ServiceResults.zip(
                 service.getOwners(Set(enquiry.id)),
                 permissionService.canViewTeamFuture(currentUser.usercode, enquiry.team),
-                caseService.findFromOriginalEnquiry(enquiry.id)
-              ).successMap { case (ownersMap, canViewTeam, linkedCases) =>
+                caseService.findFromOriginalEnquiry(enquiry.id),
+                Future.successful(service.nextClientReminder(request.enquiry.id)),
+              ).successMap { case (ownersMap, canViewTeam, linkedCases, nextClientReminder) =>
                 Ok(views.html.admin.enquiry.messages(
                   enquiryRender.enquiry,
                   profile,
@@ -99,6 +100,7 @@ class TeamEnquiryController @Inject()(
                   enquiryRender.notes,
                   ownersMap.values.flatten.toSet,
                   clientLastRead,
+                  nextClientReminder,
                   stateChangeForm,
                   messageForm,
                   canViewTeam,
@@ -224,6 +226,21 @@ class TeamEnquiryController @Inject()(
               .flashing("success" -> Messages("flash.enquiry.reassigned", data.team.name))
           }
         }
+    )
+  }
+
+  def cancelClientReminder(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey).async { implicit request =>
+    stateChangeForm(request.enquiry).bindFromRequest().fold(
+      formWithErrors => renderMessages(
+        request.enquiry,
+        formWithErrors,
+        MessagesController.messageForm(Some(request.lastEnquiryMessageDate))
+      ),
+      _ => Future.successful {
+        service.cancelClientReminder(request.enquiry)
+        Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key))
+          .flashing("success" -> Messages("flash.enquiry.clientReminderCancelled"))
+      }
     )
   }
 

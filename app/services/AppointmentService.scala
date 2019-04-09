@@ -704,7 +704,7 @@ class AppointmentServiceImpl @Inject()(
       }
     }
 
-  private def scheduleClientReminder(appointment: Appointment) = {
+  private def scheduleClientReminder(appointment: Appointment): Unit = {
     if (clientRemindersEnabled) {
       val jobKey = new JobKey(appointment.id.toString, "SendAppointmentClientReminder")
       val triggerKey = new TriggerKey(appointment.id.toString, "SendAppointmentClientReminder")
