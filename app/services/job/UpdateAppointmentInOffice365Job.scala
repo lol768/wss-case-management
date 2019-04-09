@@ -1,6 +1,6 @@
 package services.job
-import java.time.Instant
-import java.util.{Date, UUID}
+
+import java.util.UUID
 
 import domain.{AppointmentRender, AppointmentState}
 import helpers.ServiceResults
@@ -11,12 +11,11 @@ import org.quartz._
 import play.api.Configuration
 import play.api.libs.json.{JsNull, JsValue, Json}
 import services.{AppointmentService, AuditLogContext, OwnerService, UserPreferencesService}
-import warwick.core.Logging
 import warwick.office365.{O365, O365Service}
 import warwick.sso.Usercode
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 object UpdateAppointmentInOffice365Job {
@@ -40,7 +39,7 @@ class UpdateAppointmentInOffice365Job @Inject()(
   office365: O365Service,
   userPreferencesService: UserPreferencesService,
   config: Configuration
-)(implicit ec: ExecutionContext) extends Job with Logging {
+)(implicit ec: ExecutionContext) extends AbstractJob(scheduler) {
 
   private[this] lazy val domain: String = config.get[String]("domain")
   private[this] lazy val office365Domain: String = config.get[String]("office365.domain")
@@ -51,79 +50,75 @@ class UpdateAppointmentInOffice365Job @Inject()(
   }
   case class OwnerAndOutlookId(owner: Usercode, outlookId: Option[String])
 
-  override def execute(context: JobExecutionContext): Unit = {
-    implicit val auditLogContext: AuditLogContext = AuditLogContext.empty()
+  override val doLog: Boolean = false
 
-    val dataMap = context.getJobDetail.getJobDataMap
+  // Doesn't really matter, not used if doLog = false
+  override def getDescription(context: JobExecutionContext): String = s"Update Appointments in Office365 for ${context.getMergedJobDataMap.getString(UpdateAppointmentInOffice365Job.JobDataMapKeys.appointmentId)}"
+
+  override def run(implicit context: JobExecutionContext, auditLogContext: AuditLogContext): Future[JobResult] = {
+    val dataMap = context.getMergedJobDataMap
     val appointmentId = UUID.fromString(dataMap.getString(UpdateAppointmentInOffice365Job.JobDataMapKeys.appointmentId))
     val owners = OwnerAndOutlookId.fromMap(Json.parse(dataMap.getString(UpdateAppointmentInOffice365Job.JobDataMapKeys.owners)).as[Map[String, String]])
     val retries = Try(dataMap.getIntegerFromString(UpdateAppointmentInOffice365Job.JobDataMapKeys.retries)).map(_.intValue()).getOrElse(0)
 
-    val result = Await.result(
-      appointmentService.findFull(appointmentId).flatMap(_.fold(
-        errors => errors.head.cause.map(t => throw t).getOrElse(throw new RuntimeException(errors.head.message)),
-        render => {
-          if (render.appointment.state == AppointmentState.Cancelled) {
-            Future.sequence(owners.toSeq.filter(_.outlookId.nonEmpty).map(remove))
-          } else {
-            userPreferencesService.get(owners.map(_.owner)).flatMap(_.fold(
-              errors => errors.head.cause.map(t => throw t).getOrElse(throw new RuntimeException(errors.head.message)),
-              preferences => {
-                val (currentOwners, noLongerOwners) = owners.partition(o => render.teamMembers.map(_.member.usercode).contains(o.owner))
-                val removals = noLongerOwners.filter(_.outlookId.nonEmpty).toSeq.map(remove)
+    appointmentService.findFull(appointmentId).flatMap(_.fold(
+      errors => errors.head.cause.map(t => throw t).getOrElse(throw new RuntimeException(errors.head.message)),
+      render => {
+        if (render.appointment.state == AppointmentState.Cancelled) {
+          Future.sequence(owners.toSeq.filter(_.outlookId.nonEmpty).map(remove))
+        } else {
+          userPreferencesService.get(owners.map(_.owner)).flatMap(_.fold(
+            errors => errors.head.cause.map(t => throw t).getOrElse(throw new RuntimeException(errors.head.message)),
+            preferences => {
+              val (currentOwners, noLongerOwners) = owners.partition(o => render.teamMembers.map(_.member.usercode).contains(o.owner))
+              val removals = noLongerOwners.filter(_.outlookId.nonEmpty).toSeq.map(remove)
 
-                val (toSave, toUpdate) = currentOwners.partition(_.outlookId.isEmpty)
+              val (toSave, toUpdate) = currentOwners.partition(_.outlookId.isEmpty)
 
-                val saves = toSave
-                  .filter(o => preferences(o.owner).office365Enabled)
-                  .toSeq.map(o => save(render, o))
+              val saves = toSave
+                .filter(o => preferences(o.owner).office365Enabled)
+                .toSeq.map(o => save(render, o))
 
-                val updates = toUpdate
-                  .filter(o => preferences(o.owner).office365Enabled)
-                  .toSeq.map(o => update(render, o))
+              val updates = toUpdate
+                .filter(o => preferences(o.owner).office365Enabled)
+                .toSeq.map(o => update(render, o))
 
-                Future.sequence(removals ++ saves ++ updates)
-              }
-            ))
-          }
+              Future.sequence(removals ++ saves ++ updates)
+            }
+          ))
         }
-      )),
-      Duration.Inf
-    )
-    val (successful, failed) = result.partition(_.isRight)
+      }
+    )).map { results =>
+      val (successful, failed) = results.partition(_.isRight)
 
-    if (successful.nonEmpty) {
-      logger.info("%d owners (%s) updated in Office 365 for %s".format(
-        successful.size,
-        successful.map(_.right.get.owner.string).mkString(", "),
-        appointmentId.toString
-      ))
-    }
-
-    if (failed.nonEmpty) {
-      val failedOwners = owners.diff(successful.map(_.right.get).toSet)
-      val message = "%d owners failed to update Office 365: %s".format(
-        failedOwners.size,
-        failed.flatMap(_.left.get.map(_.message)).mkString(", ")
-      )
-      if (retries <= UpdateAppointmentInOffice365Job.maxRetries) {
-        logger.error(s"$message - retrying failed in 30 seconds")
-        scheduler.deleteJob(context.getJobDetail.getKey)
-        scheduler.scheduleJob(
-          JobBuilder.newJob(classOf[UpdateAppointmentInOffice365Job])
-            .withIdentity(context.getJobDetail.getKey)
-            .usingJobData(UpdateAppointmentInOffice365Job.JobDataMapKeys.appointmentId, appointmentId.toString)
-            .usingJobData(UpdateAppointmentInOffice365Job.JobDataMapKeys.owners, Json.stringify(Json.toJson(failedOwners.map(o => o.owner.string -> o.outlookId.getOrElse("")).toMap)))
-            .usingJobData(UpdateAppointmentInOffice365Job.JobDataMapKeys.retries, (retries + 1).toString)
-            .build(),
-          TriggerBuilder.newTrigger()
-            .startAt(Date.from(Instant.now().plusSeconds(60)))
-            .build()
-        )
-      } else {
-        logger.error(s"$message - max retries reached")
+      if (successful.nonEmpty) {
+        logger.info("%d owners (%s) updated in Office 365 for %s".format(
+          successful.size,
+          successful.map(_.right.get.owner.string).mkString(", "),
+          appointmentId.toString
+        ))
       }
 
+      if (failed.nonEmpty) {
+        val failedOwners = owners.diff(successful.map(_.right.get).toSet)
+        val message = "%d owners failed to update Office 365: %s".format(
+          failedOwners.size,
+          failed.flatMap(_.left.get.map(_.message)).mkString(", ")
+        )
+
+        if (retries <= UpdateAppointmentInOffice365Job.maxRetries) {
+          logger.error(s"$message - retrying failed in 1 minute")
+          rescheduleFor(scheduler, context)(1.minute, trigger =>
+            trigger
+              .usingJobData(UpdateAppointmentInOffice365Job.JobDataMapKeys.owners, Json.stringify(Json.toJson(failedOwners.map(o => o.owner.string -> o.outlookId.getOrElse("")).toMap)))
+              .usingJobData(UpdateAppointmentInOffice365Job.JobDataMapKeys.retries, (retries + 1).toString)
+          )
+        } else {
+          logger.error(s"$message - max retries reached")
+        }
+      }
+
+      JobResult.quiet
     }
   }
 
