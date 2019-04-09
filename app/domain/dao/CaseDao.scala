@@ -385,6 +385,7 @@ object CaseDao {
     counsellingServicesIssues: List[String],
     studentSupportIssueTypes: List[String],
     studentSupportIssueTypeOther: Option[String],
+    mentalHealthIssues: List[String],
     medications: List[String],
     medicationOther: Option[String],
     severityOfProblem: Option[SeverityOfProblem],
@@ -394,6 +395,7 @@ object CaseDao {
       clientRiskTypes = clientRiskTypes.toSet.map(ClientRiskType.withName),
       counsellingServicesIssues = counsellingServicesIssues.toSet.map(CounsellingServicesIssue.withName),
       studentSupportIssueTypes = StudentSupportIssueType(studentSupportIssueTypes, studentSupportIssueTypeOther),
+      mentalHealthIssues = mentalHealthIssues.toSet.map(MentalHealthIssue.withName),
       medications = CaseMedication(medications, medicationOther),
       severityOfProblem = severityOfProblem,
       duty = duty,
@@ -443,12 +445,13 @@ object CaseDao {
     def counsellingServicesIssues = column[List[String]]("counselling_services_issues")
     def studentSupportIssueTypes = column[List[String]]("student_support_issue_types")
     def studentSupportIssueTypeOther = column[Option[String]]("student_support_issue_type_other")
+    def mentalHealthIssues = column[List[String]]("mental_health_issues")
     def medications = column[List[String]]("medications")
     def medicationOther = column[Option[String]]("medication_other")
     def severityOfProblem = column[Option[SeverityOfProblem]]("severity_of_problem")
     def duty = column[Boolean]("duty")
 
-    protected def fieldsProjection = (clientRiskTypes, counsellingServicesIssues, studentSupportIssueTypes, studentSupportIssueTypeOther, medications, medicationOther, severityOfProblem, duty).mapTo[StoredCaseFields]
+    protected def fieldsProjection = (clientRiskTypes, counsellingServicesIssues, studentSupportIssueTypes, studentSupportIssueTypeOther, mentalHealthIssues, medications, medicationOther, severityOfProblem, duty).mapTo[StoredCaseFields]
   }
 
   class Cases(tag: Tag) extends Table[StoredCase](tag, "client_case")

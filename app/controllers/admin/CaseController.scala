@@ -68,6 +68,7 @@ object CaseController {
           "clientRiskTypes" -> set(ClientRiskType.formField),
           "counsellingServicesIssues" -> set(CounsellingServicesIssue.formField),
           "studentSupportIssueTypes" -> StudentSupportIssueType.formMapping,
+          "mentalHealthIssues" -> set(MentalHealthIssue.formField),
           "medications" -> CaseMedication.formMapping,
           "severityOfProblem" -> optional(SeverityOfProblem.formField),
           "duty" -> boolean,
