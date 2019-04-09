@@ -35,8 +35,6 @@ object MentalHealthIssue extends PlayEnum[MentalHealthIssue] {
   case object SleepDisorder extends MentalHealthIssue("Sleep disorder")
   case object Stress extends MentalHealthIssue("Stress")
   case object SubstanceMisuse extends MentalHealthIssue("Substance misuse")
-  case object SuicidalIdeation extends MentalHealthIssue("Suicidal ideation")
-  case object SuicidalBehaviour extends MentalHealthIssue("Suicidal behaviour")
   case object Wellbeing extends MentalHealthIssue("Wellbeing")
 
   override def values: immutable.IndexedSeq[MentalHealthIssue] = findValues
