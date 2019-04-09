@@ -44,17 +44,6 @@ class SendEnquiryClientReminderJob @Inject()(
   override def execute(context: JobExecutionContext): Unit = {
     implicit val auditLogContext: AuditLogContext = AuditLogContext.empty()
 
-    def rescheduleFor(startTime: Instant): Unit = {
-      val trigger =
-        TriggerBuilder.newTrigger()
-          .withIdentity(context.getTrigger.getKey)
-          .startAt(Date.from(startTime))
-          .usingJobData(context.getTrigger.getJobDataMap)
-          .build()
-
-      scheduler.rescheduleJob(context.getTrigger.getKey, trigger)
-    }
-
     val dataMap = context.getMergedJobDataMap
     val id = UUID.fromString(dataMap.getString(EnquiryIDJobDataKey))
     val isFinalReminder = dataMap.getBooleanValue(IsFinalReminderJobDataKey)
@@ -82,7 +71,7 @@ class SendEnquiryClientReminderJob @Inject()(
               errors => {
                 val throwable = errors.flatMap(_.cause).headOption
                 logger.error(s"Error sending enquiry reminder $id: ${errors.mkString(", ")}", throwable.orNull)
-                rescheduleFor(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
+                rescheduleFor(scheduler, context)(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
                 Done
               },
               _ => {}
@@ -91,7 +80,7 @@ class SendEnquiryClientReminderJob @Inject()(
     } catch {
       case t: Throwable =>
         logger.error(s"Error sending enquiry reminder $id - retrying in 10 minutes", t)
-        rescheduleFor(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
+        rescheduleFor(scheduler, context)(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
     }
   }
 

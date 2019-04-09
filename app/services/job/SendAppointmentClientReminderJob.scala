@@ -28,16 +28,6 @@ class SendAppointmentClientReminderJob @Inject()(
   override def execute(context: JobExecutionContext): Unit = {
     implicit val auditLogContext: AuditLogContext = AuditLogContext.empty()
 
-    def rescheduleFor(startTime: Instant): Unit = {
-      val trigger =
-        TriggerBuilder.newTrigger()
-          .withIdentity(context.getTrigger.getKey)
-          .startAt(Date.from(startTime))
-          .build()
-
-      scheduler.rescheduleJob(context.getTrigger.getKey, trigger)
-    }
-
     val dataMap = context.getJobDetail.getJobDataMap
     val id = UUID.fromString(dataMap.getString("id"))
     try {
@@ -64,7 +54,7 @@ class SendAppointmentClientReminderJob @Inject()(
               errors => {
                 val throwable = errors.flatMap(_.cause).headOption
                 logger.error(s"Error sending appointment reminder $id: ${errors.mkString(", ")}", throwable.orNull)
-                rescheduleFor(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
+                rescheduleFor(scheduler, context)(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
                 Done
               },
               _ => {}
@@ -73,7 +63,7 @@ class SendAppointmentClientReminderJob @Inject()(
     } catch {
       case t: Throwable =>
         logger.error(s"Error sending appointment reminder $id - retrying in 10 minutes", t)
-        rescheduleFor(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
+        rescheduleFor(scheduler, context)(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
     }
   }
 

@@ -25,15 +25,6 @@ class SendOutgoingEmailJob @Inject()(
   override def execute(context: JobExecutionContext): Unit = {
     implicit val auditLogContext: AuditLogContext = AuditLogContext.empty()
 
-    def rescheduleFor(startTime: Instant): Unit = {
-      val trigger =
-        TriggerBuilder.newTrigger()
-          .startAt(Date.from(startTime))
-          .build()
-
-      scheduler.rescheduleJob(context.getTrigger.getKey, trigger)
-    }
-
     val dataMap = context.getJobDetail.getJobDataMap
     val id = UUID.fromString(dataMap.getString("id"))
     try {
@@ -48,7 +39,7 @@ class SendOutgoingEmailJob @Inject()(
               errors => {
                 val throwable = errors.flatMap(_.cause).headOption
                 logger.error(s"Error sending email $id: ${errors.mkString(", ")}", throwable.orNull)
-                rescheduleFor(JavaTime.instant.plusSeconds(30))
+                rescheduleFor(scheduler, context)(JavaTime.instant.plusSeconds(30))
                 Done
               },
               _ => {}
@@ -57,7 +48,7 @@ class SendOutgoingEmailJob @Inject()(
     } catch {
       case t: Throwable =>
         logger.error(s"Error sending outgoing email $id - retrying in 30 seconds", t)
-        rescheduleFor(JavaTime.instant.plusSeconds(30))
+        rescheduleFor(scheduler, context)(JavaTime.instant.plusSeconds(30))
     }
   }
 
