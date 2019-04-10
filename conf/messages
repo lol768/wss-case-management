@@ -35,6 +35,7 @@ flash.enquiry.reassigned=The enquiry has been reassigned to {0}
 flash.enquiry.owners.updated=Enquiry owners updated
 flash.enquiry.Closed=The enquiry has been closed
 flash.enquiry.Reopened=The enquiry has been reopened
+flash.enquiry.clientReminderCancelled=The scheduled reminder message to the client has been cancelled
 flash.registration.complete=Registration complete
 flash.registration.updated=Registration updated
 flash.case.created=The case has been opened ({0})

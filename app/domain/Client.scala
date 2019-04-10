@@ -11,6 +11,7 @@ case class Client(
   lastUpdated: OffsetDateTime
 ) extends Ordered[Client] {
   val safeFullName: String = fullName.getOrElse(universityID.string)
+  val safeFirstName: String = safeFullName.trim.split("\\s+").head
 
   override def compare(that: Client): Int =
     if (this.fullName.nonEmpty && that.fullName.isEmpty) {

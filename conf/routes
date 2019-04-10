@@ -106,6 +106,7 @@ POST        /team/enquiry/:enquiryKey/reassign                  @controllers.adm
 GET         /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquiryForm(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey/owners                    @controllers.admin.OwnersController.enquirySubmit(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey/owners/self               @controllers.admin.OwnersController.enquirySubmitSelf(enquiryKey: domain.IssueKey)
+POST        /team/enquiry/:enquiryKey/cancel-reminder           @controllers.admin.TeamEnquiryController.cancelClientReminder(enquiryKey: domain.IssueKey)
 +nocsp
 GET         /team/enquiry/:enquiryKey/:fileId                   @controllers.admin.TeamEnquiryController.download(enquiryKey: domain.IssueKey, fileId: java.util.UUID)
 

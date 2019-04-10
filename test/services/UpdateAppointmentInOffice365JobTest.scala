@@ -115,9 +115,12 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
   private def setupContext(dataMap: Map[String, String]): JobExecutionContext = {
     val jobDataMap = new JobDataMap(dataMap.asJava)
     val mockJobDetail = mock[JobDetail](RETURNS_SMART_NULLS)
+    val mockTrigger = mock[Trigger](RETURNS_SMART_NULLS)
     val mockContext = mock[JobExecutionContext](RETURNS_SMART_NULLS)
     when(mockContext.getJobDetail).thenReturn(mockJobDetail)
-    when(mockJobDetail.getJobDataMap).thenReturn(jobDataMap)
+    when(mockContext.getTrigger).thenReturn(mockTrigger)
+    when(mockContext.getMergedJobDataMap).thenReturn(jobDataMap)
+    when(mockTrigger.getJobDataMap).thenReturn(jobDataMap)
     mockContext
   }
 
@@ -129,10 +132,11 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
         "owners" -> "{}"
       ))
 
-      private val exception = intercept[RuntimeException] {
+      private val exception = intercept[JobExecutionException] {
         job.execute(context)
       }
-      exception.getMessage.indexOf("Could not find an Appointment with ID") mustBe 0
+
+      exception.getMessage.contains("Could not find an Appointment with ID") mustBe true
       verify(mockScheduler, never()).scheduleJob(any())
     }
 
@@ -223,7 +227,7 @@ class UpdateAppointmentInOffice365JobTest extends PlaySpec with MockitoSugar wit
 
       job.execute(context)
 
-      private val dataMap = jobDetail.getJobDataMap
+      private val dataMap = context.getMergedJobDataMap
       dataMap.getString(UpdateAppointmentInOffice365Job.JobDataMapKeys.appointmentId) mustBe appointmentId.toString
       private val ownersJson = Json.parse(dataMap.getString(UpdateAppointmentInOffice365Job.JobDataMapKeys.owners))
       private val ownersMap = ownersJson.as[Map[String, String]]

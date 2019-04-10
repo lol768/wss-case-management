@@ -96,6 +96,7 @@ object AuditEvent {
       val Save = Symbol("EnquirySave")
       val AddMessage = Symbol("EnquiryAddMessage")
       val Reassign = Symbol("EnquiryReassign")
+      val SendClientReminder = Symbol("EnquirySendClientReminder")
       val View = Symbol("EnquiryView")
       val SetOwners = Symbol("EnquirySetOwners")
 
