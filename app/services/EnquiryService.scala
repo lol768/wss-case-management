@@ -1,8 +1,9 @@
 package services
 
 import java.time.OffsetDateTime
-import java.util.UUID
+import java.util.{Date, UUID}
 
+import akka.Done
 import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
 import domain.AuditEvent._
@@ -19,9 +20,13 @@ import helpers.ServiceResults
 import helpers.ServiceResults.Implicits._
 import helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
+import org.quartz.{JobBuilder, Scheduler, TriggerBuilder}
+import play.api.Configuration
 import play.api.libs.json.Json
 import services.EnquiryService._
+import services.job.SendEnquiryClientReminderJob
 import slick.lifted.Query
+import warwick.core.Logging
 import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
@@ -38,7 +43,7 @@ trait EnquiryService {
   /**
     * Add a message to an existing Enquiry.
     */
-  def addMessage(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(MessageData, Seq[UploadedFile])]]
+  def addMessage(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], sendClientReminder: Boolean = true)(implicit ac: AuditLogContext): Future[ServiceResult[(MessageData, Seq[UploadedFile])]]
 
   /**
     * Reassign an enquiry to another team
@@ -87,6 +92,9 @@ trait EnquiryService {
   def getLastUpdatedMessageDate(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[OffsetDateTime]]
   def getLastUpdatedMessageDates(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, OffsetDateTime]]]
 
+  def sendClientReminder(enquiryID: UUID, isFinalReminder: Boolean)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
+  def nextClientReminder(enquiryID: UUID)(implicit t: TimingContext): ServiceResult[Option[OffsetDateTime]]
+  def cancelClientReminder(enquiry: Enquiry): Unit
 }
 
 @Singleton
@@ -99,8 +107,12 @@ class EnquiryServiceImpl @Inject() (
   notificationService: NotificationService,
   uploadedFileService: UploadedFileService,
   clientService: ClientService,
-  memberService: MemberService
-)(implicit ec: ExecutionContext) extends EnquiryService {
+  memberService: MemberService,
+  scheduler: Scheduler,
+  configuration: Configuration,
+)(implicit ec: ExecutionContext) extends EnquiryService with Logging {
+
+  private lazy val clientRemindersEnabled = configuration.get[Boolean]("wellbeing.features.enquiryClientReminders")
 
   private def createStoredEnquiry(id: UUID, key: IssueKey, save: EnquirySave) = StoredEnquiry(
     id = id,
@@ -132,21 +144,38 @@ class EnquiryServiceImpl @Inject() (
           nextId <- sql"SELECT nextval('SEQ_ENQUIRY_KEY')".as[Int].head
           e <- enquiryDao.insert(createStoredEnquiry(id, IssueKey(IssueKeyType.Enquiry, nextId), enquiry))
           _ <- addMessageDBIO(e.universityID, e.team, id, message, files)
-        } yield e).map(enquiry =>
-          // FIXME - disable/enable with a feature flag when implementing CASE-355
-          // notificationService.newEnquiry(enquiry.key, enquiry.team).map(_.right.map(_ => enquiry.asEnquiry(clients.head)))
-          ServiceResults.success(enquiry.asEnquiry(clients.head))
-        )
+        } yield e).map(_.asEnquiry(clients.head)).flatMap { enquiry =>
+          // For if we ever allow creating an enquiry by the team
+          message.sender match {
+            case MessageSender.Team =>
+              scheduleClientReminder(enquiry, isFinalReminder = false)
+
+            case MessageSender.Client =>
+              cancelClientReminder(enquiry)
+          }
+
+          notificationService.newEnquiry(enquiry.key, enquiry.team).map(_.right.map(_ => enquiry))
+        }
       )
     }
   }
 
-  override def addMessage(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(MessageData, Seq[UploadedFile])]] = {
+  override def addMessage(enquiry: Enquiry, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)], sendClientReminder: Boolean = true)(implicit ac: AuditLogContext): Future[ServiceResult[(MessageData, Seq[UploadedFile])]] = {
     auditService.audit(Operation.Enquiry.AddMessage, enquiry.id.toString, Target.Enquiry, Json.obj()) {
       memberService.getOrAddMember(message.teamMember).successFlatMapTo(member =>
         daoRunner.run(for {
           (m, f) <- addMessageDBIO(enquiry.client.universityID, enquiry.team, enquiry.id, message, files)
         } yield (m, f)).flatMap { case (m, f) =>
+          if (sendClientReminder) {
+            message.sender match {
+              case MessageSender.Team =>
+                scheduleClientReminder(enquiry, isFinalReminder = message.teamMember.contains(SendEnquiryClientReminderJob.SendMessageAs))
+
+              case MessageSender.Client =>
+                cancelClientReminder(enquiry)
+            }
+          } else cancelClientReminder(enquiry)
+
           notificationService.enquiryMessage(enquiry, m.sender).map(_.map(_ =>
             (m.asMessageData(member), f)
           ))
@@ -164,6 +193,7 @@ class EnquiryServiceImpl @Inject() (
           _ <- addNoteDBIO(stored.id, EnquiryNoteType.Referral, note)
         } yield (stored, client)).flatMap { case (stored, client) =>
           val enquiry = stored.asEnquiry(client.asClient)
+          cancelClientReminder(enquiry)
           notificationService.enquiryReassign(enquiry).map(_.map(_ => enquiry))
         }
       )
@@ -188,7 +218,12 @@ class EnquiryServiceImpl @Inject() (
         (existing, client) <- enquiryDao.findByIDQuery(id).withClient.result.head
         stored <- enquiryDao.update(existing.copy(state = targetState), version)
       } yield {
-        Right(stored.asEnquiry(client.asClient))
+        val enquiry = stored.asEnquiry(client.asClient)
+
+        // Whatever the transition here, cancel any reminder
+        cancelClientReminder(enquiry)
+
+        Right(enquiry)
       })
     }
   }
@@ -202,6 +237,10 @@ class EnquiryServiceImpl @Inject() (
         )
       } yield (stored, client)).flatMap { case (stored, client) =>
         val enquiry = stored.asEnquiry(client.asClient)
+
+        // Whatever the transition here, cancel any reminder
+        cancelClientReminder(enquiry)
+
         notificationService.enquiryMessage(enquiry, message.sender).map(_.map(_ => enquiry))
       }
     }
@@ -435,6 +474,78 @@ class EnquiryServiceImpl @Inject() (
         .map { case (e, (_, d)) => (e.id, d) }
         .result
     ).map(r => Right(r.toMap.mapValues(_.get)))
+
+  private def scheduleClientReminder(enquiry: Enquiry, isFinalReminder: Boolean): Unit = {
+    if (clientRemindersEnabled) {
+      val triggerKey = SendEnquiryClientReminderJob.triggerKey(enquiry.id)
+
+      val triggerTime = JavaTime.offsetDateTime.plus(SendEnquiryClientReminderJob.SendReminderAfter).toInstant
+
+      if (scheduler.checkExists(triggerKey)) {
+        scheduler.rescheduleJob(
+          triggerKey,
+          TriggerBuilder.newTrigger()
+            .withIdentity(triggerKey)
+            .startAt(Date.from(triggerTime))
+            .usingJobData(SendEnquiryClientReminderJob.IsFinalReminderJobDataKey, isFinalReminder)
+            .build()
+        )
+      } else {
+        scheduler.scheduleJob(
+          JobBuilder.newJob(classOf[SendEnquiryClientReminderJob])
+            .withIdentity(SendEnquiryClientReminderJob.jobKey(enquiry.id))
+            .usingJobData(SendEnquiryClientReminderJob.EnquiryIDJobDataKey, enquiry.id.toString)
+            .build(),
+          TriggerBuilder.newTrigger()
+            .withIdentity(triggerKey)
+            .startAt(Date.from(triggerTime))
+            .usingJobData(SendEnquiryClientReminderJob.IsFinalReminderJobDataKey, isFinalReminder)
+            .build()
+        )
+      }
+    }
+  }
+
+  override def cancelClientReminder(enquiry: Enquiry): Unit = {
+    val triggerKey = SendEnquiryClientReminderJob.triggerKey(enquiry.id)
+
+    if (scheduler.checkExists(triggerKey)) {
+      scheduler.unscheduleJob(triggerKey)
+    }
+  }
+
+  override def sendClientReminder(enquiryID: UUID, isFinalReminder: Boolean)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
+    auditService.audit(Operation.Enquiry.SendClientReminder, enquiryID.toString, Target.Enquiry, Json.obj()) {
+      daoRunner.run(getWithClientAndMessagesAndNotes(enquiryDao.findByIDQuery(enquiryID))).flatMap { case (withMessages, notes) =>
+        val r = groupTuples(withMessages, notes).head
+        val lastMessageFromTeam =
+          r.messages
+            .filter { m => m.message.sender == MessageSender.Team && !m.message.teamMember.map(_.usercode).contains(SendEnquiryClientReminderJob.SendMessageAs) }
+            .map(_.message.created)
+            .last
+
+        val message = MessageSave(
+          text = views.txt.enquiry.clientReminder(r, lastMessageFromTeam).toString().trim,
+          sender = MessageSender.Team,
+          teamMember = Some(SendEnquiryClientReminderJob.SendMessageAs)
+        )
+
+        addMessage(r.enquiry, message, Nil, sendClientReminder = !isFinalReminder).map(_.right.map(_ => Done))
+      }
+    }
+
+  override def nextClientReminder(enquiryID: UUID)(implicit t: TimingContext): ServiceResult[Option[OffsetDateTime]] = {
+    val triggerKey = SendEnquiryClientReminderJob.triggerKey(enquiryID)
+
+    val nextFireTime: Option[OffsetDateTime] =
+      if (scheduler.checkExists(triggerKey)) {
+        Some(scheduler.getTrigger(triggerKey).getNextFireTime.toInstant.atZone(JavaTime.timeZone).toOffsetDateTime)
+      } else {
+        None
+      }
+
+    Right(nextFireTime)
+  }
 }
 
 object EnquiryService {

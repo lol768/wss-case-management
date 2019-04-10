@@ -10,6 +10,7 @@ export default function CasePicker(element) {
   const $element = $(element);
   const team = $element.data('team');
   const member = $element.data('member');
+  const state = $element.data('state') || 'All';
 
   // Might have manually wired this element up with CasePicker,
   // but add the class for CSS style purposes.
@@ -29,7 +30,14 @@ export default function CasePicker(element) {
   function doSearch(query, callback) {
     currentQuery = query;
 
-    postJsonWithCredentials('/service/casesearch', { query, team, member })
+    const requestBody = {
+      query,
+      team,
+      member,
+      state,
+    };
+
+    postJsonWithCredentials('/service/casesearch', requestBody)
       .then(response => response.json())
       .catch((e) => {
         log.error(e);

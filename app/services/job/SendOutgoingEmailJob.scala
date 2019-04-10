@@ -1,17 +1,14 @@
 package services.job
 
-import java.time.Instant
-import java.util.{Date, UUID}
+import java.util.UUID
 
 import akka.Done
 import javax.inject.Inject
 import org.quartz._
 import services.{AuditLogContext, EmailService}
-import warwick.core.Logging
-import warwick.core.helpers.JavaTime
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Sends a single outgoing email for a particular user.
@@ -20,44 +17,38 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 class SendOutgoingEmailJob @Inject()(
   emailService: EmailService,
   scheduler: Scheduler
-)(implicit executionContext: ExecutionContext) extends Job with Logging {
+)(implicit executionContext: ExecutionContext) extends AbstractJob(scheduler) {
 
-  override def execute(context: JobExecutionContext): Unit = {
-    implicit val auditLogContext: AuditLogContext = AuditLogContext.empty()
+  override val doLog: Boolean = false
 
-    def rescheduleFor(startTime: Instant): Unit = {
-      val trigger =
-        TriggerBuilder.newTrigger()
-          .startAt(Date.from(startTime))
-          .build()
+  // Doesn't really matter, not used if doLog = false
+  override def getDescription(context: JobExecutionContext): String = "Send Email"
 
-      scheduler.rescheduleJob(context.getTrigger.getKey, trigger)
-    }
-
-    val dataMap = context.getJobDetail.getJobDataMap
+  override def run(implicit context: JobExecutionContext, auditLogContext: AuditLogContext): Future[JobResult] = {
+    val dataMap = context.getMergedJobDataMap
     val id = UUID.fromString(dataMap.getString("id"))
     try {
-      Await.result(
-        emailService.get(id).flatMap {
-          case Left(_) | Right(None) =>
-            logger.info(s"OutgoingEmail $id no longer exists - ignoring")
-            Future.successful(Done)
+      emailService.get(id).flatMap {
+        case Left(_) | Right(None) =>
+          logger.info(s"OutgoingEmail $id no longer exists - ignoring")
+          Future.successful(Done)
 
-          case Right(Some(email)) =>
-            emailService.sendImmediately(email).map(_.fold(
-              errors => {
-                val throwable = errors.flatMap(_.cause).headOption
-                logger.error(s"Error sending email $id: ${errors.mkString(", ")}", throwable.orNull)
-                rescheduleFor(JavaTime.instant.plusSeconds(30))
-                Done
-              },
-              _ => {}
-            ))
-        }, Duration.Inf)
+        case Right(Some(email)) =>
+          emailService.sendImmediately(email).map(_.fold(
+            errors => {
+              val throwable = errors.flatMap(_.cause).headOption
+              logger.error(s"Error sending email $id: ${errors.mkString(", ")}", throwable.orNull)
+              rescheduleFor(scheduler, context)(30.seconds)
+              Done
+            },
+            _ => {}
+          ))
+      }.map(_ => JobResult.quiet)
     } catch {
       case t: Throwable =>
         logger.error(s"Error sending outgoing email $id - retrying in 30 seconds", t)
-        rescheduleFor(JavaTime.instant.plusSeconds(30))
+        rescheduleFor(scheduler, context)(30.seconds)
+        Future.successful(JobResult.quiet)
     }
   }
 

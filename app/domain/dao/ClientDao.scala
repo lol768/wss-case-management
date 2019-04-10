@@ -70,15 +70,16 @@ object ClientDao {
 
     sealed trait CommonProperties { self: Table[_] =>
       def fullName: Rep[Option[String]] = column[Option[String]]("full_name")
-      def searchableFullName: Rep[TsVector] = toTsVector(fullName, Some("english")).orEmptyTsVector
       def version: Rep[OffsetDateTime] = column[OffsetDateTime]("version_utc")
     }
 
     class Clients(tag: Tag) extends Table[StoredClient](tag, "client") with VersionedTable[StoredClient] with CommonProperties {
       override def matchesPrimaryKey(other: StoredClient): Rep[Boolean] = universityID === other.universityID
 
+      def searchableFullName: Rep[TsVector] = column[TsVector]("full_name_tsv")
+
       def universityID: Rep[UniversityID] = column[UniversityID]("university_id", O.PrimaryKey)
-      def searchableUniversityID: Rep[TsVector] = toTsVector(universityID.asColumnOf[String], Some("english"))
+      def searchableUniversityID: Rep[TsVector] = column[TsVector]("university_id_tsv")
 
       def * : ProvenShape[StoredClient] = (universityID, fullName, version).mapTo[StoredClient]
     }

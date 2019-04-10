@@ -1,19 +1,16 @@
 package services.job
 
-import java.time.Instant
-import java.time.temporal.ChronoUnit
-import java.util.{Date, UUID}
+import java.util.UUID
 
 import akka.Done
 import domain.{AppointmentState, AppointmentType}
 import javax.inject.Inject
 import org.quartz._
 import services.{AppointmentService, AuditLogContext, NotificationService}
-import warwick.core.Logging
 import warwick.core.helpers.JavaTime
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Sends reminders for clients of an accepted appointment.
@@ -23,57 +20,50 @@ class SendAppointmentClientReminderJob @Inject()(
   appointments: AppointmentService,
   notificationService: NotificationService,
   scheduler: Scheduler
-)(implicit executionContext: ExecutionContext) extends Job with Logging {
+)(implicit executionContext: ExecutionContext) extends AbstractJob(scheduler) {
 
-  override def execute(context: JobExecutionContext): Unit = {
-    implicit val auditLogContext: AuditLogContext = AuditLogContext.empty()
+  override val doLog: Boolean = false
 
-    def rescheduleFor(startTime: Instant): Unit = {
-      val trigger =
-        TriggerBuilder.newTrigger()
-          .withIdentity(context.getTrigger.getKey)
-          .startAt(Date.from(startTime))
-          .build()
+  // Doesn't really matter, not used if doLog = false
+  override def getDescription(context: JobExecutionContext): String = "Send Appointment Client Reminder"
 
-      scheduler.rescheduleJob(context.getTrigger.getKey, trigger)
-    }
-
-    val dataMap = context.getJobDetail.getJobDataMap
+  override def run(implicit context: JobExecutionContext, auditLogContext: AuditLogContext): Future[JobResult] = {
+    val dataMap = context.getMergedJobDataMap
     val id = UUID.fromString(dataMap.getString("id"))
     try {
-      Await.result(
-        appointments.find(id).flatMap {
-          case Left(_) =>
-            logger.info(s"Appointment $id no longer exists - ignoring")
-            Future.successful(Done)
+      appointments.find(id).flatMap {
+        case Left(_) =>
+          logger.info(s"Appointment $id no longer exists - ignoring")
+          Future.successful(Done)
 
-          case Right(appointment) if appointment.state != AppointmentState.Accepted =>
-            logger.info(s"Appointment $id is not accepted (${appointment.state}) - ignoring")
-            Future.successful(Done)
+        case Right(appointment) if appointment.state != AppointmentState.Accepted =>
+          logger.info(s"Appointment $id is not accepted (${appointment.state}) - ignoring")
+          Future.successful(Done)
 
-          case Right(appointment) if appointment.start.toLocalDate != JavaTime.localDate.plusDays(1) =>
-            logger.info(s"Appointment $id is not happening tomorrow (${appointment.start}) - ignoring")
-            Future.successful(Done)
+        case Right(appointment) if appointment.start.toLocalDate != JavaTime.localDate.plusDays(1) =>
+          logger.info(s"Appointment $id is not happening tomorrow (${appointment.start}) - ignoring")
+          Future.successful(Done)
 
-          case Right(appointment) if appointment.appointmentType != AppointmentType.FaceToFace =>
-            logger.info(s"Appointment $id is not a face-to-face appointment (${appointment.appointmentType}) - ignoring")
-            Future.successful(Done)
+        case Right(appointment) if appointment.appointmentType != AppointmentType.FaceToFace =>
+          logger.info(s"Appointment $id is not a face-to-face appointment (${appointment.appointmentType}) - ignoring")
+          Future.successful(Done)
 
-          case Right(appointment) =>
-            appointments.sendClientReminder(appointment.id).map(_.fold(
-              errors => {
-                val throwable = errors.flatMap(_.cause).headOption
-                logger.error(s"Error sending appointment reminder $id: ${errors.mkString(", ")}", throwable.orNull)
-                rescheduleFor(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
-                Done
-              },
-              _ => {}
-            ))
-        }, Duration.Inf)
+        case Right(appointment) =>
+          appointments.sendClientReminder(appointment.id).map(_.fold(
+            errors => {
+              val throwable = errors.flatMap(_.cause).headOption
+              logger.error(s"Error sending appointment reminder $id: ${errors.mkString(", ")}", throwable.orNull)
+              rescheduleFor(scheduler, context)(10.minutes)
+              Done
+            },
+            _ => {}
+          ))
+      }.map(_ => JobResult.quiet)
     } catch {
       case t: Throwable =>
         logger.error(s"Error sending appointment reminder $id - retrying in 10 minutes", t)
-        rescheduleFor(JavaTime.instant.plus(10, ChronoUnit.MINUTES))
+        rescheduleFor(scheduler, context)(10.minutes)
+        Future.successful(JobResult.quiet)
     }
   }
 

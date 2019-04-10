@@ -1,0 +1,9 @@
+@import domain.EnquiryRender
+@import java.time.OffsetDateTime
+@import warwick.core.helpers.JavaTime
+
+@(r: EnquiryRender, lastMessageFromTeam: OffsetDateTime)
+
+Hi @{r.enquiry.client.safeFirstName},
+
+@{r.enquiry.team.name} sent you a message on @JavaTime.Relative(lastMessageFromTeam.toLocalDate) but we haven't had a reply from you yet. Could you send us your response, please?

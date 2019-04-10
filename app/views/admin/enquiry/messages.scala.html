@@ -12,6 +12,7 @@
   notes: Seq[EnquiryNote],
   owners: Set[Member],
   clientLastRead: Option[OffsetDateTime],
+  nextClientReminder: Option[OffsetDateTime],
   stateChangeForm: Form[OffsetDateTime],
   messageForm: Form[MessageFormData],
   canViewEnquiryTeam: Boolean,
@@ -209,5 +210,19 @@
         }
       </div>
     </div>
+
+    @nextClientReminder.map { reminderTime =>
+      @b3.inline.formCSRF(controllers.admin.routes.TeamEnquiryController.cancelClientReminder(enquiry.key)) { implicit ifc =>
+        @b3.validatedHidden(stateChangeForm, "version")
+
+        <p>
+          A reminder will be sent to the client @JavaTime.Relative(reminderTime).
+
+          <button type="submit" class="btn btn-default btn-xs">
+            Cancel reminder
+          </button>
+        </p>
+      }
+    }
   </div>
 }

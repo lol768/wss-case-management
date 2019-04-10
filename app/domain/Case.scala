@@ -47,6 +47,7 @@ case class CaseFields(
   clientRiskTypes: Set[ClientRiskType],
   counsellingServicesIssues: Set[CounsellingServicesIssue],
   studentSupportIssueTypes: Set[StudentSupportIssueType],
+  mentalHealthIssues: Set[MentalHealthIssue],
   medications: Set[CaseMedication],
   severityOfProblem: Option[SeverityOfProblem],
   duty: Boolean,
@@ -72,6 +73,7 @@ case class CaseSave(
   clientRiskTypes: Set[ClientRiskType],
   counsellingServicesIssues: Set[CounsellingServicesIssue],
   studentSupportIssueTypes: Set[StudentSupportIssueType],
+  mentalHealthIssues: Set[MentalHealthIssue],
   medications: Set[CaseMedication],
   severityOfProblem: Option[SeverityOfProblem],
   duty: Boolean,
@@ -87,6 +89,7 @@ object CaseSave {
       c.fields.clientRiskTypes,
       c.fields.counsellingServicesIssues,
       c.fields.studentSupportIssueTypes,
+      c.fields.mentalHealthIssues,
       c.fields.medications,
       c.fields.severityOfProblem,
       c.fields.duty,
@@ -253,20 +256,24 @@ case class CaseDocumentSave(
 
 sealed abstract class CaseDocumentType(val description: String) extends EnumEntry
 object CaseDocumentType extends PlayEnum[CaseDocumentType] {
-  case object DSAEntitlementLetter extends CaseDocumentType("DSA Entitlement Letter")
-  case object KeyLog extends CaseDocumentType("Key Log")
-  case object MedicalEvidenceDocuments extends CaseDocumentType("Medical Evidence Documents")
-  case object MentalHealthServicesOther extends CaseDocumentType("Mental Health Services - Other Documents")
-  case object MitigatingCircumstancesForm extends CaseDocumentType("Mitigating Circumstances Form")
-  case object Photos extends CaseDocumentType("Photos")
-  case object PoliceIncidentDocument extends CaseDocumentType("Police Incident Document")
-  case object ReleaseOfInformationConsentForm extends CaseDocumentType("Release Of Information Consent Form")
-  case object SecurityReport extends CaseDocumentType("Security Report")
-  case object SpecificLearningDifficultyDocument extends CaseDocumentType("Specific Learning Difficulty Document")
-  case object WellbeingSupportInformationForm extends CaseDocumentType("Wellbeing Support Information Form")
-  case object UIRForm extends CaseDocumentType("UIR Form")
+  case object DSAEntitlementLetter extends CaseDocumentType("DSA entitlement letter")
+  case object DSA2 extends CaseDocumentType("DSA2")
   case object EmailCorrespondence extends CaseDocumentType("Email correspondence")
+  case object KeyLog extends CaseDocumentType("Key log")
+  case object MedicalEvidenceDocuments extends CaseDocumentType("Medical evidence documents")
+  case object MentalHealthServicesOther extends CaseDocumentType("Mental health services - other documents")
+  case object MitigatingCircumstancesForm extends CaseDocumentType("Mitigating circumstances form")
+  case object NeedsAssessment extends CaseDocumentType("Needs assessment")
+  case object Photos extends CaseDocumentType("Photos")
+  case object PoliceIncidentDocument extends CaseDocumentType("Police incident document")
+  case object ReasonableAdjustments extends CaseDocumentType("Reasonable adjustments")
   case object Referral extends CaseDocumentType("Referral")
+  case object RegistrationForm extends CaseDocumentType("Registration form")
+  case object ReleaseOfInformationConsentForm extends CaseDocumentType("Release of information consent form")
+  case object SecurityReport extends CaseDocumentType("Security report")
+  case object SpecificLearningDifficultyDocument extends CaseDocumentType("Specific learning difficulty document")
+  case object WellbeingSupportInformationForm extends CaseDocumentType("Wellbeing Support information form")
+  case object UIRForm extends CaseDocumentType("UIR form")
   case object Other extends CaseDocumentType("Other")
 
   override def values: immutable.IndexedSeq[CaseDocumentType] = findValues
@@ -306,6 +313,7 @@ object CaseHistory {
       "clientRiskTypes" -> toJson(r.clientRiskTypes.map { case (clientRiskType, v, u) => (clientRiskType.map(_.description), v, u) }),
       "counsellingServicesIssues" -> toJson(r.counsellingServicesIssues.map { case (counsellingServicesIssue, v, u) => (counsellingServicesIssue.map(_.description), v, u) }),
       "studentSupportIssueTypes" -> toJson(r.studentSupportIssueTypes.map { case (studentSupportIssueType, v, u) => (studentSupportIssueType.map(_.description), v, u) }),
+      "mentalHealthIssues" -> toJson(r.mentalHealthIssues.map { case (mentalHealthIssue, v, u) => (mentalHealthIssue.map(_.description), v, u) }),
       "medications" -> toJson(r.medications.map { case (medication, v, u) => (medication.map(_.description), v, u) }),
       "severityOfProblem" -> toJson(r.severityOfProblem.map { case (severityOfProblem, v, u) => (severityOfProblem.map(_.description), v, u) })
     )
@@ -362,6 +370,7 @@ object CaseHistory {
         clientRiskTypes = typedSimpleFieldHistory(_.fields.clientRiskTypes.map(ClientRiskType.withName).toSet),
         counsellingServicesIssues = typedSimpleFieldHistory(_.fields.counsellingServicesIssues.map(CounsellingServicesIssue.withName).toSet),
         studentSupportIssueTypes = typedSimpleFieldHistory(c => StudentSupportIssueType.apply(c.fields.studentSupportIssueTypes, c.fields.studentSupportIssueTypeOther)),
+        mentalHealthIssues = typedSimpleFieldHistory(_.fields.mentalHealthIssues.map(MentalHealthIssue.withName).toSet),
         medications = typedSimpleFieldHistory(c => CaseMedication.apply(c.fields.medications, c.fields.medicationOther)),
         severityOfProblem = typedSimpleFieldHistory(_.fields.severityOfProblem),
       )
@@ -395,6 +404,7 @@ case class CaseHistory(
   clientRiskTypes: FieldHistory[Set[ClientRiskType]],
   counsellingServicesIssues: FieldHistory[Set[CounsellingServicesIssue]],
   studentSupportIssueTypes: FieldHistory[Set[StudentSupportIssueType]],
+  mentalHealthIssues: FieldHistory[Set[MentalHealthIssue]],
   medications: FieldHistory[Set[CaseMedication]],
   severityOfProblem: FieldHistory[Option[SeverityOfProblem]]
 )
