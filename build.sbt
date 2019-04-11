@@ -26,7 +26,7 @@ autoAPIMappings := true
 // Avoid some of the constant SBT "Updating"
 updateOptions := updateOptions.value.withCachedResolution(true)
 
-lazy val main = (project in file("."))
+lazy val root = (project in file("."))
   .enablePlugins(WarwickProject, PlayScala)
   .settings(
     packageZipTarball in Universal := (packageZipTarball in Universal).dependsOn(webpack).value,
