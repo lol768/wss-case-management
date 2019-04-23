@@ -1,8 +1,6 @@
 package services
 
 import domain._
-import helpers.ServiceResults.ServiceResult
-import helpers.caching.CacheElement
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
@@ -14,7 +12,9 @@ import services.tabula.ProfileService
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import uk.ac.warwick.util.mywarwick.model.response.Response
+import warwick.caching.CacheElement
 import warwick.core.helpers.JavaTime
+import warwick.core.helpers.ServiceResults.ServiceResult
 import warwick.sso._
 
 import scala.collection.JavaConverters._

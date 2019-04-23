@@ -8,7 +8,7 @@ import controllers.BaseController
 import controllers.sysadmin.DataGenerationController._
 import domain._
 import enumeratum.{Enum, EnumEntry}
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import org.quartz._
 import play.api.Configuration

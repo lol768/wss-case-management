@@ -20,10 +20,10 @@ import play.api.http.{FileMimeTypes, HeaderNames}
 import play.api.libs.Files.TemporaryFileCreator
 import play.api.mvc.Results._
 import play.api.mvc._
-import system.{ImplicitRequestContext, TimingCategories}
+import system.ImplicitRequestContext
 import uk.ac.warwick.util.virusscan.{VirusScanResult, VirusScanService}
 import warwick.core.Logging
-import warwick.core.timing.{TimingContext, TimingService}
+import warwick.core.timing.{TimingCategories, TimingContext, TimingService}
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.AuthenticatedRequest
 

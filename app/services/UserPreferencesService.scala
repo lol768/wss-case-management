@@ -4,7 +4,7 @@ import com.google.inject.ImplementedBy
 import domain.UserPreferences
 import domain.dao.UserPreferencesDao.StoredUserPreferences
 import domain.dao.{DaoRunner, UserPreferencesDao}
-import helpers.ServiceResults._
+import warwick.core.helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import warwick.core.Logging

@@ -8,7 +8,7 @@ import domain.History._
 import domain.dao.CaseDao._
 import domain.dao.DSADao.{StoredDSAApplicationVersion, StoredDSAFundingType, StoredDSAFundingTypeVersion}
 import enumeratum.{EnumEntry, PlayEnum}
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.ServiceResult
 import play.api.libs.json.{Json, Writes}
 import services.{AuditLogContext, CaseService, ClientService}
 import warwick.core.helpers.JavaTime

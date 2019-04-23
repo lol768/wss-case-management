@@ -7,7 +7,7 @@ import controllers.BaseController
 import controllers.locations.LocationsController._
 import controllers.refiners.AdminActionRefiner
 import domain.{Building, BuildingSave, Room, RoomSave}
-import helpers.ServiceResults
+import warwick.core.helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._

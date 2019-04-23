@@ -6,8 +6,8 @@ import controllers.BaseController
 import controllers.refiners.{AnyTeamActionRefiner, ValidUniversityIDActionFilter}
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
-import helpers.ServiceResults
-import helpers.ServiceResults._
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults._
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.data.Form

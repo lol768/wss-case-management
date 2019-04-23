@@ -7,8 +7,8 @@ import controllers.BaseController
 import controllers.refiners.AdminActionRefiner
 import controllers.reports.ReportsController._
 import domain.{Team, Teams}
-import helpers.ServiceResults
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.mvc.{Action, AnyContent}
 import services.{CaseService, EnquiryService}

@@ -4,9 +4,9 @@ import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import domain._
-import helpers.ServiceResults
-import helpers.ServiceResults.Implicits._
-import helpers.ServiceResults.{ServiceError, ServiceResult}
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.mailer.Email

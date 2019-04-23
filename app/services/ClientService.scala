@@ -4,17 +4,17 @@ import com.google.inject.ImplementedBy
 import domain.Client
 import domain.dao.ClientDao.StoredClient
 import domain.dao.{ClientDao, DaoRunner}
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import services.tabula.ProfileService
 import slick.dbio.DBIOAction
 import warwick.sso.UniversityID
-import helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.Implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import domain.ExtendedPostgresProfile.api._
-import helpers.ServiceResults
+import warwick.core.helpers.ServiceResults
 import warwick.core.timing.TimingContext
 
 object ClientService {

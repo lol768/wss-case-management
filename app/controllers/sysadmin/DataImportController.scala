@@ -8,7 +8,7 @@ import controllers.sysadmin.DataImportController._
 import controllers.sysadmin.SpreadsheetContentsHandler.{Cell, Row, Sheet}
 import controllers.{BaseController, UploadedFileControllerHelper}
 import domain._
-import helpers.ServiceResults._
+import warwick.core.helpers.ServiceResults._
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import org.apache.poi.openxml4j.opc.OPCPackage

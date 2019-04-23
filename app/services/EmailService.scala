@@ -7,8 +7,8 @@ import com.google.inject.ImplementedBy
 import domain.AuditEvent._
 import domain.OutgoingEmail
 import domain.dao.{DaoRunner, OutgoingEmailDao}
-import helpers.ServiceResults
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Named, Singleton}
 import org.quartz.{JobBuilder, JobKey, Scheduler, TriggerBuilder}
 import play.api.libs.json.Json

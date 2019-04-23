@@ -3,8 +3,8 @@ package controllers
 import controllers.FlexiPickerController._
 import controllers.refiners.AnyTeamActionRefiner
 import domain.{SitsProfile, UserType}
-import helpers.ServiceResults
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.ServiceResult
 import helpers.StringUtils._
 import javax.inject.{Inject, Named, Singleton}
 import play.api.Configuration

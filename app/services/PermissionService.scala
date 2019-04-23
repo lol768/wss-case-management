@@ -4,9 +4,9 @@ import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import domain.{IssueState, Team, Teams}
-import helpers.ServiceResults
-import helpers.ServiceResults.Implicits._
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Provider, Singleton}
 import play.api.Configuration
 import system.Roles

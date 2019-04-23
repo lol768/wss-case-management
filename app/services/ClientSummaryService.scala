@@ -10,9 +10,9 @@ import domain.dao.ClientDao.StoredClient
 import domain.dao.ClientSummaryDao.StoredClientSummary
 import domain.dao.ClientSummaryDao.StoredClientSummary.StoredReasonableAdjustment
 import domain.dao.{ClientSummaryDao, DaoRunner}
-import helpers.ServiceResults
-import helpers.ServiceResults.Implicits._
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import warwick.core.timing.TimingContext

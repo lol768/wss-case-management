@@ -4,19 +4,17 @@ import java.time.LocalDate
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
-import helpers.ServiceResults.{ServiceError, ServiceResult}
-import helpers.ServiceResults.Implicits._
-import helpers.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
 import javax.inject.{Inject, Singleton}
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
-import services.{FreeBusyService, LocationService}
 import services.FreeBusyService.{FreeBusyPeriod, FreeBusyStatus}
 import services.office365.Office365FreeBusyService.Office365FreeBusyServiceError
-import system.TimingCategories
+import services.{FreeBusyService, LocationService}
+import warwick.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
 import warwick.core.Logging
 import warwick.core.helpers.JavaTime
-import warwick.core.timing.{TimingContext, TimingService}
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
+import warwick.core.timing.{TimingCategories, TimingContext, TimingService}
 import warwick.office365.O365Service
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
 

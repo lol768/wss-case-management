@@ -6,7 +6,7 @@ import controllers.refiners.{AnyTeamActionRefiner, CanViewEnquiryActionRefiner}
 import domain.dao.EnquiryDao.EnquirySearchQuery
 import domain.{Enquiry, IssueKey, IssueStateFilter, Teams}
 import helpers.Json.JsonClientError
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms.{localDate, mapping, nonEmptyText, optional, text}

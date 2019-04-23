@@ -5,12 +5,12 @@ import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import enumeratum.{EnumEntry, PlayEnum}
-import helpers.ServiceResults.ServiceResult
-import helpers.caching.CacheElement
 import javax.inject.{Inject, Singleton}
 import services.FreeBusyService.FreeBusyPeriod
 import services.office365.Office365FreeBusyService
 import services.tabula.TabulaFreeBusyService
+import warwick.caching.CacheElement
+import warwick.core.helpers.ServiceResults.ServiceResult
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
 

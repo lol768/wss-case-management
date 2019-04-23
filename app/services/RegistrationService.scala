@@ -6,13 +6,13 @@ import java.time.OffsetDateTime
 import com.google.inject.ImplementedBy
 import domain.dao.{DaoRunner, RegistrationDao}
 import domain.{Registration, RegistrationData, RegistrationDataHistory}
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 import warwick.sso.UniversityID
-import helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.Implicits._
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[RegistrationServiceImpl])

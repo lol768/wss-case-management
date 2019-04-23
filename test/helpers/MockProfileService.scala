@@ -1,9 +1,9 @@
 package helpers
 
 import domain.SitsProfile
-import helpers.ServiceResults.ServiceResult
-import helpers.caching.CacheElement
 import services.tabula.ProfileService
+import warwick.caching.CacheElement
+import warwick.core.helpers.ServiceResults.ServiceResult
 import warwick.core.timing.TimingContext
 import warwick.sso.UniversityID
 
