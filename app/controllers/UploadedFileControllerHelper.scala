@@ -121,13 +121,15 @@ class UploadedFileControllerHelperImpl @Inject()(
       HeaderNames.CONTENT_SECURITY_POLICY -> (
         "default-src 'none'; " +
         "img-src 'self' data:; " + // View images inline; allow data: for Safari media player
+        "font-src 'self' data:; " + // Allow fonts in PDFs
         "object-src 'self'; " + // Allow plugins to load for the current context
         "plugin-types application/pdf; " + // Only allow the PDF plugin
         "style-src 'unsafe-inline'; " + // PDF viewer Chrome?
         "media-src 'self'" // Needed to load the audio/video
       ),
 
-      "Cross-Origin-Resource-Policy" -> "same-origin",
+      // This currently stops Save As... working in Chrome
+      // "Cross-Origin-Resource-Policy" -> "same-origin",
     )
 
     if (request.headers.get(HeaderNames.IF_NONE_MATCH).contains(toEtag(uploadedFile))) {
