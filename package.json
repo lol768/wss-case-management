@@ -39,14 +39,14 @@
     "sinon-chai": "2.14.0",
     "terser-webpack-plugin": "1.2.1",
     "webpack": "4.28.3",
-    "webpack-bundle-analyzer": "3.0.3",
+    "webpack-bundle-analyzer": "3.3.2",
     "webpack-cli": "3.1.2",
     "webpack-merge": "4.1.5",
     "webpack-notifier": "1.7.0",
     "webpack-stream": "5.2.1"
   },
   "dependencies": {
-    "@universityofwarwick/id7": "2.3.0",
+    "@universityofwarwick/id7": "2.3.1",
     "@universityofwarwick/serverpipe": "1.0.1",
     "bootstrap-3-typeahead": "github:UniversityofWarwick/Bootstrap-3-Typeahead#acada2f8e5d9a70dbb37c1fd152895937a03f8d5",
     "core-js": "2.6.1",
@@ -54,7 +54,7 @@
     "fullcalendar": "github:UniversityofWarwick/fullcalendar#v3-csp",
     "fullcalendar-scheduler": "github:UniversityofWarwick/fullcalendar-scheduler#v1-csp",
     "isomorphic-fetch": "2.2.1",
-    "jquery": "3.3.1",
+    "jquery": "3.4.0",
     "lodash-es": "4.17.11",
     "loglevel": "1.6.1",
     "moment-timezone": "github:UniversityofWarwick/moment-timezone#0.5.23-london"

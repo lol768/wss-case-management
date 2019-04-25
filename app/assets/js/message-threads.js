@@ -141,7 +141,7 @@ export default function MessageThreads(container) {
           if (response.errors[0].messageKey === 'error.optimisticLocking') {
             $form.find('.needs-refresh').removeClass('hidden');
           } else {
-            $form.find('.error').empty().html(_.map(response.errors, error => error.message).join(', ')).removeClass('hidden');
+            $form.find('.error').empty().html(_.map(response.errors, error => error.message || error).join(', ')).removeClass('hidden');
           }
         } else {
           log.error(response);
