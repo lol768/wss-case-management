@@ -9,7 +9,7 @@ import domain.AuditEvent
 import domain.CustomJdbcTypes._
 import domain.dao.{AuditDao, DaoRunner}
 import helpers.ConditionalChain._
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
 import domain.ExtendedPostgresProfile.api._

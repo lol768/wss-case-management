@@ -3,8 +3,8 @@ package controllers
 import java.util.UUID
 
 import domain.{IssueKey, Teams}
-import helpers.ServiceResults
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.ServiceResult
 import play.api.mvc._
 import services.{AppointmentService, CaseService, EnquiryService, RegistrationService}
 import system.Roles

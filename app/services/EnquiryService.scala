@@ -16,9 +16,9 @@ import domain.dao.EnquiryDao.{Enquiries, EnquiryFilter, EnquirySearchQuery, Stor
 import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{DaoRunner, EnquiryDao, MemberDao, MessageDao}
-import helpers.ServiceResults
-import helpers.ServiceResults.Implicits._
-import helpers.ServiceResults.{ServiceError, ServiceResult}
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import org.quartz.{JobBuilder, Scheduler, TriggerBuilder}
 import play.api.Configuration

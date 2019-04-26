@@ -4,7 +4,6 @@ import java.time.LocalDate
 
 import domain._
 import helpers.OneAppPerSuite
-import helpers.caching.NeverExpiringMemoryAsyncCacheApi
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
@@ -18,10 +17,12 @@ import play.api.routing.sird._
 import play.api.test.WsTestClient
 import play.api.{Configuration, Environment}
 import play.core.server.Server
-import services.{NoAuditLogging, NullTimingService, PhotoServiceImpl}
+import services.{NoAuditLogging, PhotoServiceImpl}
 import uk.ac.warwick.sso.client.trusted.TrustedApplication.HEADER_ERROR_CODE
 import uk.ac.warwick.sso.client.trusted.{CurrentApplication, EncryptedCertificate, TrustedApplicationsManager}
+import warwick.caching.NeverExpiringMemoryAsyncCacheApi
 import warwick.sso.UniversityID
+import warwick.timing.NullTimingService
 
 import scala.concurrent.ExecutionContext
 

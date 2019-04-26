@@ -9,7 +9,7 @@ import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
 import domain.dao.CaseDao.CaseFilter
 import domain.dao.EnquiryDao.EnquiryFilter
-import helpers.ServiceResults
+import warwick.core.helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.data.Form

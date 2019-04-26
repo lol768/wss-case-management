@@ -13,9 +13,9 @@ import domain.dao.CaseDao.StoredCase
 import domain.dao.ClientDao.StoredClient
 import domain.dao.{AppointmentDao, DaoRunner}
 import domain.{Case, _}
-import helpers.ServiceResults
-import helpers.ServiceResults.Implicits._
-import helpers.ServiceResults.{ServiceError, ServiceResult}
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Provider, Singleton}
 import org.quartz._
 import play.api.Configuration

@@ -33,7 +33,7 @@ lazy val root = (project in file("."))
     javaOptions in Test += "-Dlogger.resource=test-logging.xml"
   )
 
-val playUtilsVersion = "1.29"
+val playUtilsVersion = "1.33.1"
 val ssoClientVersion = "2.63"
 val warwickUtilsVersion = "20190221"
 val enumeratumVersion = "1.5.13"
@@ -72,6 +72,7 @@ val appDeps = Seq(
   "uk.ac.warwick.play-utils" %% "objectstore" % playUtilsVersion,
   "uk.ac.warwick.play-utils" %% "office365" % playUtilsVersion,
   "uk.ac.warwick.play-utils" %% "slick" % playUtilsVersion,
+  "uk.ac.warwick.play-utils" %% "caching" % playUtilsVersion,
 
   "uk.ac.warwick.util" % "warwickutils-core" % warwickUtilsVersion,
   "uk.ac.warwick.util" % "warwickutils-mywarwick" % warwickUtilsVersion exclude("uk.ac.warwick.sso", "sso-client"),
@@ -101,6 +102,7 @@ val testDeps = Seq(
   "org.scalatest" %% "scalatest" % "3.0.5",
   "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.1",
   "uk.ac.warwick.sso" %% "sso-client-play-testing" % ssoClientVersion,
+  "uk.ac.warwick.play-utils" %% "testing" % playUtilsVersion,
   "org.seleniumhq.selenium" % "selenium-java" % "3.141.59",
   "org.seleniumhq.selenium" % "selenium-chrome-driver" % "3.141.59",
   "com.opentable.components" % "otj-pg-embedded" % "0.13.1",

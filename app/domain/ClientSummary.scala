@@ -6,7 +6,7 @@ import domain.History._
 import domain.ClientRiskStatus.{High, Medium}
 import domain.dao.ClientSummaryDao.{StoredClientSummary, StoredClientSummaryVersion}
 import enumeratum.{EnumEntry, PlayEnum}
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.ServiceResult
 import play.api.libs.json.{Format, Json, Writes}
 import services.{AuditLogContext, ClientService}
 import warwick.core.helpers.JavaTime

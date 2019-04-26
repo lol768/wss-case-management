@@ -5,9 +5,7 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
-import helpers.ServiceResults.{ServiceError, ServiceResult}
-import helpers.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
-import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
+import helpers.{TrustedAppsHelper, WSRequestUriBuilder}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.cache.AsyncCacheApi
@@ -16,11 +14,12 @@ import play.api.libs.ws.WSClient
 import services.FreeBusyService
 import services.FreeBusyService.{FreeBusyPeriod, FreeBusyStatus}
 import services.tabula.TabulaFreeBusyService._
-import system.TimingCategories
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
+import warwick.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
 import warwick.core.Logging
-import warwick.core.helpers.JavaTime
-import warwick.core.timing.{TimingContext, TimingService}
+import warwick.core.helpers.{JavaTime, ServiceResults}
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
+import warwick.core.timing.{TimingCategories, TimingContext, TimingService}
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
 
 import scala.collection.JavaConverters._
