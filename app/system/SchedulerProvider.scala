@@ -30,14 +30,18 @@ class SchedulerProvider @Inject()(
   @NamedDatabase("default") db: DatabaseConfigProvider
 ) extends Provider[Scheduler] {
 
+  private lazy val scheduler = {
+    val s = new StdSchedulerFactory().getScheduler
+    s.setJobFactory(jobFactory)
+    s
+  }
+
+
   def get(): Scheduler = {
     import ExecutionContext.Implicits.global
 
     // quartz.properties specifies this JNDI name
     JNDI.initialContext.rebind("db.default", DataSourceExtractor.extract(db))
-
-    val scheduler = new StdSchedulerFactory().getScheduler
-    scheduler.setJobFactory(jobFactory)
 
     def shutdown: Future[Unit] = Future {
       // Waits for running jobs to finish.
