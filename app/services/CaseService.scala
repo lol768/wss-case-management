@@ -18,9 +18,9 @@ import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao._
 import domain.{Page, _}
-import helpers.ServiceResults
-import helpers.ServiceResults.Implicits._
-import helpers.ServiceResults.{ServiceError, ServiceResult}
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import services.CaseService._

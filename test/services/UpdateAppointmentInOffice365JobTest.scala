@@ -7,7 +7,7 @@ import java.util.UUID
 import domain.Owner.EntityType
 import domain.Teams.WellbeingSupport
 import domain._
-import helpers.ServiceResults
+import warwick.core.helpers.ServiceResults
 import org.mockito.ArgumentMatchers.{eq => isEqual, _}
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock

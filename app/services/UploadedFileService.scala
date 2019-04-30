@@ -10,12 +10,11 @@ import domain.ExtendedPostgresProfile.api._
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{DaoRunner, UploadedFileDao}
 import domain.{UploadedFile, UploadedFileOwner, UploadedFileSave}
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Named, Singleton}
 import play.api.libs.json.Json
-import system.TimingCategories
 import warwick.core.helpers.JavaTime
-import warwick.core.timing.TimingService
+import warwick.core.timing.{TimingCategories, TimingService}
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.Usercode
 

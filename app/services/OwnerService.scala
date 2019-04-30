@@ -10,8 +10,8 @@ import domain._
 import domain.dao.MemberDao.StoredMember
 import domain.dao.MemberDao.StoredMember.Members
 import domain.dao.{DaoRunner, OwnerDao}
-import helpers.ServiceResults.Implicits._
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsString, Json}
 import warwick.core.helpers.JavaTime

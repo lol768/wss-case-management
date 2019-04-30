@@ -8,7 +8,7 @@ import controllers.MessagesController.MessageFormData
 import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.refiners.{ClientIssueActionFilters, IssueSpecificRequest}
 import domain._
-import helpers.ServiceResults
+import warwick.core.helpers.ServiceResults
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._

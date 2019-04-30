@@ -1,6 +1,6 @@
 package domain
 
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.ServiceResult
 import services.PermissionService
 
 case class Creator(

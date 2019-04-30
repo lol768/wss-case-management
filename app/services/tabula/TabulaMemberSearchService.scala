@@ -1,17 +1,17 @@
 package services.tabula
 
 import com.google.inject.ImplementedBy
-import helpers.ServiceResults.{ServiceError, ServiceResult}
-import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
+import helpers.{TrustedAppsHelper, WSRequestUriBuilder}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
 import services.PhotoService
-import system.TimingCategories
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
 import warwick.core.Logging
-import warwick.core.timing.{TimingContext, TimingService}
+import warwick.core.helpers.ServiceResults
+import warwick.core.timing.{TimingCategories, TimingContext, TimingService}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}

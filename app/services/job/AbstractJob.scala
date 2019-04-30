@@ -1,6 +1,6 @@
 package services.job
 
-import helpers.ServiceResults.ServiceError
+import warwick.core.helpers.ServiceResults.ServiceError
 import org.quartz._
 import services.AuditLogContext
 import warwick.core.Logging

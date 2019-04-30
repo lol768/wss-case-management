@@ -3,8 +3,8 @@ package services.job
 import java.util.UUID
 
 import domain.{AppointmentRender, AppointmentState}
-import helpers.ServiceResults
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.ServiceResult
 import helpers.StringUtils._
 import javax.inject.Inject
 import org.quartz._

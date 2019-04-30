@@ -9,8 +9,8 @@ import controllers.refiners._
 import controllers.{API, BaseController}
 import domain._
 import enumeratum.{EnumEntry, PlayEnum}
-import helpers.ServiceResults.ServiceResult
-import helpers.{FormHelpers, ServiceResults}
+import warwick.core.helpers.ServiceResults.ServiceResult
+import helpers.FormHelpers
 import javax.inject.{Inject, Singleton}
 import play.api.data.Forms._
 import play.api.data.{Form, FormError}
@@ -20,7 +20,7 @@ import play.api.mvc.{Action, AnyContent, Result}
 import services.FreeBusyService.FreeBusyPeriod
 import services._
 import services.tabula.ProfileService
-import warwick.core.helpers.JavaTime
+import warwick.core.helpers.{JavaTime, ServiceResults}
 import warwick.core.timing.TimingContext
 import warwick.sso._
 

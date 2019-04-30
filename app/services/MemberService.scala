@@ -5,8 +5,8 @@ import domain.ExtendedPostgresProfile.api._
 import domain.dao.MemberDao.StoredMember
 import domain.dao.{DaoRunner, MemberDao}
 import domain.{Member, Teams}
-import helpers.ServiceResults.Implicits._
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import slick.dbio.DBIOAction
 import warwick.sso.{GroupService, UserLookupService, Usercode}

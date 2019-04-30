@@ -10,7 +10,8 @@ import play.api.libs.JNDI
 import play.db.NamedDatabase
 import slick.jdbc.JdbcProfile
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 object DataSourceExtractor {
   import scala.language.reflectiveCalls
@@ -30,22 +31,21 @@ class SchedulerProvider @Inject()(
   @NamedDatabase("default") db: DatabaseConfigProvider
 ) extends Provider[Scheduler] {
 
-  def get(): Scheduler = {
-    import ExecutionContext.Implicits.global
+  private def shutdown: Future[Unit] = Future {
+    // Waits for running jobs to finish.
+    scheduler.shutdown(true)
+  }
 
+  private lazy val scheduler = {
     // quartz.properties specifies this JNDI name
     JNDI.initialContext.rebind("db.default", DataSourceExtractor.extract(db))
 
-    val scheduler = new StdSchedulerFactory().getScheduler
-    scheduler.setJobFactory(jobFactory)
-
-    def shutdown: Future[Unit] = Future {
-      // Waits for running jobs to finish.
-      scheduler.shutdown(true)
-    }
+    val s = new StdSchedulerFactory().getScheduler
+    s.setJobFactory(jobFactory)
 
     lifecycle.addStopHook(shutdown _)
-
-    scheduler
+    s
   }
+
+  def get(): Scheduler = scheduler
 }

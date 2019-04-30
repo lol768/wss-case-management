@@ -1,7 +1,7 @@
 package services
 
 import domain._
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults.ServiceResult
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.sso.{UniversityID, Usercode}
 

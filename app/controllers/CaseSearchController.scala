@@ -5,8 +5,8 @@ import controllers.CaseSearchController._
 import controllers.refiners.AnyTeamActionRefiner
 import domain._
 import domain.dao.CaseDao.CaseSearchQuery
-import helpers.ServiceResults
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._

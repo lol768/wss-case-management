@@ -8,7 +8,7 @@ import controllers.admin.CaseDocumentController._
 import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CaseSpecificRequest}
 import controllers.{BaseController, UploadedFileControllerHelper}
 import domain._
-import helpers.ServiceResults.ServiceError
+import warwick.core.helpers.ServiceResults.ServiceError
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._

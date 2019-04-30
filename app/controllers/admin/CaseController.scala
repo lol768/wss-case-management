@@ -9,8 +9,8 @@ import controllers.refiners._
 import controllers.{BaseController, MessagesController, UploadedFileControllerHelper}
 import domain.CaseNoteType._
 import domain._
-import helpers.ServiceResults.{ServiceError, ServiceResult}
-import helpers.{FormHelpers, ServiceResults}
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
+import helpers.FormHelpers
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -18,7 +18,7 @@ import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Result}
 import services._
 import services.tabula.ProfileService
-import warwick.core.helpers.JavaTime
+import warwick.core.helpers.{JavaTime, ServiceResults}
 import warwick.core.timing.TimingContext
 import warwick.sso._
 

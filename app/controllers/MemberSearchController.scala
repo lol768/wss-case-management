@@ -2,7 +2,7 @@ package controllers
 
 import controllers.refiners.AnyTeamActionRefiner
 import domain.Team
-import helpers.ServiceResults
+import warwick.core.helpers.ServiceResults
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json

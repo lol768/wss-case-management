@@ -9,8 +9,8 @@ import controllers.admin.TeamEnquiryController._
 import controllers.refiners._
 import controllers.{API, BaseController, MessagesController, UploadedFileControllerHelper}
 import domain._
-import helpers.ServiceResults
-import helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._

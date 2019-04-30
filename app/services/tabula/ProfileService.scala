@@ -2,9 +2,7 @@ package services.tabula
 
 import com.google.inject.ImplementedBy
 import domain.SitsProfile
-import helpers.ServiceResults.{ServiceError, ServiceResult}
-import helpers.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
-import helpers.{ServiceResults, TrustedAppsHelper, WSRequestUriBuilder}
+import helpers.{TrustedAppsHelper, WSRequestUriBuilder}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.cache.AsyncCacheApi
@@ -12,10 +10,12 @@ import play.api.libs.json.{JsPath, JsValue, JsonValidationError}
 import play.api.libs.ws.WSClient
 import services.PhotoService
 import services.tabula.ProfileService._
-import system.TimingCategories
 import uk.ac.warwick.sso.client.trusted.{TrustedApplicationUtils, TrustedApplicationsManager}
+import warwick.caching.{CacheElement, CacheOptions, Ttl, VariableTtlCacheHelper}
 import warwick.core.Logging
-import warwick.core.timing.{TimingContext, TimingService}
+import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
+import warwick.core.timing.{TimingCategories, TimingContext, TimingService}
 import warwick.sso.UniversityID
 
 import scala.collection.JavaConverters._

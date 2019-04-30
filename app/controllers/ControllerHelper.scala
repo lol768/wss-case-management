@@ -1,8 +1,8 @@
 package controllers
 
 import helpers.Json._
-import helpers.ServiceResults.Implicits._
-import helpers.ServiceResults.{ServiceError, ServiceResult}
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import play.api.libs.json.Json
 import play.api.mvc.{RequestHeader, Result, Results}
 import warwick.core.Logging

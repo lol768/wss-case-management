@@ -3,9 +3,8 @@ package domain.dao
 import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import warwick.core.timing.{TimingContext, TimingService}
+import warwick.core.timing.{TimingCategories, TimingContext, TimingService}
 import slick.jdbc.JdbcProfile
-import system.TimingCategories
 
 import scala.concurrent.{ExecutionContext, Future}
 
