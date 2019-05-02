@@ -83,8 +83,9 @@ class FreeBusyServiceTest extends PlaySpec with MockitoSugar with ScalaFutures {
         ois.close
         value
       }
-      
+
       stringDeserialize(stringSerialize(FreeBusyStatus.WorkingElsewhere)) must equal(FreeBusyStatus.WorkingElsewhere)
+      stringDeserialize(stringSerialize(FreeBusyStatus.WorkingElsewhere)) must not equal(FreeBusyStatus.Busy)
     }
   }
 
