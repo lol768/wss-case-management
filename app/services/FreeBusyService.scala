@@ -47,7 +47,10 @@ object FreeBusyService {
         .values.toList.flatten.sorted
   }
 
-  sealed abstract class FreeBusyStatus(val description: String) extends EnumEntry
+  sealed abstract class FreeBusyStatus(val description: String) extends EnumEntry {
+    // CASE-500 no-arg constructor to allow serialization
+    def this() = this("")
+  }
   object FreeBusyStatus extends PlayEnum[FreeBusyStatus] {
     case class FreeWithCategories(categories: Seq[String]) extends FreeBusyStatus(s"Free (${categories.mkString(", ")})") {
       override val entryName: String = "Free"
