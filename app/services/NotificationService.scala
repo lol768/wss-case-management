@@ -4,9 +4,6 @@ import java.util.UUID
 
 import com.google.inject.ImplementedBy
 import domain._
-import warwick.core.helpers.ServiceResults
-import warwick.core.helpers.ServiceResults.Implicits._
-import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.mailer.Email
@@ -16,7 +13,9 @@ import services.NotificationService.{NotificationConfiguration, _}
 import services.tabula.ProfileService
 import uk.ac.warwick.util.mywarwick.MyWarwickService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
-import warwick.core.helpers.JavaTime
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
+import warwick.core.helpers.{JavaTime, ServiceResults}
 import warwick.core.timing.TimingContext
 import warwick.sso._
 
@@ -140,7 +139,7 @@ class NotificationServiceImpl @Inject()(
       withTeamUsers(Teams.WellbeingSupport) { users =>
         val url = controllers.admin.routes.ClientController.client(universityID).build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$teamSubjectPrefix New registration received",
           body = views.txt.emails.newregistration(url),
           recipients = users,
@@ -158,7 +157,7 @@ class NotificationServiceImpl @Inject()(
     ifEnabled(_.registrationInvite) {
       val url = controllers.registration.routes.RegisterController.form().build
       withUser(universityID) { user =>
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = "Register for Wellbeing Support Services",
           body = views.txt.emails.registrationinvite(user, url),
           recipients = Seq(user),
@@ -178,7 +177,7 @@ class NotificationServiceImpl @Inject()(
       withTeamUsers(team) { users =>
         val url = controllers.admin.routes.TeamEnquiryController.messages(enquiryKey).build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$teamSubjectPrefix ${enquiryKey.string} - New enquiry received",
           body = views.txt.emails.newenquiry(url),
           recipients = users,
@@ -203,7 +202,7 @@ class NotificationServiceImpl @Inject()(
     withTeamUsers(enquiry.team) { users =>
       val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key).build
 
-      queueEmailAndSendActivity(
+      sendActivityAndQueueEmail(
         subject = s"$teamSubjectPrefix ${enquiry.key.string} - Enquiry message from client received",
         body = views.txt.emails.enquirymessagefromclient(url),
         recipients = users,
@@ -221,7 +220,7 @@ class NotificationServiceImpl @Inject()(
     withUser(client) { user =>
       val url = controllers.routes.ClientMessagesController.messages(id).build
 
-      queueEmailAndSendActivity(
+      sendActivityAndQueueEmail(
         subject = s"$clientSubjectPrefix A message from ${team.name} has been received",
         body = views.txt.emails.messagefromteam(user, team, url),
         recipients = Seq(user),
@@ -246,7 +245,7 @@ class NotificationServiceImpl @Inject()(
     def message(users: Seq[User]) = {
       val url = controllers.admin.routes.CaseController.view(c.key).build
 
-      queueEmailAndSendActivity(
+      sendActivityAndQueueEmail(
         subject = s"$teamSubjectPrefix ${c.key.string} - Case message from client received",
         body = views.txt.emails.casemessagefromclient(url),
         recipients = users,
@@ -271,7 +270,7 @@ class NotificationServiceImpl @Inject()(
       withTeamUsers(enquiry.team) { users =>
         val url = controllers.admin.routes.TeamEnquiryController.messages(enquiry.key).build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$teamSubjectPrefix ${enquiry.key.string} - Enquiry assigned",
           body = views.txt.emails.enquiryreassigned(url),
           recipients = users,
@@ -293,7 +292,7 @@ class NotificationServiceImpl @Inject()(
         withUsers(newOwners) { users =>
           val url = controllers.admin.routes.CaseController.view(clientCase.key).build
 
-          queueEmailAndSendActivity(
+          sendActivityAndQueueEmail(
             subject = s"$teamSubjectPrefix ${clientCase.key.string} - New case owner",
             body = views.txt.emails.newcaseowner(url),
             recipients = users.toSeq,
@@ -313,7 +312,7 @@ class NotificationServiceImpl @Inject()(
       withTeamUsers(clientCase.team) { users =>
         val url = controllers.admin.routes.CaseController.view(clientCase.key).build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$teamSubjectPrefix ${clientCase.key.string} - Case assigned",
           body = views.txt.emails.casereassigned(url),
           recipients = users,
@@ -332,7 +331,7 @@ class NotificationServiceImpl @Inject()(
       withUsers(clients) { clientUsers =>
         val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$clientSubjectPrefix New appointment created",
           body = views.txt.emails.clientNewAppointment(url),
           recipients = clientUsers.toSeq,
@@ -351,7 +350,7 @@ class NotificationServiceImpl @Inject()(
       withUsers(clients) { clientUsers =>
         val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$clientSubjectPrefix Appointment cancelled",
           body = views.txt.emails.clientCancelledAppointment(url),
           recipients = clientUsers.toSeq,
@@ -370,7 +369,7 @@ class NotificationServiceImpl @Inject()(
       withUsers(clients) { clientUsers =>
         val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$clientSubjectPrefix Appointment updated",
           body = views.txt.emails.clientChangedAppointment(url),
           recipients = clientUsers.toSeq,
@@ -389,7 +388,7 @@ class NotificationServiceImpl @Inject()(
       withUsers(clients) { clientUsers =>
         val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$clientSubjectPrefix Appointment rescheduled",
           body = views.txt.emails.clientRescheduledAppointment(url),
           recipients = clientUsers.toSeq,
@@ -408,7 +407,7 @@ class NotificationServiceImpl @Inject()(
       withUsers(owners) { ownerUsers =>
         val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$teamSubjectPrefix New appointment created",
           body = views.txt.emails.ownerNewAppointment(url),
           recipients = ownerUsers.toSeq,
@@ -427,7 +426,7 @@ class NotificationServiceImpl @Inject()(
       withUsers(owners) { ownerUsers =>
         val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$teamSubjectPrefix Appointment cancelled",
           body = views.txt.emails.ownerCancelledAppointment(url),
           recipients = ownerUsers.toSeq,
@@ -446,7 +445,7 @@ class NotificationServiceImpl @Inject()(
       withUsers(owners) { ownerUsers =>
         val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$teamSubjectPrefix Appointment updated",
           body = views.txt.emails.ownerChangedAppointment(url),
           recipients = ownerUsers.toSeq,
@@ -465,7 +464,7 @@ class NotificationServiceImpl @Inject()(
       withUsers(owners) { ownerUsers =>
         val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$teamSubjectPrefix Appointment rescheduled",
           body = views.txt.emails.ownerRescheduledAppointment(url),
           recipients = ownerUsers.toSeq,
@@ -484,7 +483,7 @@ class NotificationServiceImpl @Inject()(
       withUsers(teamMembers) { teamMembers =>
         val url = controllers.admin.routes.AppointmentController.view(appointment.key).build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$teamSubjectPrefix ${appointment.key.string} - Appointment ${clientState.clientDescription}",
           body = views.txt.emails.appointmentResponse(url, clientState.clientDescription.toLowerCase),
           recipients = teamMembers.toSeq,
@@ -503,7 +502,7 @@ class NotificationServiceImpl @Inject()(
       withUsers(clients) { clientUsers =>
         val url = controllers.appointments.routes.AppointmentController.redirectToMyAppointments().build
 
-        queueEmailAndSendActivity(
+        sendActivityAndQueueEmail(
           subject = s"$clientSubjectPrefix Appointment reminder",
           body = views.txt.emails.appointmentReminder(appointment.start, url),
           recipients = clientUsers.toSeq,
@@ -517,8 +516,8 @@ class NotificationServiceImpl @Inject()(
       }
     }
 
-  private def queueEmailAndSendActivity(subject: String, body: TxtFormat.Appendable, recipients: Seq[User], activity: Activity)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
-    val queueEmail =
+  private def sendActivityAndQueueEmail(subject: String, body: TxtFormat.Appendable, recipients: Seq[User], activity: Activity)(implicit ac: AuditLogContext): Future[ServiceResult[Activity]] = {
+    def queueEmail =
       if (notificationConfiguration.sendEmails)
         emailService.queue(
           Email(
@@ -535,7 +534,9 @@ class NotificationServiceImpl @Inject()(
         )
       else Future.successful(Right(Nil))
 
-    queueEmail.successFlatMapTo(_ => sendAndHandleResponse(activity))
+    sendAndHandleResponse(activity).successFlatMapTo(activity =>
+      queueEmail.successMapTo(_ => activity)
+    )
   }
 
   private def buildActivity(users: Set[User], title: String, url: String, activityType: String): Activity =

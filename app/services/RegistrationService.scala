@@ -13,6 +13,7 @@ import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
 import warwick.sso.UniversityID
 import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.slick.helpers.SlickServiceResults.Implicits._
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[RegistrationServiceImpl])
@@ -45,12 +46,12 @@ class RegistrationServiceImpl @Inject()(
     ) {
       get(universityID).successFlatMapTo { existing =>
         val action = existing.map(r => dao.update(universityID, r.data, JavaTime.offsetDateTime, r.updatedDate)).getOrElse(dao.invite(universityID))
-        daoRunner.run(action).map(_.parsed).map(Right.apply)
+        daoRunner.runWithServiceResult(for {
+          registration <- action
+          _ <- notificationService.registrationInvite(universityID).toDBIO
+        } yield registration).map(_.map(_.parsed))
       }
-    }.flatMap(_.fold(
-      errors => Future.successful(Left(errors)),
-      registration => notificationService.registrationInvite(universityID).map(_.right.map(_ => registration))
-    ))
+    }
 
   override def register(universityID: UniversityID, data: RegistrationData, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Registration]] =
     get(universityID).successFlatMapTo(_.map(existing =>
@@ -61,11 +62,11 @@ class RegistrationServiceImpl @Inject()(
           Target.Registration,
           Json.toJson(data)(RegistrationData.formatter)
         ) {
-          daoRunner.run(dao.update(universityID, Some(data), existing.lastInvited, version)).map(_.parsed).map(Right.apply)
-        }.flatMap(_.fold(
-          errors => Future.successful(Left(errors)),
-          registration => notificationService.newRegistration(universityID).map(_.right.map(_ => registration))
-        ))
+          daoRunner.runWithServiceResult(for {
+            update <- dao.update(universityID, Some(data), existing.lastInvited, version)
+            _ <- notificationService.newRegistration(universityID).toDBIO
+          } yield update).map(_.map(_.parsed))
+        }
       } else {
         auditService.audit(
           Operation.Registration.Update,
