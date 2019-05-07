@@ -18,6 +18,7 @@ import play.api.mvc.{Action, AnyContent}
 import services._
 import services.tabula.ProfileService
 import warwick.core.helpers.JavaTime
+import warwick.fileuploads.UploadedFileControllerHelper
 import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}

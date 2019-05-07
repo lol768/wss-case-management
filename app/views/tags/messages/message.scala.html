@@ -1,6 +1,7 @@
-@import domain.{MessageData, MessageSender, UploadedFile}
+@import domain.{MessageData, MessageSender}
 @import warwick.core.helpers.JavaTime
 
+@import warwick.fileuploads.UploadedFile
 @(
   message: MessageData,
   files: Seq[UploadedFile],

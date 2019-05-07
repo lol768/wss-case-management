@@ -16,9 +16,6 @@ import domain.dao.EnquiryDao.{Enquiries, EnquiryFilter, EnquirySearchQuery, Stor
 import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{DaoRunner, EnquiryDao, MemberDao, MessageDao}
-import warwick.core.helpers.ServiceResults
-import warwick.core.helpers.ServiceResults.Implicits._
-import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import org.quartz.{JobBuilder, Scheduler, TriggerBuilder}
 import play.api.Configuration
@@ -27,8 +24,11 @@ import services.EnquiryService._
 import services.job.SendEnquiryClientReminderJob
 import slick.lifted.Query
 import warwick.core.Logging
-import warwick.core.helpers.JavaTime
+import warwick.core.helpers.{JavaTime, ServiceResults}
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import warwick.core.timing.TimingContext
+import warwick.fileuploads.{UploadedFile, UploadedFileOwner, UploadedFileSave}
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}

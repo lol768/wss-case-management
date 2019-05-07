@@ -2,9 +2,8 @@ package controllers.admin
 
 import java.util.UUID
 
-import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.refiners.{CanViewCaseActionRefiner, CaseMessageActionFilters}
-import controllers.{API, BaseController, MessagesController, UploadedFileControllerHelper}
+import controllers.{API, BaseController, MessagesController}
 import domain._
 import domain.AuditEvent._
 import javax.inject.{Inject, Singleton}
@@ -14,6 +13,8 @@ import services.{AuditService, CaseService}
 import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
 import JavaTime.offsetDateTimeISOWrites
+import warwick.fileuploads.UploadedFileControllerHelper
+import warwick.fileuploads.UploadedFileControllerHelper.TemporaryUploadedFile
 
 import scala.concurrent.{ExecutionContext, Future}
 

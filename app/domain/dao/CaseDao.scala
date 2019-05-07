@@ -22,6 +22,7 @@ import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.core.helpers.JavaTime
+import warwick.fileuploads.UploadedFile
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.ExecutionContext

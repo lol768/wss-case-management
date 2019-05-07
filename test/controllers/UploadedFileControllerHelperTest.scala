@@ -5,7 +5,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.typesafe.config.ConfigMemorySize
-import domain.UploadedFileSave
 import helpers.{MockVirusScanService, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
@@ -14,6 +13,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.Configuration
 import play.api.http.Status
 import play.api.test.{FakeHeaders, FakeRequest}
+import warwick.fileuploads.{UploadedFileControllerHelper, UploadedFileSave}
 import warwick.sso.{Usercode, Users}
 
 class UploadedFileControllerHelperTest extends PlaySpec with OneAppPerSuite with MockitoSugar with ScalaFutures {

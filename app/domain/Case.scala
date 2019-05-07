@@ -12,6 +12,7 @@ import warwick.core.helpers.ServiceResults.ServiceResult
 import play.api.libs.json.{Json, Writes}
 import services.{AuditLogContext, CaseService, ClientService}
 import warwick.core.helpers.JavaTime
+import warwick.fileuploads.UploadedFile
 import warwick.sso.{UniversityID, User, UserLookupService, Usercode}
 
 import scala.collection.immutable

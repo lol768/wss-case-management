@@ -16,6 +16,7 @@ import services.AuditLogContext
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.core.helpers.JavaTime
+import warwick.fileuploads.{UploadedFile, UploadedFileOwner}
 import warwick.sso.Usercode
 
 import scala.concurrent.ExecutionContext

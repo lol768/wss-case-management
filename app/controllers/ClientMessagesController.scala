@@ -5,7 +5,6 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import controllers.MessagesController.MessageFormData
-import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.refiners.{ClientIssueActionFilters, IssueSpecificRequest}
 import domain._
 import warwick.core.helpers.ServiceResults
@@ -17,6 +16,8 @@ import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.tabula.ProfileService
 import services.{AuditService, CaseService, ClientService, EnquiryService}
 import warwick.core.helpers.JavaTime
+import warwick.fileuploads.UploadedFileControllerHelper
+import warwick.fileuploads.UploadedFileControllerHelper.TemporaryUploadedFile
 import warwick.sso.UserLookupService
 
 import scala.concurrent.{ExecutionContext, Future}

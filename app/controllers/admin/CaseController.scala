@@ -6,7 +6,7 @@ import java.util.UUID
 import controllers.MessagesController.MessageFormData
 import controllers.admin.CaseController._
 import controllers.refiners._
-import controllers.{BaseController, MessagesController, UploadedFileControllerHelper}
+import controllers.{BaseController, MessagesController}
 import domain.CaseNoteType._
 import domain._
 import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
@@ -20,6 +20,7 @@ import services._
 import services.tabula.ProfileService
 import warwick.core.helpers.{JavaTime, ServiceResults}
 import warwick.core.timing.TimingContext
+import warwick.fileuploads.UploadedFileControllerHelper
 import warwick.sso._
 
 import scala.concurrent.duration._
