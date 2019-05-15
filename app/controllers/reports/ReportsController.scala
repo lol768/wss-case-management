@@ -4,64 +4,38 @@ import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 
 import controllers.BaseController
-import controllers.refiners.AdminActionRefiner
-import controllers.reports.ReportsController._
-import domain.{Team, Teams}
-import warwick.core.helpers.ServiceResults
-import warwick.core.helpers.ServiceResults.ServiceResult
+import controllers.refiners.ReportingAdminActionRefiner
 import javax.inject.{Inject, Singleton}
 import play.api.mvc.{Action, AnyContent}
-import services.{CaseService, EnquiryService}
+import services.{PermissionService, ReportingService}
 import warwick.core.helpers.JavaTime
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object ReportsController {
-  val ReportDays = Seq(7, 14, 28)
-  case class Statistics(last7Days: Int, last14Days: Int, last28Days: Int)
-}
-
 @Singleton
 class ReportsController @Inject()(
-  enquiries: EnquiryService,
-  cases: CaseService,
-  adminActionRefiner: AdminActionRefiner,
+  reporting: ReportingService,
+  permissions: PermissionService,
+  reportingAdminActionRefiner: ReportingAdminActionRefiner,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import adminActionRefiner._
+  import reportingAdminActionRefiner._
+  
+  def home(): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    val name = currentUser().name.first
 
-  private def collectStatistics(report: (Team, OffsetDateTime) => Future[ServiceResult[Int]]): Future[ServiceResult[Seq[(Team, Statistics)]]] =
-    ServiceResults.futureSequence(
-      Teams.all.map { team =>
-        ServiceResults.futureSequence(
-          ReportDays.map { d =>
-            report(team, JavaTime.offsetDateTime.truncatedTo(ChronoUnit.DAYS).minusDays(d.toLong))
-          }
-        ).map(_.right.map(_.toList match {
-          case List(last7, last14, last28) => team -> Statistics(last7, last14, last28)
-          case r => throw new IllegalArgumentException(s"Invalid results: $r")
-        }))
-      }
-    )
+    permissions.teams(currentUser().usercode)
+      .map {
+        case teams if teams.nonEmpty =>
+          val start = JavaTime.offsetDateTime.truncatedTo(ChronoUnit.DAYS).minusDays(14.toLong)
+          val end = OffsetDateTime.now
+          val range = "Last 14 days"
 
-  def home(): Action[AnyContent] = AdminRequiredAction.async { implicit request =>
-    val openedEnquiries: Future[ServiceResult[Seq[(Team, Statistics)]]] =
-      collectStatistics(enquiries.countEnquiriesOpenedSince)
-    val closedEnquiries: Future[ServiceResult[Seq[(Team, Statistics)]]] =
-      collectStatistics(enquiries.countEnquiriesClosedSince)
-    val openedCases: Future[ServiceResult[Seq[(Team, Statistics)]]] =
-      collectStatistics(cases.countOpenedSince)
-    val closedCases: Future[ServiceResult[Seq[(Team, Statistics)]]] =
-      collectStatistics(cases.countClosedSince)
+          reporting.metrics(start, end, teams)
+            .successMap { metrics => Ok(views.html.reports.home(teams.map(_.name), range, metrics, teams.size > 1)) }
 
-    ServiceResults.zip(
-      openedEnquiries,
-      closedEnquiries,
-      openedCases,
-      closedCases
-    ).successMap { case (oe, ce, oc, cc) =>
-      Ok(views.html.reports.home(oe, ce, oc, cc))
-    }
-  }
-
+        case _ =>
+          Future.successful(Forbidden(views.html.errors.forbidden(name)(requestContext(request))))
+      }.getOrElse(Future.successful(Forbidden(views.html.errors.forbidden(name)(requestContext(request)))))
+  }}
 }

@@ -84,9 +84,6 @@ trait EnquiryService {
 
   def getOwnersMatching(filter: EnquiryFilter, state: IssueStateFilter)(implicit t: TimingContext): Future[ServiceResult[Seq[Member]]]
 
-  def countEnquiriesOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
-  def countEnquiriesClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
-
   def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]]
 
   def getLastUpdatedMessageDate(enquiryKey: IssueKey)(implicit t: TimingContext): Future[ServiceResult[OffsetDateTime]]
@@ -119,7 +116,8 @@ class EnquiryServiceImpl @Inject() (
     key = key,
     universityID = save.universityID,
     subject = save.subject,
-    team = save.team
+    team = save.team,
+    state = save.state
   )
 
   private def addMessageDBIO(client: UniversityID, team: Team, enquiryId: UUID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): DBIO[(Message, Seq[UploadedFile])] =
@@ -439,20 +437,6 @@ class EnquiryServiceImpl @Inject() (
         EnquiryListRender(enquiry.asEnquiry(client.asClient), lastUpdated, lastMessageFromClient, lastViewed)
       })
     }
-
-  override def countEnquiriesOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]] =
-    daoRunner.run(
-      enquiryDao.findByFilterQuery(EnquiryFilter(team), IssueStateFilter.Open)
-        .filter(_.created >= date)
-        .length.result
-    ).map(Right.apply)
-
-  override def countEnquiriesClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]] =
-    daoRunner.run(
-      enquiryDao.findByFilterQuery(EnquiryFilter(team), IssueStateFilter.Closed)
-        .filter(_.version >= date)
-        .length.result
-    ).map(Right.apply)
 
   override def getLastUpdatedForClients(clients: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[OffsetDateTime]]]] =
     daoRunner.run(enquiryDao.getLastUpdatedForClients(clients)).map(r => Right(r.toMap.withDefaultValue(None)))

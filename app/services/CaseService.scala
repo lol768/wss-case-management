@@ -71,9 +71,6 @@ trait CaseService {
   def countCases(filter: CaseFilter)(implicit t: TimingContext): Future[ServiceResult[Int]]
   def getOwnersMatching(filter: CaseFilter)(implicit t: TimingContext): Future[ServiceResult[Seq[Member]]]
 
-  def countOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
-  def countClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]]
-
   def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]]
   def setOwners(id: UUID, owners: Set[Usercode], note: Option[CaseNoteSave])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
 
@@ -561,21 +558,7 @@ class CaseServiceImpl @Inject() (
         .distinct
         .result
     ).map { results => Right(results.map(_.asMember).sorted) }
-
-  override def countOpenedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]] =
-    daoRunner.run(
-      dao.listQuery(CaseFilter(team).withState(IssueStateFilter.Open))
-        .filter(_.created >= date)
-        .length.result
-    ).map(Right.apply)
-
-  override def countClosedSince(team: Team, date: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Int]] =
-    daoRunner.run(
-      dao.listQuery(CaseFilter(team).withState(IssueStateFilter.Closed))
-        .filter(_.version >= date)
-        .length.result
-    ).map(Right.apply)
-
+  
   override def getOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[Member]]]] =
     ownerService.getCaseOwners(ids)
 

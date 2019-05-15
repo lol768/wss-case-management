@@ -68,6 +68,7 @@ trait CaseDao {
   def getClientHistory(caseID: UUID): DBIO[Seq[StoredCaseClientVersion]]
   def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, StoredCase, Seq]
   def getLastUpdatedForClients(clients: Set[UniversityID]): DBIO[Seq[(UniversityID, Option[OffsetDateTime])]]
+  def findCasesWithEnquiriesQuery(state: IssueStateFilter): Query[Cases, StoredCase, Seq]
 }
 
 @Singleton
@@ -285,6 +286,10 @@ class CaseDaoImpl @Inject()(
       }
       .result
   }
+  
+  override def findCasesWithEnquiriesQuery(state: IssueStateFilter): Query[Cases, StoredCase, Seq] = {
+    cases.table.filter(c => c.originalEnquiry.isDefined && c.matchesState(state))
+  }
 }
 
 object CaseDao {
@@ -325,7 +330,7 @@ object CaseDao {
     cause: CaseCause,
     dsaApplication: Option[UUID],
     fields: StoredCaseFields,
-  ) extends Versioned[StoredCase] {
+  ) extends Versioned[StoredCase] with Teamable {
     def asCase: Case =
       Case(
         id = id,
@@ -458,11 +463,17 @@ object CaseDao {
     with VersionedTable[StoredCase]
     with CommonProperties {
     override def matchesPrimaryKey(other: StoredCase): Rep[Boolean] = id === other.id
-    def id = column[UUID]("id", O.PrimaryKey)
+    def id: Rep[UUID] = column[UUID]("id", O.PrimaryKey)
     def searchableKey: Rep[TsVector] = column[TsVector]("case_key_tsv")
     def searchableSubject: Rep[TsVector] = column[TsVector]("subject_tsv")
 
-    def isOpen = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
+    def isOpen: Rep[Boolean] = state === (IssueState.Open : IssueState) || state === (IssueState.Reopened : IssueState)
+
+    def matchesState(state: IssueStateFilter): Rep[Boolean] = state match {
+      case IssueStateFilter.Open => isOpen
+      case IssueStateFilter.Closed => !isOpen
+      case IssueStateFilter.All => true.bind
+    }
 
     override def * : ProvenShape[StoredCase] =
       (id, key, subject, created, team, version, state, incidentDate, onCampus, notifiedPolice, notifiedAmbulance, notifiedFire, originalEnquiry, caseType, cause, dsaApplication, fieldsProjection).mapTo[StoredCase]

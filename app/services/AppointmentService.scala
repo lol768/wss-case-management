@@ -13,9 +13,6 @@ import domain.dao.CaseDao.StoredCase
 import domain.dao.ClientDao.StoredClient
 import domain.dao.{AppointmentDao, DaoRunner}
 import domain.{Case, _}
-import warwick.core.helpers.ServiceResults
-import warwick.core.helpers.ServiceResults.Implicits._
-import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Provider, Singleton}
 import org.quartz._
 import play.api.Configuration
@@ -25,7 +22,9 @@ import services.job.SendAppointmentClientReminderJob
 import services.office365.Office365CalendarService
 import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.core.Logging
-import warwick.core.helpers.JavaTime
+import warwick.core.helpers.{JavaTime, ServiceResults}
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import warwick.core.timing.TimingContext
 import warwick.sso.{UniversityID, Usercode}
 
@@ -745,7 +744,6 @@ class AppointmentServiceImpl @Inject()(
         ).map(_ => Right(Done))
       }
     }
-
 }
 
 object AppointmentService {

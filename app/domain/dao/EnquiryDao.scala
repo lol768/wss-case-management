@@ -38,6 +38,8 @@ trait EnquiryDao {
   def findNotesQuery(enquiryIDs: Set[UUID]): Query[EnquiryNotes, StoredEnquiryNote, Seq]
   def searchQuery(query: EnquirySearchQuery): Query[Enquiries, StoredEnquiry, Seq]
   def getLastUpdatedForClients(clients: Set[UniversityID]): DBIO[Seq[(UniversityID, Option[OffsetDateTime])]]
+  def findByStateQuery(state: IssueStateFilter): Query[Enquiries, StoredEnquiry, Seq]
+  def countFirstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime): Query[(Rep[Team], Rep[Int]), (Team, Int), Seq]
 }
 
 @Singleton
@@ -146,6 +148,17 @@ class EnquiryDaoImpl @Inject() (
       .result
   }
 
+  override def findByStateQuery(state: IssueStateFilter): Query[Enquiries, StoredEnquiry, Seq] =
+    enquiries.table.filter(_.matchesState(state))
+  
+  override def countFirstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime): Query[(Rep[Team], Rep[Int]), (Team, Int), Seq] = {
+    enquiries.table
+      .groupBy(e => (e.team, e.universityId))
+      .map { case (pair, group) => (pair, group.map(_.created).min) }
+      .filter { case (_, date) => date >= start && date < end }
+      .groupBy { case ((team, _), _) => team }
+      .map { case (team, group) => (team, group.size) }
+  }
 }
 
 object EnquiryDao {
@@ -162,10 +175,10 @@ object EnquiryDao {
     universityID: UniversityID,
     subject: String,
     team: Team,
-    state: IssueState = Open,
+    state: IssueState,
     version: OffsetDateTime = JavaTime.offsetDateTime,
     created: OffsetDateTime = JavaTime.offsetDateTime,
-  ) extends Versioned[StoredEnquiry] {
+  ) extends Versioned[StoredEnquiry] with Teamable {
     override def atVersion(at: OffsetDateTime): StoredEnquiry = copy(version = at)
 
     override def storedVersion[B <: StoredVersion[StoredEnquiry]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
@@ -224,14 +237,20 @@ object EnquiryDao {
   class Enquiries(tag: Tag) extends Table[StoredEnquiry](tag, "enquiry") with VersionedTable[StoredEnquiry] with CommonEnquiryProperties {
     override def matchesPrimaryKey(other: StoredEnquiry): Rep[Boolean] = id === other.id
 
-    def id = column[UUID]("id", O.PrimaryKey)
+    def id: Rep[UUID] = column[UUID]("id", O.PrimaryKey)
     def searchableKey: Rep[TsVector] = column[TsVector]("enquiry_key_tsv")
     def searchableSubject: Rep[TsVector] = column[TsVector]("subject_tsv")
 
     def * = (id, key, universityId, subject, team, state, version, created).mapTo[StoredEnquiry]
     def idx = index("idx_enquiry_key", key, unique = true)
 
-    def isOpen = state === (Open : IssueState) || state === (Reopened : IssueState)
+    def isOpen: Rep[Boolean] = state === (Open : IssueState) || state === (Reopened : IssueState)
+    
+    def matchesState(state: IssueStateFilter): Rep[Boolean] = state match {
+      case IssueStateFilter.Open => isOpen
+      case IssueStateFilter.Closed => !isOpen
+      case IssueStateFilter.All => true.bind
+    }
   }
 
   class EnquiryVersions(tag: Tag) extends Table[StoredEnquiryVersion](tag, "enquiry_version") with StoredVersionTable[StoredEnquiry] with CommonEnquiryProperties {
@@ -251,12 +270,15 @@ object EnquiryDao {
       .on { case (e, (m, _)) =>
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
+    
     def withNotes = q
       .joinLeft(enquiryNotes.table)
       .on { case (e, n) => e.id === n.enquiryID }
+    
     def withClient = q
       .join(ClientDao.clients.table)
       .on { case (e, c) => e.universityId === c.universityID }
+    
     def withClientAndMessages = q
       .withClient
       .joinLeft(
@@ -270,6 +292,7 @@ object EnquiryDao {
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
       .map { case ((e, c), mfm) => (e, c, mfm) }
+    
     def withLastUpdatedFor(usercode: Usercode) = q
       .withClient
       .join(Message.lastUpdatedEnquiryMessage)
@@ -421,5 +444,6 @@ object EnquiryDao {
     def apply(team: Team): EnquiryFilter = EnquiryFilter(team = Some(team))
     def apply(owner: Usercode): EnquiryFilter = EnquiryFilter(owner = Set(owner))
     def apply(team: Team, owner: Usercode): EnquiryFilter = EnquiryFilter(team = Some(team), owner = Set(owner))
+    def none: EnquiryFilter = EnquiryFilter(team = None)
   }
 }

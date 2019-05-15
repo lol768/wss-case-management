@@ -3,16 +3,14 @@ package domain
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import helpers.FormHelpers
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation._
 import warwick.core.helpers.JavaTime
 
-trait Issue {
+trait Issue extends Teamable {
   def id: UUID
   def state: IssueState
-  def team: Team
 }
 
 case class IssueRender(
