@@ -20,6 +20,7 @@ import domain.dao._
 import domain.{Page, _}
 import warwick.core.helpers.ServiceResults
 import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.slick.helpers.SlickServiceResults.Implicits._
 import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
@@ -635,13 +636,11 @@ class CaseServiceImpl @Inject() (
   override def addMessage(`case`: Case, client: UniversityID, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[(MessageData, Seq[UploadedFile])]] = {
     auditService.audit(Operation.Case.AddMessage, `case`.id.toString, Target.Case, Json.obj("client" -> client.string)) {
       memberService.getOrAddMember(message.teamMember).successFlatMapTo(member =>
-        daoRunner.run(addMessageDBIO(`case`, client, message, files, ac.usercode.get)).flatMap { case (m, file) =>
-          getOwners(Set(`case`.id)).successFlatMapTo(ownerMap =>
-            notificationService.caseMessage(`case`, ownerMap.getOrElse(`case`.id, Set.empty).map(_.usercode), client, m.sender).map(_.map(_ =>
-              (m.asMessageData(member), file)
-            ))
-          )
-        }
+        daoRunner.runWithServiceResult(for {
+          (m, file) <- addMessageDBIO(`case`, client, message, files, ac.usercode.get)
+          ownerMap <- getOwners(Set(`case`.id)).toDBIO
+          _ <- notificationService.caseMessage(`case`, ownerMap.right.get.getOrElse(`case`.id, Set.empty).map(_.usercode), client, m.sender).toDBIO
+        } yield (m.asMessageData(member), file))
       )
     }
   }
@@ -684,15 +683,13 @@ class CaseServiceImpl @Inject() (
 
   override def reassign(c: Case, team: Team, caseType: Option[CaseType], note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Case]] =
     auditService.audit(Operation.Case.Reassign, c.id.toString, Target.Case, Json.obj("team" -> team.id, "caseType" -> caseType.map(_.entryName).orNull[String])) {
-      daoRunner.run(for {
+      daoRunner.runWithServiceResult(for {
         existing <- dao.find(c.id)
         sc <- dao.update(existing.copy(team = team, caseType = caseType), version)
         _ <- addNoteDBIO(c.id, CaseNoteType.Referral, note)
-      } yield sc).map { sc => Right(sc.asCase) }
-    }.flatMap(_.fold(
-      errors => Future.successful(Left(errors)),
-      reassigned => notificationService.caseReassign(reassigned).map(_.right.map(_ => reassigned))
-    ))
+        _ <- notificationService.caseReassign(sc.asCase).toDBIO
+      } yield sc.asCase)
+    }
 
   override def getHistory(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[CaseHistory]] = {
     ownerService.getCaseOwnerHistory(id).flatMap(result => result.fold(

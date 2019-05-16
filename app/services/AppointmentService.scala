@@ -20,12 +20,12 @@ import play.api.libs.json.Json
 import services.AppointmentService._
 import services.job.SendAppointmentClientReminderJob
 import services.office365.Office365CalendarService
-import uk.ac.warwick.util.mywarwick.model.request.Activity
 import warwick.core.Logging
 import warwick.core.helpers.{JavaTime, ServiceResults}
 import warwick.core.helpers.ServiceResults.Implicits._
 import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import warwick.core.timing.TimingContext
+import warwick.slick.helpers.SlickServiceResults.Implicits._
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -141,7 +141,7 @@ class AppointmentServiceImpl @Inject()(
         clientService.getOrAddClients(clients),
         memberService.getOrAddMembers(teamMembers)
       ).successFlatMapTo { _ =>
-        daoRunner.run(for {
+        daoRunner.runWithServiceResult(for {
           nextId <- sql"SELECT nextval('SEQ_APPOINTMENT_KEY')".as[Int].head
           inserted <- dao.insert(createStoredAppointment(id, IssueKey(IssueKeyType.Appointment, nextId), appointment, team))
           _ <- dao.insertCaseLinks(caseIDs.map(cid => createCaseLink(id, cid, ac.usercode.getOrElse(teamMembers.head))))
@@ -156,24 +156,18 @@ class AppointmentServiceImpl @Inject()(
               JavaTime.offsetDateTime
             )
           })
-        } yield inserted).flatMap { a =>
-          ownerService.setAppointmentOwners(a.id, teamMembers).successFlatMapTo { setOwnersResult =>
-            val appointment = a.asAppointment
-            office365CalendarService.updateAppointment(appointment.id, setOwnersResult)
-            val ownersToNotify = setOwnersResult.all.map(_.userId).toSet - currentUser
-            ServiceResults.zip(
-              notificationService.ownerNewAppointment(ownersToNotify, appointment).map(sr =>
-                ServiceResults.logErrors(sr, logger, ())
-              ),
-              notificationService.clientNewAppointment(clients).map(sr =>
-                ServiceResults.logErrors(sr, logger, ())
-              )
-            ).map(_ => {
-              scheduleClientReminder(appointment)
-              Right(appointment)
-            })
+          setOwnersResult <- ownerService.setAppointmentOwners(inserted.id, teamMembers).toDBIO
+          _ <- DBIO.successful(office365CalendarService.updateAppointment(inserted.id, setOwnersResult.right.get))
+          _ <- DBIO.successful(scheduleClientReminder(inserted.asAppointment))
+          _ <- {
+            val ownersToNotify = setOwnersResult.right.get.all.map(_.userId).toSet - currentUser
+            if (ownersToNotify.nonEmpty)
+              notificationService.ownerNewAppointment(ownersToNotify, inserted.asAppointment).map(_.map(Option.apply)).toDBIO
+            else
+              DBIO.successful(None)
           }
-        }
+          _ <- notificationService.clientNewAppointment(clients).toDBIO
+        } yield inserted.asAppointment)
       }
     }
   }
@@ -194,7 +188,7 @@ class AppointmentServiceImpl @Inject()(
         clientService.getOrAddClients(clients),
         memberService.getOrAddMembers(teamMembers)
       ).successFlatMapTo { _ =>
-        daoRunner.run(for {
+        daoRunner.runWithServiceResult(for {
           existing <- dao.findByIDQuery(id).result.head
           _ <- updateDifferencesDBIO[AppointmentCase, UUID](
             cases,
@@ -245,73 +239,55 @@ class AppointmentServiceImpl @Inject()(
             ),
             version
           )
-        } yield (updated, clientsResult)).flatMap { case (a, clientsResult) =>
-          ownerService.setAppointmentOwners(a.id, teamMembers).successFlatMapTo { setOwnersResult =>
-            office365CalendarService.updateAppointment(a.id, setOwnersResult)
-            val appointment = a.asAppointment
-
-            val notifyAddedClients: Future[ServiceResult[Option[Activity]]] =
-              if (clientsResult.added.nonEmpty)
-                notificationService.clientNewAppointment(clientsResult.added.map(_.universityID).toSet).map(sr =>
-                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
-                )
-              else Future.successful(Right(None))
-
-            val addedOwnersToNotify = setOwnersResult.added.map(_.userId).toSet - currentUser
-            val notifyAddedOwners: Future[ServiceResult[Option[Activity]]] =
-              if (addedOwnersToNotify.nonEmpty)
-                notificationService.ownerNewAppointment(addedOwnersToNotify, appointment).map(sr =>
-                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
-                )
-              else Future.successful(Right(None))
-
-            val notifyRemovedClients: Future[ServiceResult[Option[Activity]]] =
-              if (clientsResult.removed.nonEmpty)
-                notificationService.clientCancelledAppointment(clientsResult.removed.map(_.universityID).toSet).map(sr =>
-                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
-                )
-              else Future.successful(Right(None))
-
-            val removedOwnersToNotify = setOwnersResult.removed.map(_.userId).toSet - currentUser
-            val notifyRemovedOwners: Future[ServiceResult[Option[Activity]]] =
-              if (removedOwnersToNotify.nonEmpty)
-                notificationService.ownerCancelledAppointment(removedOwnersToNotify, appointment).map(sr =>
-                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
-                )
-              else Future.successful(Right(None))
-
-            val notifyExistingClients: Future[ServiceResult[Option[Activity]]] =
-              if (clientsResult.unchanged.nonEmpty)
-                notificationService.clientChangedAppointment(clientsResult.unchanged.map(_.universityID).toSet).map(sr =>
-                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
-                )
-              else Future.successful(Right(None))
-
-            val existingOwnersToNotify = setOwnersResult.unchanged.map(_.userId).toSet - currentUser
-            val notifyExistingOwners: Future[ServiceResult[Option[Activity]]] =
-              if (existingOwnersToNotify.nonEmpty)
-                notificationService.ownerChangedAppointment(existingOwnersToNotify, appointment).map(sr =>
-                  ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
-                )
-              else Future.successful(Right(None))
-
-            ServiceResults.zip(
-              notifyAddedClients,
-              notifyRemovedClients,
-              notifyExistingClients,
-              notifyAddedOwners,
-              notifyRemovedOwners,
-              notifyExistingOwners
-            ).map(_ => Right(appointment))
+          setOwnersResult <- ownerService.setAppointmentOwners(updated.id, teamMembers).toDBIO
+          _ <- DBIO.successful(office365CalendarService.updateAppointment(updated.id, setOwnersResult.right.get))
+          _ <- {
+            if (clientsResult.added.nonEmpty)
+              notificationService.clientNewAppointment(clientsResult.added.map(_.universityID).toSet).map(_.map(Option.apply)).toDBIO
+            else
+              DBIO.successful(None)
           }
-        }
+          _ <- {
+            val addedOwnersToNotify = setOwnersResult.right.get.added.map(_.userId).toSet - currentUser
+            if (addedOwnersToNotify.nonEmpty)
+              notificationService.ownerNewAppointment(addedOwnersToNotify, updated.asAppointment).map(_.map(Option.apply)).toDBIO
+            else
+              DBIO.successful(None)
+          }
+          _ <- {
+            if (clientsResult.removed.nonEmpty)
+              notificationService.clientCancelledAppointment(clientsResult.removed.map(_.universityID).toSet).map(_.map(Option.apply)).toDBIO
+            else
+              DBIO.successful(None)
+          }
+          _ <- {
+            val removedOwnersToNotify = setOwnersResult.right.get.removed.map(_.userId).toSet - currentUser
+            if (removedOwnersToNotify.nonEmpty)
+              notificationService.ownerCancelledAppointment(removedOwnersToNotify, updated.asAppointment).map(_.map(Option.apply)).toDBIO
+            else
+              DBIO.successful(None)
+          }
+          _ <- {
+            if (clientsResult.unchanged.nonEmpty)
+              notificationService.clientChangedAppointment(clientsResult.unchanged.map(_.universityID).toSet).map(_.map(Option.apply)).toDBIO
+            else
+              DBIO.successful(None)
+          }
+          _ <- {
+            val existingOwnersToNotify = setOwnersResult.right.get.unchanged.map(_.userId).toSet - currentUser
+            if (existingOwnersToNotify.nonEmpty)
+              notificationService.ownerChangedAppointment(existingOwnersToNotify, updated.asAppointment).map(_.map(Option.apply)).toDBIO
+            else
+              DBIO.successful(None)
+          }
+        } yield updated.asAppointment)
       }
     }
   }
 
   override def reschedule(id: UUID, changes: AppointmentSave, currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
     auditService.audit(Operation.Appointment.Reschedule, id.toString, Target.Appointment, Json.obj()) {
-      daoRunner.run(for {
+      daoRunner.runWithServiceResult(for {
         existing <- dao.findByIDQuery(id).result.head
         clients <- getClientsQuery(id).result
         updated <- dao.update(
@@ -345,34 +321,17 @@ class AppointmentServiceImpl @Inject()(
             )
           )
         }: _*)
-      } yield (updated, clients)).flatMap { case (a, clients) =>
-        ownerService.getAppointmentOwners(Set(a.id)).successMapTo(_.getOrElse(id, Set())).successFlatMapTo { teamMembers =>
-          office365CalendarService.updateAppointment(a.id, teamMembers)
-
-          val appointment = a.asAppointment
-
-          val notifyClients: Future[ServiceResult[Option[Activity]]] =
-            notificationService.clientRescheduledAppointment(clients.map(_.universityID).toSet).map(sr =>
-              ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
-            )
-
-          val ownersToNotify = teamMembers.map(_.member.usercode) - currentUser
-          val notifyOwners: Future[ServiceResult[Option[Activity]]] =
-            if (ownersToNotify.nonEmpty)
-              notificationService.ownerRescheduledAppointment(ownersToNotify, appointment).map(sr =>
-                ServiceResults.logErrors(sr.right.map(Some(_)), logger, None)
-              )
-            else Future.successful(Right(None))
-
-          ServiceResults.zip(
-            notifyClients,
-            notifyOwners,
-          ).map(_ => {
-            scheduleClientReminder(appointment)
-            Right(appointment)
-          })
+        teamMembers <- ownerService.getAppointmentOwners(Set(updated.id)).successMapTo(_.getOrElse(id, Set())).toDBIO
+        _ <- DBIO.from(Future.successful(office365CalendarService.updateAppointment(updated.id, teamMembers.right.get)))
+        _ <- notificationService.clientRescheduledAppointment(clients.map(_.universityID).toSet).toDBIO
+        _ <- {
+          val ownersToNotify = teamMembers.right.get.map(_.member.usercode) - currentUser
+          if (ownersToNotify.nonEmpty)
+            notificationService.ownerRescheduledAppointment(ownersToNotify, updated.asAppointment).map(_.map(Option.apply)).toDBIO
+          else DBIO.successful(None)
         }
-      }
+        _ <- DBIO.successful(scheduleClientReminder(updated.asAppointment))
+      } yield updated.asAppointment)
     }
 
   override def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Appointment]] =
@@ -566,7 +525,7 @@ class AppointmentServiceImpl @Inject()(
 
   override def clientAccept(appointmentID: UUID, universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
     auditService.audit(Operation.Appointment.Accept, appointmentID.toString, Target.Appointment, Json.obj("universityID" -> universityID.string)) {
-      daoRunner.run(for {
+      daoRunner.runWithServiceResult(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
         client <-
           getClientsQuery(appointmentID)
@@ -584,19 +543,14 @@ class AppointmentServiceImpl @Inject()(
             dao.update(appointment.copy(state = AppointmentState.Accepted), appointment.version)
           else
             DBIO.successful(appointment)
-      } yield updatedAppointment).flatMap { a =>
-        getTeamMembers(a.id).successFlatMapTo { teamMembers =>
-          val appointment = a.asAppointment
-          notificationService.appointmentConfirmation(appointment, teamMembers.map(_.member.usercode), AppointmentState.Accepted).map(sr =>
-            ServiceResults.logErrors(sr, logger, ())
-          ).map(_ => Right(appointment))
-        }
-      }
+        teamMembers <- getTeamMembers(updatedAppointment.id).toDBIO
+        _ <- notificationService.appointmentConfirmation(updatedAppointment.asAppointment, teamMembers.right.get.map(_.member.usercode), AppointmentState.Accepted).toDBIO
+      } yield updatedAppointment.asAppointment)
     }
 
   override def clientDecline(appointmentID: UUID, universityID: UniversityID, reason: AppointmentCancellationReason)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
     auditService.audit(Operation.Appointment.Decline, appointmentID.toString, Target.Appointment, Json.obj("universityID" -> universityID.string, "reason" -> reason.entryName)) {
-      daoRunner.run(for {
+      daoRunner.runWithServiceResult(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
         clients <- getClientsQuery(appointmentID).result
         _ <- dao.updateClient(
@@ -611,14 +565,9 @@ class AppointmentServiceImpl @Inject()(
             dao.update(appointment.copy(state = AppointmentState.Provisional), appointment.version)
           else
             DBIO.successful(appointment)
-      } yield updatedAppointment).flatMap { a =>
-        getTeamMembers(a.id).successFlatMapTo { teamMembers =>
-          val appointment = a.asAppointment
-          notificationService.appointmentConfirmation(appointment, teamMembers.map(_.member.usercode), AppointmentState.Cancelled).map(sr =>
-            ServiceResults.logErrors(sr, logger, ())
-          ).map(_ => Right(appointment))
-        }
-      }
+        teamMembers <- getTeamMembers(updatedAppointment.id).toDBIO
+        _ <- notificationService.appointmentConfirmation(updatedAppointment.asAppointment, teamMembers.right.get.map(_.member.usercode), AppointmentState.Cancelled).toDBIO
+      } yield updatedAppointment.asAppointment)
     }
 
   override def recordOutcomes(appointmentID: UUID, clientAttendance: Map[UniversityID, (AppointmentClientAttendanceState, Option[AppointmentCancellationReason])], outcomes: AppointmentOutcomesSave, note: Option[CaseNoteSave], version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
@@ -678,29 +627,24 @@ class AppointmentServiceImpl @Inject()(
 
   override def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, note: Option[CaseNoteSave], currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]] =
     auditService.audit(Operation.Appointment.Cancel, appointmentID.toString, Target.Appointment, Json.obj()) {
-      daoRunner.run(for {
+      daoRunner.runWithServiceResult(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
         cases <- dao.findByIDQuery(appointmentID).withCases.map { case (_, c) => c }.result
         clients <- getClientsQuery(appointmentID).result
         updatedAppointment <- dao.update(appointment.copy(state = AppointmentState.Cancelled, cancellationReason = Some(reason)), version)
         _ <- note.map { n => DBIO.seq(cases.map { c => caseService.addNoteDBIO(c.id, CaseNoteType.AppointmentNote, n) }: _*) }.getOrElse(DBIO.successful(()))
-      } yield (updatedAppointment, clients)).flatMap { case (a, clients) =>
-        getTeamMembers(a.id).successFlatMapTo(teamMembers => {
-          office365CalendarService.updateAppointment(a.id, teamMembers)
-          val appointment = a.asAppointment
-          val ownersToNotify = teamMembers.map(_.member.usercode) - currentUser
-          val notifications = ServiceResults.zip(
-            notificationService.clientCancelledAppointment(clients.map(_.universityID).toSet).map(sr => ServiceResults.logErrors(sr, logger, ())),
-            notificationService.ownerCancelledAppointment(ownersToNotify, appointment).map(sr => ServiceResults.logErrors(sr, logger, ()))
-          )
-          (for {
-            _ <- note.map(n => memberService.getOrAddMember(n.teamMember)).getOrElse(Future.successful(()))
-            activities <- notifications
-          } yield activities).map(_ =>
-            ServiceResults.success(appointment)
-          )
-        })
-      }
+        teamMembers <- getTeamMembers(updatedAppointment.id).toDBIO
+        _ <- DBIO.successful(office365CalendarService.updateAppointment(updatedAppointment.id, teamMembers.right.get))
+        _ <- DBIO.from(note.map(n => memberService.getOrAddMember(n.teamMember)).getOrElse(Future.successful(())))
+        _ <- notificationService.clientCancelledAppointment(clients.map(_.universityID).toSet).toDBIO
+        _ <- {
+          val ownersToNotify = teamMembers.right.get.map(_.member.usercode) - currentUser
+          if (ownersToNotify.nonEmpty)
+            notificationService.ownerCancelledAppointment(ownersToNotify, updatedAppointment.asAppointment).map(_.map(Option.apply)).toDBIO
+          else
+            DBIO.successful(None)
+        }
+      } yield updatedAppointment.asAppointment)
     }
 
   private def scheduleClientReminder(appointment: Appointment): Unit = {
@@ -735,14 +679,11 @@ class AppointmentServiceImpl @Inject()(
 
   override def sendClientReminder(appointmentID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]] =
     auditService.audit(Operation.Appointment.SendClientReminder, appointmentID.toString, Target.Appointment, Json.obj()) {
-      daoRunner.run(for {
+      daoRunner.runWithServiceResult(for {
         appointment <- dao.findByIDQuery(appointmentID).result.head
         clients <- getClientsQuery(appointmentID).result
-      } yield (appointment, clients)).flatMap { case (appointment, clients) =>
-        notificationService.appointmentReminder(appointment.asAppointment, clients.filterNot(_.state == AppointmentState.Cancelled).map(_.universityID).toSet).map(sr =>
-          ServiceResults.logErrors(sr, logger, ())
-        ).map(_ => Right(Done))
-      }
+        _ <- notificationService.appointmentReminder(appointment.asAppointment, clients.filterNot(_.state == AppointmentState.Cancelled).map(_.universityID).toSet).toDBIO
+      } yield Done)
     }
 }
 
