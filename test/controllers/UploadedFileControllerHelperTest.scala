@@ -74,7 +74,7 @@ class UploadedFileControllerHelperTest extends PlaySpec with OneAppPerSuite with
       file.metadata mustBe UploadedFileSave("uploadedfile.txt", content.length.toLong, "text/plain")
     }
 
-    "fail if a file is too large" in new MultipartBodyFixture(get[Configuration].get[ConfigMemorySize]("wellbeing.files.maxIndividualFileSize").toBytes + 1, "uploadedfile.txt") {
+    "fail if a file is too large" in new MultipartBodyFixture(get[Configuration].get[ConfigMemorySize]("uploads.maxIndividualFileSize").toBytes + 1, "uploadedfile.txt") {
       val response = uploadedFileControllerHelper.bodyParser.apply(request).run(body)
       response.futureValue.isLeft mustBe true
 
