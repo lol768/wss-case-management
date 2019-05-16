@@ -3,12 +3,13 @@
     teams: Seq[String],
     range: String,
     metrics: Seq[Metric],
-    showTotal: Boolean
-)(implicit context: RequestContext)
+    showTotal: Boolean,
+    form: Form[DateRange]
+)(implicit context: RequestContext, req: RequestHeader, messages: MessagesProvider)
 
 @row(metric: Metric) = {
     <tr>
-      <th>
+      <th title="@metric.description.getOrElse(metric.name)">
         @metric.name
       </th>
       
@@ -27,6 +28,23 @@
 }
   
 @main("Reports") {
+  <div class="well">
+    @b3.vertical.formCSRF(action = controllers.reports.routes.ReportsController.submitForm) { implicit ifc =>
+      @if(form.hasGlobalErrors) {
+        @defining(form.globalErrors.map(_.message).mkString(", ")) { error =>
+          @b3.datePicker(form("start"), '_label -> "Start", '_error -> true)
+          @b3.datePicker(form("end"), '_label -> "End", '_error -> error)
+        }
+      } else {
+        @b3.datePicker(form("start"), '_label -> "Start", '_label -> "Start")
+        @b3.datePicker(form("end"), '_label -> "End", '_label -> "End")
+      }
+  
+      @context.csrfHelper.formField
+      @b3.submit('class -> "btn btn-primary") { Update report }
+    }
+  </div>
+  
   <table class="table table-default">
     <caption>@range</caption>
     <thead>

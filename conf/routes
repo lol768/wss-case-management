@@ -166,7 +166,8 @@ POST        /team/appointment/:key/outcomes         @controllers.admin.Appointme
 ## Admins ##
 
 GET         /admin                                  @controllers.IndexController.redirectToPath(path = "/admin/reports")
-GET         /admin/reports                          @controllers.reports.ReportsController.home
+GET         /admin/reports                          @controllers.reports.ReportsController.showForm
+POST        /admin/reports                          @controllers.reports.ReportsController.submitForm
 GET         /admin/locations                        @controllers.locations.LocationsController.list
 GET         /admin/locations/building/create        @controllers.locations.LocationsController.createBuildingForm
 POST        /admin/locations/building/create        @controllers.locations.LocationsController.createBuilding

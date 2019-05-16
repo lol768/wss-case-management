@@ -19,7 +19,7 @@ import warwick.core.timing.TimingContext
 import scala.concurrent.{ExecutionContext, Future}
 
 case class TeamMetrics (team: Team, value: Int)
-case class Metric (name: String, teamMetrics: Seq[TeamMetrics])
+case class Metric (name: String, description: Option[String], teamMetrics: Seq[TeamMetrics])
 
 @ImplementedBy(classOf[ReportingServiceImpl])
 trait ReportingService {
@@ -53,6 +53,7 @@ class ReportingServiceImpl @Inject() (
   
   private def collectMetric(
     name: String,
+    description: Option[String],
     teams: Seq[Team],
     start: OffsetDateTime,
     end: OffsetDateTime,
@@ -64,7 +65,7 @@ class ReportingServiceImpl @Inject() (
           .map(value => TeamMetrics(team, value))
       }
     )
-    .map(teamMetric => Metric(name, teamMetric))
+    .map(teamMetric => Metric(name, description, teamMetric))
     .map(metric =>
       ServiceResults.success(metric)
     ).recover { case e =>
@@ -73,16 +74,16 @@ class ReportingServiceImpl @Inject() (
     
   def metrics(start: OffsetDateTime, end: OffsetDateTime, teams: Seq[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[Metric]]] =
     ServiceResults.futureSequence(Seq(
-      collectMetric("First-time enquirers", teams, start, end, countFirstEnquiries),
-      collectMetric("Enquiries opened", teams, start, end, countOpenedEnquiries),
-      collectMetric("Enquiries closed", teams, start, end, countClosedEnquiries),
-      collectMetric("Cases opened", teams, start, end, countOpenedCasesFromEnquiries),
-      collectMetric("Cases closed", teams, start, end, countClosedCasesFromEnquiries),
-      collectMetric("Cases with non-cancelled appointments", teams, start, end, countCasesWithAppointmentsFromEnquiries),
-      collectMetric("Provisional appointments",teams, start, end, countProvisionalAppointments),
-      collectMetric("Accepted appointments", teams, start, end, countAcceptedAppointments),
-      collectMetric("Attended appointments", teams, start, end, countAttendedAppointments),
-      collectMetric("Cancelled appointments", teams, start, end, countCancelledAppointments)
+      collectMetric("First-time enquirers", Some("Unique university IDs making a first recorded enquiry in the period"), teams, start, end, countFirstEnquiries),
+      collectMetric("Enquiries opened", Some("Enquiries created in the period (and still open)"), teams, start, end, countOpenedEnquiries),
+      collectMetric("Enquiries closed", Some("Enquiries closed in the period"), teams, start, end, countClosedEnquiries),
+      collectMetric("Cases opened", Some("Cases created in the period (and still open), which started as enquiries"), teams, start, end, countOpenedCasesFromEnquiries),
+      collectMetric("Cases closed", Some("Cases closed in the period, which started as enquiries"), teams, start, end, countClosedCasesFromEnquiries),
+      collectMetric("Cases with non-cancelled appointments", Some("Cases created in the period (and still open), which started as enquiries, and have resulted in an appointment which is either pending or has taken place"), teams, start, end, countCasesWithAppointmentsFromEnquiries),
+      collectMetric("Provisional appointments", Some("Appointments provisionally scheduled to occur during the period"), teams, start, end, countProvisionalAppointments),
+      collectMetric("Accepted appointments", Some("Appointments scheduled to occur during the period, which have been accepted"), teams, start, end, countAcceptedAppointments),
+      collectMetric("Attended appointments", Some("Appointments attended during the period"), teams, start, end, countAttendedAppointments),
+      collectMetric("Cancelled appointments", Some("Appointments scheduled to occur during the period, but subsequently cancelled"), teams, start, end, countCancelledAppointments)
     ))
 
   implicit class TeamTransformers[T <: Teamable](fn: => Future[Seq[T]]) {
