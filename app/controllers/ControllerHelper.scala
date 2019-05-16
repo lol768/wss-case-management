@@ -50,10 +50,10 @@ trait ControllerHelper extends Results with Logging {
 }
 
 case class DateRange(start: LocalDate, end: LocalDate) {
-  def interval: Interval = Interval.of(start.atStartOfDay(ZoneId.systemDefault()).toInstant, end.plusDays(1).atStartOfDay(ZoneId.systemDefault()).minusNanos(1).toInstant)
-  def startTime: OffsetDateTime = start.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime
-  def endTime: OffsetDateTime = end.atStartOfDay(ZoneId.systemDefault()).plusDays(1).minusNanos(1).toOffsetDateTime
-  def isViable: Boolean = interval.toDuration.toDays <= DateRange.maxRange
+  val startTime: OffsetDateTime = start.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime
+  val endTime: OffsetDateTime = end.atStartOfDay(ZoneId.systemDefault()).plusDays(1).minusNanos(1).toOffsetDateTime
+  val interval: Interval = Interval.of(startTime.toInstant, endTime.toInstant)
+  val isViable: Boolean = interval.toDuration.toDays <= DateRange.maxRange
 
   override def toString: String = s"${start.format(DateRange.localDateStringFormat)} to ${end.format(DateRange.localDateStringFormat)} inclusive"
 }

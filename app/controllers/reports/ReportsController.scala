@@ -46,11 +46,11 @@ class ReportsController @Inject()(
       }.getOrElse(Future.successful(Forbidden(views.html.errors.forbidden(name)(requestContext(request)))))
   }
 
-  def showForm: Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request =>
+  def reportForm: Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request =>
     renderHtmlReport(defaultDateRange, form)
   }
 
-  def submitForm: Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request =>
+  def report: Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request =>
     form.bindFromRequest.fold(
       formError => renderHtmlReport(defaultDateRange, formError),
       dateRange => renderHtmlReport(dateRange, form.fill(dateRange))
