@@ -22,6 +22,7 @@ trait PermissionService {
   def inAnyTeam(users: Set[Usercode]): ServiceResult[Map[Usercode, Boolean]]
   def teams(user: Usercode): ServiceResult[Seq[Team]]
   def isAdmin(user: Usercode): Future[ServiceResult[Boolean]]
+  def isReportingAdmin(user: Usercode): Future[ServiceResult[Boolean]]
   def canViewTeam(user: Usercode, team: Team): ServiceResult[Boolean]
   def canViewTeamFuture(user: Usercode, team: Team): Future[ServiceResult[Boolean]]
 
@@ -88,6 +89,9 @@ class PermissionServiceImpl @Inject() (
 
   override def isAdmin(user: Usercode): Future[ServiceResult[Boolean]] =
     Future.successful(isAdminImpl(user))
+
+  override def isReportingAdmin(user: Usercode): Future[ServiceResult[Boolean]] =
+    Future.successful(isReportingAdminImpl(user))
 
   override def canViewTeam(user: Usercode, team: Team): ServiceResult[Boolean] =
     ServiceResults.sequence(Seq(isAdminImpl(user), inTeam(user, team)))
@@ -255,6 +259,9 @@ class PermissionServiceImpl @Inject() (
 
   private def isAdminImpl(user: Usercode): ServiceResult[Boolean] =
     ServiceResults.fromTry(groupService.isUserInGroup(user, roleService.getRole(Roles.Admin).groupName))
+
+  private def isReportingAdminImpl(user: Usercode): ServiceResult[Boolean] =
+    ServiceResults.fromTry(groupService.isUserInGroup(user, roleService.getRole(Roles.ReportingAdmin).groupName))
 
 }
 

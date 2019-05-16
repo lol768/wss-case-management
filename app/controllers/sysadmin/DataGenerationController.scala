@@ -314,11 +314,7 @@ class DataGenerationJob @Inject()(
   private[this] val allTeamMembers: Map[Team, Seq[Usercode]] =
     configuration.get[Map[String, Seq[String]]]("wellbeing.testTeamMembers")
       .map { case (teamId, usercodes) => Teams.fromId(teamId) -> usercodes.map(Usercode.apply) }
-
-  private[this] val allAdmins: Seq[Usercode] =
-    configuration.get[Seq[String]]("wellbeing.testAdmins")
-      .map(Usercode.apply)
-
+  
   private[this] val registrationInvitesEnabled = configuration.get[Boolean]("wellbeing.features.registrationInvites")
 
   private[this] implicit class FutureServiceResultOps[A](f: Future[ServiceResult[A]]) {

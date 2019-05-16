@@ -1,12 +1,14 @@
 package domain
 
-import play.api.data.{FormError, Forms, Mapping}
 import play.api.data.format.Formatter
-import play.api.libs.json.{Format, Json, Writes}
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.data.{FormError, Forms, Mapping}
+import play.api.libs.json.{Format, Json, Writes, _}
 
 sealed abstract class Team(val id: String, val name: String)
+
+trait Teamable {
+  def team: Team
+}
 
 object Teams {
   case object Counselling extends Team("counselling", "Counselling Service")
@@ -15,6 +17,7 @@ object Teams {
   case object WellbeingSupport extends Team("wellbeing", "Wellbeing Support")
 
   val all: Seq[Team] = Seq(Counselling, Disability, MentalHealth, WellbeingSupport)
+  val none: Seq[Team] = Seq.empty
 
   def fromId(id: String): Team =
     all.find(_.id == id).getOrElse {

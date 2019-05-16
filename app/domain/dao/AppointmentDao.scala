@@ -43,6 +43,7 @@ trait AppointmentDao {
   def findAcceptedQuery: Query[Appointments, StoredAppointment, Seq]
   def findAttendedQuery: Query[Appointments, StoredAppointment, Seq]
   def findCancelledQuery: Query[Appointments, StoredAppointment, Seq]
+  def findNotCancelledQuery: Query[Appointments, StoredAppointment, Seq]
   def searchQuery(query: AppointmentSearchQuery): Query[Appointments, StoredAppointment, Seq]
   def countForClientBadge(universityID: UniversityID): DBIO[Int]
 
@@ -130,6 +131,10 @@ class AppointmentDaoImpl @Inject()(
     appointments.table
       .filter(_.isCancelled)
 
+  override def findNotCancelledQuery: Query[Appointments, StoredAppointment, Seq] =
+    appointments.table
+      .filterNot(_.isCancelled)
+
   override def searchQuery(q: AppointmentSearchQuery): Query[Appointments, StoredAppointment, Seq] = {
     def queries(a: Appointments, c: Clients, tm: Members): Seq[Rep[Option[Boolean]]] =
       Seq[Option[Rep[Option[Boolean]]]](
@@ -165,7 +170,7 @@ class AppointmentDaoImpl @Inject()(
       .map { case (a, _, _, _, _) => a }
   }
 
-  override def countForClientBadge(universityID: UniversityID): DBIO[Int] = {
+  override def countForClientBadge(universityID: UniversityID): DBIO[Int] =
     appointments.table
       .withClients
       .filter { case (appointment, ac, client) =>
@@ -176,11 +181,9 @@ class AppointmentDaoImpl @Inject()(
       }
       .length
       .result
-  }
 
-  override def casesForAppointmentQuery(appointmentId: UUID): Query[AppointmentCases, AppointmentCase, Seq] = {
+  override def casesForAppointmentQuery(appointmentId: UUID): Query[AppointmentCases, AppointmentCase, Seq] =
     AppointmentCase.appointmentCases.table.filter(ac => ac.appointmentID === appointmentId)
-  }
 
   override def insertCaseLinks(joins: Set[AppointmentCase])(implicit ac: AuditLogContext): DBIO[Seq[AppointmentCase]] =
     AppointmentCase.appointmentCases.insertAll(joins.toSeq)
@@ -229,7 +232,7 @@ object AppointmentDao {
     dsaActionPointOther: Option[String],
     created: OffsetDateTime,
     version: OffsetDateTime,
-  ) extends Versioned[StoredAppointment] {
+  ) extends Versioned[StoredAppointment] with Teamable {
     def asAppointment = Appointment(
       id,
       key,

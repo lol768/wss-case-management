@@ -3,7 +3,7 @@ package domain
 import java.time.{Duration, LocalDate, OffsetDateTime}
 import java.util.UUID
 
-import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient}
+import domain.dao.AppointmentDao.{AppointmentCase, StoredAppointment, StoredAppointmentClient}
 import domain.dao.CaseDao.{StoredCase, StoredCaseFields}
 import domain.dao.LocationDao.{StoredBuilding, StoredRoom}
 import domain.dao._
@@ -216,6 +216,14 @@ object Fixtures {
       None,
       JavaTime.offsetDateTime,
       JavaTime.offsetDateTime,
+    )
+    
+    def newAppointmentCase(appointmentID: UUID, caseID: UUID): AppointmentCase = AppointmentCase(
+      UUID.randomUUID(),
+      appointmentID,
+      caseID,
+      Usercode("ss1"),
+      JavaTime.offsetDateTime
     )
   }
 

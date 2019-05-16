@@ -24,7 +24,7 @@ case class Appointment(
   dsaActionPoints: Set[AppointmentDSAActionPoint],
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
-) {
+) extends Teamable {
   val end: OffsetDateTime = start.plus(duration)
 
   def subject(clientsOption: Option[Set[AppointmentClient]], teamMembersOption: Option[Set[AppointmentTeamMember]]): String = Seq(

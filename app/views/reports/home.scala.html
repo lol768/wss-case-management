@@ -1,40 +1,48 @@
-@import controllers.reports.ReportsController.Statistics
-@import domain.Team
-
+@import services.Metric
 @(
-  openedEnquiries: Seq[(Team, Statistics)],
-  closedEnquiries: Seq[(Team, Statistics)],
-  openedCases: Seq[(Team, Statistics)],
-  closedCases: Seq[(Team, Statistics)]
+    teams: Seq[String],
+    range: String,
+    metrics: Seq[Metric],
+    showTotal: Boolean
 )(implicit context: RequestContext)
 
-@report(title: String, r: Seq[(Team, Statistics)]) = {
+@row(metric: Metric) = {
+    <tr>
+      <th>
+        @metric.name
+      </th>
+      
+      @teams.map { case team =>
+        <td>
+          @metric.teamMetrics.find(_.team.name == team).map(_.value).getOrElse("-")
+        </td>
+      }
+      
+      @if(showTotal) {
+        <th>
+        @metric.teamMetrics.map({ case tm => tm.value }).sum
+        </th>
+      }
+    </tr>
+}
+  
+@main("Reports") {
   <table class="table table-default">
-    <caption>@title</caption>
+    <caption>@range</caption>
     <thead>
       <tr>
-        <th class="col-sm-6">Team</th>
-        <th class="col-sm-2">Last 7 days</th>
-        <th class="col-sm-2">Last 14 days</th>
-        <th class="col-sm-2">Last 28 days</th>
+        <th></th>
+        
+        @teams.map { case team => <th>@team</th> }
+        
+        @if(showTotal) {
+          <th>Total</th>
+        }
       </tr>
     </thead>
+    
     <tbody>
-      @r.map { case (team, stats) =>
-        <tr>
-          <td>@team.name</td>
-          <td>@stats.last7Days</td>
-          <td>@stats.last14Days</td>
-          <td>@stats.last28Days</td>
-        </tr>
-      }
+      @metrics.map { case metric => @row(metric) }
     </tbody>
   </table>
-}
-
-@main("Reports") {
-  @report("Enquiries opened", openedEnquiries)
-  @report("Enquiries closed", closedEnquiries)
-  @report("Cases opened", openedCases)
-  @report("Cases closed", closedCases)
 }

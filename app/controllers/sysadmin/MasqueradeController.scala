@@ -24,6 +24,7 @@ class MasqueradeController @Inject()(
 
   private[this] val testTabulaUsers = configuration.get[Seq[String]]("wellbeing.tabula.testUsers")
   private[this] val testTeamMemberUsers = configuration.get[Map[String, Seq[String]]]("wellbeing.testTeamMembers")
+  private[this] val testReportingAdminUsers = configuration.get[Seq[String]]("wellbeing.testReportingAdmins")
   private[this] val testAdminUsers = configuration.get[Seq[String]]("wellbeing.testAdmins")
   
   def masquerade: Action[AnyContent] = RequireMasquerader.async { implicit request =>
@@ -56,13 +57,19 @@ class MasqueradeController @Inject()(
         .toSeq
         .sortBy { case (team, _) => team.name }
 
+      val testReportingAdmins =
+        userLookupService.getUsers(testReportingAdminUsers.map(Usercode.apply))
+          .toOption
+          .map(_.values.toSeq.map { user => user -> user.universityId.map(photos.photoUrl) })
+          .getOrElse(Seq())
+
       val testAdmins =
         userLookupService.getUsers(testAdminUsers.map(Usercode.apply))
           .toOption
           .map(_.values.toSeq.map { user => user -> user.universityId.map(photos.photoUrl) })
           .getOrElse(Seq())
 
-      Ok(views.html.sysadmin.masquerade(testUsers, testTeamMembers, testAdmins))
+      Ok(views.html.sysadmin.masquerade(testUsers, testTeamMembers, testReportingAdmins, testAdmins))
     }
   }
 }
