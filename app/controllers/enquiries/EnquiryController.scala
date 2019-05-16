@@ -2,10 +2,9 @@ package controllers.enquiries
 
 import java.time.{DayOfWeek, LocalTime}
 
-import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.enquiries.EnquiryController._
 import controllers.refiners.ValidUniversityIDActionFilter
-import controllers.{BaseController, UploadedFileControllerHelper}
+import controllers.BaseController
 import domain._
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
@@ -15,6 +14,8 @@ import play.api.mvc._
 import services.{EnquiryService, SecurityService}
 import uk.ac.warwick.util.workingdays.{WorkingDaysHelper, WorkingDaysHelperImpl}
 import warwick.core.helpers.JavaTime
+import warwick.fileuploads.UploadedFileControllerHelper
+import warwick.fileuploads.UploadedFileControllerHelper.TemporaryUploadedFile
 import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}

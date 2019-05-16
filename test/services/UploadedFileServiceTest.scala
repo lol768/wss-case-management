@@ -6,13 +6,13 @@ import java.nio.charset.StandardCharsets
 import akka.Done
 import com.google.common.io.ByteSource
 import domain.ExtendedPostgresProfile.api._
-import domain.UploadedFileSave
 import domain.dao.{AbstractDaoTest, DaoRunner, UploadedFileDao}
 import helpers.DataFixture
 import org.jclouds.http.HttpResponseException
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import warwick.core.timing.TimingService
+import warwick.fileuploads.UploadedFileSave
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.Usercode
 

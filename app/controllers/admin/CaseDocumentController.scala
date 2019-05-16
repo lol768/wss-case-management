@@ -3,10 +3,9 @@ package controllers.admin
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.admin.CaseDocumentController._
 import controllers.refiners.{CanEditCaseActionRefiner, CanViewCaseActionRefiner, CaseSpecificRequest}
-import controllers.{BaseController, UploadedFileControllerHelper}
+import controllers.BaseController
 import domain._
 import warwick.core.helpers.ServiceResults.ServiceError
 import javax.inject.{Inject, Singleton}
@@ -16,6 +15,8 @@ import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.CaseService
 import warwick.core.helpers.JavaTime
+import warwick.fileuploads.UploadedFileControllerHelper
+import warwick.fileuploads.UploadedFileControllerHelper.TemporaryUploadedFile
 
 import scala.concurrent.{ExecutionContext, Future}
 

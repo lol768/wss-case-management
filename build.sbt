@@ -33,7 +33,7 @@ lazy val root = (project in file("."))
     javaOptions in Test += "-Dlogger.resource=test-logging.xml"
   )
 
-val playUtilsVersion = "1.34"
+val playUtilsVersion = "1.36"
 val ssoClientVersion = "2.63"
 val warwickUtilsVersion = "20190503"
 val enumeratumVersion = "1.5.13"
@@ -73,6 +73,7 @@ val appDeps = Seq(
   "uk.ac.warwick.play-utils" %% "office365" % playUtilsVersion,
   "uk.ac.warwick.play-utils" %% "slick" % playUtilsVersion,
   "uk.ac.warwick.play-utils" %% "caching" % playUtilsVersion,
+  "uk.ac.warwick.play-utils" %% "fileuploads" % playUtilsVersion,
 
   "uk.ac.warwick.util" % "warwickutils-core" % warwickUtilsVersion,
   "uk.ac.warwick.util" % "warwickutils-mywarwick" % warwickUtilsVersion exclude("uk.ac.warwick.sso", "sso-client"),

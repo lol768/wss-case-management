@@ -1,0 +1,12 @@
+@import warwick.fileuploads.UploadedFileControllerHelper.TemporaryUploadedFile
+@import warwick.fileuploads.UploadedFileControllerHelper.UploadedFileConfiguration
+@(
+  renderedError: Html,
+  title: String,
+  file: TemporaryUploadedFile,
+  config: UploadedFileConfiguration
+)(implicit context: RequestContext)
+
+@main(title) {
+  @renderedError
+}

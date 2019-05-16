@@ -20,6 +20,7 @@ import uk.ac.warwick.util.workingdays.{WorkingDaysHelper, WorkingDaysHelperImpl}
 import warwick.core.Logging
 import warwick.core.helpers.JavaTime
 import warwick.core.timing.TimingContext
+import warwick.fileuploads.{UploadedFile, UploadedFileSave}
 import warwick.sso.{AuthenticatedRequest, UniversityID, Usercode}
 
 import scala.collection.JavaConverters._

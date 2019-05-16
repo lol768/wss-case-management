@@ -9,12 +9,12 @@ import domain.AuditEvent._
 import domain.ExtendedPostgresProfile.api._
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{DaoRunner, UploadedFileDao}
-import domain.{UploadedFile, UploadedFileOwner, UploadedFileSave}
 import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Named, Singleton}
 import play.api.libs.json.Json
 import warwick.core.helpers.JavaTime
 import warwick.core.timing.{TimingCategories, TimingService}
+import warwick.fileuploads.{UploadedFile, UploadedFileOwner, UploadedFileSave}
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.Usercode
 

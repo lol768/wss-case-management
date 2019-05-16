@@ -1,11 +1,13 @@
 package system
 
+import controllers.UploadedFileErrorProviderImpl
 import net.codingwell.scalaguice.{ScalaModule, ScalaMultibinder}
 import org.quartz.Scheduler
 import play.api.{Configuration, Environment}
 import services.healthcheck._
 import uk.ac.warwick.util.core.scheduling.QuartzDAO
 import uk.ac.warwick.util.service.ServiceHealthcheckProvider
+import warwick.fileuploads.UploadedFileErrorProvider
 import warwick.healthcheck.dao.SlickQuartzDAO
 
 class AppModule(environment: Environment, configuration: Configuration) extends ScalaModule {
@@ -13,6 +15,7 @@ class AppModule(environment: Environment, configuration: Configuration) extends 
     // Enables Scheduler for injection. Scheduler.start() happens separately, in SchedulerConfigModule
     bind[Scheduler].toProvider[SchedulerProvider]
     bind[AppStartup].asEagerSingleton()
+    bind[UploadedFileErrorProvider].to[UploadedFileErrorProviderImpl]
     bindHealthChecks()
   }
 

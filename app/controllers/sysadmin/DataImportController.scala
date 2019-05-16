@@ -1,12 +1,11 @@
 package controllers.sysadmin
 
 import com.google.common.io.ByteSource
-import controllers.UploadedFileControllerHelper.TemporaryUploadedFile
 import controllers.admin.CaseController.CaseFormData
 import controllers.admin.{CaseController, OwnersController}
 import controllers.sysadmin.DataImportController._
 import controllers.sysadmin.SpreadsheetContentsHandler.{Cell, Row, Sheet}
-import controllers.{BaseController, UploadedFileControllerHelper}
+import controllers.BaseController
 import domain._
 import warwick.core.helpers.ServiceResults._
 import helpers.StringUtils._
@@ -29,6 +28,8 @@ import services._
 import services.tabula.ProfileService
 import warwick.core.Logging
 import warwick.core.timing.TimingContext
+import warwick.fileuploads.UploadedFileControllerHelper
+import warwick.fileuploads.UploadedFileControllerHelper.TemporaryUploadedFile
 import warwick.sso.{UniversityID, UserLookupService, Usercode}
 
 import scala.collection.mutable
