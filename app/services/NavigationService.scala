@@ -61,7 +61,7 @@ class NavigationServiceImpl @Inject() (
   private lazy val masquerade = NavigationPage("Masquerade", controllers.sysadmin.routes.MasqueradeController.masquerade())
 
   private lazy val reportingAdmin =
-    NavigationPage("Reports", controllers.reports.routes.ReportsController.home())
+    NavigationPage("Reports", controllers.reports.routes.ReportsController.reportForm())
 
   private lazy val admin =
     NavigationDropdown("Admin", Call("GET", "/admin"), Seq(

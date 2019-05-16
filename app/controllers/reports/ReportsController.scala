@@ -1,14 +1,14 @@
 package controllers.reports
 
-import java.time.OffsetDateTime
-import java.time.temporal.ChronoUnit
+import java.time.LocalDate
 
-import controllers.BaseController
 import controllers.refiners.ReportingAdminActionRefiner
+import controllers.{BaseController, DateRange}
 import javax.inject.{Inject, Singleton}
+import play.api.data.Form
 import play.api.mvc.{Action, AnyContent}
 import services.{PermissionService, ReportingService}
-import warwick.core.helpers.JavaTime
+import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -20,22 +20,40 @@ class ReportsController @Inject()(
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import reportingAdminActionRefiner._
-  
-  def home(): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+
+  private def defaultDateRange = DateRange(
+    LocalDate.now().minusDays(7),
+    LocalDate.now()
+  )
+
+  private def form = DateRange.form.fill(defaultDateRange)
+
+  private def renderHtmlReport(dateRange: DateRange, dateForm: Form[DateRange] = form)(implicit request: AuthenticatedRequest[AnyContent]) = {
     val name = currentUser().name.first
 
     permissions.teams(currentUser().usercode)
       .map {
         case teams if teams.nonEmpty =>
-          val start = JavaTime.offsetDateTime.truncatedTo(ChronoUnit.DAYS).minusDays(14.toLong)
-          val end = OffsetDateTime.now
-          val range = "Last 14 days"
+          val start = dateRange.startTime
+          val end = dateRange.endTime
+          val range = dateRange.toString
 
           reporting.metrics(start, end, teams)
-            .successMap { metrics => Ok(views.html.reports.home(teams.map(_.name), range, metrics, teams.size > 1)) }
+            .successMap { metrics => Ok(views.html.reports.home(teams.map(_.name), range, metrics, teams.size > 1, dateForm)) }
 
         case _ =>
           Future.successful(Forbidden(views.html.errors.forbidden(name)(requestContext(request))))
       }.getOrElse(Future.successful(Forbidden(views.html.errors.forbidden(name)(requestContext(request)))))
-  }}
+  }
+
+  def reportForm: Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request =>
+    renderHtmlReport(defaultDateRange, form)
+  }
+
+  def report: Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request =>
+    form.bindFromRequest.fold(
+      formError => renderHtmlReport(defaultDateRange, formError),
+      dateRange => renderHtmlReport(dateRange, form.fill(dateRange))
+    )
+  }
 }

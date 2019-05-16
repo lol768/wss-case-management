@@ -16,6 +16,7 @@ error.owners.case.nonEmpty=A case must have at least 1 owner
 error.client.invalid=Please choose a valid client
 error.dsa.invalid=You cannot make changes to DSA application information for this case
 error.caseType.invalid=Please select a valid case type
+error.localDate=Please enter a valid date
 error.localDateTime=Please enter a valid date/time
 error.linkTarget.same=You can''t link a case to itself
 error.privacyStatementConsent.required=Please confirm you have read the privacy statement
