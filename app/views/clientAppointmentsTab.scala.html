@@ -35,14 +35,14 @@
           @a.clients.find(_.client.universityID == context.user.get.universityId.get).map { client =>
             @if(a.appointment.state == AppointmentState.Provisional) {
               @if(client.state != AppointmentState.Provisional) {
-                <span class="label label-@client.state.labelType" @client.cancellationReason.map { r => title="@r.description" }>
+                <span class="@client.state.className" @client.cancellationReason.map { r => title="@r.description" }>
                   @tags.icons.appointmentState(client.state, client = true)
                   @client.state.clientDescription
                 </span>
                 &nbsp;
               }
             } else {
-              <span class="label label-@a.appointment.state.labelType" @a.appointment.cancellationReason.map { r => title="@r.description" }>
+              <span class="@a.appointment.state.className" @a.appointment.cancellationReason.map { r => title="@r.description" }>
                 @tags.icons.appointmentState(a.appointment.state)
                 @a.appointment.state
               </span>
