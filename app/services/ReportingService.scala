@@ -25,13 +25,17 @@ case class Metric (name: String, description: Option[String], teamMetrics: Seq[T
 trait ReportingService {
   def countOpenedEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countClosedEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
-  
+
   def countOpenedCasesFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countClosedCasesFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
+
+  def countOpenedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
+  def countClosedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   
   def countFirstEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
-  
+
   def countCasesWithAppointmentsFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
+  def countCasesWithAppointmentsWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   
   def countProvisionalAppointments(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countAcceptedAppointments(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
@@ -77,9 +81,12 @@ class ReportingServiceImpl @Inject() (
       collectMetric("First-time enquirers", Some("Unique university IDs making a first recorded enquiry in the period"), teams, start, end, countFirstEnquiries),
       collectMetric("Enquiries opened", Some("Enquiries created in the period (and still open)"), teams, start, end, countOpenedEnquiries),
       collectMetric("Enquiries closed", Some("Enquiries closed in the period"), teams, start, end, countClosedEnquiries),
-      collectMetric("Cases opened", Some("Cases created in the period (and still open), which started as enquiries"), teams, start, end, countOpenedCasesFromEnquiries),
-      collectMetric("Cases closed", Some("Cases closed in the period, which started as enquiries"), teams, start, end, countClosedCasesFromEnquiries),
-      collectMetric("Cases with non-cancelled appointments", Some("Cases created in the period (and still open), which started as enquiries, and have resulted in an appointment which is either pending or has taken place"), teams, start, end, countCasesWithAppointmentsFromEnquiries),
+      collectMetric("Cases opened from enquiries", Some("Cases created in the period (and still open), which started as enquiries"), teams, start, end, countOpenedCasesFromEnquiries),
+      collectMetric("Cases opened from enquiries, with appointments", Some("Cases created in the period (and still open), which started as enquiries, and have resulted in an appointment which is either pending or has taken place"), teams, start, end, countCasesWithAppointmentsFromEnquiries),
+      collectMetric("Cases closed from enquiries", Some("Cases closed in the period, which started as enquiries"), teams, start, end, countClosedCasesFromEnquiries),
+      collectMetric("Cases opened without enquiries", Some("Cases created in the period (and still open), which did not start as enquiries"), teams, start, end, countOpenedCasesWithoutEnquiries),
+      collectMetric("Cases opened without enquiries, with appointments", Some("Cases created in the period (and still open), which did not start as enquiries, and have resulted in an appointment which is either pending or has taken place"), teams, start, end, countCasesWithAppointmentsWithoutEnquiries),
+      collectMetric("Cases closed without enquiries", Some("Cases closed in the period, which did not start as enquiries"), teams, start, end, countClosedCasesWithoutEnquiries),
       collectMetric("Provisional appointments", Some("Appointments provisionally scheduled to occur during the period"), teams, start, end, countProvisionalAppointments),
       collectMetric("Accepted appointments", Some("Appointments scheduled to occur during the period, which have been accepted"), teams, start, end, countAcceptedAppointments),
       collectMetric("Attended appointments", Some("Appointments attended during the period"), teams, start, end, countAttendedAppointments),
@@ -141,6 +148,28 @@ class ReportingServiceImpl @Inject() (
   def countClosedCasesFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getClosedCasesWithEnquiries(start, end).forTeam(team)
 
+  private def getOpenedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[StoredCase]] =
+    daoRunner.run {
+      Compiled(
+        caseDao.findCasesWithoutEnquiriesQuery(IssueStateFilter.Open)
+          .filter(c => c.created >= start && c.created < end)
+      ).result
+    }
+
+  def countOpenedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
+    getOpenedCasesWithoutEnquiries(start, end).forTeam(team)
+
+  private def getClosedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[StoredCase]] =
+    daoRunner.run {
+      Compiled(
+        caseDao.findCasesWithoutEnquiriesQuery(IssueStateFilter.Closed)
+          .filter(c => c.version >= start && c.version < end)
+      ).result
+    }
+
+  def countClosedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
+    getClosedCasesWithoutEnquiries(start, end).forTeam(team)
+
   private def firstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[(Team, Int)]] =
     daoRunner.run {
       Compiled(
@@ -178,6 +207,21 @@ class ReportingServiceImpl @Inject() (
 
   def countCasesWithAppointmentsFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getCasesWithLiveAppointmentsFromEnquiries(start, end).forTeam(team)
+
+  private def getCasesWithLiveAppointmentsWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[StoredCase]] = {
+    val casesWithNonCancelledApptsQuery = appointmentDao.findNotCancelledQuery.withCases.map(_._2).map(_.id)
+
+    daoRunner.run {
+      Compiled(
+        caseDao.findCasesWithoutEnquiriesQuery(IssueStateFilter.All)
+          .filter(c => c.created >= start && c.created < end)
+          .filter(_.id in casesWithNonCancelledApptsQuery)
+      ).result
+    }
+  }
+
+  def countCasesWithAppointmentsWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
+    getCasesWithLiveAppointmentsWithoutEnquiries(start, end).forTeam(team)
 
   private def getAppointments(start: OffsetDateTime, end: OffsetDateTime, state: AppointmentState)(implicit t: TimingContext): Future[Seq[StoredAppointment]] =
     daoRunner.run {

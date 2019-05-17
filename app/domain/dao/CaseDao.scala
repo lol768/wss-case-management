@@ -70,6 +70,7 @@ trait CaseDao {
   def findByOriginalEnquiryQuery(enquiryId: UUID): Query[Cases, StoredCase, Seq]
   def getLastUpdatedForClients(clients: Set[UniversityID]): DBIO[Seq[(UniversityID, Option[OffsetDateTime])]]
   def findCasesWithEnquiriesQuery(state: IssueStateFilter): Query[Cases, StoredCase, Seq]
+  def findCasesWithoutEnquiriesQuery(state: IssueStateFilter): Query[Cases, StoredCase, Seq]
 }
 
 @Singleton
@@ -287,9 +288,13 @@ class CaseDaoImpl @Inject()(
       }
       .result
   }
-  
+
   override def findCasesWithEnquiriesQuery(state: IssueStateFilter): Query[Cases, StoredCase, Seq] = {
     cases.table.filter(c => c.originalEnquiry.isDefined && c.matchesState(state))
+  }
+
+  override def findCasesWithoutEnquiriesQuery(state: IssueStateFilter): Query[Cases, StoredCase, Seq] = {
+    cases.table.filter(c => c.originalEnquiry.isEmpty && c.matchesState(state))
   }
 }
 

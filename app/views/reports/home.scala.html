@@ -9,18 +9,18 @@
 
 @row(metric: Metric) = {
     <tr>
-      <th title="@metric.description.getOrElse(metric.name)">
+      <th class="use-tooltip" title="@metric.description.getOrElse(metric.name)">
         @metric.name
       </th>
       
       @teams.map { case team =>
-        <td>
+        <td class="numeric">
           @metric.teamMetrics.find(_.team.name == team).map(_.value).getOrElse("-")
         </td>
       }
       
       @if(showTotal) {
-        <th>
+        <th class="numeric total">
         @metric.teamMetrics.map({ case tm => tm.value }).sum
         </th>
       }
@@ -50,10 +50,10 @@
       <tr>
         <th></th>
         
-        @teams.map { case team => <th>@team</th> }
+        @teams.map { case team => <th class="numeric">@team</th> }
         
         @if(showTotal) {
-          <th>Total</th>
+          <th class="numeric total">Total</th>
         }
       </tr>
     </thead>
