@@ -63,9 +63,9 @@ class ReportingServiceTest extends AbstractDaoTest {
       val closedEnq = enquiryService.save(es.copy(state = IssueState.Closed), msg.copy(), Nil).serviceValue
       makeCaseAndApptForEnquiry(closedEnq, IssueState.Closed)
       
-      enquiryService.save(es.copy(), msg.copy(), Nil)
-      enquiryService.save(es.copy(), msg.copy(), Nil)
-      enquiryService.save(es.copy(team = Teams.Disability), msg.copy(), Nil)
+      enquiryService.save(es.copy(), msg.copy(), Nil).serviceValue
+      enquiryService.save(es.copy(), msg.copy(), Nil).serviceValue
+      enquiryService.save(es.copy(team = Teams.Disability), msg.copy(), Nil).serviceValue
       
       val openEnq = enquiryService.save(es.copy(team = Teams.MentalHealth), msg.copy(), Nil).serviceValue
       makeCaseAndApptForEnquiry(openEnq, IssueState.Open)
