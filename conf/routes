@@ -166,8 +166,6 @@ POST        /team/appointment/:key/outcomes         @controllers.admin.Appointme
 ## Admins ##
 
 GET         /admin                                  @controllers.IndexController.redirectToPath(path = "/admin/reports")
-GET         /admin/reports                          @controllers.reports.ReportsController.reportForm
-POST        /admin/reports                          @controllers.reports.ReportsController.report
 GET         /admin/locations                        @controllers.locations.LocationsController.list
 GET         /admin/locations/building/create        @controllers.locations.LocationsController.createBuildingForm
 POST        /admin/locations/building/create        @controllers.locations.LocationsController.createBuilding
@@ -177,6 +175,9 @@ GET         /admin/locations/room/create            @controllers.locations.Locat
 POST        /admin/locations/room/create            @controllers.locations.LocationsController.createRoom
 GET         /admin/locations/room/:id               @controllers.locations.LocationsController.editRoomForm(id: java.util.UUID)
 POST        /admin/locations/room/:id               @controllers.locations.LocationsController.editRoom(id: java.util.UUID)
+GET         /admin/reports                                      @controllers.reports.ReportsController.reportForm
+POST        /admin/reports                                      @controllers.reports.ReportsController.report
+GET         /admin/reports/opened-enquiries/:start/:end         @controllers.reports.ReportsController.openedByDay(start: java.time.LocalDate, end: java.time.LocalDate)
 
 ## Sysadmins ##
 

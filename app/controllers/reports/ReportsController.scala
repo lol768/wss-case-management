@@ -3,11 +3,13 @@ package controllers.reports
 import java.time.LocalDate
 
 import controllers.refiners.ReportingAdminActionRefiner
-import controllers.{BaseController, DateRange}
+import controllers.{API, BaseController, DateRange}
+import helpers.Json.JsonClientError
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
+import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent}
-import services.{PermissionService, ReportingService}
+import services.{DailyMetrics, PermissionService, ReportingService}
 import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -19,6 +21,7 @@ class ReportsController @Inject()(
   reportingAdminActionRefiner: ReportingAdminActionRefiner,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
+  import DailyMetrics.writesDailyMetrics
   import reportingAdminActionRefiner._
 
   private def defaultDateRange = DateRange(
@@ -56,4 +59,17 @@ class ReportsController @Inject()(
       dateRange => renderHtmlReport(dateRange, form.fill(dateRange))
     )
   }
+  
+  def openedByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    Future.successful(permissions.teams(currentUser().usercode))
+      .successFlatMap(teams => {
+        Future.sequence(teams.map(team => {
+          reporting.openedEnquiriesByDay(start, end, Some(team))
+            .flatMap(_.fold(
+              e => Future.successful(Json.toJson(JsonClientError(status = "bad_request", errors = e.map(_.message)))),
+              dms => Future.successful(Json.obj(team.name -> Json.toJson(dms)))
+            ))
+        })).map(metrics => Ok(Json.toJson(API.Success[JsArray](data = Json.arr(metrics)))))
+      })
+  }}
 }
