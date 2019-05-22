@@ -13,6 +13,7 @@ import domain.dao.ClientDao.StoredClient
 import domain.dao.{AbstractDaoTest, CaseDao, ClientDao, UploadedFileDao}
 import helpers.DataFixture
 import warwick.core.timing.TimingContext
+import warwick.fileuploads.UploadedFileSave
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.{UniversityID, Usercode}
 

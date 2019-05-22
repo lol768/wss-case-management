@@ -5,7 +5,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.typesafe.config.ConfigMemorySize
-import domain.UploadedFileSave
 import helpers.{MockVirusScanService, OneAppPerSuite}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
@@ -14,6 +13,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.Configuration
 import play.api.http.Status
 import play.api.test.{FakeHeaders, FakeRequest}
+import warwick.fileuploads.{UploadedFileControllerHelper, UploadedFileSave}
 import warwick.sso.{Usercode, Users}
 
 class UploadedFileControllerHelperTest extends PlaySpec with OneAppPerSuite with MockitoSugar with ScalaFutures {
@@ -74,7 +74,7 @@ class UploadedFileControllerHelperTest extends PlaySpec with OneAppPerSuite with
       file.metadata mustBe UploadedFileSave("uploadedfile.txt", content.length.toLong, "text/plain")
     }
 
-    "fail if a file is too large" in new MultipartBodyFixture(get[Configuration].get[ConfigMemorySize]("wellbeing.files.maxIndividualFileSize").toBytes + 1, "uploadedfile.txt") {
+    "fail if a file is too large" in new MultipartBodyFixture(get[Configuration].get[ConfigMemorySize]("uploads.maxIndividualFileSize").toBytes + 1, "uploadedfile.txt") {
       val response = uploadedFileControllerHelper.bodyParser.apply(request).run(body)
       response.futureValue.isLeft mustBe true
 

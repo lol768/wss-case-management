@@ -60,9 +60,12 @@ class NavigationServiceImpl @Inject() (
 
   private lazy val masquerade = NavigationPage("Masquerade", controllers.sysadmin.routes.MasqueradeController.masquerade())
 
+  private lazy val reportingAdmin =
+    NavigationPage("Reports", controllers.reports.routes.ReportsController.reportForm())
+
   private lazy val admin =
     NavigationDropdown("Admin", Call("GET", "/admin"), Seq(
-      NavigationPage("Reports", controllers.reports.routes.ReportsController.home()),
+      reportingAdmin,
       NavigationPage("Locations", controllers.locations.routes.LocationsController.list())
     ))
 
@@ -77,9 +80,11 @@ class NavigationServiceImpl @Inject() (
 
   private def teamHome(team: Team) = NavigationPage(team.name, controllers.admin.routes.AdminController.teamHome(team.id))
 
-  private def adminMenu(loginContext: LoginContext): Seq[Navigation] =
+  private def adminOrReportingMenu(loginContext: LoginContext): Seq[Navigation] =
     if (loginContext.userHasRole(Admin))
       Seq(admin)
+    else if (loginContext.userHasRole(ReportingAdmin))
+      Seq(reportingAdmin)
     else
       Nil
 
@@ -111,6 +116,6 @@ class NavigationServiceImpl @Inject() (
   override def getNavigation(loginContext: LoginContext): Seq[Navigation] =
     teamLinks(loginContext) ++
     masqueraderLinks(loginContext) ++
-    adminMenu(loginContext) ++
+    adminOrReportingMenu(loginContext) ++
     sysadminMenu(loginContext)
 }

@@ -1,6 +1,9 @@
 package services
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
+import java.nio.charset.StandardCharsets.UTF_8
 import java.time.{LocalDate, LocalTime, Month}
+import java.util.Base64
 
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
@@ -62,6 +65,27 @@ class FreeBusyServiceTest extends PlaySpec with MockitoSugar with ScalaFutures {
         // Wednesday 9am - 11am Busy
         FreeBusyPeriod(start = wednesday.atTime(nineAM).atZone(JavaTime.timeZone).toOffsetDateTime, end = wednesday.atTime(elevenAM).atZone(JavaTime.timeZone).toOffsetDateTime, status = FreeBusyStatus.Busy)
       )
+    }
+    
+    "be serialisable" in {
+      def stringSerialize(value: Any): String = {
+        val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
+        val oos = new ObjectOutputStream(stream)
+        oos.writeObject(value)
+        oos.close
+        new String(Base64.getEncoder().encode(stream.toByteArray), UTF_8)
+      }
+
+      def stringDeserialize(str: String): Any = {
+        val bytes = Base64.getDecoder().decode(str.getBytes(UTF_8))
+        val ois = new ObjectInputStream(new ByteArrayInputStream(bytes))
+        val value = ois.readObject
+        ois.close
+        value
+      }
+
+      stringDeserialize(stringSerialize(FreeBusyStatus.WorkingElsewhere)) must equal(FreeBusyStatus.WorkingElsewhere)
+      stringDeserialize(stringSerialize(FreeBusyStatus.WorkingElsewhere)) must not equal(FreeBusyStatus.Busy)
     }
   }
 

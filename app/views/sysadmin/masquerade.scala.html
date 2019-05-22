@@ -7,6 +7,7 @@
 @(
   testUsers: Seq[(SitsDepartment, Seq[(UserType, Seq[(Option[Course], Seq[SitsProfile])])])],
   testTeamMembers: Seq[(Team, Seq[(User, Option[String])])],
+  testReportingAdmins: Seq[(User, Option[String])],
   testAdmins: Seq[(User, Option[String])]
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
@@ -67,22 +68,45 @@
           <h4>Admins</h4>
 
           <ul>
-            @testAdmins.map { case (user, photo) =>
-              <li>
-                @b3.inline.formCSRF(warwick.sso.routes.MasqueradeController.masquerade(), 'class -> "inline-form") { implicit ifc =>
-                  <input type="hidden" name="usercode" value="@user.usercode.string">
-                  <button type="submit" class="btn btn-default btn-sm">
-                    <i class="fal fa-fw fa-user-secret"></i>
-                    Mask
-                  </button>
-                }
-
-                @photo.map { url =>
-                  <img class="img-thumbnail img-circle" src="@url?s=24">
-                }
-                @user.name.full
-              </li>
+          @testAdmins.map { case (user, photo) =>
+          <li>
+            @b3.inline.formCSRF(warwick.sso.routes.MasqueradeController.masquerade(), 'class -> "inline-form") { implicit ifc =>
+              <input type="hidden" name="usercode" value="@user.usercode.string">
+              <button type="submit" class="btn btn-default btn-sm">
+                <i class="fal fa-fw fa-user-secret"></i>
+                Mask
+              </button>
             }
+
+            @photo.map { url =>
+              <img class="img-thumbnail img-circle" src="@url?s=24">
+            }
+            @user.name.full
+          </li>
+          }
+          </ul>
+        }
+
+        @if(testReportingAdmins.nonEmpty) {
+          <h4>Reporting admins</h4>
+
+          <ul>
+          @testReportingAdmins.map { case (user, photo) =>
+          <li>
+            @b3.inline.formCSRF(warwick.sso.routes.MasqueradeController.masquerade(), 'class -> "inline-form") { implicit ifc =>
+              <input type="hidden" name="usercode" value="@user.usercode.string">
+              <button type="submit" class="btn btn-default btn-sm">
+                <i class="fal fa-fw fa-user-secret"></i>
+                Mask
+              </button>
+            }
+
+            @photo.map { url =>
+              <img class="img-thumbnail img-circle" src="@url?s=24">
+            }
+            @user.name.full
+          </li>
+          }
           </ul>
         }
 

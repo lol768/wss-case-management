@@ -318,6 +318,20 @@ section.indent {
       margin-bottom: 0;
     }
   }
+  
+  tfoot.total {
+    font-weight: bold;
+    background-color: @table-bg-accent;
+  }
+  
+  .numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    
+    &.total {
+      padding-left: 2em;
+    }
+  }
 }
 
 .tab-content > .active {

@@ -24,7 +24,7 @@ case class Appointment(
   dsaActionPoints: Set[AppointmentDSAActionPoint],
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
-) {
+) extends Teamable {
   val end: OffsetDateTime = start.plus(duration)
 
   def subject(clientsOption: Option[Set[AppointmentClient]], teamMembersOption: Option[Set[AppointmentTeamMember]]): String = Seq(
@@ -183,16 +183,16 @@ object AppointmentPurpose extends PlayEnum[AppointmentPurpose] {
   override def values: immutable.IndexedSeq[AppointmentPurpose] = findValues
 }
 
-sealed abstract class AppointmentState(val labelType: String, val isTerminal: Boolean) extends EnumEntry {
+sealed abstract class AppointmentState(val className: String, val isTerminal: Boolean) extends EnumEntry {
   // When attached to AppointmentClient, the displayable description
   val clientDescription: String = entryName
   val nonTerminal: Boolean = !isTerminal
 }
 object AppointmentState extends PlayEnum[AppointmentState] {
-  case object Provisional extends AppointmentState("default", isTerminal = false)
-  case object Accepted extends AppointmentState("info", isTerminal = false)
-  case object Attended extends AppointmentState("success", isTerminal = true)
-  case object Cancelled extends AppointmentState("danger", isTerminal = true) {
+  case object Provisional extends AppointmentState("text-muted", isTerminal = false)
+  case object Accepted extends AppointmentState("text-info", isTerminal = false)
+  case object Attended extends AppointmentState("text-success", isTerminal = true)
+  case object Cancelled extends AppointmentState("text-danger", isTerminal = true) {
     override val clientDescription = "Declined"
   }
 

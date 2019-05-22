@@ -11,6 +11,7 @@ import domain.dao.UploadedFileDao.StoredUploadedFile
 import enumeratum._
 import services.AuditLogContext
 import warwick.core.helpers.JavaTime
+import warwick.fileuploads.{UploadedFile, UploadedFileOwner}
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.collection.immutable

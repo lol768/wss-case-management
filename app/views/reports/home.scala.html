@@ -1,40 +1,65 @@
-@import controllers.reports.ReportsController.Statistics
-@import domain.Team
-
+@import services.Metric
 @(
-  openedEnquiries: Seq[(Team, Statistics)],
-  closedEnquiries: Seq[(Team, Statistics)],
-  openedCases: Seq[(Team, Statistics)],
-  closedCases: Seq[(Team, Statistics)]
-)(implicit context: RequestContext)
+    teams: Seq[String],
+    range: String,
+    metrics: Seq[Metric],
+    showTotal: Boolean,
+    form: Form[DateRange]
+)(implicit context: RequestContext, req: RequestHeader, messages: MessagesProvider)
 
-@report(title: String, r: Seq[(Team, Statistics)]) = {
+@row(metric: Metric) = {
+    <tr>
+      <th class="use-tooltip" title="@metric.description.getOrElse(metric.name)">
+        @metric.name
+      </th>
+      
+      @teams.map { case team =>
+        <td class="numeric">
+          @metric.teamMetrics.find(_.team.name == team).map(_.value).getOrElse("-")
+        </td>
+      }
+      
+      @if(showTotal) {
+        <th class="numeric total">
+        @metric.teamMetrics.map({ case tm => tm.value }).sum
+        </th>
+      }
+    </tr>
+}
+  
+@main("Reports") {
+  <div class="well">
+    @b3.vertical.formCSRF(action = controllers.reports.routes.ReportsController.report) { implicit ifc =>
+      @if(form.hasGlobalErrors) {
+        @defining(form.globalErrors.map(_.message).mkString(", ")) { error =>
+          @b3.datePicker(form("start"), '_label -> "Start", '_error -> true)
+          @b3.datePicker(form("end"), '_label -> "End", '_error -> error)
+        }
+      } else {
+        @b3.datePicker(form("start"), '_label -> "Start", '_label -> "Start")
+        @b3.datePicker(form("end"), '_label -> "End", '_label -> "End")
+      }
+  
+      @b3.submit('class -> "btn btn-primary") { Update report }
+    }
+  </div>
+  
   <table class="table table-default">
-    <caption>@title</caption>
+    <caption>@range</caption>
     <thead>
       <tr>
-        <th class="col-sm-6">Team</th>
-        <th class="col-sm-2">Last 7 days</th>
-        <th class="col-sm-2">Last 14 days</th>
-        <th class="col-sm-2">Last 28 days</th>
+        <th></th>
+        
+        @teams.map { case team => <th class="numeric">@team</th> }
+        
+        @if(showTotal) {
+          <th class="numeric total">Total</th>
+        }
       </tr>
     </thead>
+    
     <tbody>
-      @r.map { case (team, stats) =>
-        <tr>
-          <td>@team.name</td>
-          <td>@stats.last7Days</td>
-          <td>@stats.last14Days</td>
-          <td>@stats.last28Days</td>
-        </tr>
-      }
+      @metrics.map { case metric => @row(metric) }
     </tbody>
   </table>
-}
-
-@main("Reports") {
-  @report("Enquiries opened", openedEnquiries)
-  @report("Enquiries closed", closedEnquiries)
-  @report("Cases opened", openedCases)
-  @report("Cases closed", closedCases)
 }

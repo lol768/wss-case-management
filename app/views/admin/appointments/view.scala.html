@@ -71,7 +71,7 @@
         }
 
         @tags.sectioned.detail("State") {
-          <span class="label label-@a.appointment.state.labelType" @a.appointment.cancellationReason.map { r => title="@r.description" }>
+          <span class="@a.appointment.state.className" @a.appointment.cancellationReason.map { r => title="@r.description" }>
             @tags.icons.appointmentState(a.appointment.state)
             @a.appointment.state
           </span>
