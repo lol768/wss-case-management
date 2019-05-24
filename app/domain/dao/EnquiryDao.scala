@@ -17,7 +17,7 @@ import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
-import slick.jdbc.JdbcProfile
+import slick.jdbc.{GetResult, JdbcProfile}
 import slick.lifted.ProvenShape
 import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
@@ -39,6 +39,7 @@ trait EnquiryDao {
   def searchQuery(query: EnquirySearchQuery): Query[Enquiries, StoredEnquiry, Seq]
   def getLastUpdatedForClients(clients: Set[UniversityID]): DBIO[Seq[(UniversityID, Option[OffsetDateTime])]]
   def findByStateQuery(state: IssueStateFilter): Query[Enquiries, StoredEnquiry, Seq]
+  def getFirstEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Team): DBIO[Seq[StoredEnquiry]]
   def countFirstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime): Query[(Rep[Team], Rep[Int]), (Team, Int), Seq]
 }
 
@@ -150,15 +151,39 @@ class EnquiryDaoImpl @Inject() (
 
   override def findByStateQuery(state: IssueStateFilter): Query[Enquiries, StoredEnquiry, Seq] =
     enquiries.table.filter(_.matchesState(state))
+
+  implicit val getUUIDResult = GetResult(r => UUID.fromString(r.nextString))
   
-  override def countFirstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime): Query[(Rep[Team], Rep[Int]), (Team, Int), Seq] = {
+  override def getFirstEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Team): DBIO[Seq[StoredEnquiry]] =
+    sql"""select e.id
+      from enquiry e
+      join (
+        select team_id, university_id, min(created_utc) as firstdate
+          from enquiry
+          where team_id = ${team.id}
+          and created_utc >= $start
+          and created_utc < $end
+          group by university_id, team_id
+          order by university_id, firstdate desc
+      ) f
+      on (
+        e.team_id = f.team_id and
+          e.university_id = f.university_id and
+          e.created_utc = f.firstdate
+      )
+    order by e.university_id, e.team_id;""".as[UUID]
+      .flatMap(idSeq =>
+        enquiries.table.filter(_.id.inSet(idSeq))
+          .result
+      )
+
+  override def countFirstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime): Query[(Rep[Team], Rep[Int]), (Team, Int), Seq] =
     enquiries.table
       .groupBy(e => (e.team, e.universityId))
       .map { case (pair, group) => (pair, group.map(_.created).min) }
       .filter { case (_, date) => date >= start && date < end }
       .groupBy { case ((team, _), _) => team }
       .map { case (team, group) => (team, group.size) }
-  }
 }
 
 object EnquiryDao {
