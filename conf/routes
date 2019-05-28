@@ -189,6 +189,8 @@ POST        /sysadmin/emails/:id                    @controllers.sysadmin.EmailQ
 GET         /sysadmin/import                        @controllers.sysadmin.DataImportController.importForm()
 POST        /sysadmin/import/preview                @controllers.sysadmin.DataImportController.importCasesPreview()
 POST        /sysadmin/import                        @controllers.sysadmin.DataImportController.scheduleJob()
+GET         /sysadmin/push-to-outlook               @controllers.sysadmin.PushToOutlookController.form()
+POST        /sysadmin/push-to-outlook               @controllers.sysadmin.PushToOutlookController.submit()
 
 ## Fallbacks ##
 
