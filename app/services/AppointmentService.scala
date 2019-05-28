@@ -157,6 +157,7 @@ class AppointmentServiceImpl @Inject()(
             )
           })
           setOwnersResult <- ownerService.setAppointmentOwners(inserted.id, teamMembers).toDBIO
+          _ <- DBIO.successful(office365CalendarService.updateAppointment(inserted.id, setOwnersResult.right.get))
           _ <- DBIO.successful(scheduleClientReminder(inserted.asAppointment))
           _ <- {
             val ownersToNotify = setOwnersResult.right.get.all.map(_.userId).toSet - currentUser
@@ -166,10 +167,7 @@ class AppointmentServiceImpl @Inject()(
               DBIO.successful(None)
           }
           _ <- notificationService.clientNewAppointment(clients).toDBIO
-        } yield (inserted.asAppointment, setOwnersResult)).map(_.map { case (inserted, setOwnersResult) =>
-          office365CalendarService.updateAppointment(inserted.id, setOwnersResult.right.get)
-          inserted
-        })
+        } yield inserted.asAppointment)
       }
     }
   }

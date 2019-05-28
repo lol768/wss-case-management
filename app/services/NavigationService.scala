@@ -76,6 +76,7 @@ class NavigationServiceImpl @Inject() (
       Some(NavigationPage("Import data", controllers.sysadmin.routes.DataImportController.importForm())),
       Some(NavigationPage("Dummy data generation", controllers.sysadmin.routes.DataGenerationController.generateForm()))
         .filter(_ => dataGenerationEnabled),
+      Some(NavigationPage("Push to Outlook", controllers.sysadmin.routes.PushToOutlookController.form())),
     ).flatten)
 
   private def teamHome(team: Team) = NavigationPage(team.name, controllers.admin.routes.AdminController.teamHome(team.id))
