@@ -1,0 +1,16 @@
+@import domain.OutgoingEmail
+@import org.quartz.Trigger
+@import warwick.core.helpers.JavaTime
+
+@()(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@main("Push to Outlook") {
+  @b3.inline.formCSRF(controllers.sysadmin.routes.PushToOutlookController.submit()) { implicit ifc =>
+    <p>
+      Update all owners Outlook calendars with upcoming appointments
+    </p>
+    <p>
+      <button type="submit" class="btn btn-primary">Push to Outlook</button>
+    </p>
+  }
+}
