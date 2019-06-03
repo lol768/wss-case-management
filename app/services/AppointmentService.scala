@@ -242,7 +242,6 @@ class AppointmentServiceImpl @Inject()(
             version
           )
           setOwnersResult <- ownerService.setAppointmentOwners(updated.id, teamMembers).toDBIO
-          _ <- DBIO.successful(office365CalendarService.updateAppointment(updated.id, setOwnersResult.right.get))
           _ <- {
             if (clientsResult.added.nonEmpty)
               notificationService.clientNewAppointment(clientsResult.added.map(_.universityID).toSet).map(_.map(Option.apply)).toDBIO
@@ -282,7 +281,10 @@ class AppointmentServiceImpl @Inject()(
             else
               DBIO.successful(None)
           }
-        } yield updated.asAppointment)
+        } yield (updated.asAppointment, setOwnersResult)).successMapTo { case (updated, setOwnersResult) =>
+          office365CalendarService.updateAppointment(updated.id, setOwnersResult.right.get)
+          updated
+        }
       }
     }
   }
@@ -324,7 +326,6 @@ class AppointmentServiceImpl @Inject()(
           )
         }: _*)
         teamMembers <- ownerService.getAppointmentOwners(Set(updated.id)).successMapTo(_.getOrElse(id, Set())).toDBIO
-        _ <- DBIO.from(Future.successful(office365CalendarService.updateAppointment(updated.id, teamMembers.right.get)))
         _ <- notificationService.clientRescheduledAppointment(clients.map(_.universityID).toSet).toDBIO
         _ <- {
           val ownersToNotify = teamMembers.right.get.map(_.member.usercode) - currentUser
@@ -333,7 +334,10 @@ class AppointmentServiceImpl @Inject()(
           else DBIO.successful(None)
         }
         _ <- DBIO.successful(scheduleClientReminder(updated.asAppointment))
-      } yield updated.asAppointment)
+      } yield (updated.asAppointment, teamMembers)).successMapTo { case (updated, teamMembers) =>
+        office365CalendarService.updateAppointment(updated.id, teamMembers.right.get)
+        updated
+      }
     }
 
   override def find(id: UUID)(implicit t: TimingContext): Future[ServiceResult[Appointment]] =
@@ -636,7 +640,6 @@ class AppointmentServiceImpl @Inject()(
         updatedAppointment <- dao.update(appointment.copy(state = AppointmentState.Cancelled, cancellationReason = Some(reason)), version)
         _ <- note.map { n => DBIO.seq(cases.map { c => caseService.addNoteDBIO(c.id, CaseNoteType.AppointmentNote, n) }: _*) }.getOrElse(DBIO.successful(()))
         teamMembers <- getTeamMembers(updatedAppointment.id).toDBIO
-        _ <- DBIO.successful(office365CalendarService.updateAppointment(updatedAppointment.id, teamMembers.right.get))
         _ <- DBIO.from(note.map(n => memberService.getOrAddMember(n.teamMember)).getOrElse(Future.successful(())))
         _ <- notificationService.clientCancelledAppointment(clients.map(_.universityID).toSet).toDBIO
         _ <- {
@@ -646,7 +649,10 @@ class AppointmentServiceImpl @Inject()(
           else
             DBIO.successful(None)
         }
-      } yield updatedAppointment.asAppointment)
+      } yield (updatedAppointment.asAppointment, teamMembers)).successMapTo { case (updatedAppointment, teamMembers) =>
+        office365CalendarService.updateAppointment(updatedAppointment.id, teamMembers.right.get)
+        updatedAppointment
+      }
     }
 
   private def scheduleClientReminder(appointment: Appointment): Unit = {
