@@ -32,7 +32,7 @@ case class Message (
   ownerType: MessageOwner,
   created: OffsetDateTime = JavaTime.offsetDateTime,
   version: OffsetDateTime = JavaTime.offsetDateTime,
-) extends Versioned[Message] {
+) extends Versioned[Message] with Created[Message] {
   override def atVersion(at: OffsetDateTime): Message = copy(version = at)
 
   override def storedVersion[B <: StoredVersion[Message]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
@@ -158,7 +158,7 @@ case class MessageVersion (
   operation: DatabaseOperation,
   timestamp: OffsetDateTime,
   auditUser: Option[Usercode]
-) extends StoredVersion[Message]
+) extends StoredVersion[Message] with Created[MessageVersion]
 
 /**
   * Just the data of a message required to save it. Other properties
@@ -196,7 +196,7 @@ case class MessageData (
   created: OffsetDateTime,
   teamMember: Option[Member],
   team: Option[Team]
-)
+) extends Created[MessageData]
 
 case class MessageRender(
   message: MessageData,

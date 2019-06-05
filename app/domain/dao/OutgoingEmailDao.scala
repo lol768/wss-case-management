@@ -42,7 +42,7 @@ object OutgoingEmailDao {
     lastSendAttempt: Option[OffsetDateTime],
     failureReason: Option[String],
     version: OffsetDateTime = JavaTime.offsetDateTime
-  ) extends Versioned[PersistedOutgoingEmail] {
+  ) extends Versioned[PersistedOutgoingEmail] with Created[PersistedOutgoingEmail] {
     override def atVersion(at: OffsetDateTime): PersistedOutgoingEmail = copy(version = at)
     override def storedVersion[B <: StoredVersion[PersistedOutgoingEmail]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
       PersistedOutgoingEmailVersion.versioned(this, operation, timestamp).asInstanceOf[B]
@@ -73,7 +73,7 @@ object OutgoingEmailDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[PersistedOutgoingEmail]
+  ) extends StoredVersion[PersistedOutgoingEmail] with Created[PersistedOutgoingEmailVersion]
 
   object PersistedOutgoingEmailVersion {
     def tupled = (apply _).tupled

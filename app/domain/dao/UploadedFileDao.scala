@@ -59,7 +59,7 @@ object UploadedFileDao {
     ownerType: Option[UploadedFileOwner],
     created: OffsetDateTime,
     version: OffsetDateTime
-  ) extends Versioned[StoredUploadedFile] {
+  ) extends Versioned[StoredUploadedFile] with Created[StoredUploadedFile] {
     def asUploadedFile = UploadedFile(
       id,
       fileName,
@@ -109,7 +109,7 @@ object UploadedFileDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[StoredUploadedFile]
+  ) extends StoredVersion[StoredUploadedFile] with Created[StoredUploadedFileVersion]
 
   trait CommonProperties { self: Table[_] =>
     def fileName = column[String]("file_name")

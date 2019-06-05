@@ -18,7 +18,7 @@ case class OutgoingEmail(
   lastSendAttempt: Option[OffsetDateTime] = None,
   failureReason: Option[String] = None,
   updated: OffsetDateTime = JavaTime.offsetDateTime
-) {
+) extends Created[OutgoingEmail] {
   require(recipient.nonEmpty || emailAddress.nonEmpty, "One of recipient or emailAddress must be set")
   require(email.attachments.isEmpty, "Storing emails directly with attachments is not yet supported")
   require(email.to.isEmpty, "Don't use TO on the Email, set recipient or emailAddress")

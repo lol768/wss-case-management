@@ -232,7 +232,7 @@ object AppointmentDao {
     dsaActionPointOther: Option[String],
     created: OffsetDateTime,
     version: OffsetDateTime,
-  ) extends Versioned[StoredAppointment] with Teamable {
+  ) extends Versioned[StoredAppointment] with Created[StoredAppointment] with Teamable {
     def asAppointment = Appointment(
       id,
       key,
@@ -297,7 +297,7 @@ object AppointmentDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[StoredAppointment]
+  ) extends StoredVersion[StoredAppointment] with Created[StoredAppointmentVersion]
 
   trait CommonAppointmentProperties { self: Table[_] =>
     def key = column[IssueKey]("appointment_key")
@@ -407,7 +407,7 @@ object AppointmentDao {
     attendanceState: Option[AppointmentClientAttendanceState],
     created: OffsetDateTime,
     version: OffsetDateTime,
-  ) extends Versioned[StoredAppointmentClient] {
+  ) extends Versioned[StoredAppointmentClient] with Created[StoredAppointmentClient] {
     def asAppointmentClient(client: Client) = AppointmentClient(
       client,
       state,
@@ -444,7 +444,7 @@ object AppointmentDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[StoredAppointmentClient]
+  ) extends StoredVersion[StoredAppointmentClient] with Created[StoredAppointmentClientVersion]
 
   trait CommonAppointmentClientProperties { self: Table[_] =>
     def universityID = column[UniversityID]("university_id")

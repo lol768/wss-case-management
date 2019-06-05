@@ -102,11 +102,11 @@ class ReportingServiceImpl @Inject() (
       collectMetric("Enquiries opened", "Enquiries created in the period (and still open)", "/admin/reports/opened-enquiries", teams, start, end, countOpenedEnquiries),
       collectMetric("Enquiries closed", "Enquiries closed in the period", "/admin/reports/closed-enquiries", teams, start, end, countClosedEnquiries),
       collectMetric("Cases opened from enquiries", "Cases created in the period (and still open), which started as enquiries", "/admin/reports/opened-cases-with-enq", teams, start, end, countOpenedCasesFromEnquiries),
-      collectMetric("Cases opened from enquiries, with appointments", "Cases created in the period (and still open), which started as enquiries, and have resulted in an appointment which is either pending or has taken place", "/admin/reports/cases-with-appts-with-enq", teams, start, end, countCasesWithAppointmentsFromEnquiries),
       collectMetric("Cases closed from enquiries", "Cases closed in the period, which started as enquiries", "/admin/reports/closed-cases-with-enq", teams, start, end, countClosedCasesFromEnquiries),
       collectMetric("Cases opened without enquiries", "Cases created in the period (and still open), which did not start as enquiries", "/admin/reports/opened-cases-no-enq", teams, start, end, countOpenedCasesWithoutEnquiries),
-      collectMetric("Cases opened without enquiries, with appointments", "Cases created in the period (and still open), which did not start as enquiries, and have resulted in an appointment which is either pending or has taken place", "/admin/reports/cases-with-appts-no-enq", teams, start, end, countCasesWithAppointmentsWithoutEnquiries),
       collectMetric("Cases closed without enquiries", "Cases closed in the period, which did not start as enquiries", "/admin/reports/closed-cases-no-enq", teams, start, end, countClosedCasesWithoutEnquiries),
+      collectMetric("Cases from enquiries, with appointments", "Cases created in the period, which started as enquiries, and have resulted in an appointment which is either pending or has taken place", "/admin/reports/cases-with-appts-with-enq", teams, start, end, countCasesWithAppointmentsFromEnquiries),
+      collectMetric("Cases without enquiries, with appointments", "Cases created in the period, which did not start as enquiries, and have resulted in an appointment which is either pending or has taken place", "/admin/reports/cases-with-appts-no-enq", teams, start, end, countCasesWithAppointmentsWithoutEnquiries),
       collectMetric("Provisional appointments", "Appointments provisionally scheduled to occur during the period", "/admin/reports/provisional-appts", teams, start, end, countProvisionalAppointments),
       collectMetric("Accepted appointments", "Appointments scheduled to occur during the period, which have been accepted", "/admin/reports/accepted-appts", teams, start, end, countAcceptedAppointments),
       collectMetric("Attended appointments", "Appointments attended during the period", "/admin/reports/attended-appts", teams, start, end, countAttendedAppointments),
@@ -127,7 +127,7 @@ class ReportingServiceImpl @Inject() (
       )
   }
 
-  implicit class DailyTransformers[T <: Versioned[T]](timestampedFuture: Future[Seq[T]]) {
+  implicit class DailyVersionedTransformers[T <: Versioned[T]](timestampedFuture: Future[Seq[T]]) {
     def versionedByDay(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[(LocalDate, Seq[T])]] = {
 
       val startDay = start.toLocalDate
@@ -143,7 +143,7 @@ class ReportingServiceImpl @Inject() (
           .toSeq
       })
     }
-    
+
     def countVersionedByDay(start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[Seq[DailyMetrics]] = {
       timestampedFuture.map(timestamped => {
         val sorted = timestamped.sortBy(_.version)
@@ -151,6 +151,36 @@ class ReportingServiceImpl @Inject() (
           .takeWhile(!_.isAfter(end))
           .map { date =>
             DailyMetrics(date, sorted.count(t => t.version.toLocalDate.isEqual(date)))
+          }
+          .toSeq
+      })
+    }
+  }
+
+  implicit class DailyCreatedTransformers[T <: Created[T]](timestampedFuture: Future[Seq[T]]) {
+    def createdByDay(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[(LocalDate, Seq[T])]] = {
+
+      val startDay = start.toLocalDate
+      val lastDay = end.toLocalDate
+
+      timestampedFuture.map(timestamped => {
+        val sorted = timestamped.sortBy(_.created)
+        Iterator.iterate(startDay)(_.plusDays(1L))
+          .takeWhile(!_.isAfter(lastDay))
+          .map { date =>
+            date -> sorted.filter(t => t.created.toLocalDate.isEqual(date))
+          }
+          .toSeq
+      })
+    }
+
+    def countCreatedByDay(start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[Seq[DailyMetrics]] = {
+      timestampedFuture.map(timestamped => {
+        val sorted = timestamped.sortBy(_.created)
+        Iterator.iterate(start)(_.plusDays(1L))
+          .takeWhile(!_.isAfter(end))
+          .map { date =>
+            DailyMetrics(date, sorted.count(t => t.created.toLocalDate.isEqual(date)))
           }
           .toSeq
       })
@@ -181,7 +211,7 @@ class ReportingServiceImpl @Inject() (
     val dateRange = DateRange(start, end)
     getOpenedEnquiries(dateRange.startTime, dateRange.endTime)
       .forTeam(team)
-      .countVersionedByDay(start, end)
+      .countCreatedByDay(start, end)
       .toServiceResult(s"Opened enquiries by day, $dateRange")
   }
 
@@ -221,7 +251,7 @@ class ReportingServiceImpl @Inject() (
     val dateRange = DateRange(start, end)
     getOpenedCasesWithEnquiries(dateRange.startTime, dateRange.endTime)
       .forTeam(team)
-      .countVersionedByDay(start, end)
+      .countCreatedByDay(start, end)
       .toServiceResult(s"Opened cases from enquiries by day, $dateRange")
   }
 
@@ -286,11 +316,9 @@ class ReportingServiceImpl @Inject() (
   }
 
   
-  private def firstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[(Team, Int)]] =
+  private def firstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[TeamMetrics]] =
     daoRunner.run {
-      Compiled(
-        enquiryDao.countFirstEnquiriesByTeam(start, end)
-      ).result
+      enquiryDao.countFirstEnquiriesByTeam(start, end)
     }
 
   def countFirstEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
@@ -299,12 +327,11 @@ class ReportingServiceImpl @Inject() (
         team match {
           case Some(searchedTeam) =>
             enqsByTeam
-              .find { case (matchingTeam, _) => matchingTeam == searchedTeam }
-              .map { case (_, count) => count }
-              .getOrElse(0)
+              .find { _.team == searchedTeam }
+              .fold(0)(_.value)
           case None =>
             enqsByTeam
-              .map { case (_, count) => count }
+              .map(_.value)
               .sum
         }
       )
@@ -312,9 +339,9 @@ class ReportingServiceImpl @Inject() (
   def firstEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     daoRunner.run {
-        enquiryDao.getFirstEnquiries(dateRange.startTime, dateRange.endTime, team)
+      enquiryDao.getFirstEnquiries(dateRange.startTime, dateRange.endTime, team)
     }
-      .countVersionedByDay(start, end)
+      .countCreatedByDay(start, end)
       .toServiceResult(s"First enquiries by day, $dateRange")
   }
 
@@ -373,7 +400,7 @@ class ReportingServiceImpl @Inject() (
         appointmentDao.searchQuery(
           AppointmentSearchQuery(
             startAfter = Some(start.toLocalDate),
-            startBefore = Some(end.plusDays(1L).toLocalDate),
+            startBefore = Some(end.toLocalDate), // don't need to plusDays(1) here, as the query is already inclusive
             states = Set(state),
           )
         )

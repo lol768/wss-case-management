@@ -16,7 +16,7 @@ import domain.dao.MemberDao.StoredMember.Members
 import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import services.AuditLogContext
+import services.{AuditLogContext, TeamMetrics}
 import slick.jdbc.{GetResult, JdbcProfile}
 import slick.lifted.ProvenShape
 import warwick.core.helpers.JavaTime
@@ -40,7 +40,7 @@ trait EnquiryDao {
   def getLastUpdatedForClients(clients: Set[UniversityID]): DBIO[Seq[(UniversityID, Option[OffsetDateTime])]]
   def findByStateQuery(state: IssueStateFilter): Query[Enquiries, StoredEnquiry, Seq]
   def getFirstEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Team): DBIO[Seq[StoredEnquiry]]
-  def countFirstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime): Query[(Rep[Team], Rep[Int]), (Team, Int), Seq]
+  def countFirstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime): DBIO[Seq[TeamMetrics]]
 }
 
 @Singleton
@@ -75,7 +75,7 @@ class EnquiryDaoImpl @Inject() (
     Option(filter.owner).filter(_.nonEmpty).fold(enquiries.table.subquery)(usercodes =>
       enquiries.table
         .join(Owner.owners.table)
-        .on((e, o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Enquiry : Owner.EntityType))
+        .on((e, o) => e.id === o.entityId && o.entityType === (Owner.EntityType.Enquiry: Owner.EntityType))
         .filter { case (_, o) => o.userId.inSet(usercodes) }
         .map { case (e, _) => e }
     ).filter(e => {
@@ -97,14 +97,14 @@ class EnquiryDaoImpl @Inject() (
         q.query.filter(_.nonEmpty).map { queryStr =>
           (
             e.searchableKey @+
-            e.searchableSubject @+
-            m.map(_.searchableText).orEmptyTsVector @+
-            client.searchableUniversityID @+
-            client.searchableFullName @+
-            f.map(_.searchableFileName).orEmptyTsVector @+
-            tm.map(_.searchableUsercode).orEmptyTsVector @+
-            tm.map(_.searchableFullName).orEmptyTsVector
-          ).? @@ prefixTsQuery(queryStr.bind)
+              e.searchableSubject @+
+              m.map(_.searchableText).orEmptyTsVector @+
+              client.searchableUniversityID @+
+              client.searchableFullName @+
+              f.map(_.searchableFileName).orEmptyTsVector @+
+              tm.map(_.searchableUsercode).orEmptyTsVector @+
+              tm.map(_.searchableFullName).orEmptyTsVector
+            ).? @@ prefixTsQuery(queryStr.bind)
         },
         q.createdAfter.map { d => e.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => e.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
@@ -153,7 +153,7 @@ class EnquiryDaoImpl @Inject() (
     enquiries.table.filter(_.matchesState(state))
 
   implicit val getUUIDResult = GetResult(r => UUID.fromString(r.nextString))
-  
+
   override def getFirstEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Team): DBIO[Seq[StoredEnquiry]] =
     sql"""select e.id
       from enquiry e
@@ -164,26 +164,38 @@ class EnquiryDaoImpl @Inject() (
           and created_utc >= $start
           and created_utc < $end
           group by university_id, team_id
-          order by university_id, firstdate desc
       ) f
       on (
         e.team_id = f.team_id and
           e.university_id = f.university_id and
           e.created_utc = f.firstdate
       )
-    order by e.university_id, e.team_id;""".as[UUID]
-      .flatMap(idSeq =>
-        enquiries.table.filter(_.id.inSet(idSeq))
-          .result
+      order by e.id;""".as[UUID]
+      .flatMap(idSeq => {
+      enquiries.table
+        .filter(_.id.inSet(idSeq))
+        .result
+    })
+  
+  override def countFirstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime): DBIO[Seq[TeamMetrics]] =
+    sql"""select e.team_id, count(e.id)
+      from enquiry e
+      join (
+        select team_id, university_id, min(created_utc) as firstdate
+          from enquiry
+          where created_utc >= $start
+          and created_utc < $end
+          group by university_id, team_id
+      ) f
+      on (
+        e.team_id = f.team_id and
+        e.university_id = f.university_id and
+        e.created_utc = f.firstdate
       )
-
-  override def countFirstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime): Query[(Rep[Team], Rep[Int]), (Team, Int), Seq] =
-    enquiries.table
-      .groupBy(e => (e.team, e.universityId))
-      .map { case (pair, group) => (pair, group.map(_.created).min) }
-      .filter { case (_, date) => date >= start && date < end }
-      .groupBy { case ((team, _), _) => team }
-      .map { case (team, group) => (team, group.size) }
+      group by e.team_id;""".as[(String, Int)]
+      .map(_.map { case (id, value) =>
+        TeamMetrics(Teams.fromId(id), value)
+      })
 }
 
 object EnquiryDao {
@@ -203,7 +215,7 @@ object EnquiryDao {
     state: IssueState,
     version: OffsetDateTime = JavaTime.offsetDateTime,
     created: OffsetDateTime = JavaTime.offsetDateTime,
-  ) extends Versioned[StoredEnquiry] with Teamable {
+  ) extends Versioned[StoredEnquiry] with Created[StoredEnquiry] with Teamable {
     override def atVersion(at: OffsetDateTime): StoredEnquiry = copy(version = at)
 
     override def storedVersion[B <: StoredVersion[StoredEnquiry]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
@@ -245,7 +257,7 @@ object EnquiryDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[StoredEnquiry]
+  ) extends StoredVersion[StoredEnquiry] with Created[StoredEnquiry]
 
   sealed trait CommonEnquiryProperties {
     self: Table[_] =>
@@ -356,7 +368,7 @@ object EnquiryDao {
     teamMember: Usercode,
     created: OffsetDateTime,
     version: OffsetDateTime
-  ) extends Versioned[StoredEnquiryNote] {
+  ) extends Versioned[StoredEnquiryNote] with Created[StoredEnquiryNote] {
     def asEnquiryNote(member: Member) = EnquiryNote(
       id,
       noteType,
@@ -394,7 +406,7 @@ object EnquiryDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[StoredEnquiryNote]
+  ) extends StoredVersion[StoredEnquiryNote] with Created[StoredEnquiryNote]
 
   trait CommonNoteProperties { self: Table[_] =>
     def enquiryID = column[UUID]("enquiry_id")
