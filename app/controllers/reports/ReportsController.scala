@@ -8,7 +8,7 @@ import domain.Team
 import helpers.Json.JsonClientError
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent, Result}
 import services.{DailyMetrics, PermissionService, ReportingService}
 import warwick.core.helpers.ServiceResults.ServiceResult
@@ -76,7 +76,7 @@ class ReportsController @Inject()(
               e => Future.successful(Json.toJson(JsonClientError(status = "bad_request", errors = e.map(_.message)))),
               dms => Future.successful(Json.obj(team.name -> Json.toJson(dms)))
             ))
-        })).map(metrics => Ok(Json.toJson(API.Success[JsArray](data = Json.arr(metrics)))))
+        })).map(metrics => Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(metrics)))))
       })
 
   private def dailyReport(
@@ -92,7 +92,7 @@ class ReportsController @Inject()(
               e => Future.successful(Json.toJson(JsonClientError(status = "bad_request", errors = e.map(_.message)))),
               dms => Future.successful(Json.obj(team.name -> Json.toJson(dms)))
             ))
-        })).map(metrics => Ok(Json.toJson(API.Success[JsArray](data = Json.arr(metrics)))))
+        })).map(metrics => Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(metrics)))))
       })
   
   def openedEnquiriesByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
