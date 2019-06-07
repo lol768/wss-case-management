@@ -85,8 +85,8 @@
             all qualified first aid responders) on <a href="tel:+442476522222">024 7652 2222</a>
             or internally on 22222.</p>
 
-          <p>If your enquiry relates to a mental health emergency, please see the Mental Health
-            Team website for <a href="https://warwick.ac.uk/mentalhealth/crisis">information regarding on and off campus crisis support services</a>.</p>
+          <p>If your enquiry relates to a mental health emergency, please see
+            <a href="https://warwick.ac.uk/counselling/emergency_contacts">information regarding on and off campus crisis support services</a>.</p>
 
           <p>Our Counselling service is also open until 8pm on Tuesdays and Thursdays.</p>
         </div>
@@ -100,23 +100,6 @@
   </p>
 
   <div class="panel-group" id="enquiry-forms" role="tablist" aria-multiselectable="true">
-    @panel(Teams.MentalHealth, "Support for mental health conditions", mentalHealthForm, controllers.enquiries.routes.EnquiryController.submitMentalHealth()) { implicit vfc =>
-      @b3.free('_label -> "Subject:") {
-        <span class="form-control-static">Mental health query</span>
-      }(b3.inline.fieldConstructorSpecific, messagesProvider)
-
-      @b3.free('_label -> "Select any of the following that apply (or leave them all unticked if not)", '_class -> "checkboxGroup") {
-        @b3.checkbox(mentalHealthForm("reasonableAdjustments"), '_text -> "I'm looking for help with reasonable adjustments for a mental health disability (including special exam arrangements)")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
-        @b3.checkbox(mentalHealthForm("studySkills"), '_text -> "I'm looking for DSA specialist mentoring")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
-        @b3.checkbox(mentalHealthForm("generalAdvice"), '_text -> "I'm looking for general advice and support on mental health (e.g. self-help, liaising with statutory services)")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
-      }
-
-      @b3.free('_label -> "Do you have any documents you can upload that might help us understand your situation?", '_class -> mentalHealthForm.error("file").map(_ => "has-error")) {
-        <input type="file" id="mentalHealthForm_file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" aria-label="Attach a file">
-        @b3.errors(mentalHealthForm("file"))
-      }
-    }
-
     @panel(Teams.Counselling, "Counselling for emotional or psychological issues", counsellingForm, controllers.enquiries.routes.EnquiryController.submitCounselling()) { implicit vfc =>
       @b3.free('_label -> "Subject:") {
         <span class="form-control-static">Counselling query</span>
@@ -130,7 +113,7 @@
       }
     }
 
-    @panel(Teams.Disability, "Support with disabilities such as dyslexia, autism spectrum and mobility", disabilityForm, controllers.enquiries.routes.EnquiryController.submitDisability()) { implicit vfc =>
+    @panel(Teams.Disability, "Support with disabilities such as dyslexia, mental health and autism spectrum", disabilityForm, controllers.enquiries.routes.EnquiryController.submitDisability()) { implicit vfc =>
       @b3.free('_label -> "Subject:") {
         <span class="form-control-static">Disability query</span>
       }(b3.inline.fieldConstructorSpecific, messagesProvider)

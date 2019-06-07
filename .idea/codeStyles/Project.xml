@@ -8,20 +8,237 @@
       </value>
     </option>
     <option name="RIGHT_MARGIN" value="100" />
+    <DB2CodeStyleSettings version="2">
+      <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
+      <option name="QUERY_ALIGN_ELEMENTS" value="false" />
+      <option name="INSERT_COLLAPSE_MULTI_ROW_VALUES" value="true" />
+      <option name="SET_ALIGN_EQUAL_SIGN" value="false" />
+      <option name="SELECT_ALIGN_AS" value="false" />
+      <option name="FROM_WRAP_JOIN_1" value="false" />
+      <option name="FROM_WRAP_JOIN_2" value="false" />
+      <option name="FROM_ONLY_JOIN_INDENT" value="1" />
+      <option name="TABLE_OPENING" value="1" />
+      <option name="TABLE_CONTENT" value="2" />
+      <option name="TABLE_CLOSING" value="3" />
+      <option name="TABLE_TYPES_ALIGN" value="false" />
+      <option name="TABLE_DEFAULTS_ALIGN" value="false" />
+      <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
+      <option name="TABLE_ALTER_INSTRUCTION_ALIGN" value="false" />
+      <option name="POST_OPT_WRAP_2" value="false" />
+      <option name="POST_OPT_ALIGN" value="false" />
+      <option name="IMP_DECLARE_ALIGN_TYPE" value="false" />
+      <option name="IMP_DECLARE_ALIGN_EQ" value="false" />
+      <option name="EXPR_CASE_END" value="1" />
+      <option name="INDEX_NAME_TEMPLATE" value="idx_{table}_{columns}_{unique?u:}" />
+      <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
+      <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
+    </DB2CodeStyleSettings>
+    <DerbyCodeStyleSettings version="2">
+      <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
+      <option name="QUERY_ALIGN_ELEMENTS" value="false" />
+      <option name="INSERT_COLLAPSE_MULTI_ROW_VALUES" value="true" />
+      <option name="SET_ALIGN_EQUAL_SIGN" value="false" />
+      <option name="SELECT_ALIGN_AS" value="false" />
+      <option name="FROM_WRAP_JOIN_1" value="false" />
+      <option name="FROM_WRAP_JOIN_2" value="false" />
+      <option name="FROM_ONLY_JOIN_INDENT" value="1" />
+      <option name="TABLE_OPENING" value="1" />
+      <option name="TABLE_CONTENT" value="2" />
+      <option name="TABLE_CLOSING" value="3" />
+      <option name="TABLE_TYPES_ALIGN" value="false" />
+      <option name="TABLE_DEFAULTS_ALIGN" value="false" />
+      <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
+      <option name="TABLE_ALTER_INSTRUCTION_ALIGN" value="false" />
+      <option name="POST_OPT_WRAP_2" value="false" />
+      <option name="POST_OPT_ALIGN" value="false" />
+      <option name="IMP_DECLARE_ALIGN_TYPE" value="false" />
+      <option name="IMP_DECLARE_ALIGN_EQ" value="false" />
+      <option name="EXPR_CASE_END" value="1" />
+      <option name="INDEX_NAME_TEMPLATE" value="idx_{table}_{columns}_{unique?u:}" />
+      <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
+      <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
+    </DerbyCodeStyleSettings>
+    <H2CodeStyleSettings version="2">
+      <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
+      <option name="QUERY_ALIGN_ELEMENTS" value="false" />
+      <option name="INSERT_COLLAPSE_MULTI_ROW_VALUES" value="true" />
+      <option name="SET_ALIGN_EQUAL_SIGN" value="false" />
+      <option name="SELECT_ALIGN_AS" value="false" />
+      <option name="FROM_WRAP_JOIN_1" value="false" />
+      <option name="FROM_WRAP_JOIN_2" value="false" />
+      <option name="FROM_ONLY_JOIN_INDENT" value="1" />
+      <option name="TABLE_OPENING" value="1" />
+      <option name="TABLE_CONTENT" value="2" />
+      <option name="TABLE_CLOSING" value="3" />
+      <option name="TABLE_TYPES_ALIGN" value="false" />
+      <option name="TABLE_DEFAULTS_ALIGN" value="false" />
+      <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
+      <option name="TABLE_ALTER_INSTRUCTION_ALIGN" value="false" />
+      <option name="POST_OPT_WRAP_2" value="false" />
+      <option name="POST_OPT_ALIGN" value="false" />
+      <option name="EXPR_CASE_END" value="1" />
+      <option name="INDEX_NAME_TEMPLATE" value="idx_{table}_{columns}_{unique?u:}" />
+      <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
+      <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
+    </H2CodeStyleSettings>
+    <HSQLCodeStyleSettings version="2">
+      <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
+      <option name="QUERY_ALIGN_ELEMENTS" value="false" />
+      <option name="INSERT_COLLAPSE_MULTI_ROW_VALUES" value="true" />
+      <option name="SET_ALIGN_EQUAL_SIGN" value="false" />
+      <option name="SELECT_ALIGN_AS" value="false" />
+      <option name="FROM_WRAP_JOIN_1" value="false" />
+      <option name="FROM_WRAP_JOIN_2" value="false" />
+      <option name="FROM_ONLY_JOIN_INDENT" value="1" />
+      <option name="TABLE_OPENING" value="1" />
+      <option name="TABLE_CONTENT" value="2" />
+      <option name="TABLE_CLOSING" value="3" />
+      <option name="TABLE_TYPES_ALIGN" value="false" />
+      <option name="TABLE_DEFAULTS_ALIGN" value="false" />
+      <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
+      <option name="TABLE_ALTER_INSTRUCTION_ALIGN" value="false" />
+      <option name="POST_OPT_WRAP_2" value="false" />
+      <option name="POST_OPT_ALIGN" value="false" />
+      <option name="EXPR_CASE_END" value="1" />
+      <option name="INDEX_NAME_TEMPLATE" value="idx_{table}_{columns}_{unique?u:}" />
+      <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
+      <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
+    </HSQLCodeStyleSettings>
     <JSCodeStyleSettings version="0">
       <option name="USE_DOUBLE_QUOTES" value="false" />
       <option name="SPACES_WITHIN_OBJECT_LITERAL_BRACES" value="true" />
       <option name="SPACES_WITHIN_IMPORTS" value="true" />
     </JSCodeStyleSettings>
+    <MSSQLCodeStyleSettings version="2">
+      <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
+      <option name="QUERY_ALIGN_ELEMENTS" value="false" />
+      <option name="SET_ALIGN_EQUAL_SIGN" value="false" />
+      <option name="SELECT_ALIGN_AS" value="false" />
+      <option name="FROM_WRAP_JOIN_1" value="false" />
+      <option name="FROM_WRAP_JOIN_2" value="false" />
+      <option name="FROM_ONLY_JOIN_INDENT" value="1" />
+      <option name="TABLE_OPENING" value="1" />
+      <option name="TABLE_CONTENT" value="2" />
+      <option name="TABLE_CLOSING" value="3" />
+      <option name="TABLE_TYPES_ALIGN" value="false" />
+      <option name="TABLE_DEFAULTS_ALIGN" value="false" />
+      <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
+      <option name="TABLE_ALTER_INSTRUCTION_ALIGN" value="false" />
+      <option name="POST_OPT_WRAP_2" value="false" />
+      <option name="POST_OPT_ALIGN" value="false" />
+      <option name="IMP_DECLARE_ALIGN_TYPE" value="false" />
+      <option name="IMP_DECLARE_ALIGN_EQ" value="false" />
+      <option name="EXPR_CASE_END" value="1" />
+      <option name="INDEX_NAME_TEMPLATE" value="idx_{table}_{columns}_{unique?u:}" />
+      <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
+      <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
+    </MSSQLCodeStyleSettings>
     <MarkdownNavigatorCodeStyleSettings>
       <option name="RIGHT_MARGIN" value="72" />
     </MarkdownNavigatorCodeStyleSettings>
+    <MySQLCodeStyleSettings version="2">
+      <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
+      <option name="QUERY_ALIGN_ELEMENTS" value="false" />
+      <option name="INSERT_COLLAPSE_MULTI_ROW_VALUES" value="true" />
+      <option name="SET_ALIGN_EQUAL_SIGN" value="false" />
+      <option name="SELECT_ALIGN_AS" value="false" />
+      <option name="FROM_WRAP_JOIN_1" value="false" />
+      <option name="FROM_WRAP_JOIN_2" value="false" />
+      <option name="FROM_ONLY_JOIN_INDENT" value="1" />
+      <option name="TABLE_OPENING" value="1" />
+      <option name="TABLE_CONTENT" value="2" />
+      <option name="TABLE_CLOSING" value="3" />
+      <option name="TABLE_TYPES_ALIGN" value="false" />
+      <option name="TABLE_DEFAULTS_ALIGN" value="false" />
+      <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
+      <option name="TABLE_ALTER_INSTRUCTION_ALIGN" value="false" />
+      <option name="POST_OPT_WRAP_2" value="false" />
+      <option name="POST_OPT_ALIGN" value="false" />
+      <option name="EXPR_CASE_END" value="1" />
+      <option name="INDEX_NAME_TEMPLATE" value="idx_{table}_{columns}_{unique?u:}" />
+      <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
+      <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
+    </MySQLCodeStyleSettings>
+    <OracleCodeStyleSettings version="2">
+      <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
+      <option name="QUERY_ALIGN_ELEMENTS" value="false" />
+      <option name="SET_ALIGN_EQUAL_SIGN" value="false" />
+      <option name="SELECT_ALIGN_AS" value="false" />
+      <option name="FROM_WRAP_JOIN_1" value="false" />
+      <option name="FROM_WRAP_JOIN_2" value="false" />
+      <option name="FROM_ONLY_JOIN_INDENT" value="1" />
+      <option name="TABLE_OPENING" value="1" />
+      <option name="TABLE_CONTENT" value="2" />
+      <option name="TABLE_CLOSING" value="3" />
+      <option name="TABLE_TYPES_ALIGN" value="false" />
+      <option name="TABLE_DEFAULTS_ALIGN" value="false" />
+      <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
+      <option name="TABLE_ALTER_INSTRUCTION_ALIGN" value="false" />
+      <option name="POST_OPT_WRAP_2" value="false" />
+      <option name="POST_OPT_ALIGN" value="false" />
+      <option name="IMP_DECLARE_ALIGN_TYPE" value="false" />
+      <option name="IMP_DECLARE_ALIGN_EQ" value="false" />
+      <option name="EXPR_CASE_END" value="1" />
+      <option name="INDEX_NAME_TEMPLATE" value="idx_{table}_{columns}_{unique?u:}" />
+      <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
+      <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
+    </OracleCodeStyleSettings>
+    <PostgresCodeStyleSettings version="2">
+      <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
+      <option name="QUERY_ALIGN_ELEMENTS" value="false" />
+      <option name="INSERT_COLLAPSE_MULTI_ROW_VALUES" value="true" />
+      <option name="SET_ALIGN_EQUAL_SIGN" value="false" />
+      <option name="SELECT_ALIGN_AS" value="false" />
+      <option name="FROM_WRAP_JOIN_1" value="false" />
+      <option name="FROM_WRAP_JOIN_2" value="false" />
+      <option name="FROM_ONLY_JOIN_INDENT" value="1" />
+      <option name="TABLE_OPENING" value="1" />
+      <option name="TABLE_CONTENT" value="2" />
+      <option name="TABLE_CLOSING" value="3" />
+      <option name="TABLE_TYPES_ALIGN" value="false" />
+      <option name="TABLE_DEFAULTS_ALIGN" value="false" />
+      <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
+      <option name="TABLE_ALTER_INSTRUCTION_ALIGN" value="false" />
+      <option name="POST_OPT_WRAP_2" value="false" />
+      <option name="POST_OPT_ALIGN" value="false" />
+      <option name="IMP_DECLARE_ALIGN_TYPE" value="false" />
+      <option name="IMP_DECLARE_ALIGN_EQ" value="false" />
+      <option name="EXPR_CASE_END" value="1" />
+      <option name="INDEX_NAME_TEMPLATE" value="idx_{table}_{columns}_{unique?u:}" />
+      <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
+      <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
+    </PostgresCodeStyleSettings>
+    <SQLiteCodeStyleSettings version="2">
+      <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
+      <option name="QUERY_ALIGN_ELEMENTS" value="false" />
+      <option name="INSERT_COLLAPSE_MULTI_ROW_VALUES" value="true" />
+      <option name="SET_ALIGN_EQUAL_SIGN" value="false" />
+      <option name="SELECT_ALIGN_AS" value="false" />
+      <option name="FROM_WRAP_JOIN_1" value="false" />
+      <option name="FROM_WRAP_JOIN_2" value="false" />
+      <option name="FROM_ONLY_JOIN_INDENT" value="1" />
+      <option name="TABLE_OPENING" value="1" />
+      <option name="TABLE_CONTENT" value="2" />
+      <option name="TABLE_CLOSING" value="3" />
+      <option name="TABLE_TYPES_ALIGN" value="false" />
+      <option name="TABLE_DEFAULTS_ALIGN" value="false" />
+      <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
+      <option name="TABLE_ALTER_INSTRUCTION_ALIGN" value="false" />
+      <option name="POST_OPT_WRAP_2" value="false" />
+      <option name="POST_OPT_ALIGN" value="false" />
+      <option name="EXPR_CASE_END" value="1" />
+      <option name="INDEX_NAME_TEMPLATE" value="idx_{table}_{columns}_{unique?u:}" />
+      <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
+      <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
+    </SQLiteCodeStyleSettings>
     <ScalaCodeStyleSettings>
       <option name="alwaysUsedImports">
         <array>
           <option value="DateFormats.isoDateReads" />
         </array>
       </option>
+      <option name="USE_SCALADOC2_FORMATTING" value="true" />
+      <option name="MULTILINE_STRING_SUPPORT" value="-1" />
     </ScalaCodeStyleSettings>
     <SqlCodeStyleSettings version="2">
       <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
@@ -48,6 +265,30 @@
       <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
       <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
     </SqlCodeStyleSettings>
+    <SybaseCodeStyleSettings version="2">
+      <option name="QUERY_SECTION_1ST_WORD_ALIGN" value="2" />
+      <option name="QUERY_ALIGN_ELEMENTS" value="false" />
+      <option name="SET_ALIGN_EQUAL_SIGN" value="false" />
+      <option name="SELECT_ALIGN_AS" value="false" />
+      <option name="FROM_WRAP_JOIN_1" value="false" />
+      <option name="FROM_WRAP_JOIN_2" value="false" />
+      <option name="FROM_ONLY_JOIN_INDENT" value="1" />
+      <option name="TABLE_OPENING" value="1" />
+      <option name="TABLE_CONTENT" value="2" />
+      <option name="TABLE_CLOSING" value="3" />
+      <option name="TABLE_TYPES_ALIGN" value="false" />
+      <option name="TABLE_DEFAULTS_ALIGN" value="false" />
+      <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
+      <option name="TABLE_ALTER_INSTRUCTION_ALIGN" value="false" />
+      <option name="POST_OPT_WRAP_2" value="false" />
+      <option name="POST_OPT_ALIGN" value="false" />
+      <option name="IMP_DECLARE_ALIGN_TYPE" value="false" />
+      <option name="IMP_DECLARE_ALIGN_EQ" value="false" />
+      <option name="EXPR_CASE_END" value="1" />
+      <option name="INDEX_NAME_TEMPLATE" value="idx_{table}_{columns}_{unique?u:}" />
+      <option name="PRIMARY_KEY_NAME_TEMPLATE" value="pk_{table}" />
+      <option name="FOREIGN_KEY_NAME_TEMPLATE" value="fk_{table}_{ref_table}_{ref_columns}" />
+    </SybaseCodeStyleSettings>
     <XML>
       <option name="XML_LEGACY_SETTINGS_IMPORTED" value="true" />
     </XML>
@@ -55,6 +296,26 @@
       <indentOptions>
         <option name="INDENT_SIZE" value="2" />
         <option name="TAB_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
+    <codeStyleSettings language="DB2">
+      <indentOptions>
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
+    <codeStyleSettings language="Derby">
+      <indentOptions>
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
+    <codeStyleSettings language="H2">
+      <indentOptions>
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
+    <codeStyleSettings language="HSQLDB">
+      <indentOptions>
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
       </indentOptions>
     </codeStyleSettings>
     <codeStyleSettings language="JAVA">
@@ -76,13 +337,43 @@
         <option name="TAB_SIZE" value="2" />
       </indentOptions>
     </codeStyleSettings>
+    <codeStyleSettings language="MySQL">
+      <indentOptions>
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
+    <codeStyleSettings language="Oracle">
+      <indentOptions>
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
+    <codeStyleSettings language="PostgreSQL">
+      <indentOptions>
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
     <codeStyleSettings language="SQL">
+      <indentOptions>
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
+    <codeStyleSettings language="SQLite">
       <indentOptions>
         <option name="CONTINUATION_INDENT_SIZE" value="2" />
       </indentOptions>
     </codeStyleSettings>
     <codeStyleSettings language="Scala">
       <option name="ALIGN_MULTILINE_PARAMETERS" value="false" />
+    </codeStyleSettings>
+    <codeStyleSettings language="Sybase">
+      <indentOptions>
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
+    <codeStyleSettings language="TSQL">
+      <indentOptions>
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+      </indentOptions>
     </codeStyleSettings>
   </code_scheme>
 </component>
