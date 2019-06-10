@@ -1,4 +1,18 @@
-// don't panic about weird properties, this is for SVG styling
+// don't panic about weird properties, this is for D3 styling, mostly within SVGs
+
+.d3-chartable {
+  cursor: pointer;
+}
+
+.d3-chart-container {
+  max-height: 3000px;
+  overflow-y: hidden;
+  .transition(max-height 0.5s ease-in-out);
+}
+
+.d3-chart-container.collapsed {
+  max-height: 0;
+}
 
 .tile {
   shape-rendering: crispEdges;
@@ -15,4 +29,12 @@
   fill: none;
   stroke: #000;
   shape-rendering: crispEdges;
+}
+
+path.domain {
+  stroke: none;
+}
+
+.y .tick line {
+  stroke: #ddd;
 }
