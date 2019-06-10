@@ -10,7 +10,10 @@
 @row(metric: Metric) = {
     <tr>
       <th class="use-tooltip" title="@metric.description.getOrElse(metric.name)">
-        @metric.name
+        @metric.urlPath match {
+          case Some(path) => { <a class="d3-chartable" data-src="@path?start=@form("start").value&end=@form("end").value">@metric.name</a> }
+          case None => { @metric.name }
+        }
       </th>
       
       @teams.map { case team =>
@@ -42,6 +45,11 @@
   
       @b3.submit('class -> "btn btn-primary") { Update report }
     }
+  </div>
+  
+  <div id="d3-chart-container" class="d3-chart-container collapsed">
+    <i class="d3-hider pull-right far fa-2x fa-times text-muted" title="Hide chart"></i>
+    <div id="d3-chart"></div>
   </div>
   
   <table class="table table-default">

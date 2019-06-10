@@ -21,11 +21,15 @@ class AppModule(environment: Environment, configuration: Configuration) extends 
 
   def bindHealthChecks(): Unit = {
     val healthchecks = ScalaMultibinder.newSetBinder[ServiceHealthcheckProvider](binder)
-    healthchecks.addBinding.to[UptimeHealthCheck]
-    healthchecks.addBinding.to[EncryptedObjectStorageHealthCheck]
-    healthchecks.addBinding.to[OutgoingEmailQueueHealthCheck]
-    healthchecks.addBinding.to[OutgoingEmailDelayHealthCheck]
-    healthchecks.addBinding.to[VirusScanServiceHealthCheck]
+  
+    if (!(configuration.getOptional[Boolean]("healthchecks.disabled")).getOrElse(false)) {
+      // we don't need to bind all these for tests
+      healthchecks.addBinding.to[UptimeHealthCheck]
+      healthchecks.addBinding.to[EncryptedObjectStorageHealthCheck]
+      healthchecks.addBinding.to[OutgoingEmailQueueHealthCheck]
+      healthchecks.addBinding.to[OutgoingEmailDelayHealthCheck]
+      healthchecks.addBinding.to[VirusScanServiceHealthCheck]
+    }
 
     healthchecks.addBinding.toInstance(new ThreadPoolHealthCheck("default"))
     configuration.get[Configuration]("threads").subKeys.toSeq.foreach { name =>

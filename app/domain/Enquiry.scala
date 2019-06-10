@@ -20,7 +20,7 @@ case class Enquiry(
   state: IssueState,
   lastUpdated: OffsetDateTime,
   created: OffsetDateTime
-) extends Issue
+) extends Issue with Created
 
 case class EnquirySave(
   universityID: UniversityID,
@@ -55,7 +55,7 @@ case class EnquiryNote(
   teamMember: Member,
   created: OffsetDateTime = JavaTime.offsetDateTime,
   lastUpdated: OffsetDateTime = JavaTime.offsetDateTime,
-)
+) extends Created
 
 object EnquiryNote {
   // oldest first

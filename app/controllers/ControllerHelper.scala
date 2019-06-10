@@ -83,4 +83,6 @@ object DateRange {
     )(DateRange.apply)(DateRange.unapply)
       verifying(validationConstraint)
   )
+  
+  def apply(start: OffsetDateTime, end: OffsetDateTime): DateRange = DateRange(start.toLocalDate, end.toLocalDate)
 }

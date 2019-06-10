@@ -3,11 +3,17 @@ package controllers.reports
 import java.time.LocalDate
 
 import controllers.refiners.ReportingAdminActionRefiner
-import controllers.{BaseController, DateRange}
+import controllers.{API, BaseController, DateRange}
+import domain.Team
+import helpers.Json.JsonClientError
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
-import play.api.mvc.{Action, AnyContent}
-import services.{PermissionService, ReportingService}
+import play.api.libs.json.{JsValue, Json}
+import play.api.mvc.{Action, AnyContent, Result}
+import services.DailyMetrics.writesDailyMetrics
+import services.{DailyMetrics, PermissionService, ReportingService}
+import warwick.core.helpers.ServiceResults.ServiceResult
+import warwick.core.timing.TimingContext
 import warwick.sso.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -56,4 +62,82 @@ class ReportsController @Inject()(
       dateRange => renderHtmlReport(dateRange, form.fill(dateRange))
     )
   }
+
+  type MetricsGenerator = (LocalDate, LocalDate, Option[Team]) => Future[ServiceResult[Seq[DailyMetrics]]]
+  type MetricsForTeamGenerator = (LocalDate, LocalDate, Team) => Future[ServiceResult[Seq[DailyMetrics]]]
+  
+  private def dailyReportOptTeam(
+    reporter: MetricsGenerator,
+    start: Option[LocalDate],
+    end: Option[LocalDate]
+  )(implicit req: AuthenticatedRequest[AnyContent], t: TimingContext): Future[Result] = 
+    Future.successful(permissions.teams(currentUser().usercode))
+      .successFlatMap(teams => {
+        Future.sequence(teams.map(team => {
+          reporter(start.getOrElse(LocalDate.now.minusDays(7)), end.getOrElse(LocalDate.now), Some(team))
+            .flatMap(_.fold(
+              e => Future.successful(Json.toJson(JsonClientError(status = "bad_request", errors = e.map(_.message)))),
+              dms => Future.successful(Json.obj(team.name -> Json.toJson(dms)))
+            ))
+        })).map(metrics => Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(metrics)))))
+      })
+
+  private def dailyReport(
+    reporter: MetricsForTeamGenerator,
+    start: Option[LocalDate],
+    end: Option[LocalDate]
+  )(implicit req: AuthenticatedRequest[AnyContent], t: TimingContext): Future[Result] =
+    Future.successful(permissions.teams(currentUser().usercode))
+      .successFlatMap(teams => {
+        Future.sequence(teams.map(team => {
+          reporter(start.getOrElse(LocalDate.now.minusDays(7)), end.getOrElse(LocalDate.now), team)
+            .flatMap(_.fold(
+              e => Future.successful(Json.toJson(JsonClientError(status = "bad_request", errors = e.map(_.message)))),
+              dms => Future.successful(Json.obj(team.name -> Json.toJson(dms)))
+            ))
+        })).map(metrics => Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(metrics)))))
+      })
+  
+  def openedEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.openedEnquiriesByDay, start, end)
+  }}
+  def closedEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.closedEnquiriesByDay, start, end)
+  }}
+  def openedCasesFromEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.openedCasesFromEnquiriesByDay, start, end)
+  }}
+  def closedCasesFromEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.closedCasesFromEnquiriesByDay, start, end)
+  }}
+  def openedCasesWithoutEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.openedCasesWithoutEnquiriesByDay, start, end)
+  }}
+  def closedCasesWithoutEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.closedCasesWithoutEnquiriesByDay, start, end)
+  }}
+  def firstEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReport(reporting.firstEnquiriesByDay, start, end)
+  }}
+  def casesWithAppointmentsFromEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.casesWithAppointmentsFromEnquiriesByDay, start, end)
+  }}
+  def casesWithAppointmentsWithoutEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.casesWithAppointmentsWithoutEnquiriesByDay, start, end)
+  }}
+  def provisionalAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.provisionalAppointmentsByDay, start, end)
+  }}
+  def acceptedAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.acceptedAppointmentsByDay, start, end)
+  }}
+  def attendedAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.attendedAppointmentsByDay, start, end)
+  }}
+  def cancelledAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyReportOptTeam(reporting.cancelledAppointmentsByDay, start, end)
+  }}
+
+
+
 }

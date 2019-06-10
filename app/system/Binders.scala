@@ -1,6 +1,6 @@
 package system
 
-import java.time.{Duration, OffsetDateTime, ZoneId}
+import java.time.{Duration, LocalDate, OffsetDateTime, ZoneId}
 
 import play.api.mvc.{PathBindable, QueryStringBindable}
 import warwick.core.helpers.JavaTime
@@ -17,6 +17,12 @@ object Binders {
     QueryStringBindable.bindableString.transform(
       UniversityID.apply,
       _.string
+    )
+
+  implicit val localDateQueryStringBindable: QueryStringBindable[LocalDate] =
+    QueryStringBindable.bindableString.transform(
+      LocalDate.parse(_, JavaTime.localDateFormat),
+      _.format(JavaTime.localDateFormat)
     )
 
   implicit val offsetDateTimeQueryStringBindable: QueryStringBindable[OffsetDateTime] =

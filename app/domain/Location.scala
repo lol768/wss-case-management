@@ -12,7 +12,7 @@ case class Building(
   wai2GoID: Int,
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
-)
+) extends Created
 
 object Building {
   def tupled = (apply _).tupled
@@ -34,7 +34,7 @@ case class Room(
   o365Usercode: Option[Usercode],
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
-)
+) extends Created
 
 object Room {
   def tupled = (apply _).tupled
