@@ -62,16 +62,19 @@ class ReportsController @Inject()(
       dateRange => renderHtmlReport(dateRange, form.fill(dateRange))
     )
   }
+
+  type MetricsGenerator = (LocalDate, LocalDate, Option[Team]) => Future[ServiceResult[Seq[DailyMetrics]]]
+  type MetricsForTeamGenerator = (LocalDate, LocalDate, Team) => Future[ServiceResult[Seq[DailyMetrics]]]
   
   private def dailyReportOptTeam(
-    reporter: (LocalDate, LocalDate, Option[Team]) => Future[ServiceResult[Seq[DailyMetrics]]],
-    start: LocalDate,
-    end: LocalDate
+    reporter: MetricsGenerator,
+    start: Option[LocalDate],
+    end: Option[LocalDate]
   )(implicit req: AuthenticatedRequest[AnyContent], t: TimingContext): Future[Result] = 
     Future.successful(permissions.teams(currentUser().usercode))
       .successFlatMap(teams => {
         Future.sequence(teams.map(team => {
-          reporter(start, end, Some(team))
+          reporter(start.getOrElse(LocalDate.now.minusDays(7)), end.getOrElse(LocalDate.now), Some(team))
             .flatMap(_.fold(
               e => Future.successful(Json.toJson(JsonClientError(status = "bad_request", errors = e.map(_.message)))),
               dms => Future.successful(Json.obj(team.name -> Json.toJson(dms)))
@@ -80,14 +83,14 @@ class ReportsController @Inject()(
       })
 
   private def dailyReport(
-    reporter: (LocalDate, LocalDate, Team) => Future[ServiceResult[Seq[DailyMetrics]]],
-    start: LocalDate,
-    end: LocalDate
+    reporter: MetricsForTeamGenerator,
+    start: Option[LocalDate],
+    end: Option[LocalDate]
   )(implicit req: AuthenticatedRequest[AnyContent], t: TimingContext): Future[Result] =
     Future.successful(permissions.teams(currentUser().usercode))
       .successFlatMap(teams => {
         Future.sequence(teams.map(team => {
-          reporter(start, end, team)
+          reporter(start.getOrElse(LocalDate.now.minusDays(7)), end.getOrElse(LocalDate.now), team)
             .flatMap(_.fold(
               e => Future.successful(Json.toJson(JsonClientError(status = "bad_request", errors = e.map(_.message)))),
               dms => Future.successful(Json.obj(team.name -> Json.toJson(dms)))
@@ -95,43 +98,43 @@ class ReportsController @Inject()(
         })).map(metrics => Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(metrics)))))
       })
   
-  def openedEnquiriesByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def openedEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.openedEnquiriesByDay, start, end)
   }}
-  def closedEnquiriesByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def closedEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.closedEnquiriesByDay, start, end)
   }}
-  def openedCasesFromEnquiriesByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def openedCasesFromEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.openedCasesFromEnquiriesByDay, start, end)
   }}
-  def closedCasesFromEnquiriesByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def closedCasesFromEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.closedCasesFromEnquiriesByDay, start, end)
   }}
-  def openedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def openedCasesWithoutEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.openedCasesWithoutEnquiriesByDay, start, end)
   }}
-  def closedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def closedCasesWithoutEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.closedCasesWithoutEnquiriesByDay, start, end)
   }}
-  def firstEnquiriesByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def firstEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReport(reporting.firstEnquiriesByDay, start, end)
   }}
-  def casesWithAppointmentsFromEnquiriesByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def casesWithAppointmentsFromEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.casesWithAppointmentsFromEnquiriesByDay, start, end)
   }}
-  def casesWithAppointmentsWithoutEnquiriesByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def casesWithAppointmentsWithoutEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.casesWithAppointmentsWithoutEnquiriesByDay, start, end)
   }}
-  def provisionalAppointmentsByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def provisionalAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.provisionalAppointmentsByDay, start, end)
   }}
-  def acceptedAppointmentsByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def acceptedAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.acceptedAppointmentsByDay, start, end)
   }}
-  def attendedAppointmentsByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def attendedAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.attendedAppointmentsByDay, start, end)
   }}
-  def cancelledAppointmentsByDay(start: LocalDate, end: LocalDate): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+  def cancelledAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReportOptTeam(reporting.cancelledAppointmentsByDay, start, end)
   }}
 

@@ -177,19 +177,19 @@ GET         /admin/locations/room/:id               @controllers.locations.Locat
 POST        /admin/locations/room/:id               @controllers.locations.LocationsController.editRoom(id: java.util.UUID)
 GET         /admin/reports                                         @controllers.reports.ReportsController.reportForm
 POST        /admin/reports                                         @controllers.reports.ReportsController.report
-GET         /admin/reports/opened-enquiries                        @controllers.reports.ReportsController.openedEnquiriesByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/closed-enquiries                        @controllers.reports.ReportsController.closedEnquiriesByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/opened-cases-with-enq                   @controllers.reports.ReportsController.openedCasesFromEnquiriesByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/closed-cases-with-enq                   @controllers.reports.ReportsController.closedCasesFromEnquiriesByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/opened-cases-no-enq                     @controllers.reports.ReportsController.openedCasesWithoutEnquiriesByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/closed-cases-no-enq                     @controllers.reports.ReportsController.closedCasesWithoutEnquiriesByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/first-enquiries                         @controllers.reports.ReportsController.firstEnquiriesByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/cases-with-appts-with-enq               @controllers.reports.ReportsController.casesWithAppointmentsFromEnquiriesByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/cases-with-appts-no-enq                 @controllers.reports.ReportsController.casesWithAppointmentsWithoutEnquiriesByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/provisional-appts                       @controllers.reports.ReportsController.provisionalAppointmentsByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/accepted-appts                          @controllers.reports.ReportsController.acceptedAppointmentsByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/attended-appts                          @controllers.reports.ReportsController.attendedAppointmentsByDay(start: java.time.LocalDate, end: java.time.LocalDate)
-GET         /admin/reports/cancelled-appts                         @controllers.reports.ReportsController.cancelledAppointmentsByDay(start: java.time.LocalDate, end: java.time.LocalDate)
+GET         /admin/reports/opened-enquiries                        @controllers.reports.ReportsController.openedEnquiriesByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/closed-enquiries                        @controllers.reports.ReportsController.closedEnquiriesByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/opened-cases-with-enq                   @controllers.reports.ReportsController.openedCasesFromEnquiriesByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/closed-cases-with-enq                   @controllers.reports.ReportsController.closedCasesFromEnquiriesByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/opened-cases-no-enq                     @controllers.reports.ReportsController.openedCasesWithoutEnquiriesByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/closed-cases-no-enq                     @controllers.reports.ReportsController.closedCasesWithoutEnquiriesByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/first-enquiries                         @controllers.reports.ReportsController.firstEnquiriesByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/cases-with-appts-with-enq               @controllers.reports.ReportsController.casesWithAppointmentsFromEnquiriesByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/cases-with-appts-no-enq                 @controllers.reports.ReportsController.casesWithAppointmentsWithoutEnquiriesByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/provisional-appts                       @controllers.reports.ReportsController.provisionalAppointmentsByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/accepted-appts                          @controllers.reports.ReportsController.acceptedAppointmentsByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/attended-appts                          @controllers.reports.ReportsController.attendedAppointmentsByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
+GET         /admin/reports/cancelled-appts                         @controllers.reports.ReportsController.cancelledAppointmentsByDay(start: Option[java.time.LocalDate], end: Option[java.time.LocalDate])
 
 ## Sysadmins ##
 

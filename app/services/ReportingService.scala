@@ -13,6 +13,7 @@ import domain.dao.EnquiryDao.StoredEnquiry
 import domain.dao.{AppointmentDao, CaseDao, DaoRunner, EnquiryDao}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{Writes, Json => PlayJson}
+import play.api.mvc.Call
 import warwick.core.Logging
 import warwick.core.helpers.ServiceResults
 import warwick.core.helpers.ServiceResults.ServiceResult
@@ -74,10 +75,12 @@ class ReportingServiceImpl @Inject() (
 
   type ReportGenerator = (OffsetDateTime, OffsetDateTime, Option[Team]) => Future[Int]
   
+  private val rc = controllers.reports.routes.ReportsController
+  
   private def collectMetric(
     name: String,
     description: String,
-    urlPath: String,
+    routeForDetails: Call,
     teams: Seq[Team],
     start: OffsetDateTime,
     end: OffsetDateTime,
@@ -89,7 +92,7 @@ class ReportingServiceImpl @Inject() (
           .map(value => TeamMetrics(team, value))
       }
     )
-    .map(teamMetric => Metric(name, Some(description), Some(urlPath), teamMetric))
+    .map(teamMetric => Metric(name, Some(description), Some(routeForDetails.toString), teamMetric))
     .map(metric =>
       ServiceResults.success(metric)
     ).recover { case e =>
@@ -98,19 +101,19 @@ class ReportingServiceImpl @Inject() (
     
   def metrics(start: OffsetDateTime, end: OffsetDateTime, teams: Seq[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[Metric]]] =
     ServiceResults.futureSequence(Seq(
-      collectMetric("First-time enquirers", "Unique university IDs making a first recorded enquiry in the period", "/admin/reports/first-enquiries", teams, start, end, countFirstEnquiries),
-      collectMetric("Enquiries opened", "Enquiries created in the period (and still open)", "/admin/reports/opened-enquiries", teams, start, end, countOpenedEnquiries),
-      collectMetric("Enquiries closed", "Enquiries closed in the period", "/admin/reports/closed-enquiries", teams, start, end, countClosedEnquiries),
-      collectMetric("Cases opened from enquiries", "Cases created in the period (and still open), which started as enquiries", "/admin/reports/opened-cases-with-enq", teams, start, end, countOpenedCasesFromEnquiries),
-      collectMetric("Cases closed from enquiries", "Cases closed in the period, which started as enquiries", "/admin/reports/closed-cases-with-enq", teams, start, end, countClosedCasesFromEnquiries),
-      collectMetric("Cases opened without enquiries", "Cases created in the period (and still open), which did not start as enquiries", "/admin/reports/opened-cases-no-enq", teams, start, end, countOpenedCasesWithoutEnquiries),
-      collectMetric("Cases closed without enquiries", "Cases closed in the period, which did not start as enquiries", "/admin/reports/closed-cases-no-enq", teams, start, end, countClosedCasesWithoutEnquiries),
-      collectMetric("Cases from enquiries, with appointments", "Cases created in the period, which started as enquiries, and have resulted in an appointment which is either pending or has taken place", "/admin/reports/cases-with-appts-with-enq", teams, start, end, countCasesWithAppointmentsFromEnquiries),
-      collectMetric("Cases without enquiries, with appointments", "Cases created in the period, which did not start as enquiries, and have resulted in an appointment which is either pending or has taken place", "/admin/reports/cases-with-appts-no-enq", teams, start, end, countCasesWithAppointmentsWithoutEnquiries),
-      collectMetric("Provisional appointments", "Appointments provisionally scheduled to occur during the period", "/admin/reports/provisional-appts", teams, start, end, countProvisionalAppointments),
-      collectMetric("Accepted appointments", "Appointments scheduled to occur during the period, which have been accepted", "/admin/reports/accepted-appts", teams, start, end, countAcceptedAppointments),
-      collectMetric("Attended appointments", "Appointments attended during the period", "/admin/reports/attended-appts", teams, start, end, countAttendedAppointments),
-      collectMetric("Cancelled appointments", "Appointments scheduled to occur during the period, but subsequently cancelled", "/admin/reports/cancelled-appts", teams, start, end, countCancelledAppointments)
+      collectMetric("First-time enquirers", "Unique university IDs making a first recorded enquiry in the period", rc.firstEnquiriesByDay(None, None), teams, start, end, countFirstEnquiries),
+      collectMetric("Enquiries opened", "Enquiries created in the period (and still open)", rc.openedEnquiriesByDay(None, None), teams, start, end, countOpenedEnquiries),
+      collectMetric("Enquiries closed", "Enquiries closed in the period", rc.closedEnquiriesByDay(None, None), teams, start, end, countClosedEnquiries),
+      collectMetric("Cases opened from enquiries", "Cases created in the period (and still open), which started as enquiries", rc.openedCasesFromEnquiriesByDay(None, None), teams, start, end, countOpenedCasesFromEnquiries),
+      collectMetric("Cases closed from enquiries", "Cases closed in the period, which started as enquiries", rc.closedCasesFromEnquiriesByDay(None, None), teams, start, end, countClosedCasesFromEnquiries),
+      collectMetric("Cases opened without enquiries", "Cases created in the period (and still open), which did not start as enquiries", rc.openedCasesWithoutEnquiriesByDay(None, None), teams, start, end, countOpenedCasesWithoutEnquiries),
+      collectMetric("Cases closed without enquiries", "Cases closed in the period, which did not start as enquiries", rc.closedCasesWithoutEnquiriesByDay(None, None), teams, start, end, countClosedCasesWithoutEnquiries),
+      collectMetric("Cases from enquiries, with appointments", "Cases created in the period, which started as enquiries, and have resulted in an appointment which is either pending or has taken place", rc.casesWithAppointmentsFromEnquiriesByDay(None, None), teams, start, end, countCasesWithAppointmentsFromEnquiries),
+      collectMetric("Cases without enquiries, with appointments", "Cases created in the period, which did not start as enquiries, and have resulted in an appointment which is either pending or has taken place", rc.casesWithAppointmentsWithoutEnquiriesByDay(None, None), teams, start, end, countCasesWithAppointmentsWithoutEnquiries),
+      collectMetric("Provisional appointments", "Appointments provisionally scheduled to occur during the period", rc.provisionalAppointmentsByDay(None, None), teams, start, end, countProvisionalAppointments),
+      collectMetric("Accepted appointments", "Appointments scheduled to occur during the period, which have been accepted", rc.acceptedAppointmentsByDay(None, None), teams, start, end, countAcceptedAppointments),
+      collectMetric("Attended appointments", "Appointments attended during the period", rc.attendedAppointmentsByDay(None, None), teams, start, end, countAttendedAppointments),
+      collectMetric("Cancelled appointments", "Appointments scheduled to occur during the period, but subsequently cancelled", rc.cancelledAppointmentsByDay(None, None), teams, start, end, countCancelledAppointments)
     ))
 
   implicit class TeamableTransformers[T <: Teamable](teamableFuture: Future[Seq[T]]) {
