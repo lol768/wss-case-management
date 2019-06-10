@@ -10,6 +10,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent, Result}
+import services.DailyMetrics.writesDailyMetrics
 import services.{DailyMetrics, PermissionService, ReportingService}
 import warwick.core.helpers.ServiceResults.ServiceResult
 import warwick.core.timing.TimingContext
@@ -24,7 +25,6 @@ class ReportsController @Inject()(
   reportingAdminActionRefiner: ReportingAdminActionRefiner,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
-  import DailyMetrics.writesDailyMetrics
   import reportingAdminActionRefiner._
 
   private def defaultDateRange = DateRange(
