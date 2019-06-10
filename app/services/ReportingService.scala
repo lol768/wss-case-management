@@ -157,7 +157,7 @@ class ReportingServiceImpl @Inject() (
     }
   }
 
-  implicit class DailyCreatedTransformers[T <: Created[T]](timestampedFuture: Future[Seq[T]]) {
+  implicit class DailyCreatedTransformers[T <: Created](timestampedFuture: Future[Seq[T]]) {
     def createdByDay(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[(LocalDate, Seq[T])]] = {
 
       val startDay = start.toLocalDate

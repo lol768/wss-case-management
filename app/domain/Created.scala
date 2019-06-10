@@ -2,6 +2,6 @@ package domain
 
 import java.time.OffsetDateTime
 
-trait Created[A <: Created[A]] {
+trait Created {
   def created: OffsetDateTime
 }

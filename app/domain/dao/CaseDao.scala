@@ -336,7 +336,7 @@ object CaseDao {
     cause: CaseCause,
     dsaApplication: Option[UUID],
     fields: StoredCaseFields,
-  ) extends Versioned[StoredCase] with Created[StoredCase] with Teamable {
+  ) extends Versioned[StoredCase] with Created with Teamable {
     def asCase: Case =
       Case(
         id = id,
@@ -434,7 +434,7 @@ object CaseDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[StoredCase] with Created[StoredCaseVersion]
+  ) extends StoredVersion[StoredCase] with Created
 
   trait CommonProperties { self: Table[_] =>
     def key = column[IssueKey]("case_key")
@@ -775,7 +775,7 @@ object CaseDao {
     appointmentId: Option[UUID],
     created: OffsetDateTime,
     version: OffsetDateTime
-  ) extends Versioned[StoredCaseNote] with Created[StoredCaseNote] {
+  ) extends Versioned[StoredCaseNote] with Created {
     def asCaseNote(member: Member) = CaseNote(
       id,
       noteType,
@@ -815,7 +815,7 @@ object CaseDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[StoredCaseNote] with Created[StoredCaseNoteVersion]
+  ) extends StoredVersion[StoredCaseNote] with Created
 
   trait CommonNoteProperties { self: Table[_] =>
     def caseId = column[UUID]("case_id")
@@ -871,7 +871,7 @@ object CaseDao {
     caseNote: UUID,
     created: OffsetDateTime,
     version: OffsetDateTime
-  ) extends Versioned[StoredCaseDocument] with Created[StoredCaseDocument] {
+  ) extends Versioned[StoredCaseDocument] with Created {
     def asCaseDocument(file: UploadedFile, note: CaseNote, member: Member) = CaseDocument(
       id,
       documentType,
@@ -912,7 +912,7 @@ object CaseDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[StoredCaseDocument] with Created[StoredCaseDocumentVersion]
+  ) extends StoredVersion[StoredCaseDocument] with Created
 
   trait CommonDocumentProperties { self: Table[_] =>
     def caseId = column[UUID]("case_id")

@@ -67,7 +67,7 @@ object LocationDao {
     wai2GoID: Int,
     created: OffsetDateTime,
     version: OffsetDateTime,
-  ) extends Versioned[StoredBuilding] with Created[StoredBuilding] {
+  ) extends Versioned[StoredBuilding] with Created {
     def asBuilding: Building = Building(id, name, wai2GoID, created, version)
 
     override def atVersion(at: OffsetDateTime): StoredBuilding = copy(version = at)
@@ -95,7 +95,7 @@ object LocationDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode],
-  ) extends StoredVersion[StoredBuilding] with Created[StoredBuildingVersion]
+  ) extends StoredVersion[StoredBuilding] with Created
 
   trait CommonBuildingProperties { self: Table[_] =>
     def name = column[String]("name")
@@ -145,7 +145,7 @@ object LocationDao {
     o365Usercode: Option[Usercode],
     created: OffsetDateTime,
     version: OffsetDateTime,
-  ) extends Versioned[StoredRoom] with Created[StoredRoom] {
+  ) extends Versioned[StoredRoom] with Created {
     def asRoom(building: Building): Room = Room(
       id,
       building,
@@ -188,7 +188,7 @@ object LocationDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode],
-  ) extends StoredVersion[StoredRoom] with Created[StoredRoomVersion]
+  ) extends StoredVersion[StoredRoom] with Created
 
   trait CommonRoomProperties { self: Table[_] =>
     def buildingID = column[UUID]("building_id")

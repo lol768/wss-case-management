@@ -11,7 +11,7 @@
     <tr>
       <th class="use-tooltip" title="@metric.description.getOrElse(metric.name)">
         @metric.urlPath match {
-          case Some(path) => { <a class="d3-chartable" data-src="@path/@form("start").value.getOrElse("-")/@form("end").value.getOrElse("-")">@metric.name</a> }
+          case Some(path) => { <a class="d3-chartable" data-src="@path?start=@form("start").value&end=@form("end").value">@metric.name</a> }
           case None => { @metric.name }
         }
       </th>

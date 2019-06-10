@@ -97,14 +97,14 @@ class EnquiryDaoImpl @Inject() (
         q.query.filter(_.nonEmpty).map { queryStr =>
           (
             e.searchableKey @+
-              e.searchableSubject @+
-              m.map(_.searchableText).orEmptyTsVector @+
-              client.searchableUniversityID @+
-              client.searchableFullName @+
-              f.map(_.searchableFileName).orEmptyTsVector @+
-              tm.map(_.searchableUsercode).orEmptyTsVector @+
-              tm.map(_.searchableFullName).orEmptyTsVector
-            ).? @@ prefixTsQuery(queryStr.bind)
+            e.searchableSubject @+
+            m.map(_.searchableText).orEmptyTsVector @+
+            client.searchableUniversityID @+
+            client.searchableFullName @+
+            f.map(_.searchableFileName).orEmptyTsVector @+
+            tm.map(_.searchableUsercode).orEmptyTsVector @+
+            tm.map(_.searchableFullName).orEmptyTsVector
+          ).? @@ prefixTsQuery(queryStr.bind)
         },
         q.createdAfter.map { d => e.created.? >= d.atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
         q.createdBefore.map { d => e.created.? <= d.plusDays(1).atStartOfDay.atZone(JavaTime.timeZone).toOffsetDateTime },
@@ -215,7 +215,7 @@ object EnquiryDao {
     state: IssueState,
     version: OffsetDateTime = JavaTime.offsetDateTime,
     created: OffsetDateTime = JavaTime.offsetDateTime,
-  ) extends Versioned[StoredEnquiry] with Created[StoredEnquiry] with Teamable {
+  ) extends Versioned[StoredEnquiry] with Created with Teamable {
     override def atVersion(at: OffsetDateTime): StoredEnquiry = copy(version = at)
 
     override def storedVersion[B <: StoredVersion[StoredEnquiry]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
@@ -257,7 +257,7 @@ object EnquiryDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[StoredEnquiry] with Created[StoredEnquiry]
+  ) extends StoredVersion[StoredEnquiry] with Created
 
   sealed trait CommonEnquiryProperties {
     self: Table[_] =>
@@ -368,7 +368,7 @@ object EnquiryDao {
     teamMember: Usercode,
     created: OffsetDateTime,
     version: OffsetDateTime
-  ) extends Versioned[StoredEnquiryNote] with Created[StoredEnquiryNote] {
+  ) extends Versioned[StoredEnquiryNote] with Created {
     def asEnquiryNote(member: Member) = EnquiryNote(
       id,
       noteType,
@@ -406,7 +406,7 @@ object EnquiryDao {
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
     auditUser: Option[Usercode]
-  ) extends StoredVersion[StoredEnquiryNote] with Created[StoredEnquiryNote]
+  ) extends StoredVersion[StoredEnquiryNote] with Created
 
   trait CommonNoteProperties { self: Table[_] =>
     def enquiryID = column[UUID]("enquiry_id")

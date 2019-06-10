@@ -19,8 +19,8 @@ object Binders {
       _.string
     )
 
-  implicit val localDatePathBindable: PathBindable[LocalDate] =
-    PathBindable.bindableString.transform(
+  implicit val localDateQueryStringBindable: QueryStringBindable[LocalDate] =
+    QueryStringBindable.bindableString.transform(
       LocalDate.parse(_, JavaTime.localDateFormat),
       _.format(JavaTime.localDateFormat)
     )
