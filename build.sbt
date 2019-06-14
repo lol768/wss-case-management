@@ -90,6 +90,8 @@ val appDeps = Seq(
   "org.apache.jclouds.api" % "filesystem" % "2.1.1",
 
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
+  
+  "com.github.tototoshi" %% "scala-csv" % "1.3.6",
 
   "org.apache.tika" % "tika-core" % "1.20",
   "org.apache.tika" % "tika-parsers" % "1.20",

@@ -22,7 +22,7 @@ import warwick.core.timing.TimingContext
 import scala.concurrent.{ExecutionContext, Future}
 
 case class TeamMetrics (team: Team, value: Int)
-case class Metric (name: String, description: Option[String], urlPath: Option[String], teamMetrics: Seq[TeamMetrics])
+case class Metric (name: String, description: Option[String], chartPath: Option[String], csvPath: Option[String], teamMetrics: Seq[TeamMetrics])
 case class DailyMetrics (day: LocalDate, value: Int)
 object DailyMetrics {
   implicit val writesDailyMetrics: Writes[DailyMetrics] = PlayJson.writes[DailyMetrics]
@@ -35,32 +35,32 @@ trait ReportingService {
 
   def countOpenedEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countClosedEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
-  def openedEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
-  def closedEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def openedEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def closedEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
 
   def countOpenedCasesFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countClosedCasesFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
-  def openedCasesFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
-  def closedCasesFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def openedCasesFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def closedCasesFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
 
   def countOpenedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countClosedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
-  def openedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
-  def closedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def openedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def closedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
   
   def countCasesWithAppointmentsFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countCasesWithAppointmentsWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
-  def casesWithAppointmentsFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
-  def casesWithAppointmentsWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def casesWithAppointmentsFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def casesWithAppointmentsWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
   
   def countProvisionalAppointments(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countAcceptedAppointments(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countAttendedAppointments(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countCancelledAppointments(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
-  def provisionalAppointmentsByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
-  def acceptedAppointmentsByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
-  def attendedAppointmentsByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
-  def cancelledAppointmentsByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def provisionalAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def acceptedAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def attendedAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
+  def cancelledAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
   
   def metrics(start: OffsetDateTime, end: OffsetDateTime, teams: Seq[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[Metric]]]
 }
@@ -80,7 +80,8 @@ class ReportingServiceImpl @Inject() (
   private def collectMetric(
     name: String,
     description: String,
-    routeForDetails: Call,
+    routeForChart: Call,
+    routeForCsv: Call,
     teams: Seq[Team],
     start: OffsetDateTime,
     end: OffsetDateTime,
@@ -92,7 +93,7 @@ class ReportingServiceImpl @Inject() (
           .map(value => TeamMetrics(team, value))
       }
     )
-    .map(teamMetric => Metric(name, Some(description), Some(routeForDetails.toString), teamMetric))
+    .map(teamMetric => Metric(name, Some(description), Some(routeForChart.toString), Some(routeForCsv.toString), teamMetric))
     .map(metric =>
       ServiceResults.success(metric)
     ).recover { case e =>
@@ -101,22 +102,25 @@ class ReportingServiceImpl @Inject() (
     
   def metrics(start: OffsetDateTime, end: OffsetDateTime, teams: Seq[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[Metric]]] =
     ServiceResults.futureSequence(Seq(
-      collectMetric("First-time enquirers", "Unique university IDs making a first recorded enquiry in the period", rc.firstEnquiriesByDay(None, None), teams, start, end, countFirstEnquiries),
-      collectMetric("Enquiries opened", "Enquiries created in the period (and still open)", rc.openedEnquiriesByDay(None, None), teams, start, end, countOpenedEnquiries),
-      collectMetric("Enquiries closed", "Enquiries closed in the period", rc.closedEnquiriesByDay(None, None), teams, start, end, countClosedEnquiries),
-      collectMetric("Cases opened from enquiries", "Cases created in the period (and still open), which started as enquiries", rc.openedCasesFromEnquiriesByDay(None, None), teams, start, end, countOpenedCasesFromEnquiries),
-      collectMetric("Cases closed from enquiries", "Cases closed in the period, which started as enquiries", rc.closedCasesFromEnquiriesByDay(None, None), teams, start, end, countClosedCasesFromEnquiries),
-      collectMetric("Cases opened without enquiries", "Cases created in the period (and still open), which did not start as enquiries", rc.openedCasesWithoutEnquiriesByDay(None, None), teams, start, end, countOpenedCasesWithoutEnquiries),
-      collectMetric("Cases closed without enquiries", "Cases closed in the period, which did not start as enquiries", rc.closedCasesWithoutEnquiriesByDay(None, None), teams, start, end, countClosedCasesWithoutEnquiries),
-      collectMetric("Cases from enquiries, with appointments", "Cases created in the period, which started as enquiries, and have resulted in an appointment which is either pending or has taken place", rc.casesWithAppointmentsFromEnquiriesByDay(None, None), teams, start, end, countCasesWithAppointmentsFromEnquiries),
-      collectMetric("Cases without enquiries, with appointments", "Cases created in the period, which did not start as enquiries, and have resulted in an appointment which is either pending or has taken place", rc.casesWithAppointmentsWithoutEnquiriesByDay(None, None), teams, start, end, countCasesWithAppointmentsWithoutEnquiries),
-      collectMetric("Provisional appointments", "Appointments provisionally scheduled to occur during the period", rc.provisionalAppointmentsByDay(None, None), teams, start, end, countProvisionalAppointments),
-      collectMetric("Accepted appointments", "Appointments scheduled to occur during the period, which have been accepted", rc.acceptedAppointmentsByDay(None, None), teams, start, end, countAcceptedAppointments),
-      collectMetric("Attended appointments", "Appointments attended during the period", rc.attendedAppointmentsByDay(None, None), teams, start, end, countAttendedAppointments),
-      collectMetric("Cancelled appointments", "Appointments scheduled to occur during the period, but subsequently cancelled", rc.cancelledAppointmentsByDay(None, None), teams, start, end, countCancelledAppointments)
+      collectMetric("First-time enquirers", "Unique university IDs making a first recorded enquiry in the period", rc.firstEnquiriesByDay(None, None), rc.firstEnquiriesByDayCsv(None, None), teams, start, end, countFirstEnquiries),
+      collectMetric("Enquiries opened", "Enquiries created in the period (and still open)", rc.openedEnquiriesByDay(None, None), rc.openedEnquiriesByDayCsv(None, None), teams, start, end, countOpenedEnquiries),
+      collectMetric("Enquiries closed", "Enquiries closed in the period", rc.closedEnquiriesByDay(None, None), rc.closedEnquiriesByDayCsv(None, None), teams, start, end, countClosedEnquiries),
+      collectMetric("Cases opened from enquiries", "Cases created in the period (and still open), which started as enquiries", rc.openedCasesFromEnquiriesByDay(None, None), rc.openedCasesFromEnquiriesByDayCsv(None, None), teams, start, end, countOpenedCasesFromEnquiries),
+      collectMetric("Cases closed from enquiries", "Cases closed in the period, which started as enquiries", rc.closedCasesFromEnquiriesByDay(None, None), rc.closedCasesFromEnquiriesByDayCsv(None, None), teams, start, end, countClosedCasesFromEnquiries),
+      collectMetric("Cases opened without enquiries", "Cases created in the period (and still open), which did not start as enquiries", rc.openedCasesWithoutEnquiriesByDay(None, None), rc.openedCasesWithoutEnquiriesByDayCsv(None, None), teams, start, end, countOpenedCasesWithoutEnquiries),
+      collectMetric("Cases closed without enquiries", "Cases closed in the period, which did not start as enquiries", rc.closedCasesWithoutEnquiriesByDay(None, None), rc.closedCasesWithoutEnquiriesByDayCsv(None, None), teams, start, end, countClosedCasesWithoutEnquiries),
+      collectMetric("Cases from enquiries, with appointments", "Cases created in the period, which started as enquiries, and have resulted in an appointment which is either pending or has taken place", rc.casesWithAppointmentsFromEnquiriesByDay(None, None), rc.casesWithAppointmentsFromEnquiriesByDayCsv(None, None), teams, start, end, countCasesWithAppointmentsFromEnquiries),
+      collectMetric("Cases without enquiries, with appointments", "Cases created in the period, which did not start as enquiries, and have resulted in an appointment which is either pending or has taken place", rc.casesWithAppointmentsWithoutEnquiriesByDay(None, None), rc.casesWithAppointmentsWithoutEnquiriesByDayCsv(None, None), teams, start, end, countCasesWithAppointmentsWithoutEnquiries),
+      collectMetric("Provisional appointments", "Appointments provisionally scheduled to occur during the period", rc.provisionalAppointmentsByDay(None, None), rc.provisionalAppointmentsByDayCsv(None, None), teams, start, end, countProvisionalAppointments),
+      collectMetric("Accepted appointments", "Appointments scheduled to occur during the period, which have been accepted", rc.acceptedAppointmentsByDay(None, None), rc.acceptedAppointmentsByDayCsv(None, None), teams, start, end, countAcceptedAppointments),
+      collectMetric("Attended appointments", "Appointments attended during the period", rc.attendedAppointmentsByDay(None, None), rc.attendedAppointmentsByDayCsv(None, None), teams, start, end, countAttendedAppointments),
+      collectMetric("Cancelled appointments", "Appointments scheduled to occur during the period, but subsequently cancelled", rc.cancelledAppointmentsByDay(None, None), rc.cancelledAppointmentsByDayCsv(None, None), teams, start, end, countCancelledAppointments)
     ))
 
   implicit class TeamableTransformers[T <: Teamable](teamableFuture: Future[Seq[T]]) {
+    def forTeam(team: Team)(implicit t: TimingContext): Future[Seq[T]] =
+      teamableFuture.map(teamable => teamable.filter(_.team == team))
+
     def forTeam(team: Option[Team])(implicit t: TimingContext): Future[Seq[T]] =
       teamableFuture.map(teamable => team.map(t => teamable.filter(_.team == t)).getOrElse(teamable))
 
@@ -210,7 +214,7 @@ class ReportingServiceImpl @Inject() (
   def countOpenedEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getOpenedEnquiries(start, end).countForTeam(team)
   
-  def openedEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def openedEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getOpenedEnquiries(dateRange.startTime, dateRange.endTime)
       .forTeam(team)
@@ -230,7 +234,7 @@ class ReportingServiceImpl @Inject() (
   def countClosedEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getClosedEnquiries(start, end).countForTeam(team)
 
-  def closedEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def closedEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getClosedEnquiries(dateRange.startTime, dateRange.endTime)
       .forTeam(team)
@@ -250,7 +254,7 @@ class ReportingServiceImpl @Inject() (
   def countOpenedCasesFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getOpenedCasesWithEnquiries(start, end).countForTeam(team)
 
-  def openedCasesFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def openedCasesFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getOpenedCasesWithEnquiries(dateRange.startTime, dateRange.endTime)
       .forTeam(team)
@@ -270,7 +274,7 @@ class ReportingServiceImpl @Inject() (
   def countClosedCasesFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getClosedCasesWithEnquiries(start, end).countForTeam(team)
 
-  def closedCasesFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def closedCasesFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getClosedCasesWithEnquiries(dateRange.startTime, dateRange.endTime)
       .forTeam(team)
@@ -290,7 +294,7 @@ class ReportingServiceImpl @Inject() (
   def countOpenedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getOpenedCasesWithoutEnquiries(start, end).countForTeam(team)
 
-  def openedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def openedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getOpenedCasesWithoutEnquiries(dateRange.startTime, dateRange.endTime)
       .forTeam(team)
@@ -310,7 +314,7 @@ class ReportingServiceImpl @Inject() (
   def countClosedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getClosedCasesWithoutEnquiries(start, end).countForTeam(team)
 
-  def closedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def closedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getClosedCasesWithoutEnquiries(dateRange.startTime, dateRange.endTime)
       .forTeam(team)
@@ -364,7 +368,7 @@ class ReportingServiceImpl @Inject() (
   def countCasesWithAppointmentsFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getCasesWithLiveAppointmentsFromEnquiries(start, end).countForTeam(team)
 
-  def casesWithAppointmentsFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def casesWithAppointmentsFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getCasesWithLiveAppointmentsFromEnquiries(dateRange.startTime, dateRange.endTime)
       .forTeam(team)
@@ -388,7 +392,7 @@ class ReportingServiceImpl @Inject() (
   def countCasesWithAppointmentsWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getCasesWithLiveAppointmentsWithoutEnquiries(start, end).countForTeam(team)
 
-  def casesWithAppointmentsWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def casesWithAppointmentsWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getCasesWithLiveAppointmentsWithoutEnquiries(dateRange.startTime, dateRange.endTime)
       .forTeam(team)
@@ -422,7 +426,7 @@ class ReportingServiceImpl @Inject() (
   def countCancelledAppointments(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getAppointments(start, end, AppointmentState.Cancelled).countForTeam(team)
   
-  def provisionalAppointmentsByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def provisionalAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getAppointments(dateRange.startTime, dateRange.endTime, AppointmentState.Provisional)
       .forTeam(team)
@@ -430,7 +434,7 @@ class ReportingServiceImpl @Inject() (
       .toServiceResult(s"Closed enquiries by day, $dateRange")
   }
 
-  def acceptedAppointmentsByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def acceptedAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getAppointments(dateRange.startTime, dateRange.endTime, AppointmentState.Accepted)
       .forTeam(team)
@@ -438,7 +442,7 @@ class ReportingServiceImpl @Inject() (
       .toServiceResult(s"Closed enquiries by day, $dateRange")
   }
 
-  def attendedAppointmentsByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def attendedAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getAppointments(dateRange.startTime, dateRange.endTime, AppointmentState.Attended)
       .forTeam(team)
@@ -446,7 +450,7 @@ class ReportingServiceImpl @Inject() (
       .toServiceResult(s"Closed enquiries by day, $dateRange")
   }
 
-  def cancelledAppointmentsByDay(start: LocalDate, end: LocalDate, team: Option[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
+  def cancelledAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getAppointments(dateRange.startTime, dateRange.endTime, AppointmentState.Cancelled)
       .forTeam(team)

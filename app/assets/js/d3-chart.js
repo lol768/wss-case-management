@@ -18,17 +18,15 @@ export default function D3Chart(container) {
       .append('g')
       .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
-    // const x = d3.scaleTime().range([0, width]);
     const x = d3.scaleBand().rangeRound([0, width], 0.08);
     const y = d3.scaleLinear().range([height, 0]);
     const colours = d3.scaleOrdinal(d3.schemeSet2);
-    // const parseDate = d3.timeParse('%Y-%m-%d');
-    // const formatDate = d3.timeFormat('%b %d');
 
     let working = false;
 
     document.addEventListener('click', (event) => {
       const { target } = event;
+      const trigger = target.closest('.d3-chartable');
 
       if (working) {
         return;
@@ -39,15 +37,15 @@ export default function D3Chart(container) {
         container.classList.add('collapsed');
         svg.selectAll('*').remove();
         working = false;
-      } else if (event.target.classList.contains('d3-chartable')) {
-        const jsonSrc = event.target.dataset.src;
+      } else if (trigger) {
+        const { src, title } = trigger.dataset;
 
         const spinner = document.createElement('i');
         spinner.classList.add('far', 'fa-fw', 'fa-spin', 'fa-spinner');
-        target.parentNode.insertBefore(spinner, target.nextSibling);
+        trigger.parentNode.insertBefore(spinner, trigger.nextSibling);
 
-        if (jsonSrc) {
-          d3.json(jsonSrc)
+        if (src) {
+          d3.json(src)
             .then((json) => {
               spinner.parentNode.removeChild(spinner);
 
@@ -176,7 +174,7 @@ export default function D3Chart(container) {
                   .attr('x', width / 2)
                   .attr('y', 0 - margin.top / 2)
                   .attr('text-anchor', 'middle')
-                  .text(target.text);
+                  .text(title);
 
                 container.classList.remove('collapsed');
                 working = false;

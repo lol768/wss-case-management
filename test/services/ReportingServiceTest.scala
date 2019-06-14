@@ -222,12 +222,12 @@ class ReportingServiceTest extends AbstractDaoTest {
         reportingService.countClosedEnquiries(outofScopeStart, outofScopeEnd, None).futureValue mustBe 0
         reportingService.countOpenedEnquiries(outofScopeStart, outofScopeEnd, None).futureValue mustBe 0
         
-        val closedDailies = reportingService.closedEnquiriesByDay(start.toLocalDate, end.toLocalDate, Some(Teams.WellbeingSupport)).serviceValue
+        val closedDailies = reportingService.closedEnquiriesByDay(start.toLocalDate, end.toLocalDate, Teams.WellbeingSupport).serviceValue
         closedDailies.size mustBe 7
         closedDailies.head.day.isEqual(start.toLocalDate) mustBe true
         closedDailies.foreach(_.value mustBe 1)
 
-        val openedDailies = reportingService.openedEnquiriesByDay(start.toLocalDate, end.toLocalDate, Some(Teams.WellbeingSupport)).serviceValue
+        val openedDailies = reportingService.openedEnquiriesByDay(start.toLocalDate, end.toLocalDate, Teams.WellbeingSupport).serviceValue
         openedDailies.size mustBe 7
         openedDailies.head.day.isEqual(start.toLocalDate) mustBe true
         openedDailies.foreach(_.value mustBe 2)
@@ -254,13 +254,13 @@ class ReportingServiceTest extends AbstractDaoTest {
         reportingService.countClosedCasesFromEnquiries(outofScopeStart, outofScopeEnd, None).futureValue mustBe 0
         reportingService.countOpenedCasesFromEnquiries(outofScopeStart, outofScopeEnd, None).futureValue mustBe 0
 
-        val closedDailies = reportingService.closedCasesFromEnquiriesByDay(start.toLocalDate, end.toLocalDate, Some(Teams.WellbeingSupport)).serviceValue
+        val closedDailies = reportingService.closedCasesFromEnquiriesByDay(start.toLocalDate, end.toLocalDate, Teams.WellbeingSupport).serviceValue
         closedDailies.size mustBe 7
         closedDailies.head.day.isEqual(start.toLocalDate) mustBe true
         closedDailies.head.value mustBe 1
         closedDailies.tail.foreach(_.value mustBe 0)
 
-        val openedDailies = reportingService.openedCasesFromEnquiriesByDay(start.toLocalDate, end.toLocalDate, Some(Teams.WellbeingSupport)).serviceValue
+        val openedDailies = reportingService.openedCasesFromEnquiriesByDay(start.toLocalDate, end.toLocalDate, Teams.WellbeingSupport).serviceValue
         openedDailies.size mustBe 7
         openedDailies.head.day.isEqual(start.toLocalDate) mustBe true
         openedDailies.head.value mustBe 1
@@ -286,13 +286,13 @@ class ReportingServiceTest extends AbstractDaoTest {
         reportingService.countClosedCasesWithoutEnquiries(outofScopeStart, outofScopeEnd, None).futureValue mustBe 0
         reportingService.countOpenedCasesWithoutEnquiries(outofScopeStart, outofScopeEnd, None).futureValue mustBe 0
 
-        val closedDailies = reportingService.closedCasesWithoutEnquiriesByDay(start.toLocalDate, end.toLocalDate, Some(Teams.WellbeingSupport)).serviceValue
+        val closedDailies = reportingService.closedCasesWithoutEnquiriesByDay(start.toLocalDate, end.toLocalDate, Teams.WellbeingSupport).serviceValue
         closedDailies.size mustBe 7
         closedDailies.head.day.isEqual(start.toLocalDate) mustBe true
         closedDailies.head.value mustBe 1
         closedDailies.tail.foreach(_.value mustBe 0)
 
-        val openedDailies = reportingService.openedCasesWithoutEnquiriesByDay(start.toLocalDate, end.toLocalDate, Some(Teams.WellbeingSupport)).serviceValue
+        val openedDailies = reportingService.openedCasesWithoutEnquiriesByDay(start.toLocalDate, end.toLocalDate, Teams.WellbeingSupport).serviceValue
         openedDailies.size mustBe 7
         openedDailies.head.day.isEqual(start.toLocalDate) mustBe true
         openedDailies.head.value mustBe 1
@@ -315,7 +315,7 @@ class ReportingServiceTest extends AbstractDaoTest {
         val outofScopeEnd = outofScopeStart.plusMinutes(1)
         reportingService.countCasesWithAppointmentsFromEnquiries(outofScopeStart, outofScopeEnd, None).futureValue mustBe 0
 
-        val dailies = reportingService.casesWithAppointmentsFromEnquiriesByDay(start.toLocalDate, end.toLocalDate, Some(Teams.WellbeingSupport)).serviceValue
+        val dailies = reportingService.casesWithAppointmentsFromEnquiriesByDay(start.toLocalDate, end.toLocalDate, Teams.WellbeingSupport).serviceValue
         dailies.size mustBe 7
         dailies.head.day.isEqual(start.toLocalDate) mustBe true
         dailies.head.value mustBe 2
@@ -336,7 +336,7 @@ class ReportingServiceTest extends AbstractDaoTest {
         val outofScopeEnd = outofScopeStart.plusMinutes(1)
         reportingService.countCasesWithAppointmentsWithoutEnquiries(outofScopeStart, outofScopeEnd, None).futureValue mustBe 0
 
-        val dailies = reportingService.casesWithAppointmentsWithoutEnquiriesByDay(start.toLocalDate, end.toLocalDate, Some(Teams.WellbeingSupport)).serviceValue
+        val dailies = reportingService.casesWithAppointmentsWithoutEnquiriesByDay(start.toLocalDate, end.toLocalDate, Teams.WellbeingSupport).serviceValue
         dailies.size mustBe 7
         dailies.head.day.isEqual(start.toLocalDate) mustBe true
         dailies.head.value mustBe 2
@@ -373,7 +373,7 @@ class ReportingServiceTest extends AbstractDaoTest {
         reportingService.countAttendedAppointments(outofScopeStart, outofScopeEnd, None).futureValue mustBe 0
         reportingService.countCancelledAppointments(outofScopeStart, outofScopeEnd, None).futureValue mustBe 0
  
-        val dailies = reportingService.provisionalAppointmentsByDay(start.toLocalDate, end.toLocalDate, Some(Teams.WellbeingSupport)).serviceValue
+        val dailies = reportingService.provisionalAppointmentsByDay(start.toLocalDate, end.toLocalDate, Teams.WellbeingSupport).serviceValue
         dailies.size mustBe 7
         dailies.head.day.isEqual(start.toLocalDate) mustBe true
         dailies.head.value mustBe 4

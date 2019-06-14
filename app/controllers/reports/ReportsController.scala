@@ -2,6 +2,9 @@ package controllers.reports
 
 import java.time.LocalDate
 
+import akka.stream.scaladsl.{Source, StreamConverters}
+import akka.util.ByteString
+import com.github.tototoshi.csv.CSVWriter
 import controllers.refiners.ReportingAdminActionRefiner
 import controllers.{API, BaseController, DateRange}
 import domain.Team
@@ -26,6 +29,8 @@ class ReportsController @Inject()(
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
   import reportingAdminActionRefiner._
+
+  type MetricsGenerator = (LocalDate, LocalDate, Team) => Future[ServiceResult[Seq[DailyMetrics]]]
 
   private def defaultDateRange = DateRange(
     LocalDate.now().minusDays(7),
@@ -63,34 +68,14 @@ class ReportsController @Inject()(
     )
   }
 
-  type MetricsGenerator = (LocalDate, LocalDate, Option[Team]) => Future[ServiceResult[Seq[DailyMetrics]]]
-  type MetricsForTeamGenerator = (LocalDate, LocalDate, Team) => Future[ServiceResult[Seq[DailyMetrics]]]
-  
-  private def dailyReportOptTeam(
-    reporter: MetricsGenerator,
-    start: Option[LocalDate],
-    end: Option[LocalDate]
-  )(implicit req: AuthenticatedRequest[AnyContent], t: TimingContext): Future[Result] = 
-    Future.successful(permissions.teams(currentUser().usercode))
-      .successFlatMap(teams => {
-        Future.sequence(teams.map(team => {
-          reporter(start.getOrElse(LocalDate.now.minusDays(7)), end.getOrElse(LocalDate.now), Some(team))
-            .flatMap(_.fold(
-              e => Future.successful(Json.toJson(JsonClientError(status = "bad_request", errors = e.map(_.message)))),
-              dms => Future.successful(Json.obj(team.name -> Json.toJson(dms)))
-            ))
-        })).map(metrics => Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(metrics)))))
-      })
-
   private def dailyReport(
-    reporter: MetricsForTeamGenerator,
-    start: Option[LocalDate],
-    end: Option[LocalDate]
+    reporter: MetricsGenerator,
+    dateRange: DateRange
   )(implicit req: AuthenticatedRequest[AnyContent], t: TimingContext): Future[Result] =
     Future.successful(permissions.teams(currentUser().usercode))
       .successFlatMap(teams => {
         Future.sequence(teams.map(team => {
-          reporter(start.getOrElse(LocalDate.now.minusDays(7)), end.getOrElse(LocalDate.now), team)
+          reporter(dateRange.start, dateRange.end, team)
             .flatMap(_.fold(
               e => Future.successful(Json.toJson(JsonClientError(status = "bad_request", errors = e.map(_.message)))),
               dms => Future.successful(Json.obj(team.name -> Json.toJson(dms)))
@@ -99,45 +84,145 @@ class ReportsController @Inject()(
       })
   
   def openedEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.openedEnquiriesByDay, start, end)
+    dailyReport(reporting.openedEnquiriesByDay, DateRange(start, end))
   }}
   def closedEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.closedEnquiriesByDay, start, end)
+    dailyReport(reporting.closedEnquiriesByDay, DateRange(start, end))
   }}
   def openedCasesFromEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.openedCasesFromEnquiriesByDay, start, end)
+    dailyReport(reporting.openedCasesFromEnquiriesByDay, DateRange(start, end))
   }}
   def closedCasesFromEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.closedCasesFromEnquiriesByDay, start, end)
+    dailyReport(reporting.closedCasesFromEnquiriesByDay, DateRange(start, end))
   }}
   def openedCasesWithoutEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.openedCasesWithoutEnquiriesByDay, start, end)
+    dailyReport(reporting.openedCasesWithoutEnquiriesByDay, DateRange(start, end))
   }}
   def closedCasesWithoutEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.closedCasesWithoutEnquiriesByDay, start, end)
+    dailyReport(reporting.closedCasesWithoutEnquiriesByDay, DateRange(start, end))
   }}
   def firstEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReport(reporting.firstEnquiriesByDay, start, end)
+    dailyReport(reporting.firstEnquiriesByDay, DateRange(start, end))
   }}
   def casesWithAppointmentsFromEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.casesWithAppointmentsFromEnquiriesByDay, start, end)
+    dailyReport(reporting.casesWithAppointmentsFromEnquiriesByDay, DateRange(start, end))
   }}
   def casesWithAppointmentsWithoutEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.casesWithAppointmentsWithoutEnquiriesByDay, start, end)
+    dailyReport(reporting.casesWithAppointmentsWithoutEnquiriesByDay, DateRange(start, end))
   }}
   def provisionalAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.provisionalAppointmentsByDay, start, end)
+    dailyReport(reporting.provisionalAppointmentsByDay, DateRange(start, end))
   }}
   def acceptedAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.acceptedAppointmentsByDay, start, end)
+    dailyReport(reporting.acceptedAppointmentsByDay, DateRange(start, end))
   }}
   def attendedAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.attendedAppointmentsByDay, start, end)
+    dailyReport(reporting.attendedAppointmentsByDay, DateRange(start, end))
   }}
   def cancelledAppointmentsByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
-    dailyReportOptTeam(reporting.cancelledAppointmentsByDay, start, end)
+    dailyReport(reporting.cancelledAppointmentsByDay, DateRange(start, end))
   }}
 
+  private def csvSource(rows: Seq[Seq[String]]): Source[ByteString, Future[Unit]] = {
+    StreamConverters.asOutputStream().mapMaterializedValue(outputStream => Future {
+      val writer = CSVWriter.open(outputStream)
+      try {
+        writer.writeAll(rows)
+      } catch {
+        case t: Throwable => logger.error("Error encountered while writing CSV", t)
+      } finally {
+        writer.flush()
+        writer.close()
+      }
+    })
+  }
 
+  private def dailyCsv(
+    reporter: MetricsGenerator,
+    dateRange: DateRange
+  )(implicit req: AuthenticatedRequest[AnyContent], t: TimingContext): Future[Result] = {
+    
+    val emptyDailyMetrics = dateRange.map(d => DailyMetrics(d, 0)) 
+    
+    Future.successful(permissions.teams(currentUser().usercode))
+      .successFlatMap(teams => {
+        val futureMetrics = Future.sequence(teams.map(team => {
+          reporter(dateRange.start, dateRange.end, team)
+            .map(_.getOrElse(emptyDailyMetrics))
+            .map(dms => (team, dms))
+        }))
 
+        futureMetrics.map(metrics => {
+          val rows = ReportsController.csvFromMetrics(dateRange, metrics)
+          Ok.chunked(csvSource(rows)).as("text/csv")
+        })
+      })
+  }
+  
+  def openedEnquiriesByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request =>
+    dailyCsv(reporting.openedEnquiriesByDay, DateRange(start, end))
+  }
+  def closedEnquiriesByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.closedEnquiriesByDay, DateRange(start, end))
+  }}
+  def openedCasesFromEnquiriesByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.openedCasesFromEnquiriesByDay, DateRange(start, end))
+  }}
+  def closedCasesFromEnquiriesByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.closedCasesFromEnquiriesByDay, DateRange(start, end))
+  }}
+  def openedCasesWithoutEnquiriesByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.openedCasesWithoutEnquiriesByDay, DateRange(start, end))
+  }}
+  def closedCasesWithoutEnquiriesByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.closedCasesWithoutEnquiriesByDay, DateRange(start, end))
+  }}
+  def firstEnquiriesByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.firstEnquiriesByDay, DateRange(start, end))
+  }}
+  def casesWithAppointmentsFromEnquiriesByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.casesWithAppointmentsFromEnquiriesByDay, DateRange(start, end))
+  }}
+  def casesWithAppointmentsWithoutEnquiriesByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.casesWithAppointmentsWithoutEnquiriesByDay, DateRange(start, end))
+  }}
+  def provisionalAppointmentsByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.provisionalAppointmentsByDay, DateRange(start, end))
+  }}
+  def acceptedAppointmentsByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.acceptedAppointmentsByDay, DateRange(start, end))
+  }}
+  def attendedAppointmentsByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.attendedAppointmentsByDay, DateRange(start, end))
+  }}
+  def cancelledAppointmentsByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
+    dailyCsv(reporting.cancelledAppointmentsByDay, DateRange(start, end))
+  }}
+}
+
+object ReportsController {
+  def csvFromMetrics(dateRange: DateRange, metrics: Seq[(Team, Seq[DailyMetrics])]): Seq[Seq[String]] = {
+    val teamIds = metrics.map(_._1.name)
+    val headerRow = "Date" +: teamIds
+
+    val dataRowCount = dateRange.daysInclusive.intValue
+    val dataMatrix = Array.ofDim[String](dataRowCount, headerRow.size)
+
+    (0 until dataRowCount).map(d => {
+      dataMatrix(d)(0) = dateRange.start.plusDays(d.longValue).toString
+    })
+
+    metrics.map {case (team, dms) => {
+      val column = headerRow.indexOf(team.name)
+      (0 until dataRowCount).map(d => {
+        dataMatrix(d)(column) = dms(d).value.toString
+      })
+    }}
+
+    val dataRows = (0 until dataRowCount).map(d => {
+      dataMatrix(d).toSeq
+    })
+
+    headerRow +: dataRows
+  }
 }

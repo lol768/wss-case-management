@@ -9,11 +9,15 @@
 
 @row(metric: Metric) = {
     <tr>
-      <th class="use-tooltip" title="@metric.description.getOrElse(metric.name)">
-        @metric.urlPath match {
-          case Some(path) => { <a class="d3-chartable" data-src="@path?start=@form("start").value&end=@form("end").value">@metric.name</a> }
-          case None => { @metric.name }
-        }
+      <th><span class="use-tooltip" title="@metric.description.getOrElse(metric.name)">@metric.name</span>
+        <span class="btn-group">
+          @metric.chartPath.map { path =>
+            <a class="btn btn-xs btn-default d3-chartable use-tooltip" title="Show daily metrics chart" data-title="@metric.name" data-src="@path?start=@form("start").value&end=@form("end").value"><i class="fal fa-lg fa-fw fa-chart-bar"></i></a>
+          }
+          @metric.csvPath.map { path =>
+            <a class="btn btn-xs btn-default use-tooltip" title="Download daily metrics CSV" href="@path?start=@form("start").value&end=@form("end").value"><i class="fal fa-lg fa-fw fa-file-csv"></i></a>
+          }
+        </span>
       </th>
       
       @teams.map { case team =>
@@ -52,7 +56,7 @@
     <div id="d3-chart"></div>
   </div>
   
-  <table class="table table-default">
+  <table class="table table-default report">
     <caption>@range</caption>
     <thead>
       <tr>
