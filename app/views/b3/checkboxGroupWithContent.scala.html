@@ -1,0 +1,137 @@
+@import domain.IdAndDescription
+@import domain.EnumEntryOther
+@import uk.ac.warwick.util.core.StringUtils
+@(
+  label: String,
+  items: IndexedSeq[_ <: IdAndDescription],
+  form: Form[_],
+  field: String,
+  idPrefix: String,
+  withOther: Option[_ <: EnumEntryOther] = None,
+  columns: Int = 1,
+  inModal: Boolean = true
+)(content: Html = Html(""))(implicit fc: views.html.b3.B3FieldConstructor, messagesProvider: MessagesProvider)
+
+@fullField = @{withOther.map(_ => s"$field.entries").getOrElse(field)}
+@fullFieldWithIndex(i: Int) = @{withOther.map(_ => s"$field.entries[$i]").getOrElse(s"$field[$i]")}
+
+@isChecked(item: IdAndDescription) = @{form(fullField).indexes.exists(i => form(fullFieldWithIndex(i)).value.contains(item.id))}
+
+@partionedItems = @{
+  val nonOtherItems = items.filter(item => withOther.isEmpty || item.id != withOther.get.id).map(item => Html(
+    b3.checkbox(form(s"$fullField[]"),
+      'id -> s"$idPrefix-${item.id}",
+      'value -> item.id,
+      '_text -> item.description,
+      'checked -> isChecked(item)
+    )(b3.clear.fieldConstructorSpecific, messagesProvider).toString
+    // pass clear FC to the checkboxes so they aren't each wrapped in a form group
+  ))
+
+  val allItems = if (withOther.isEmpty) {
+    nonOtherItems
+  } else {
+    nonOtherItems :+ play.twirl.api.HtmlFormat.fill(scala.collection.immutable.Seq(
+      Html(
+        b3.checkbox(form(s"$fullField[]"),
+          'id -> s"$idPrefix-${withOther.get.id}",
+          'value -> withOther.get.id,
+          '_text -> withOther.get.label,
+          'checked -> isChecked(withOther.get),
+          Symbol("data-toggle") -> "optional-subform",
+          Symbol("data-target") -> s"#$idPrefix-${withOther.get.id}-value"
+        )(b3.clear.fieldConstructorSpecific, messagesProvider).toString
+      ),
+      Html(
+        b3.text(form(s"$field.otherValue"),
+          'id -> s"$idPrefix-${withOther.get.id}-value"
+        )(b3.clear.fieldConstructorSpecific, messagesProvider).toString
+      )
+    ))
+  }
+
+  val maxItemsPerColumn = Math.ceil(allItems.size / columns.toDouble).toInt
+  allItems.zipWithIndex.groupBy { case (_, i) => i / maxItemsPerColumn }.mapValues(_.map(_._1))
+    .toSeq.sortBy(_._1).map(_._2)
+}
+
+@allErrors = @{
+  form(field).errors.map(_.format) ++ form(fullField).indexes.flatMap(i =>
+    form(fullFieldWithIndex(i)).errors.map(_.format + form(fullFieldWithIndex(i)).value.filter(StringUtils.hasText).map(e => s": $e").getOrElse(""))
+  )
+}
+
+@b3.free('_label -> label,
+  '_class -> s"checkboxGroup ${if (allErrors.nonEmpty) "has-error" else ""}"
+) {
+
+  @if(inModal) {
+    <button type="button" class="btn btn-link" data-toggle="modal" data-target="#@idPrefix-checkboxGroup-modal" data-backdrop="static" data-keyboard="false" aria-label="Edit">
+      @tags.icons.checkboxGroupEdit()
+    </button>
+
+    <div class="selected-items">
+      @items.filter(item => (withOther.isEmpty || item.id != withOther.get.id) && isChecked(item)).map { item =>
+        <div class="selected-items__item">
+          @tags.icons.checkboxGroupSelected() @item.description
+        </div>
+      }
+      @withOther.filter(other => isChecked(other)).map { other =>
+        <div class="selected-items__item">
+          @tags.icons.checkboxGroupSelected() @other.label (@form(s"$field.otherValue").value.getOrElse(""))
+        </div>
+      }
+      @if(!items.exists(isChecked)) {
+        <div class="selected-items__item">
+          (None)
+        </div>
+      }
+    </div>
+
+    <div class="modal fade" id="@idPrefix-checkboxGroup-modal" tabindex="-1" role="dialog" aria-labelledby="@idPrefix-checkboxGroup-modal-label">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title" id="@idPrefix-checkboxGroup-modal-label">@label</h4>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              @partionedItems.map { group =>
+                <div class="col-md-@{12 / columns}">
+                  @group.map { item =>
+                    @item
+                  }
+                </div>
+              }
+            </div>
+
+            @content
+          </div>
+          <div class="modal-footer">
+            <button type="button" data-dismiss="modal" class="btn btn-primary">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    @allErrors.map { error =>
+      <span class="help-block">@error</span>
+    }
+  } else {
+    <div class="row">
+      @partionedItems.map { group =>
+        <div class="col-md-@{12 / columns}">
+          @group.map { item =>
+            @item
+          }
+        </div>
+      }
+    </div>
+
+    @content
+
+    @form(field).error.map { error =>
+      <span class="help-block">@error.format</span>
+    }
+  }
+}

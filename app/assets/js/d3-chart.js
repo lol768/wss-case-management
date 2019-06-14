@@ -1,5 +1,6 @@
 /* eslint-env browser */
 import * as d3 from 'd3';
+import log from 'loglevel';
 
 export default function D3Chart(container) {
   if (container) {
@@ -181,7 +182,7 @@ export default function D3Chart(container) {
               }
             })
             .catch((err) => {
-              console.log(err);
+              log.error(err);
               const alert = document.createElement('p');
               alert.classList.add('alert', 'alert-danger');
               alert.innerHTML = 'Sorry, chart could not be created.';

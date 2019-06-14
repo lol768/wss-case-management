@@ -428,14 +428,27 @@
             </div>
           </div>
 
-          @b3.checkboxGroup(
+          @b3.checkboxGroupWithContent(
             label = "Academic reasonable adjustments",
             items = ReasonableAdjustment.values,
             form = form,
             field = "reasonable-adjustments",
             idPrefix = "reasonable-adjustment",
             columns = 2
-          )
+          ) {
+            @b3.textarea(form("reasonable-adjustments-notes"),
+              '_label -> "Notes for student's department",
+              'rows -> 5
+            )
+          }
+
+          @if(form.hasGlobalErrors) {
+            <div class="alert alert-danger">
+              @form.globalErrors.map { error =>
+                @error.format
+              }
+            </div>
+          }
 
           <div class="row">
             <div class="col-sm-3">

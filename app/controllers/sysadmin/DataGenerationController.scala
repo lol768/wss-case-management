@@ -445,7 +445,8 @@ class DataGenerationJob @Inject()(
             reasonableAdjustments =
               (1 to (options.ReasonableAdjustmentRate / Random.nextDouble()).toInt).map { _ =>
                 randomEnum(ReasonableAdjustment)
-              }.toSet
+              }.toSet,
+            reasonableAdjustmentsNotes = dummyWords(Random.nextInt(200)),
           )
 
           clientSummaries.get(client).serviceValue match {

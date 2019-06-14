@@ -6,19 +6,19 @@ import controllers.BaseController
 import controllers.refiners.{AnyTeamActionRefiner, ValidUniversityIDActionFilter}
 import domain._
 import domain.dao.AppointmentDao.AppointmentSearchQuery
-import warwick.core.helpers.ServiceResults
-import warwick.core.helpers.ServiceResults._
+import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms._
+import play.api.data.validation._
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import services._
 import services.tabula.ProfileService
-import warwick.core.helpers.JavaTime
-import warwick.core.timing.TimingContext
+import warwick.core.helpers.{JavaTime, ServiceResults}
+import warwick.core.helpers.ServiceResults._
 import warwick.sso._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -42,13 +42,22 @@ class ClientController @Inject()(
 
   private[this] val registrationInvitesEnabled = configuration.get[Boolean]("wellbeing.features.registrationInvites")
 
-  val form = Form(mapping(
-    "notes" -> text,
-    "alternative-contact-number" -> text,
-    "alternative-email-address" -> text,
-    "risk-status" -> optional(ClientRiskStatus.formField),
-    "reasonable-adjustments" -> set(ReasonableAdjustment.formField)
-  )(ClientSummarySave.apply)(ClientSummarySave.unapply))
+  val form = Form(
+    mapping(
+      "notes" -> text,
+      "alternative-contact-number" -> text,
+      "alternative-email-address" -> text,
+      "risk-status" -> optional(ClientRiskStatus.formField),
+      "reasonable-adjustments" -> set(ReasonableAdjustment.formField),
+      "reasonable-adjustments-notes" -> text,
+    )(ClientSummarySave.apply)(ClientSummarySave.unapply)
+      .verifying(Constraint { summary: ClientSummarySave =>
+        if (summary.reasonableAdjustments.isEmpty || summary.reasonableAdjustmentsNotes.hasText)
+          Valid
+        else
+          Invalid(ValidationError("error.reasonableAdjustments.notesEmpty"))
+      })
+  )
 
   private def clientInformation(universityID: UniversityID)(implicit ac: AuditLogContext): Future[ServiceResult[(Option[SitsProfile], Option[Registration], Option[ClientSummary], ClientSummaryHistory, Seq[EnquiryListRender], Int, Int, Seq[AppointmentRender], Map[UUID, Set[Member]])]] = {
     zip(
