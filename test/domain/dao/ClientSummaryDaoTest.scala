@@ -22,7 +22,8 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
     notes = "Some guy doing something\n\ngood for him",
     alternativeContactNumber = "07777123456",
     alternativeEmailAddress = "nobody@example.com",
-    riskStatus = Some(ClientRiskStatus.Medium)
+    riskStatus = Some(ClientRiskStatus.Medium),
+    reasonableAdjustmentsNotes = "",
   )
 
   "ClientSummaryDao" should {
@@ -44,6 +45,7 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
             result.alternativeContactNumber mustBe summary.alternativeContactNumber
             result.alternativeEmailAddress mustBe summary.alternativeEmailAddress
             result.riskStatus mustBe summary.riskStatus
+            result.reasonableAdjustmentsNotes mustBe summary.reasonableAdjustmentsNotes
 
             existsAfter.isEmpty mustBe false
             existsAfter.get._1 mustBe result
@@ -59,7 +61,8 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
         notes = "Ah okay then.",
         alternativeContactNumber = "0181 811 8181",
         alternativeEmailAddress = "other@something-else.com",
-        riskStatus = Some(ClientRiskStatus.High)
+        riskStatus = Some(ClientRiskStatus.High),
+        reasonableAdjustmentsNotes = "Some notes",
       )
 
       val earlier = ZonedDateTime.of(2018, 1, 1, 10, 0, 0, 0, JavaTime.timeZone).toInstant
@@ -82,6 +85,7 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
           updated.alternativeContactNumber mustBe updatedSummary.alternativeContactNumber
           updated.alternativeEmailAddress mustBe updatedSummary.alternativeEmailAddress
           updated.riskStatus mustBe updatedSummary.riskStatus
+          updated.reasonableAdjustmentsNotes mustBe updatedSummary.reasonableAdjustmentsNotes
         })
       } yield updated
 

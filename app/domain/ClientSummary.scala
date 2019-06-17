@@ -22,6 +22,7 @@ case class ClientSummary(
   alternativeEmailAddress: String,
   riskStatus: Option[ClientRiskStatus],
   reasonableAdjustments: Set[ReasonableAdjustment],
+  reasonableAdjustmentsNotes: String,
   updatedDate: OffsetDateTime
 ) {
   def toSave = ClientSummarySave(
@@ -29,7 +30,8 @@ case class ClientSummary(
     alternativeContactNumber = alternativeContactNumber,
     alternativeEmailAddress = alternativeEmailAddress,
     riskStatus = riskStatus,
-    reasonableAdjustments = reasonableAdjustments
+    reasonableAdjustments = reasonableAdjustments,
+    reasonableAdjustmentsNotes = reasonableAdjustmentsNotes,
   )
 }
 
@@ -38,7 +40,8 @@ case class ClientSummarySave(
   alternativeContactNumber: String,
   alternativeEmailAddress: String,
   riskStatus: Option[ClientRiskStatus],
-  reasonableAdjustments: Set[ReasonableAdjustment]
+  reasonableAdjustments: Set[ReasonableAdjustment],
+  reasonableAdjustmentsNotes: String,
 )
 
 object ClientSummarySave {

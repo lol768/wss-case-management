@@ -10,7 +10,7 @@
   @for(nav <- navigation) {
     @if(nav.dropdown && nav.children.nonEmpty) {
       <li class="dropdown @if(nav.isActive(path)){active} @if(nav.children.exists(_.isActive(path))){next-secondary}">
-        <a href="@nav.route.url" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">@nav.label <span class="caret"></span></a>
+        <a href="@nav.route.url" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">@nav.label</a>
         <ul class="dropdown-menu">
         @for(child <- nav.children) {
           <li @if(child.isActive(path)){class="active"}><a href="@child.route.url">@child.label</a></li>

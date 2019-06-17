@@ -221,6 +221,10 @@ POST        /sysadmin/import                        @controllers.sysadmin.DataIm
 GET         /sysadmin/push-to-outlook               @controllers.sysadmin.PushToOutlookController.form()
 POST        /sysadmin/push-to-outlook               @controllers.sysadmin.PushToOutlookController.submit()
 
+## API ##
+GET         /api/v1/client/:universityID/reasonable-adjustments   @controllers.api.ClientReasonableAdjustmentsAPIController.reasonableAdjustments(universityID: warwick.sso.UniversityID)
+GET         /api/v1/client/reasonable-adjustments                 @controllers.api.ClientReasonableAdjustmentsAPIController.reasonableAdjustmentsUpdatedSince(since: java.time.OffsetDateTime)
+
 ## Fallbacks ##
 
 # Handle trailing slashes in URLs

@@ -7,4 +7,6 @@ object Roles {
   val Masquerader = RoleName("masqueraders")
   val Sysadmin = RoleName("sysadmin")
   val ReportingAdmin = RoleName("reporting-admin")
+  val APIRead = RoleName("api-read")
+  val APIWrite = RoleName("api-write")
 }
