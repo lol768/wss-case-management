@@ -47,12 +47,12 @@ trait ReportingService {
   def countClosedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def openedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
   def closedCasesWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
-  
+
   def countCasesWithAppointmentsFromEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countCasesWithAppointmentsWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def casesWithAppointmentsFromEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
   def casesWithAppointmentsWithoutEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
-  
+
   def countProvisionalAppointments(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countAcceptedAppointments(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
   def countAttendedAppointments(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int]
@@ -61,7 +61,7 @@ trait ReportingService {
   def acceptedAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
   def attendedAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
   def cancelledAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]]
-  
+
   def metrics(start: OffsetDateTime, end: OffsetDateTime, teams: Seq[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[Metric]]]
 }
 
@@ -74,9 +74,9 @@ class ReportingServiceImpl @Inject() (
 )(implicit ec: ExecutionContext) extends ReportingService with Logging {
 
   type ReportGenerator = (OffsetDateTime, OffsetDateTime, Option[Team]) => Future[Int]
-  
+
   private val rc = controllers.reports.routes.ReportsController
-  
+
   private def collectMetric(
     name: String,
     description: String,
@@ -99,7 +99,7 @@ class ReportingServiceImpl @Inject() (
     ).recover { case e =>
       ServiceResults.error(s"Error collecting metric $name: $e")
     }
-    
+
   def metrics(start: OffsetDateTime, end: OffsetDateTime, teams: Seq[Team])(implicit t: TimingContext): Future[ServiceResult[Seq[Metric]]] =
     ServiceResults.futureSequence(Seq(
       collectMetric("First-time enquirers", "Unique university IDs making a first recorded enquiry in the period", rc.firstEnquiriesByDay(None, None), rc.firstEnquiriesByDayCsv(None, None), teams, start, end, countFirstEnquiries),
@@ -142,7 +142,7 @@ class ReportingServiceImpl @Inject() (
 
       timestampedFuture.map(timestamped => {
         val sorted = timestamped.sortBy(_.version)
-        Iterator.iterate(startDay)(_.plusDays(1L))
+        Iterator.iterate(startDay)(_.plusDays(1))
           .takeWhile(!_.isAfter(lastDay))
           .map { date =>
             date -> sorted.filter(t => t.version.toLocalDate.isEqual(date))
@@ -154,7 +154,7 @@ class ReportingServiceImpl @Inject() (
     def countVersionedByDay(start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[Seq[DailyMetrics]] = {
       timestampedFuture.map(timestamped => {
         val sorted = timestamped.sortBy(_.version)
-        Iterator.iterate(start)(_.plusDays(1L))
+        Iterator.iterate(start)(_.plusDays(1))
           .takeWhile(!_.isAfter(end))
           .map { date =>
             DailyMetrics(date, sorted.count(t => t.version.toLocalDate.isEqual(date)))
@@ -172,7 +172,7 @@ class ReportingServiceImpl @Inject() (
 
       timestampedFuture.map(timestamped => {
         val sorted = timestamped.sortBy(_.created)
-        Iterator.iterate(startDay)(_.plusDays(1L))
+        Iterator.iterate(startDay)(_.plusDays(1))
           .takeWhile(!_.isAfter(lastDay))
           .map { date =>
             date -> sorted.filter(t => t.created.toLocalDate.isEqual(date))
@@ -184,7 +184,7 @@ class ReportingServiceImpl @Inject() (
     def countCreatedByDay(start: LocalDate, end: LocalDate)(implicit t: TimingContext): Future[Seq[DailyMetrics]] = {
       timestampedFuture.map(timestamped => {
         val sorted = timestamped.sortBy(_.created)
-        Iterator.iterate(start)(_.plusDays(1L))
+        Iterator.iterate(start)(_.plusDays(1))
           .takeWhile(!_.isAfter(end))
           .map { date =>
             DailyMetrics(date, sorted.count(t => t.created.toLocalDate.isEqual(date)))
@@ -193,7 +193,7 @@ class ReportingServiceImpl @Inject() (
       })
     }
   }
-  
+
   implicit class DailyServiceResultTransformers(f: Future[Seq[DailyMetrics]]) {
     def toServiceResult(name: String)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] =
       f.map(seq => ServiceResults.success(seq)
@@ -213,7 +213,7 @@ class ReportingServiceImpl @Inject() (
 
   def countOpenedEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getOpenedEnquiries(start, end).countForTeam(team)
-  
+
   def openedEnquiriesByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getOpenedEnquiries(dateRange.startTime, dateRange.endTime)
@@ -302,7 +302,7 @@ class ReportingServiceImpl @Inject() (
       .toServiceResult(s"Opened cases without enquiries by day, $dateRange")
   }
 
-  
+
   private def getClosedCasesWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[StoredCase]] =
     daoRunner.run {
       Compiled(
@@ -322,7 +322,7 @@ class ReportingServiceImpl @Inject() (
       .toServiceResult(s"Closed cases without enquiries by day, $dateRange")
   }
 
-  
+
   private def firstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[TeamMetrics]] =
     daoRunner.run {
       enquiryDao.countFirstEnquiriesByTeam(start, end)
@@ -352,7 +352,7 @@ class ReportingServiceImpl @Inject() (
       .toServiceResult(s"First enquiries by day, $dateRange")
   }
 
-  
+
   private def getCasesWithLiveAppointmentsFromEnquiries(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[StoredCase]] = {
     val casesWithNonCancelledApptsQuery = appointmentDao.findNotCancelledQuery.withCases.map(_._2).map(_.id)
 
@@ -375,8 +375,8 @@ class ReportingServiceImpl @Inject() (
       .countVersionedByDay(start, end)
       .toServiceResult(s"Cases with appointments from enquiries by day, $dateRange")
   }
-  
-  
+
+
   private def getCasesWithLiveAppointmentsWithoutEnquiries(start: OffsetDateTime, end: OffsetDateTime)(implicit t: TimingContext): Future[Seq[StoredCase]] = {
     val casesWithNonCancelledApptsQuery = appointmentDao.findNotCancelledQuery.withCases.map(_._2).map(_.id)
 
@@ -425,7 +425,7 @@ class ReportingServiceImpl @Inject() (
 
   def countCancelledAppointments(start: OffsetDateTime, end: OffsetDateTime, team: Option[Team])(implicit t: TimingContext): Future[Int] =
     getAppointments(start, end, AppointmentState.Cancelled).countForTeam(team)
-  
+
   def provisionalAppointmentsByDay(start: LocalDate, end: LocalDate, team: Team)(implicit t: TimingContext): Future[ServiceResult[Seq[DailyMetrics]]] = {
     val dateRange = DateRange(start, end)
     getAppointments(dateRange.startTime, dateRange.endTime, AppointmentState.Provisional)

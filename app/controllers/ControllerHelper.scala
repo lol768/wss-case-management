@@ -57,15 +57,15 @@ case class DateRange(start: LocalDate, end: LocalDate) {
   val isViable: Boolean = interval.toDuration.toDays <= DateRange.maxRange
   val daysBetween: Long = ChronoUnit.DAYS.between(start, end)
   val daysInclusive: Long = daysBetween + 1
-  
+
   def toSeq: Seq[LocalDate] =
-    Iterator.iterate(start)(_.plusDays(1L))
+    Iterator.iterate(start)(_.plusDays(1))
       .takeWhile(!_.isAfter(end))
       .toSeq
-  
+
   def map[T](fn: LocalDate => T): Seq[T] =
     toSeq.map(date => fn(date))
-  
+
   def tupled[T](fn: LocalDate => T): Seq[(LocalDate, T)] = toSeq.zip(map(fn))
 
   override def toString: String = s"${start.format(DateRange.localDateStringFormat)} to ${end.format(DateRange.localDateStringFormat)} ($daysInclusive day${if (daysInclusive != 1) "s" else ""}, inclusive)"
@@ -96,7 +96,9 @@ object DateRange {
     )(DateRange.apply)(DateRange.unapply)
       verifying(validationConstraint)
   )
-  
+
   def apply(start: OffsetDateTime, end: OffsetDateTime): DateRange = DateRange(start.toLocalDate, end.toLocalDate)
   def apply(start: Option[LocalDate], end: Option[LocalDate]): DateRange = DateRange(start.getOrElse(LocalDate.now.minusDays(7L)), end.getOrElse(LocalDate.now))
 }
+
+case class NamedDateRange(name: String, description: String, dateRange: DateRange)

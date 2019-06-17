@@ -1,3 +1,4 @@
+@import controllers.reports.ReportsController.shortcuts
 @import services.Metric
 @(
     teams: Seq[String],
@@ -19,13 +20,13 @@
           }
         </span>
       </th>
-      
+
       @teams.map { case team =>
         <td class="numeric">
           @metric.teamMetrics.find(_.team.name == team).map(_.value).getOrElse("-")
         </td>
       }
-      
+
       @if(showTotal) {
         <th class="numeric total">
         @metric.teamMetrics.map({ case tm => tm.value }).sum
@@ -33,43 +34,51 @@
       }
     </tr>
 }
-  
+
 @main("Reports") {
   <div class="well">
-    @b3.vertical.formCSRF(action = controllers.reports.routes.ReportsController.report) { implicit ifc =>
+    @b3.vertical.formCSRF(action = controllers.reports.routes.ReportsController.report, 'id -> "date-range") { implicit ifc =>
       @if(form.hasGlobalErrors) {
         @defining(form.globalErrors.map(_.message).mkString(", ")) { error =>
           @b3.datePicker(form("start"), '_label -> "Start", '_error -> true)
-          @b3.datePicker(form("end"), '_label -> "End", '_error -> error)
+          @b3.datePicker(form("end"), '_label -> "End", 'maxDate -> "2019-06-13", '_error -> error)
         }
       } else {
         @b3.datePicker(form("start"), '_label -> "Start", '_label -> "Start")
-        @b3.datePicker(form("end"), '_label -> "End", '_label -> "End")
+        @b3.datePicker(form("end"), '_label -> "End", 'maxDate -> "2019-06-13", '_label -> "End")
       }
-  
+
+      @if(shortcuts.nonEmpty) {
+        <ul class="small list-inline pull-right">
+          @shortcuts.map { s =>
+            <li><a class="use-tooltip" data-start-field="#start" data-end-field="#end" data-start="@s.dateRange.start.toString" data-end="@s.dateRange.end.toString" title="@s.description">@s.name</a></li>
+          }
+        </ul>
+      }
+
       @b3.submit('class -> "btn btn-primary") { Update report }
     }
   </div>
-  
+
   <div id="d3-chart-container" class="d3-chart-container collapsed">
     <i class="d3-hider pull-right far fa-2x fa-times text-muted" title="Hide chart"></i>
     <div id="d3-chart"></div>
   </div>
-  
+
   <table class="table table-default report">
     <caption>@range</caption>
     <thead>
       <tr>
         <th></th>
-        
+
         @teams.map { case team => <th class="numeric">@team</th> }
-        
+
         @if(showTotal) {
           <th class="numeric total">Total</th>
         }
       </tr>
     </thead>
-    
+
     <tbody>
       @metrics.map { case metric => @row(metric) }
     </tbody>

@@ -1,12 +1,12 @@
 package controllers.reports
 
-import java.time.LocalDate
+import java.time.{DayOfWeek, LocalDate}
 
 import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
 import com.github.tototoshi.csv.CSVWriter
 import controllers.refiners.ReportingAdminActionRefiner
-import controllers.{API, BaseController, DateRange}
+import controllers.{API, BaseController, DateRange, NamedDateRange}
 import domain.Team
 import helpers.Json.JsonClientError
 import javax.inject.{Inject, Singleton}
@@ -15,6 +15,7 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent, Result}
 import services.DailyMetrics.writesDailyMetrics
 import services.{DailyMetrics, PermissionService, ReportingService}
+import uk.ac.warwick.util.termdates
 import warwick.core.helpers.ServiceResults.ServiceResult
 import warwick.core.timing.TimingContext
 import warwick.sso.AuthenticatedRequest
@@ -32,10 +33,14 @@ class ReportsController @Inject()(
 
   type MetricsGenerator = (LocalDate, LocalDate, Team) => Future[ServiceResult[Seq[DailyMetrics]]]
 
-  private def defaultDateRange = DateRange(
-    LocalDate.now().minusDays(7),
-    LocalDate.now()
-  )
+  // this week, Monday-Sunday
+  private def defaultDateRange = {
+    val start = LocalDate.now.`with`(DayOfWeek.MONDAY)
+    DateRange(
+      start,
+      start.plusDays(6)
+    )
+  }
 
   private def form = DateRange.form.fill(defaultDateRange)
 
@@ -50,7 +55,7 @@ class ReportsController @Inject()(
           val range = dateRange.toString
 
           reporting.metrics(start, end, teams)
-            .successMap { metrics => Ok(views.html.reports.home(teams.map(_.name), range, metrics, teams.size > 1, dateForm)) }
+            .successMap { metrics => Ok(views.html.reports.reports(teams.map(_.name), range, metrics, teams.size > 1, dateForm)) }
 
         case _ =>
           Future.successful(Forbidden(views.html.errors.forbidden(name)(requestContext(request))))
@@ -82,7 +87,7 @@ class ReportsController @Inject()(
             ))
         })).map(metrics => Ok(Json.toJson(API.Success[JsValue](data = Json.toJson(metrics)))))
       })
-  
+
   def openedEnquiriesByDay(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request => {
     dailyReport(reporting.openedEnquiriesByDay, DateRange(start, end))
   }}
@@ -141,9 +146,9 @@ class ReportsController @Inject()(
     reporter: MetricsGenerator,
     dateRange: DateRange
   )(implicit req: AuthenticatedRequest[AnyContent], t: TimingContext): Future[Result] = {
-    
-    val emptyDailyMetrics = dateRange.map(d => DailyMetrics(d, 0)) 
-    
+
+    val emptyDailyMetrics = dateRange.map(d => DailyMetrics(d, 0))
+
     Future.successful(permissions.teams(currentUser().usercode))
       .successFlatMap(teams => {
         val futureMetrics = Future.sequence(teams.map(team => {
@@ -158,7 +163,7 @@ class ReportsController @Inject()(
         })
       })
   }
-  
+
   def openedEnquiriesByDayCsv(start: Option[LocalDate], end: Option[LocalDate]): Action[AnyContent] = ReportingAdminRequiredAction.async { implicit request =>
     dailyCsv(reporting.openedEnquiriesByDay, DateRange(start, end))
   }
@@ -201,6 +206,32 @@ class ReportsController @Inject()(
 }
 
 object ReportsController {
+
+  def shortcuts: Seq[NamedDateRange] = {
+    val now = LocalDate.now
+    val startOfLastWeek = now.minusWeeks(1).`with`(DayOfWeek.MONDAY)
+    val startOfAcademicYear = termdates.AcademicYear.forDate(now).getAcademicWeek(1).getDateRange.getStart
+
+    Seq(
+      NamedDateRange("Last week", "Last week, Monday-to-Sunday", DateRange(
+        startOfLastWeek,
+        startOfLastWeek.plusDays(6)
+      )),
+      NamedDateRange("Last month", "The last complete calendar month", DateRange(
+        now.minusMonths(1).withDayOfMonth(1),
+        now.withDayOfMonth(1).minusDays(1)
+      )),
+      NamedDateRange("This month", "The current calendar month (partial)", DateRange(
+        now.withDayOfMonth(1),
+        now.plusMonths(1).withDayOfMonth(1).minusDays(1)
+      )),
+      NamedDateRange("This academic year", "The current academic year (partial)", DateRange(
+        startOfAcademicYear,
+        startOfAcademicYear.plusYears(1)
+      ))
+    )
+  }
+
   def csvFromMetrics(dateRange: DateRange, metrics: Seq[(Team, Seq[DailyMetrics])]): Seq[Seq[String]] = {
     val teamIds = metrics.map(_._1.name)
     val headerRow = "Date" +: teamIds
