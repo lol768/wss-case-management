@@ -8,6 +8,7 @@ import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
 import domain.AuditEvent._
 import domain.CustomJdbcTypes._
+import domain.DatabaseOperation.{Delete, Insert, Update}
 import domain.ExtendedPostgresProfile.api._
 import domain.Pagination._
 import domain._
@@ -16,7 +17,6 @@ import domain.dao.EnquiryDao.{Enquiries, EnquiryFilter, EnquirySearchQuery, Stor
 import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{DaoRunner, EnquiryDao, MemberDao, MessageDao}
-import warwick.slick.helpers.SlickServiceResults.Implicits._
 import javax.inject.{Inject, Singleton}
 import org.quartz.{JobBuilder, Scheduler, TriggerBuilder}
 import play.api.Configuration
@@ -25,11 +25,12 @@ import services.EnquiryService._
 import services.job.SendEnquiryClientReminderJob
 import slick.lifted.Query
 import warwick.core.Logging
-import warwick.core.helpers.{JavaTime, ServiceResults}
 import warwick.core.helpers.ServiceResults.Implicits._
 import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
+import warwick.core.helpers.{JavaTime, ServiceResults}
 import warwick.core.timing.TimingContext
 import warwick.fileuploads.{UploadedFile, UploadedFileOwner, UploadedFileSave}
+import warwick.slick.helpers.SlickServiceResults.Implicits._
 import warwick.sso.{UniversityID, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -64,6 +65,7 @@ trait EnquiryService {
 
   def getForRender(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]]
   def getForRender(enquiryKey: IssueKey)(implicit ac: AuditLogContext): Future[ServiceResult[EnquiryRender]]
+  def getEnquiryHistory(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryHistoryRender]]]
 
   def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]]
   def findLastViewDate(enquiryID: UUID, usercode: Usercode)(implicit t: TimingContext): Future[ServiceResult[Option[OffsetDateTime]]]
@@ -312,6 +314,27 @@ class EnquiryServiceImpl @Inject() (
         Right(groupTuples(withMessages, notes).head)
       }
     }
+
+  override def getEnquiryHistory(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryHistoryRender]]] =
+    daoRunner.run(enquiryDao.getEnquiryHistory(id)).flatMap(evs => {
+      val usercodes = evs.flatMap(_.auditUser).toSet
+      memberService.getOrAddMembers(usercodes).successMapTo { members =>
+        evs.map { ev =>
+          EnquiryHistoryRender(
+            ev.auditUser.flatMap(usercode => members.find(_.usercode == usercode))
+              .flatMap(_.fullName)
+              .getOrElse(s"User no longer in system"),
+            ev.state,
+            ev.operation match {
+              case Insert => "Created"
+              case Update => "Updated"
+              case Delete => "Deleted"
+            },
+            ev.timestamp
+          )
+        }
+      }
+    })
 
   override def findRecentlyViewed(teamMember: Usercode, limit: Int)(implicit t: TimingContext): Future[ServiceResult[Seq[Enquiry]]] =
     auditService.findRecentTargetIDsByOperation(Operation.Enquiry.View, teamMember, limit).flatMap(_.fold(

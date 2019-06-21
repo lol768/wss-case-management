@@ -92,8 +92,9 @@ class TeamEnquiryController @Inject()(
                 service.getOwners(Set(enquiry.id)),
                 permissionService.canViewTeamFuture(currentUser.usercode, enquiry.team),
                 caseService.findFromOriginalEnquiry(enquiry.id),
+                service.getEnquiryHistory(enquiry.id),
                 Future.successful(service.nextClientReminder(request.enquiry.id)),
-              ).successMap { case (ownersMap, canViewTeam, linkedCases, nextClientReminder) =>
+              ).successMap { case (ownersMap, canViewTeam, linkedCases, enquiryHistory, nextClientReminder) =>
                 Ok(views.html.admin.enquiry.messages(
                   enquiryRender.enquiry,
                   profile,
@@ -106,6 +107,7 @@ class TeamEnquiryController @Inject()(
                   messageForm,
                   canViewTeam,
                   linkedCases,
+                  enquiryHistory,
                   uploadedFileControllerHelper.supportedMimeTypes
                 ))
               }

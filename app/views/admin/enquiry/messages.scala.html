@@ -1,10 +1,9 @@
 @import java.time.OffsetDateTime
 
 @import controllers.MessagesController.MessageFormData
-@import domain.{Case, Enquiry, EnquiryNote, EnquiryNoteType, IssueState, Member, MessageRender, MessageSender, SitsProfile}
+@import domain.{Case, Enquiry, EnquiryHistoryRender, EnquiryNote, EnquiryNoteType, IssueState, Member, MessageRender, MessageSender, SitsProfile}
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
-
 @(
   enquiry: Enquiry,
   profile: Option[SitsProfile],
@@ -17,6 +16,7 @@
   messageForm: Form[MessageFormData],
   canViewEnquiryTeam: Boolean,
   linkedCases: Seq[Case],
+  enquiryHistory: Seq[EnquiryHistoryRender],
   supportedMimeTypes: Seq[MediaType]
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
@@ -41,6 +41,7 @@
         }
       </h5>
       <h5>
+        <span class="badge">
         @if(enquiry.state == IssueState.Closed) {
           Closed
         } else {
@@ -51,8 +52,37 @@
             waiting for client
           }
         }
+        </span>
+        @if(enquiryHistory.size > 1) {
+          <a role="button" href="#history-modal" class="use-tooltip" data-toggle="modal" data-target="#history-modal" title="Show enquiry history">
+            <i class="fal fa-history"></i>
+          </a>
+        }
       </h5>
     </div>
+
+    @if(enquiryHistory.size > 1) {
+      <div class="modal fade" id="history-modal" tabindex="-1" role="dialog" aria-labelledby="history-modal-label">
+        <div class="modal-dialog modal-lg" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+              <h4 class="modal-title" id="history-modal-label">Enquiry history</h4>
+            </div>
+            <div class="modal-body">
+              <ul class="list-unstyled">
+              @enquiryHistory.map { event =>
+                <li>@event.operation by @event.name <span class="badge">@event.state</span> <span class="small text-muted">@JavaTime.Relative(event.timestamp)</span></li>
+              }
+              </ul>
+            </div>
+            <div class="modal-footer spaced-buttons">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
 
     <div class="enquiry-details--actions row">
       <div class="col-sm-6 col-md-7">
