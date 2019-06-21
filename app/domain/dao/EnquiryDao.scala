@@ -41,6 +41,7 @@ trait EnquiryDao {
   def findByStateQuery(state: IssueStateFilter): Query[Enquiries, StoredEnquiry, Seq]
   def getFirstEnquiries(start: OffsetDateTime, end: OffsetDateTime, team: Team): DBIO[Seq[StoredEnquiry]]
   def countFirstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime): DBIO[Seq[TeamMetrics]]
+  def getEnquiryHistory(id: UUID): DBIO[Seq[StoredEnquiryVersion]]
 }
 
 @Singleton
@@ -176,7 +177,7 @@ class EnquiryDaoImpl @Inject() (
         .filter(_.id.inSet(idSeq))
         .result
     })
-  
+
   override def countFirstEnquiriesByTeam(start: OffsetDateTime, end: OffsetDateTime): DBIO[Seq[TeamMetrics]] =
     sql"""select e.team_id, count(e.id)
       from enquiry e
@@ -196,6 +197,9 @@ class EnquiryDaoImpl @Inject() (
       .map(_.map { case (id, value) =>
         TeamMetrics(Teams.fromId(id), value)
       })
+
+  override def getEnquiryHistory(id: UUID): DBIO[Seq[StoredEnquiryVersion]] =
+    enquiries.history(_.id === id)
 }
 
 object EnquiryDao {
@@ -282,7 +286,7 @@ object EnquiryDao {
     def idx = index("idx_enquiry_key", key, unique = true)
 
     def isOpen: Rep[Boolean] = state === (Open : IssueState) || state === (Reopened : IssueState)
-    
+
     def matchesState(state: IssueStateFilter): Rep[Boolean] = state match {
       case IssueStateFilter.Open => isOpen
       case IssueStateFilter.Closed => !isOpen
@@ -307,15 +311,15 @@ object EnquiryDao {
       .on { case (e, (m, _)) =>
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
-    
+
     def withNotes = q
       .joinLeft(enquiryNotes.table)
       .on { case (e, n) => e.id === n.enquiryID }
-    
+
     def withClient = q
       .join(ClientDao.clients.table)
       .on { case (e, c) => e.universityId === c.universityID }
-    
+
     def withClientAndMessages = q
       .withClient
       .joinLeft(
@@ -329,7 +333,7 @@ object EnquiryDao {
         e.id === m.ownerId && m.ownerType === (MessageOwner.Enquiry: MessageOwner)
       }
       .map { case ((e, c), mfm) => (e, c, mfm) }
-    
+
     def withLastUpdatedFor(usercode: Usercode) = q
       .withClient
       .join(Message.lastUpdatedEnquiryMessage)

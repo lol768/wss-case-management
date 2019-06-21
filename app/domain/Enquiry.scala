@@ -48,6 +48,13 @@ case class EnquiryListRender(
   lastViewed: Option[OffsetDateTime],
 ) extends IssueListRender(enquiry)
 
+case class EnquiryHistoryRender(
+  name: String,
+  state: IssueState,
+  operation: String,
+  timestamp: OffsetDateTime
+)
+
 case class EnquiryNote(
   id: UUID,
   noteType: EnquiryNoteType,
