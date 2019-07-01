@@ -44,6 +44,32 @@ function bindTo($scope) {
 
   UserListPopovers($scope);
 
+  if ($('#d3-chart-container', $scope).length > 0) {
+    import(/* webpackChunkName: "d3-chart-import" */'./d3-chart')
+      .then(({ default: D3Chart }) => {
+        $('#d3-chart-container', $scope).each((i, container) => {
+          D3Chart(container);
+        });
+      })
+      .catch((e) => {
+        log.error(e);
+        throw e;
+      });
+  }
+
+  if ($('[data-start][data-end]', $scope).length > 0) {
+    import(/* webpackChunkName: "date-range-import" */'./date-range')
+      .then(({ default: DateRangeShortcuts }) => {
+        $('[data-start][data-end]', $scope).each((i, el) => {
+          DateRangeShortcuts(el);
+        });
+      })
+      .catch((e) => {
+        log.error(e);
+        throw e;
+      });
+  }
+
   if ($('.field-history', $scope).length > 0) {
     import(/* webpackChunkName: "field-history-import" */'./field-history')
       .then(({ default: FieldHistory }) => {

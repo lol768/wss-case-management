@@ -1,0 +1,86 @@
+@import controllers.reports.ReportsController.shortcuts
+@import services.Metric
+@(
+    teams: Seq[String],
+    range: String,
+    metrics: Seq[Metric],
+    showTotal: Boolean,
+    form: Form[DateRange]
+)(implicit context: RequestContext, req: RequestHeader, messages: MessagesProvider)
+
+@row(metric: Metric) = {
+    <tr>
+      <th><span class="use-tooltip" title="@metric.description.getOrElse(metric.name)">@metric.name</span>
+        <span class="btn-group">
+          @metric.chartPath.map { path =>
+            <a class="btn btn-xs btn-default d3-chartable use-tooltip" title="Show daily metrics chart" data-title="@metric.name" data-src="@path?start=@form("start").value&end=@form("end").value"><i class="fal fa-lg fa-fw fa-chart-bar"></i></a>
+          }
+          @metric.csvPath.map { path =>
+            <a class="btn btn-xs btn-default use-tooltip" title="Download daily metrics CSV" href="@path?start=@form("start").value&end=@form("end").value"><i class="fal fa-lg fa-fw fa-file-csv"></i></a>
+          }
+        </span>
+      </th>
+
+      @teams.map { case team =>
+        <td class="numeric">
+          @metric.teamMetrics.find(_.team.name == team).map(_.value).getOrElse("-")
+        </td>
+      }
+
+      @if(showTotal) {
+        <th class="numeric total">
+        @metric.teamMetrics.map({ case tm => tm.value }).sum
+        </th>
+      }
+    </tr>
+}
+
+@main("Reports") {
+  <div class="well">
+    @b3.vertical.formCSRF(action = controllers.reports.routes.ReportsController.report, 'id -> "date-range") { implicit ifc =>
+      @if(form.hasGlobalErrors) {
+        @defining(form.globalErrors.map(_.message).mkString(", ")) { error =>
+          @b3.datePicker(form("start"), '_label -> "Start", '_error -> true)
+          @b3.datePicker(form("end"), '_label -> "End", 'maxDate -> "2019-06-13", '_error -> error)
+        }
+      } else {
+        @b3.datePicker(form("start"), '_label -> "Start", '_label -> "Start")
+        @b3.datePicker(form("end"), '_label -> "End", 'maxDate -> "2019-06-13", '_label -> "End")
+      }
+
+      @if(shortcuts.nonEmpty) {
+        <ul class="small list-inline pull-right">
+          @shortcuts.map { s =>
+            <li><a class="use-tooltip" data-start-field="#start" data-end-field="#end" data-start="@s.dateRange.start.toString" data-end="@s.dateRange.end.toString" title="@s.description">@s.name</a></li>
+          }
+        </ul>
+      }
+
+      @b3.submit('class -> "btn btn-primary") { Update report }
+    }
+  </div>
+
+  <div id="d3-chart-container" class="d3-chart-container collapsed">
+    <i class="d3-hider pull-right far fa-2x fa-times text-muted" title="Hide chart"></i>
+    <div id="d3-chart"></div>
+  </div>
+
+  <table class="table table-default report">
+    <caption>@range</caption>
+    <thead>
+      <tr>
+        <th></th>
+
+        @teams.map { case team => <th class="numeric">@team</th> }
+
+        @if(showTotal) {
+          <th class="numeric total">Total</th>
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @metrics.map { case metric => @row(metric) }
+    </tbody>
+  </table>
+}

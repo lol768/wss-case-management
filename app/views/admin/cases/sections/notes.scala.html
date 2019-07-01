@@ -39,5 +39,5 @@
   }
 }
 <div data-count="@notes.size" id="case-notes-list">
-  @notes.reverse.map(n => tags.cases.caseNote(c, n))
+  @notes.map(n => tags.cases.caseNote(c, n))
 </div>

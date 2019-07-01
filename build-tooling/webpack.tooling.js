@@ -19,7 +19,7 @@ const lintJS = () => ({
   module: {
     rules: [
       {
-        test: /\.js$/,
+        test: /\.m?js$/,
         enforce: 'pre',
         use: 'eslint-loader',
       },
@@ -36,7 +36,7 @@ const transpileJS = ({ entry, include } = {}) => ({
   module: {
     rules: [
       {
-        test: /\.js$/,
+        test: /\.m?js$/,
         include,
         use: 'babel-loader',
       },
@@ -48,7 +48,7 @@ const copyNpmDistAssets = ({ modules, dest } = {}) => {
   const pairs = modules.map(m => ({
     from: `node_modules/${m}/dist`,
     to: `${dest}/${m.split('/').slice(-1)[0]}/[1]`,
-    test: new RegExp('.*/dist/(.+/[-.a-z0-9@]+\\.(otf|eot|woff|woff2|ttf|js|js.map|gif|png|jpg|svg|ico))$', 'i'),
+    test: new RegExp('.*/dist/(.+/[-.a-z0-9@]+\\.(otf|eot|woff|woff2|ttf|mjs|js|js.map|gif|png|jpg|svg|ico))$', 'i'),
   }));
 
   return {

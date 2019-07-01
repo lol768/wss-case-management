@@ -1,6 +1,7 @@
 package controllers
 
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.time.{LocalDate, OffsetDateTime, ZoneId}
 
 import helpers.Json._
@@ -54,8 +55,20 @@ case class DateRange(start: LocalDate, end: LocalDate) {
   val endTime: OffsetDateTime = end.atStartOfDay(ZoneId.systemDefault()).plusDays(1).minusNanos(1).toOffsetDateTime
   val interval: Interval = Interval.of(startTime.toInstant, endTime.toInstant)
   val isViable: Boolean = interval.toDuration.toDays <= DateRange.maxRange
+  val daysBetween: Long = ChronoUnit.DAYS.between(start, end)
+  val daysInclusive: Long = daysBetween + 1
 
-  override def toString: String = s"${start.format(DateRange.localDateStringFormat)} to ${end.format(DateRange.localDateStringFormat)} inclusive"
+  def toSeq: Seq[LocalDate] =
+    Iterator.iterate(start)(_.plusDays(1))
+      .takeWhile(!_.isAfter(end))
+      .toSeq
+
+  def map[T](fn: LocalDate => T): Seq[T] =
+    toSeq.map(date => fn(date))
+
+  def tupled[T](fn: LocalDate => T): Seq[(LocalDate, T)] = toSeq.zip(map(fn))
+
+  override def toString: String = s"${start.format(DateRange.localDateStringFormat)} to ${end.format(DateRange.localDateStringFormat)} ($daysInclusive day${if (daysInclusive != 1) "s" else ""}, inclusive)"
 }
 
 object DateRange {
@@ -83,4 +96,9 @@ object DateRange {
     )(DateRange.apply)(DateRange.unapply)
       verifying(validationConstraint)
   )
+
+  def apply(start: OffsetDateTime, end: OffsetDateTime): DateRange = DateRange(start.toLocalDate, end.toLocalDate)
+  def apply(start: Option[LocalDate], end: Option[LocalDate]): DateRange = DateRange(start.getOrElse(LocalDate.now.minusDays(7L)), end.getOrElse(LocalDate.now))
 }
+
+case class NamedDateRange(name: String, description: String, dateRange: DateRange)

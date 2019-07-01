@@ -24,6 +24,9 @@ trait SecurityService {
 
   def RequireSysadmin: AuthActionBuilder
   def RequireMasquerader: AuthActionBuilder
+
+  def RequireAPIRead: AuthActionBuilder
+  def RequireAPIWrite: AuthActionBuilder
 }
 
 @Singleton
@@ -44,6 +47,9 @@ class SecurityServiceImpl @Inject()(
 
   val RequireSysadmin: AuthActionBuilder = RequiredActualUserRoleAction(Roles.Sysadmin)
   val RequireMasquerader: AuthActionBuilder = RequiredActualUserRoleAction(Roles.Masquerader)
+
+  val RequireAPIRead: AuthActionBuilder = RequiredActualUserRoleAction(Roles.APIRead)
+  val RequireAPIWrite: AuthActionBuilder = RequiredActualUserRoleAction(Roles.APIWrite)
 
   class RequireConditionActionFilter(block: AuthenticatedRequest[_] => Boolean, otherwise: AuthenticatedRequest[_] => Result)(implicit val executionContext: ExecutionContext) extends ActionFilter[AuthenticatedRequest] {
     override protected def filter[A](request: AuthenticatedRequest[A]): Future[Option[Result]] =

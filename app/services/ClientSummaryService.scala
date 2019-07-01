@@ -28,6 +28,7 @@ trait ClientSummaryService {
   def getByAlternativeEmailAddress(email: String)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]]
   def getHistory(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[ClientSummaryHistory]]
   def findAtRisk(includeMentalHealth: Boolean)(implicit t: TimingContext): Future[ServiceResult[Set[AtRiskClient]]]
+  def findUpdatedSince(since: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Seq[ClientSummary]]]
 }
 
 @Singleton
@@ -46,7 +47,8 @@ class ClientSummaryServiceImpl @Inject()(
     notes = summary.notes,
     alternativeContactNumber = summary.alternativeContactNumber,
     alternativeEmailAddress = summary.alternativeEmailAddress,
-    riskStatus = summary.riskStatus
+    riskStatus = summary.riskStatus,
+    reasonableAdjustmentsNotes = summary.reasonableAdjustmentsNotes,
   )
 
   private def toStored(universityID: UniversityID, reasonableAdjustment: ReasonableAdjustment): StoredReasonableAdjustment = StoredReasonableAdjustment(
@@ -146,4 +148,10 @@ class ClientSummaryServiceImpl @Inject()(
       )
     }))
   }
+
+  override def findUpdatedSince(since: OffsetDateTime)(implicit t: TimingContext): Future[ServiceResult[Seq[ClientSummary]]] =
+    withReasonableAdjustmentsSeq(
+      dao.findUpdatedSinceQuery(since)
+        .withClient.result
+    ).map(ServiceResults.success)
 }

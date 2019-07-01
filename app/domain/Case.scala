@@ -32,7 +32,7 @@ case class Case(
   fields: CaseFields,
   created: OffsetDateTime,
   lastUpdated: OffsetDateTime,
-) extends Issue {
+) extends Issue with Created {
   def migrated = key.keyType == IssueKeyType.MigratedCase
 }
 
@@ -196,7 +196,7 @@ case class CaseNote(
   teamMember: Member,
   created: OffsetDateTime = JavaTime.offsetDateTime,
   lastUpdated: OffsetDateTime = JavaTime.offsetDateTime,
-)
+) extends Created
 
 case class CaseNoteRender(
   note: CaseNote,
@@ -245,7 +245,7 @@ case class CaseDocument(
   caseNote: CaseNote,
   created: OffsetDateTime = JavaTime.offsetDateTime,
   lastUpdated: OffsetDateTime = JavaTime.offsetDateTime,
-) extends HasCreator
+) extends HasCreator with Created
 
 /**
   * Just the metadata of the document required to save it
