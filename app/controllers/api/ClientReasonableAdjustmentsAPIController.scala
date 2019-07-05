@@ -5,7 +5,7 @@ import java.time.OffsetDateTime
 import controllers.BaseController
 import domain.ClientSummary
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsNull, JsObject, Json}
 import play.api.mvc.{Action, AnyContent}
 import services.{ClientSummaryService, SecurityService}
 import warwick.core.helpers.JavaTime
@@ -41,8 +41,8 @@ class ClientReasonableAdjustmentsAPIController @Inject()(
       Ok(clientSummary.map(ClientReasonableAdjustmentsAPIController.toJson).getOrElse(Json.obj(
         "universityID" -> universityID.string,
         "reasonableAdjustments" -> Json.arr(),
-        "notes" -> null,
-        "lastUpdated" -> null,
+        "notes" -> JsNull,
+        "lastUpdated" -> JsNull
       )))
     }
   }
