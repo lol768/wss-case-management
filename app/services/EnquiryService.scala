@@ -318,12 +318,17 @@ class EnquiryServiceImpl @Inject() (
   override def getEnquiryHistory(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[EnquiryHistoryRender]]] =
     daoRunner.run(enquiryDao.getEnquiryHistory(id)).flatMap(evs => {
       val usercodes = evs.flatMap(_.auditUser).toSet
-      memberService.getOrAddMembers(usercodes).successMapTo { members =>
-        evs.map { ev =>
+      ServiceResults.zip(
+        memberService.findMembersIfExists(usercodes),
+        clientService.findClientsByUsercodeIfExists(usercodes)
+      ).successMapTo { case (members, clients) =>
+        evs.map { ev => {
+          val fullName = ev.auditUser.flatMap(usercode => members.find(_.usercode == usercode).flatMap(_.fullName))
+              .orElse(ev.auditUser.flatMap(usercode => clients.find(_._1 == usercode).flatMap(_._2.fullName)))
+              .getOrElse(s"User not found in system")
+
           EnquiryHistoryRender(
-            ev.auditUser.flatMap(usercode => members.find(_.usercode == usercode))
-              .flatMap(_.fullName)
-              .getOrElse(s"User no longer in system"),
+            fullName,
             ev.state,
             ev.operation match {
               case Insert => "Created"
@@ -332,7 +337,7 @@ class EnquiryServiceImpl @Inject() (
             },
             ev.timestamp
           )
-        }
+        }}
       }
     })
 
