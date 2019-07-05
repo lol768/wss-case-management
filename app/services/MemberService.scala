@@ -5,10 +5,10 @@ import domain.ExtendedPostgresProfile.api._
 import domain.dao.MemberDao.StoredMember
 import domain.dao.{DaoRunner, MemberDao}
 import domain.{Member, Teams}
-import warwick.core.helpers.ServiceResults.Implicits._
-import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import slick.dbio.DBIOAction
+import warwick.core.helpers.ServiceResults.Implicits._
+import warwick.core.helpers.ServiceResults.ServiceResult
 import warwick.sso.{GroupService, UserLookupService, Usercode}
 
 import scala.concurrent.duration._
@@ -23,6 +23,8 @@ trait MemberService {
   def getOrAddMember(usercode: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Member]]
   def getOrAddMember(usercode: Option[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Option[Member]]]
   def getOrAddMembers(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
+  def findMember(usercode: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Option[Member]]]
+  def findMembers(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
   def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
   def updateMembers(details: Map[Usercode, Option[String]])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
   def search(query: String)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
@@ -61,8 +63,15 @@ class MemberServiceImpl @Inject()(
               Right(added ++ existing.flatMap(_.map(_.asMember)))
             }
     })
-
   }
+
+  override def findMember(usercode: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Option[Member]]] =
+    daoRunner.run(dao.get(usercode)).map(osm => Right(osm.map(_.asMember)))
+
+  override def findMembers(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]] =
+    daoRunner.run(DBIOAction.sequence(usercodes.toSeq.map(dao.get))).flatMap(optMembers =>
+      Future.successful(Right(optMembers.flatten.map(_.asMember)))
+    )
 
   override def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]] =
     daoRunner.run(dao.getOlderThan(MemberService.UpdateRequiredWindow).result)
@@ -78,7 +87,7 @@ class MemberServiceImpl @Inject()(
 
   override def search(query: String)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]] = {
     val usercodeResult = userLookupService.getUser(Usercode(query)).toOption
-    usercodeResult.map(user => getOrAddMember(user.usercode).map(_.map(m => Seq(m)))).getOrElse {
+    usercodeResult.map(user => findMember(user.usercode).map(_.map(_.toSeq))).getOrElse {
       // Populate Member table
       getOrAddAllMembers.successFlatMapTo(_ =>
         // Then search them
