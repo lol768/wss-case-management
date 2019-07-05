@@ -319,8 +319,8 @@ class EnquiryServiceImpl @Inject() (
     daoRunner.run(enquiryDao.getEnquiryHistory(id)).flatMap(evs => {
       val usercodes = evs.flatMap(_.auditUser).toSet
       ServiceResults.zip(
-        memberService.findMembers(usercodes),
-        clientService.findClientsByUsercode(usercodes)
+        memberService.findMembersIfExists(usercodes),
+        clientService.findClientsByUsercodeIfExists(usercodes)
       ).successMapTo { case (members, clients) =>
         evs.map { ev => {
           val fullName = ev.auditUser.flatMap(usercode => members.find(_.usercode == usercode).flatMap(_.fullName))

@@ -25,8 +25,8 @@ object ClientService {
 trait ClientService {
   def find(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[Client]]]
   def getOrAddClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
-  def findClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
-  def findClientsByUsercode(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[(Usercode, Client)]]]
+  def findClientsIfExists(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
+  def findClientsByUsercodeIfExists(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[(Usercode, Client)]]]
   def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
   def updateClients(details: Map[UniversityID, Option[String]])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
   def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Seq[Client]]]
@@ -60,12 +60,12 @@ class ClientServiceImpl @Inject()(
         }
     })
 
-  override def findClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]] =
+  override def findClientsIfExists(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]] =
     daoRunner.run(DBIOAction.sequence(universityIDs.toSeq.map(dao.get))).flatMap(optClients =>
       Future.successful(Right(optClients.flatten.map(_.asClient)))
     )
 
-  override def findClientsByUsercode(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[(Usercode, Client)]]] = {
+  override def findClientsByUsercodeIfExists(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[(Usercode, Client)]]] = {
     val usercodesWithUniIds = userLookupService.getUsers(usercodes.toSeq)
                    .map(_.map { case (usercode, user) if user.universityId.nonEmpty => (usercode, user.universityId.get) })
                    .toOption.getOrElse(Map.empty[Usercode, UniversityID])

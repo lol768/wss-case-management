@@ -23,8 +23,8 @@ trait MemberService {
   def getOrAddMember(usercode: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Member]]
   def getOrAddMember(usercode: Option[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Option[Member]]]
   def getOrAddMembers(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
-  def findMember(usercode: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Option[Member]]]
-  def findMembers(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
+  def findMemberIfExists(usercode: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Option[Member]]]
+  def findMembersIfExists(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
   def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
   def updateMembers(details: Map[Usercode, Option[String]])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
   def search(query: String)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]]
@@ -65,10 +65,10 @@ class MemberServiceImpl @Inject()(
     })
   }
 
-  override def findMember(usercode: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Option[Member]]] =
+  override def findMemberIfExists(usercode: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[Option[Member]]] =
     daoRunner.run(dao.get(usercode)).map(osm => Right(osm.map(_.asMember)))
 
-  override def findMembers(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]] =
+  override def findMembersIfExists(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]] =
     daoRunner.run(DBIOAction.sequence(usercodes.toSeq.map(dao.get))).flatMap(optMembers =>
       Future.successful(Right(optMembers.flatten.map(_.asMember)))
     )
@@ -87,7 +87,7 @@ class MemberServiceImpl @Inject()(
 
   override def search(query: String)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Member]]] = {
     val usercodeResult = userLookupService.getUser(Usercode(query)).toOption
-    usercodeResult.map(user => findMember(user.usercode).map(_.map(_.toSeq))).getOrElse {
+    usercodeResult.map(user => findMemberIfExists(user.usercode).map(_.map(_.toSeq))).getOrElse {
       // Populate Member table
       getOrAddAllMembers.successFlatMapTo(_ =>
         // Then search them
