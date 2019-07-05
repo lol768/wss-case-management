@@ -8,7 +8,7 @@ import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.Inject
 import services.tabula.ProfileService
 import slick.dbio.DBIOAction
-import warwick.sso.UniversityID
+import warwick.sso.{UniversityID, UserLookupService, Usercode}
 import warwick.core.helpers.ServiceResults.Implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -25,12 +25,15 @@ object ClientService {
 trait ClientService {
   def find(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[Client]]]
   def getOrAddClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
+  def findClientsIfExists(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
+  def findClientsByUsercodeIfExists(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[(Usercode, Client)]]]
   def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
   def updateClients(details: Map[UniversityID, Option[String]])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]]
   def search(query: String)(implicit t: TimingContext): Future[ServiceResult[Seq[Client]]]
 }
 
 class ClientServiceImpl @Inject()(
+  userLookupService: UserLookupService,
   profileService: ProfileService,
   daoRunner: DaoRunner,
   dao: ClientDao,
@@ -39,7 +42,7 @@ class ClientServiceImpl @Inject()(
   override def find(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[Client]]] =
     daoRunner.run(dao.get(universityID)).map { c => ServiceResults.success(c.map(_.asClient)) }
 
-  override def getOrAddClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]] = {
+  override def getOrAddClients(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]] =
     daoRunner.run(DBIOAction.sequence(universityIDs.toSeq.map(dao.get))).flatMap(_.partition(_.isEmpty) match {
       case (Nil, existing) =>
         Future.successful(Right(existing.flatMap(_.map(_.asClient))))
@@ -57,6 +60,24 @@ class ClientServiceImpl @Inject()(
         }
     })
 
+  override def findClientsIfExists(universityIDs: Set[UniversityID])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]] =
+    daoRunner.run(DBIOAction.sequence(universityIDs.toSeq.map(dao.get))).flatMap(optClients =>
+      Future.successful(Right(optClients.flatten.map(_.asClient)))
+    )
+
+  override def findClientsByUsercodeIfExists(usercodes: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[Seq[(Usercode, Client)]]] = {
+    val usercodesWithUniIds = userLookupService.getUsers(usercodes.toSeq)
+                   .map(_.map { case (usercode, user) if user.universityId.nonEmpty => (usercode, user.universityId.get) })
+                   .toOption.getOrElse(Map.empty[Usercode, UniversityID])
+                   .toSeq
+
+    daoRunner.run(DBIOAction.sequence(usercodesWithUniIds.map { case (_, id) => dao.get(id) })).flatMap(optClients =>
+      Future.successful(Right(
+        usercodesWithUniIds.map { case (usercode, _) => usercode }
+          .zip(optClients.map(_.map(_.asClient)))
+          .collect { case (uc, c) if c.nonEmpty => (uc, c.get) }
+      ))
+    )
   }
 
   override def getForUpdate(implicit ac: AuditLogContext): Future[ServiceResult[Seq[Client]]] =
