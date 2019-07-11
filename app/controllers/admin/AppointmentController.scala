@@ -192,9 +192,10 @@ class AppointmentController @Inject()(
   private def renderAppointment(appointmentKey: IssueKey, cancelForm: Form[CancelAppointmentData])(implicit request: AppointmentSpecificRequest[AnyContent]): Future[Result] =
     ServiceResults.zip(
       appointments.findForRender(appointmentKey),
-      permissionService.canEditAppointment(currentUser().usercode, request.appointment.id)
+      permissionService.canEditAppointment(currentUser().usercode, request.appointment.id),
+      appointments.getHistory(request.appointment.id),
     )
-   .successFlatMap { case (render, canEdit) =>
+   .successFlatMap { case (render, canEdit, history) =>
       profiles.getProfiles(render.clients.map(_.client.universityID)).successMap { clientProfiles =>
         val clients = render.clients.map(c => c -> clientProfiles.get(c.client.universityID)).toMap
 
@@ -202,7 +203,8 @@ class AppointmentController @Inject()(
           render,
           clients,
           cancelForm,
-          canEdit
+          canEdit,
+          history,
         ))
       }
     }
