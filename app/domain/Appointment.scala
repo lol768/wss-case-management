@@ -3,11 +3,17 @@ package domain
 import java.time.{Duration, OffsetDateTime}
 import java.util.UUID
 
+import domain.History._
+import domain.dao.AppointmentDao.{StoredAppointment, StoredAppointmentClient, StoredAppointmentClientVersion, StoredAppointmentVersion}
 import enumeratum.{EnumEntry, PlayEnum}
 import play.api.libs.json.{Json, Writes}
+import services.{AuditLogContext, ClientService}
 import uk.ac.warwick.util.termdates.AcademicYear
+import warwick.core.helpers.ServiceResults.ServiceResult
+import warwick.sso.{UniversityID, User, UserLookupService, Usercode}
 
 import scala.collection.immutable
+import scala.concurrent.{ExecutionContext, Future}
 
 case class Appointment(
   id: UUID,
@@ -141,12 +147,103 @@ object AppointmentRender {
   )
 }
 
+case class AppointmentHistory(
+  start: FieldHistory[OffsetDateTime],
+  duration: FieldHistory[Duration],
+  team: FieldHistory[Team],
+  appointmentType: FieldHistory[AppointmentType],
+  purpose: FieldHistory[AppointmentPurpose],
+  state: FieldHistory[AppointmentState],
+  cancellationReason: FieldHistory[Option[AppointmentCancellationReason]],
+  outcome: FieldHistory[Set[AppointmentOutcome]],
+  dsaSupportAccessed: FieldHistory[Option[AppointmentDSASupportAccessed]],
+  dsaActionPoints: FieldHistory[Set[AppointmentDSAActionPoint]],
+  teamMembers: Seq[(Set[Either[Usercode, User]], OffsetDateTime, Option[Either[Usercode, User]])],
+  clients: FieldHistory[Set[Client]],
+  clientHistory: Map[UniversityID, AppointmentClientHistory],
+)
+
+object AppointmentHistory {
+  val writer: Writes[AppointmentHistory] = (r: AppointmentHistory) =>
+    Json.obj(
+      "start" -> toJson(r.start),
+      "duration" -> toJson(r.duration),
+      "team" -> toJson(r.team)(Teams.writer),
+      "appointmentType" -> toJson(r.appointmentType),
+      "purpose" -> toJson(r.purpose),
+      "state" -> toJson(r.state),
+      "cancellationReason" -> toJson(r.cancellationReason),
+      "outcome" -> toJson(r.outcome),
+      "dsaSupportAccessed" -> toJson(r.dsaSupportAccessed),
+      "dsaActionPoints" -> toJson(r.dsaActionPoints),
+      "teamMembers" -> toJson(r.teamMembers.map { case (owners, v, u) => (owners.map(o => o.map(user => user.name.full.getOrElse(user.usercode.string)).fold(_.string, n => n)).toSeq.sorted.mkString(", "), v, u) }),
+      "clients" -> toJson(r.clients.map { case (clients, v, u) => (clients.map(c => c.safeFullName).toSeq.sorted.mkString(", "), v, u) }),
+      "clientHistory" -> Json.toJson(r.clientHistory.map { case (universityID, v) => universityID.string -> v })(Writes.map[AppointmentClientHistory](AppointmentClientHistory.writer)),
+    )
+
+  def apply(
+    history: Seq[StoredAppointmentVersion],
+    rawOwnerHistory: Seq[OwnerVersion],
+    rawClientHistory: Seq[StoredAppointmentClientVersion],
+    userLookupService: UserLookupService,
+    clientService: ClientService
+  )(implicit ac: AuditLogContext, ec: ExecutionContext): Future[ServiceResult[AppointmentHistory]] = {
+    val usercodes = Seq(history, rawOwnerHistory, rawClientHistory).flatten.flatMap(_.auditUser) ++ rawOwnerHistory.map(_.userId)
+    implicit val usersByUsercode: Map[Usercode, User] = userLookupService.getUsers(usercodes.distinct).toOption.getOrElse(Map())
+
+    def typedSimpleFieldHistory[A](f: StoredAppointmentVersion => A) = simpleFieldHistory[StoredAppointment, StoredAppointmentVersion, A](history, f)
+
+    clientService.getOrAddClients(rawClientHistory.map(_.universityID).toSet).map(_.map(clients =>
+      AppointmentHistory(
+        start = typedSimpleFieldHistory(_.start),
+        duration = typedSimpleFieldHistory(_.duration),
+        team = typedSimpleFieldHistory(_.team),
+        appointmentType = typedSimpleFieldHistory(_.appointmentType),
+        purpose = typedSimpleFieldHistory(_.purpose),
+        state = typedSimpleFieldHistory(_.state),
+        cancellationReason = typedSimpleFieldHistory(_.cancellationReason),
+        outcome = typedSimpleFieldHistory(_.outcome.map(AppointmentOutcome.withName).toSet),
+        dsaSupportAccessed = typedSimpleFieldHistory(_.dsaSupportAccessed),
+        dsaActionPoints = typedSimpleFieldHistory(_.dsaActionPoints.map(AppointmentDSAActionPoint.withName).toSet),
+        teamMembers = flattenCollection[Owner, OwnerVersion](rawOwnerHistory)
+          .map { case (owners, v, u) => (owners.map(o => usersByUsercode.get(o.userId).map(Right.apply).getOrElse(Left(o.userId))), v, u.map(toUsercodeOrUser))},
+        clients = flattenCollection[StoredAppointmentClient, StoredAppointmentClientVersion](rawClientHistory)
+          .map { case (c, v, u) => (c.map(c => clients.find(_.universityID == c.universityID).get), v, u.map(toUsercodeOrUser))},
+        clientHistory = rawClientHistory.groupBy(_.universityID).mapValues { c: Seq[StoredAppointmentClientVersion] =>
+          def typedSimpleClientFieldHistory[A](f: StoredAppointmentClientVersion => A) = simpleFieldHistory[StoredAppointmentClient, StoredAppointmentClientVersion, A](c, f)
+
+          AppointmentClientHistory(
+            state = typedSimpleClientFieldHistory(_.state),
+            cancellationReason = typedSimpleClientFieldHistory(_.cancellationReason),
+            attendanceState = typedSimpleClientFieldHistory(_.attendanceState)
+          )
+        }
+      )
+    ))
+  }
+}
+
 case class AppointmentClient(
   client: Client,
   state: AppointmentState,
   cancellationReason: Option[AppointmentCancellationReason],
   attendanceState: Option[AppointmentClientAttendanceState],
 )
+
+case class AppointmentClientHistory(
+  state: FieldHistory[AppointmentState],
+  cancellationReason: FieldHistory[Option[AppointmentCancellationReason]],
+  attendanceState: FieldHistory[Option[AppointmentClientAttendanceState]],
+)
+
+object AppointmentClientHistory {
+  val writer: Writes[AppointmentClientHistory] = (r: AppointmentClientHistory) =>
+    Json.obj(
+      "state" -> toJson(r.state),
+      "cancellationReason" -> toJson(r.cancellationReason),
+      "attendanceState" -> toJson(r.attendanceState),
+    )
+}
 
 case class AppointmentTeamMember(
   member: Member,

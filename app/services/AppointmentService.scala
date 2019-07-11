@@ -26,7 +26,7 @@ import warwick.core.helpers.ServiceResults.Implicits._
 import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import warwick.core.timing.TimingContext
 import warwick.slick.helpers.SlickServiceResults.Implicits._
-import warwick.sso.{UniversityID, Usercode}
+import warwick.sso.{UniversityID, UserLookupService, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.higherKinds
@@ -85,6 +85,8 @@ trait AppointmentService {
   def cancel(appointmentID: UUID, reason: AppointmentCancellationReason, note: Option[CaseNoteSave], currentUser: Usercode, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Appointment]]
 
   def sendClientReminder(appointmentID: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
+
+  def getHistory(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentHistory]]
 }
 
 @Singleton
@@ -94,6 +96,7 @@ class AppointmentServiceImpl @Inject()(
   clientService: ClientService,
   memberService: MemberService,
   ownerService: OwnerService,
+  userLookupService: UserLookupService,
   office365CalendarService: Office365CalendarService,
   caseServiceProvider: Provider[CaseService],
   daoRunner: DaoRunner,
@@ -693,6 +696,21 @@ class AppointmentServiceImpl @Inject()(
         _ <- notificationService.appointmentReminder(appointment.asAppointment, clients.filterNot(_.state == AppointmentState.Cancelled).map(_.universityID).toSet).toDBIO
       } yield Done)
     }
+
+  override def getHistory(id: UUID)(implicit ac: AuditLogContext): Future[ServiceResult[AppointmentHistory]] =
+    ownerService.getAppointmentOwnerHistory(id).flatMap(result => result.fold(
+      errors => Future.successful(Left.apply(errors)),
+      rawOwnerHistory => {
+        daoRunner.run(for {
+          appointmentHistory <- dao.getHistory(id)
+          rawClientHistory <- dao.getClientHistory(id)
+        } yield {
+          (appointmentHistory, rawClientHistory)
+        }).flatMap { case (appointmentHistory, rawClientHistory) =>
+          AppointmentHistory.apply(appointmentHistory, rawOwnerHistory, rawClientHistory, userLookupService, clientService)
+        }
+      }
+    ))
 }
 
 object AppointmentService {

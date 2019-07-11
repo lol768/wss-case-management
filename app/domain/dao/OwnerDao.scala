@@ -24,6 +24,7 @@ trait OwnerDao {
   def findCaseOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq]
   def findAppointmentOwnersQuery(ids: Set[UUID]): Query[Owner.Owners, Owner, Seq]
   def getCaseOwnerHistory(id: UUID): DBIO[Seq[OwnerVersion]]
+  def getAppointmentOwnerHistory(id: UUID): DBIO[Seq[OwnerVersion]]
 }
 
 @Singleton
@@ -56,6 +57,11 @@ class OwnerDaoImpl @Inject() (
   override def getCaseOwnerHistory(id: UUID): DBIO[Seq[OwnerVersion]] =
     Owner.owners.versionsTable
       .filter(o => o.entityId === id && o.entityType === (Owner.EntityType.Case:Owner.EntityType))
+      .result
+
+  override def getAppointmentOwnerHistory(id: UUID): DBIO[Seq[OwnerVersion]] =
+    Owner.owners.versionsTable
+      .filter(o => o.entityId === id && o.entityType === (Owner.EntityType.Appointment:Owner.EntityType))
       .result
 
 }

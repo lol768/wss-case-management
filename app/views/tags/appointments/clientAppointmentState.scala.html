@@ -6,13 +6,13 @@
 )
 
 @client.attendanceState.map { attendanceState =>
-  <span class="@attendanceState.appointmentState.className" @client.cancellationReason.map { r => title="@r.description" }>
+  <span class="@attendanceState.appointmentState.className" @client.cancellationReason.map { r => title="@r.description" } data-field-history-field="state">
     @tags.icons.appointmentState(client.state, client = true)
     @attendanceState.description
   </span>
 }.getOrElse {
   @if(client.state != appointment.state) {
-    <span class="@client.state.className" @client.cancellationReason.map { r => title="@r.description" }>
+    <span class="@client.state.className" @client.cancellationReason.map { r => title="@r.description" } data-field-history-field="state">
       @tags.icons.appointmentState(client.state, client = true)
       @client.state.clientDescription
     </span>
