@@ -2,6 +2,7 @@ package domain
 
 import java.time.OffsetDateTime
 
+import domain.dao.AppointmentDao.{StoredAppointmentClient, StoredAppointmentClientVersion}
 import domain.dao.CaseDao.{StoredCaseClient, StoredCaseClientVersion, StoredCaseTag, StoredCaseTagVersion}
 import domain.dao.DSADao.{StoredDSAFundingType, StoredDSAFundingTypeVersion}
 import play.api.libs.json.{JsValue, Json, Writes}
@@ -39,7 +40,8 @@ object History {
       case owner: OwnerVersion => Owner(owner.entityId, owner.entityType, owner.userId, owner.outlookId, owner.version).asInstanceOf[A]
       case client: StoredCaseClientVersion => StoredCaseClient(client.caseId, client.universityID, client.version).asInstanceOf[A]
       case ft: StoredDSAFundingTypeVersion => StoredDSAFundingType(ft.dsaApplicationID, ft.fundingType, ft.version).asInstanceOf[A]
-      case _ => throw new IllegalArgumentException("Unsupported versioned item")
+      case client: StoredAppointmentClientVersion => StoredAppointmentClient(client.universityID, client.appointmentID, client.state, client.cancellationReason, client.attendanceState, client.created, client.version).asInstanceOf[A]
+      case _ => throw new IllegalArgumentException(s"Unsupported versioned item: $item")
     }
     val result = items.toList.sortBy(_.timestamp) match {
       case Nil => Nil

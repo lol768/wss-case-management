@@ -1,13 +1,14 @@
 @import controllers.admin.AppointmentController.CancelAppointmentData
-@import domain.{AppointmentCancellationReason, AppointmentClient, AppointmentRender, SitsProfile}
+@import domain.{AppointmentCancellationReason, AppointmentClient, AppointmentClientHistory, AppointmentHistory, AppointmentRender, AppointmentState, SitsProfile}
+@import play.api.libs.json.Json
 @import warwick.core.helpers.JavaTime
 
-@import domain.AppointmentState
 @(
   a: AppointmentRender,
   profiles: Map[AppointmentClient, Option[SitsProfile]],
   cancelForm: Form[CancelAppointmentData],
-  canEdit: Boolean
+  canEdit: Boolean,
+  history: AppointmentHistory,
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
@@ -17,7 +18,7 @@
   <div class="appointment-details">
     <div class="appointment-details--header">
       @a.clients.map { client =>
-        <h5>
+        <h5 class="field-history" data-field-history="@Json.stringify(Json.toJson(history.clientHistory(client.client.universityID))(AppointmentClientHistory.writer))">
           <a href="@controllers.admin.routes.ClientController.client(client.client.universityID)">@client.client.safeFullName</a>,
           @client.client.universityID.string,
           @profiles.get(client).flatten.map { profile =>
@@ -28,40 +29,44 @@
       }
     </div>
     <div class="appointment-details--actions row">
-      <div class="col-sm-6 col-md-7"> @* TODO history *@
+      <div class="col-sm-6 col-md-7 field-history" data-field-history="@Json.stringify(Json.toJson(history)(AppointmentHistory.writer))">
 
         @tags.sectioned.detail("Date/time") {
-          @JavaTime.Relative(a.appointment.start) &ndash; @a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+          <span data-field-history-field="start">@JavaTime.Relative(a.appointment.start)</span> &ndash; <span data-field-history-field="duration">@a.appointment.end.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))</span>
         }
 
         @a.room.map { room =>
           @tags.sectioned.detail("Location") {
+            @* TODO history *@
             @tags.mapLink(room)
           }
         }
 
         @tags.sectioned.detail(s"Team member${if (a.teamMembers.size != 1) "s" else ""}") {
           <ul class="list-unstyled">
-            @a.teamMembers.toSeq.sortBy(_.member).map { teamMember =>
-              <li>@teamMember.member.safeFullName</li>
+            @defining(a.teamMembers.toSeq.sortBy(_.member)) { teamMembers =>
+              @teamMembers.map { teamMember =>
+                <li @if(teamMembers.last == teamMember){ data-field-history-field="teamMembers" }>@teamMember.member.safeFullName</li>
+              }
             }
           </ul>
         }
 
         @tags.sectioned.detail("Team") {
-          @a.appointment.team.name
+          <div data-field-history-field="team">@a.appointment.team.name</div>
         }
 
         @tags.sectioned.detail("Appointment type") {
-          @a.appointment.appointmentType.description
+          <div data-field-history-field="appointmentType">@a.appointment.appointmentType.description</div>
         }
 
         @tags.sectioned.detail("Purpose") {
-          @a.appointment.purpose.description
+          <div data-field-history-field="purpose">@a.appointment.purpose.description</div>
         }
 
         @if(a.clientCases.nonEmpty) {
           @tags.sectioned.detail("Cases") {
+            @* TODO history *@
             <ul class="list-unstyled">
               @a.clientCases.map { clientCase =>
                 <li><a href="@controllers.admin.routes.CaseController.view(clientCase.key)">@clientCase.key.string @clientCase.subject</a></li>
@@ -71,7 +76,7 @@
         }
 
         @tags.sectioned.detail("State") {
-          <span class="@a.appointment.state.className" @a.appointment.cancellationReason.map { r => title="@r.description" }>
+          <span class="@a.appointment.state.className" @a.appointment.cancellationReason.map { r => title="@r.description" } data-field-history-field="state">
             @tags.icons.appointmentState(a.appointment.state)
             @a.appointment.state
           </span>
@@ -117,33 +122,37 @@
 
         @a.appointment.cancellationReason.map { reason =>
           @tags.sectioned.detail("Cancellation reason") {
-            @reason.description
+            <div data-field-history-field="cancellationReason">@reason.description</div>
           }
         }
 
         @if(a.appointment.outcome.nonEmpty) {
           @tags.sectioned.detail("Outcome") {
-            <ul class="list-unstyled">
-              @a.appointment.outcome.map { outcome =>
-                <li>@outcome.description</li>
-              }
-            </ul>
+            <div data-field-history-field="outcome">
+              <ul class="list-unstyled">
+                @a.appointment.outcome.map { outcome =>
+                  <li>@outcome.description</li>
+                }
+              </ul>
+            </div>
           }
         }
 
         @a.appointment.dsaSupportAccessed.map { dsaSupportAccessed =>
           @tags.sectioned.detail("DSA type of support accessed") {
-            @dsaSupportAccessed.description
+            <div data-field-history-field="dsaSupportAccessed">@dsaSupportAccessed.description</div>
           }
         }
 
         @if(a.appointment.dsaActionPoints.nonEmpty) {
           @tags.sectioned.detail("DSA action points") {
-            <ul class="list-unstyled">
-              @a.appointment.dsaActionPoints.map { dsaActionPoint =>
-                <li>@dsaActionPoint.description</li>
-              }
-            </ul>
+            <div data-field-history-field="dsaActionPoints">
+              <ul class="list-unstyled">
+                @a.appointment.dsaActionPoints.map { dsaActionPoint =>
+                  <li>@dsaActionPoint.description</li>
+                }
+              </ul>
+            </div>
           }
         }
       </div>

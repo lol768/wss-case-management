@@ -55,6 +55,9 @@ trait AppointmentDao {
   def deleteClients(clients: Set[StoredAppointmentClient])(implicit ac: AuditLogContext): DBIO[Done]
   def findClientByIDQuery(appointmentID: UUID, universityID: UniversityID): Query[AppointmentClients, StoredAppointmentClient, Seq]
   def findClientsQuery(appointmentIDs: Set[UUID]): Query[AppointmentClients, StoredAppointmentClient, Seq]
+
+  def getHistory(id: UUID): DBIO[Seq[StoredAppointmentVersion]]
+  def getClientHistory(appointmentID: UUID): DBIO[Seq[StoredAppointmentClientVersion]]
 }
 
 @Singleton
@@ -206,6 +209,12 @@ class AppointmentDaoImpl @Inject()(
   override def findClientsQuery(appointmentIDs: Set[UUID]): Query[AppointmentClients, StoredAppointmentClient, Seq] =
     appointmentClients.table
       .filter(_.appointmentID.inSet(appointmentIDs))
+
+  override def getHistory(id: UUID): DBIO[Seq[StoredAppointmentVersion]] =
+    appointments.history(_.id === id)
+
+  override def getClientHistory(appointmentID: UUID): DBIO[Seq[StoredAppointmentClientVersion]] =
+    appointmentClients.versionsTable.filter(c => c.appointmentID === appointmentID).result
 }
 
 object AppointmentDao {

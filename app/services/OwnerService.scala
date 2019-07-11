@@ -29,6 +29,7 @@ trait OwnerService {
   def setEnquiryOwners(enquiryId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
   def getAppointmentOwners(ids: Set[UUID])(implicit t: TimingContext): Future[ServiceResult[Map[UUID, Set[AppointmentTeamMember]]]]
   def setAppointmentOwners(appointmentId: UUID, owners: Set[Usercode])(implicit ac: AuditLogContext): Future[ServiceResult[UpdateDifferencesResult[Owner]]]
+  def getAppointmentOwnerHistory(appointmentId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[OwnerVersion]]]
   def setAppointmentOutlookId(appointmentId: UUID, owner: Usercode, outlookId: String)(implicit ac: AuditLogContext): Future[ServiceResult[Owner]]
 }
 
@@ -138,4 +139,7 @@ class OwnerServiceImpl @Inject()(
     daoRunner.run(ownerDao.getCaseOwnerHistory(caseId)).map(Right.apply)
   }
 
+  override def getAppointmentOwnerHistory(appointmentId: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[OwnerVersion]]] = {
+    daoRunner.run(ownerDao.getAppointmentOwnerHistory(appointmentId)).map(Right.apply)
+  }
 }
