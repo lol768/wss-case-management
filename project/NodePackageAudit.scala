@@ -33,7 +33,7 @@ object NodePackageAudit {
 
   def audit(baseDirectory: File): Unit = {
     val start = System.currentTimeMillis()
-    val results: Map[String, Any] = Process("npm audit --json", baseDirectory).lineStream_!.mkString.parseJson.convertTo[Map[String, Any]]
+    val results: Map[String, Any] = Process("npm audit --production --json", baseDirectory).lineStream_!.mkString.parseJson.convertTo[Map[String, Any]]
     val timeTakenSecs: Double = (System.currentTimeMillis() - start) / 1000.0
 
     val testCases: Seq[Elem] =
