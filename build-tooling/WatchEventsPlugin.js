@@ -5,7 +5,7 @@ module.exports = class WatchEventsPlugin {
 
   apply(compiler) {
     const { emitter } = this.options;
-    compiler.plugin('after-emit', (compilation, done) => {
+    compiler.hooks.afterEmit.tapAsync('WatchEventsPlugin', (compilation, done) => {
       emitter.emit('assets-updated');
       done();
     });
