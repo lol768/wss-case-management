@@ -26,8 +26,13 @@
 
     <title>@if(!title.isEmpty){@title - }Wellbeing at Warwick</title>
 
+    @* Preload the most popular font type. Agents should be able to decide whether they can use these assets based on the type attribute. *@
+    <link rel="preload" type="font/woff2" crossorigin="anonymous" href="@routes.Assets.versioned("lib/fontawesome-pro/webfonts/fa-light-300.woff2")" as="font">
+    <link rel="preload" type="font/woff2" crossorigin="anonymous" href="@routes.Assets.versioned("lib/fontawesome-pro/webfonts/fa-regular-400.woff2")" as="font">
+    <link rel="preload" type="font/woff2" crossorigin="anonymous" href="@routes.Assets.versioned("lib/fontawesome-pro/webfonts/fa-solid-900.woff2")" as="font">
+
     <!-- Lato web font -->
-    <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css">
+    <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic&amp;subset=latin,latin-ext" rel="stylesheet" type="text/css" crossorigin="anonymous">
 
     <!-- ID7 -->
     <link rel='stylesheet' href='@routes.Assets.versioned("style.css")'>
