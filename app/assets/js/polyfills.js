@@ -4,6 +4,7 @@ import 'core-js/modules/es.promise';
 import 'core-js/modules/es.promise.finally';
 import 'core-js/modules/es.string.ends-with';
 import 'core-js/modules/es.array.iterator';
+import 'core-js/modules/web.dom-collections.for-each';
 
 const polyfillClosest = () => {
   const ElementPrototype = window.Element.prototype;
