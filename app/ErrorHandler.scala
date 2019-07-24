@@ -1,7 +1,7 @@
 import controllers.RequestContext
 import helpers.Json._
 import javax.inject.{Inject, Singleton}
-import play.api.Environment
+import play.api.{Environment, Mode}
 import play.api.http.{HttpErrorHandler, Status}
 import play.api.libs.json.Json
 import play.api.mvc._
