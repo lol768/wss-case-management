@@ -1,5 +1,6 @@
 @import controllers.reports.ReportsController.shortcuts
 @import services.Metric
+@import warwick.core.helpers.JavaTime
 @(
     teams: Seq[String],
     range: String,
@@ -41,11 +42,11 @@
       @if(form.hasGlobalErrors) {
         @defining(form.globalErrors.map(_.message).mkString(", ")) { error =>
           @b3.datePicker(form("start"), '_label -> "Start", '_error -> true)
-          @b3.datePicker(form("end"), '_label -> "End", 'maxDate -> "2019-06-13", '_error -> error)
+          @b3.datePicker(form("end"), '_label -> "End", 'maxDate -> JavaTime.localDateTime.minusDays(1), '_error -> error)
         }
       } else {
         @b3.datePicker(form("start"), '_label -> "Start", '_label -> "Start")
-        @b3.datePicker(form("end"), '_label -> "End", 'maxDate -> "2019-06-13", '_label -> "End")
+        @b3.datePicker(form("end"), '_label -> "End", 'maxDate -> JavaTime.localDateTime.minusDays(1), '_label -> "End")
       }
 
       @if(shortcuts.nonEmpty) {
