@@ -221,11 +221,11 @@ object ReportsController {
         now.minusMonths(1).withDayOfMonth(1),
         now.withDayOfMonth(1).minusDays(1)
       )),
-      NamedDateRange("This month", "The current calendar month (partial)", DateRange(
+      NamedDateRange("Month to date", "The current calendar month (partial)", DateRange(
         now.withDayOfMonth(1),
         now.plusMonths(1).withDayOfMonth(1).minusDays(1)
       )),
-      NamedDateRange("This academic year", "The current academic year (partial)", DateRange(
+      NamedDateRange("Academic year to date", "The current academic year (partial)", DateRange(
         startOfAcademicYear,
         startOfAcademicYear.plusYears(1)
       ))
