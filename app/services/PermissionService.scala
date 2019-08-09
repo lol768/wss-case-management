@@ -61,7 +61,8 @@ class PermissionServiceImpl @Inject() (
   private lazy val caseService = caseServiceProvider.get()
   private lazy val appointmentService = appointmentServiceProvider.get()
 
-  private val webgroupPrefix = config.get[String]("app.webgroup.team.prefix")
+  private lazy val webgroupPrefix = config.get[String]("app.webgroup.team.prefix")
+  private lazy val teamRestrictedPermissions = config.get[Boolean]("wellbeing.features.teamRestrictedPermissions")
 
   override def inAnyTeam(user: Usercode): Future[ServiceResult[Boolean]] =
     Future.successful(inAnyTeamImpl(user))
@@ -94,7 +95,7 @@ class PermissionServiceImpl @Inject() (
     Future.successful(isReportingAdminImpl(user))
 
   override def canViewTeam(user: Usercode, team: Team): ServiceResult[Boolean] =
-    ServiceResults.sequence(Seq(isAdminImpl(user), inTeam(user, team)))
+    ServiceResults.sequence(Seq(isAdminImpl(user), if (teamRestrictedPermissions) inTeam(user, team) else inAnyTeamImpl(user)))
       .right.map(_.contains(true))
 
   override def canViewTeamFuture(user: Usercode, team: Team): Future[ServiceResult[Boolean]] =
@@ -109,7 +110,7 @@ class PermissionServiceImpl @Inject() (
   override def canAddTeamMessageToEnquiry(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     oneOf(
       isAdmin(user.usercode),
-      isEnquiryTeam(user.usercode, id),
+      if (teamRestrictedPermissions) isEnquiryTeam(user.usercode, id) else inAnyTeam(user.usercode),
       isEnquiryOwner(user.usercode, id)
     )
 
@@ -125,7 +126,7 @@ class PermissionServiceImpl @Inject() (
   override def canEditEnquiry(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     oneOf(
       isAdmin(user),
-      isEnquiryTeam(user, id),
+      if (teamRestrictedPermissions) isEnquiryTeam(user, id) else inAnyTeam(user),
       isEnquiryOwner(user, id)
     )
 
@@ -153,7 +154,7 @@ class PermissionServiceImpl @Inject() (
   override def canEditCase(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     oneOf(
       isAdmin(user),
-      isCaseTeam(user, id),
+      if (teamRestrictedPermissions) isCaseTeam(user, id) else inAnyTeam(user),
       isCaseOwner(user, id)
     )
 
@@ -220,7 +221,7 @@ class PermissionServiceImpl @Inject() (
   override def canEditAppointment(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
     oneOf(
       isAdmin(user),
-      isAppointmentTeam(user, id),
+      if (teamRestrictedPermissions) isAppointmentTeam(user, id) else inAnyTeam(user),
       isAppointmentTeamMember(user, id)
     )
 
