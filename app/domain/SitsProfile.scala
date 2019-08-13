@@ -45,6 +45,7 @@ case class SitsProfile(
     isStaffNotPGR = group.isEmpty,
     isStudent = userType == UserType.Student,
     isAlumni = false,
+    isApplicant = userType == UserType.Applicant,
     isUndergraduate = group.contains(StudentGroup.Undergraduate) || group.contains(StudentGroup.Foundation),
     isPGT = group.contains(StudentGroup.PGT),
     isPGR = group.contains(StudentGroup.PGR),

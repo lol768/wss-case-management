@@ -43,6 +43,15 @@ function PopupDatePicker(container, textFormat, hiddenFormat) {
     textField.val(currentDate.format(textFormat));
   }
 
+  const minDate = textField.attr('minDate');
+  if (minDate) {
+    options.minDate = minDate;
+  }
+  const maxDate = textField.attr('maxDate');
+  if (maxDate) {
+    options.maxDate = maxDate;
+  }
+
   inputGroup.datetimepicker({
     ...commonOptions,
     format: textFormat,
@@ -90,6 +99,15 @@ function InlinePicker(container, format) {
   let currentDate;
   if (hiddenField.val()) {
     currentDate = moment(hiddenField.val(), dateTimeHiddenFieldFormat);
+  }
+
+  const minDate = div.attr('minDate');
+  if (minDate) {
+    options.minDate = minDate;
+  }
+  const maxDate = div.attr('maxDate');
+  if (maxDate) {
+    options.maxDate = maxDate;
   }
 
   div.datetimepicker({

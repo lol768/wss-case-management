@@ -1,5 +1,6 @@
 /* eslint-env browser */
 import $ from 'jquery';
+import moment from 'moment-timezone';
 
 export default function DateRangeShortCuts(element) {
   $(element).on('click', (event) => {
@@ -15,11 +16,17 @@ export default function DateRangeShortCuts(element) {
       const endDate = new Date(end);
 
       if ($start.length && startDate) {
-        $start.closest('.input-group').data('DateTimePicker').date(startDate);
+        const picker = $start.closest('.input-group').data('DateTimePicker');
+        const minDate = picker.minDate();
+        const viableStartDate = minDate ? moment.max(startDate, minDate) : startDate;
+        picker.date(viableStartDate);
       }
 
       if ($end.length && endDate) {
-        $end.closest('.input-group').data('DateTimePicker').date(endDate);
+        const picker = $end.closest('.input-group').data('DateTimePicker');
+        const maxDate = picker.maxDate();
+        const viableEndDate = maxDate ? moment.min(endDate, maxDate) : endDate;
+        picker.date(viableEndDate);
       }
     }
   });
