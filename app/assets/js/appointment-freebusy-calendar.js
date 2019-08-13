@@ -1,7 +1,7 @@
 /* eslint-env browser */
 import $ from 'jquery';
-import 'fullcalendar';
-import 'fullcalendar-scheduler';
+import { Calendar } from '@fullcalendar/core';
+import resourceTimeGridPlugin from '@fullcalendar/resource-timegrid';
 import log from 'loglevel';
 import moment from 'moment-timezone';
 import { addQsToUrl, postJsonWithCredentials } from '@universityofwarwick/serverpipe';
@@ -53,6 +53,7 @@ export default function AppointmentFreeBusyForm(form) {
         }),
     );
 
+    let calendar;
     $modal
       .on('shown.bs.modal', () => {
         const currentHint = $modal.find('.current');
@@ -80,7 +81,7 @@ export default function AppointmentFreeBusyForm(form) {
             .data('duration', moment.duration(end.diff(start)).asSeconds());
 
           updateSelected();
-          $calendar.fullCalendar('refetchEventSources', selectHighlightCalendarSourceId);
+          calendar.getEventSourceById(selectHighlightCalendarSourceId).refetch();
         };
 
         // Get clients
@@ -88,15 +89,16 @@ export default function AppointmentFreeBusyForm(form) {
         const teamMembers = getFormValuesArray('teamMembers');
         let roomIDs = getFormValues('appointment.roomID');
 
-        $calendar.fullCalendar({
+        calendar = new Calendar($calendar.get()[0], {
+          plugins: [resourceTimeGridPlugin],
           ...CommonFullCalendarOptions,
           header: {
             left: 'prev,next today title',
             center: '',
-            right: 'agendaWeek,agendaDay',
+            right: 'resourceTimeGridWeek,resourceTimeGridDay',
           },
           height: 'parent',
-          defaultView: 'agendaDay',
+          defaultView: 'resourceTimeGridDay',
           defaultDate: dateTimePicker.date(),
           groupByResource: true,
           slotDuration: '00:10:00',
@@ -191,8 +193,7 @@ export default function AppointmentFreeBusyForm(form) {
                   .on('change', () => {
                     $modal.data('roomID', $select.val());
                     roomIDs = [$select.val()];
-                    $calendar.fullCalendar('refetchResources');
-                    $calendar.fullCalendar('refetchEvents');
+                    calendar.refetchEvents();
                   });
 
                 $select.find('option[value=""]').remove();
@@ -216,7 +217,7 @@ export default function AppointmentFreeBusyForm(form) {
         });
       })
       .on('hidden.bs.modal', () => {
-        $modal.find('.appointment-freebusy-calendar').fullCalendar('destroy');
+        calendar.destroy();
       });
 
     $modal.find(':button[data-toggle="select"]').on('click', () => {
