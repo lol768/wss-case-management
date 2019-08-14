@@ -28,11 +28,11 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
   private static final Project PROJECT =
     new Project()
       .key("CASE")
-      .name("Case Management");
+      .name("WSS Case Management");
 
   private static final String LINKED_REPOSITORY = "Case Management";
 
-  private static final String SLACK_CHANNEL = "#case-management";
+  private static final String SLACK_CHANNEL = "#wss-case-management";
 
   public static void main(String[] args) throws Exception {
     new CaseManagementSpec().publish();
@@ -41,7 +41,7 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
   @Override
   protected Collection<Plan> builds() {
     return Collections.singleton(
-      build(PROJECT, "APP", "Case Management")
+      build(PROJECT, "APP", "WSS Case Management")
         .linkedRepository(LINKED_REPOSITORY)
         .description("Build application")
         .stage(
@@ -99,7 +99,7 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
   @Override
   protected Collection<Deployment> deployments() {
     return Collections.singleton(
-      deployment(PROJECT, "APP", "Case Management")
+      deployment(PROJECT, "APP", "WSS Case Management")
         .autoPlayEnvironment("Development", "wellbeing-dev.warwick.ac.uk", "wellbeing", "dev", SLACK_CHANNEL)
         .autoPlayEnvironment("Test", "wellbeing-test.warwick.ac.uk", "wellbeing", "test", SLACK_CHANNEL)
         .autoPlayEnvironment("Sandbox", "wellbeing-sandbox.warwick.ac.uk", "wellbeing", "sandbox", SLACK_CHANNEL)

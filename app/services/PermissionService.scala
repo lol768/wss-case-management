@@ -21,6 +21,7 @@ trait PermissionService {
   def inAnyTeam(user: Usercode): Future[ServiceResult[Boolean]]
   def inAnyTeam(users: Set[Usercode]): ServiceResult[Map[Usercode, Boolean]]
   def teams(user: Usercode): ServiceResult[Seq[Team]]
+  def reportingTeams(user: Usercode): ServiceResult[Seq[Team]]
   def isAdmin(user: Usercode): Future[ServiceResult[Boolean]]
   def isReportingAdmin(user: Usercode): Future[ServiceResult[Boolean]]
   def canViewTeam(user: Usercode, team: Team): ServiceResult[Boolean]
@@ -87,6 +88,15 @@ class PermissionServiceImpl @Inject() (
 
   override def teams(user: Usercode): ServiceResult[Seq[Team]] =
     Right(Teams.all.filter(canViewTeam(user, _).getOrElse(false)))
+
+  override def reportingTeams(user: Usercode): ServiceResult[Seq[Team]] =
+    isReportingAdminImpl(user).flatMap {
+      case true =>
+        if (teamRestrictedPermissions) teams(user)
+        else Right(Teams.all)
+      case false =>
+        Right(Nil)
+    }
 
   override def isAdmin(user: Usercode): Future[ServiceResult[Boolean]] =
     Future.successful(isAdminImpl(user))

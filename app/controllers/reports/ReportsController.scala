@@ -47,7 +47,7 @@ class ReportsController @Inject()(
   private def renderHtmlReport(dateRange: DateRange, dateForm: Form[DateRange] = form)(implicit request: AuthenticatedRequest[AnyContent]) = {
     val name = currentUser().name.first
 
-    permissions.teams(currentUser().usercode)
+    permissions.reportingTeams(currentUser().usercode)
       .map {
         case teams if teams.nonEmpty =>
           val start = dateRange.startTime
@@ -77,7 +77,7 @@ class ReportsController @Inject()(
     reporter: MetricsGenerator,
     dateRange: DateRange
   )(implicit req: AuthenticatedRequest[AnyContent], t: TimingContext): Future[Result] =
-    Future.successful(permissions.teams(currentUser().usercode))
+    Future.successful(permissions.reportingTeams(currentUser().usercode))
       .successFlatMap(teams => {
         Future.sequence(teams.map(team => {
           reporter(dateRange.start, dateRange.end, team)
@@ -149,7 +149,7 @@ class ReportsController @Inject()(
 
     val emptyDailyMetrics = dateRange.map(d => DailyMetrics(d, 0))
 
-    Future.successful(permissions.teams(currentUser().usercode))
+    Future.successful(permissions.reportingTeams(currentUser().usercode))
       .successFlatMap(teams => {
         val futureMetrics = Future.sequence(teams.map(team => {
           reporter(dateRange.start, dateRange.end, team)
