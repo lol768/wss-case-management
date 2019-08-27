@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-pro": "5.10.1",
-    "@universityofwarwick/id7": "2.5.1",
+    "@universityofwarwick/id7": "2.5.3",
     "@universityofwarwick/serverpipe": "1.2.0",
     "bootstrap-3-typeahead": "github:UniversityofWarwick/Bootstrap-3-Typeahead#acada2f8e5d9a70dbb37c1fd152895937a03f8d5",
     "core-js": "3.2.0",
