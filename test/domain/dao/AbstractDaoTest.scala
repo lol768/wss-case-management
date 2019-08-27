@@ -3,7 +3,7 @@ package domain.dao
 import domain.ExtendedPostgresProfile
 import helpers._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.db.slick.DatabaseConfigProvider
 import services.AuditLogContext

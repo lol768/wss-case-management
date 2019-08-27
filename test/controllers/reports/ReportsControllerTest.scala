@@ -4,7 +4,7 @@ import java.time.LocalDate
 
 import controllers.DateRange
 import domain.Teams
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import services.DailyMetrics
 

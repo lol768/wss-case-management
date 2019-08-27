@@ -5,7 +5,6 @@ import java.util.UUID
 
 import akka.Done
 import com.google.inject.ImplementedBy
-import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.CaseDao._
@@ -76,6 +75,8 @@ class DSADaoImpl @Inject()(
 }
 
 object DSADao {
+
+  import CustomJdbcTypes._
 
   val dsaApplications: VersionedTableQuery[StoredDSAApplication, StoredDSAApplicationVersion, DSAApplications, DSAApplicationVersions] =
     VersionedTableQuery(TableQuery[DSAApplications], TableQuery[DSAApplicationVersions])

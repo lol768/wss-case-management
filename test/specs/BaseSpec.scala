@@ -3,7 +3,7 @@ package specs
 import helpers.FakeRequestMethods._
 import helpers.{FutureServiceMixins, OneAppPerSuite}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.Result
 import play.api.test.FakeRequest

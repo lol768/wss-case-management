@@ -1,18 +1,18 @@
 package helpers
 
 import org.databrary.PlayLogbackAccessModule
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.db.evolutions.{ClassLoaderEvolutionsReader, EvolutionsReader}
 import play.api.inject._
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.routing.Router
 import play.api.{Application, Configuration, Environment}
-import uk.ac.warwick.sso.client.SSOClientHandler
-import warwick.accesslog.LogbackAccessModule
 import routes.EmptyRouter
-import services.{NotificationService, NullNotificationService}
 import services.tabula.ProfileService
+import services.{NotificationService, NullNotificationService}
+import uk.ac.warwick.sso.client.SSOClientHandler
 import uk.ac.warwick.util.virusscan.VirusScanService
+import warwick.accesslog.LogbackAccessModule
 import warwick.sso._
 
 import scala.reflect._

@@ -51,12 +51,6 @@ object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtcColumnImpli
     d => d.toLocalDate
   )
 
-  // Don't know why this is necessary but it is
-  implicit val optionLocalDateColumnType: JdbcType[Option[LocalDate]] = MappedColumnType.base[Option[LocalDate], Date](
-    ldo => ldo.map { ld => Date.valueOf(ld) }.orNull,
-    d => Option(d).map(_.toLocalDate)
-  )
-
   // Enum[] mappings
   implicit lazy val databaseOperationTypeMapper: JdbcType[DatabaseOperation] = mappedColumnTypeForEnum(DatabaseOperation)
   implicit lazy val messageOwnerMapper: JdbcType[MessageOwner] = mappedColumnTypeForEnum(MessageOwner)

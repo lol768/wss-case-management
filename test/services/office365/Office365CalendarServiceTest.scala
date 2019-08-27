@@ -10,7 +10,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.quartz._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.Configuration
 import play.api.libs.json.Json
