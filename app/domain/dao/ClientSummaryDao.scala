@@ -8,12 +8,11 @@ import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
 import domain._
 import domain.dao.ClientDao.StoredClient
-import domain.dao.ClientSummaryDao.{StoredClientSummary, StoredClientSummaryVersion}
 import domain.dao.ClientSummaryDao.StoredClientSummary.{ClientSummaries, ReasonableAdjustments, StoredReasonableAdjustment}
+import domain.dao.ClientSummaryDao.{StoredClientSummary, StoredClientSummaryVersion}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
-import slick.jdbc.JdbcProfile
 import slick.lifted.{Index, PrimaryKey, ProvenShape}
 import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
@@ -192,7 +191,7 @@ object ClientSummaryDao {
 @Singleton
 class ClientSummaryDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
-)(implicit executionContext: ExecutionContext) extends ClientSummaryDao with HasDatabaseConfigProvider[JdbcProfile] {
+)(implicit executionContext: ExecutionContext) extends ClientSummaryDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
 
   import StoredClientSummary._
   import dbConfig.profile.api._

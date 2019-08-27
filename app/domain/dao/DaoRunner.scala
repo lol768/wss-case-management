@@ -1,9 +1,9 @@
 package domain.dao
 
 import com.google.inject.ImplementedBy
+import domain.ExtendedPostgresProfile
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import slick.jdbc.JdbcProfile
 import warwick.core.helpers.ServiceResults
 import warwick.core.helpers.ServiceResults.ServiceResult
 import warwick.core.timing.{TimingCategories, TimingContext, TimingService}
@@ -34,7 +34,7 @@ class DaoRunnerImpl @Inject() (
   timing: TimingService,
 )(
   implicit ec: ExecutionContext
-) extends DaoRunner with HasDatabaseConfigProvider[JdbcProfile] {
+) extends DaoRunner with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
   import profile.api._
   import timing._
 

@@ -103,26 +103,26 @@
     @panel(Teams.Counselling, "Counselling for emotional or psychological issues", counsellingForm, controllers.enquiries.routes.EnquiryController.submitCounselling()) { implicit vfc =>
       @b3.free('_label -> "Subject:") {
         <span class="form-control-static">Counselling query</span>
-      }(b3.inline.fieldConstructorSpecific, messagesProvider)
+      }(b3.inline.fieldConstructorSpecific(), messagesProvider)
 
       @b3.free('_label -> "Select any of the following that apply (or leave them all unticked if not)", '_class -> "checkboxGroup") {
-        @b3.checkbox(counsellingForm("faceToFace"), '_text -> "I'm interested in face-to-face counselling")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
-        @b3.checkbox(counsellingForm("therapy"), '_text -> "I'm interested in group therapy")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
-        @b3.checkbox(counsellingForm("online"), '_text -> "I'm interested in email counselling")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
-        @b3.checkbox(counsellingForm("other"), '_text -> "I’m interested in counselling but I’m not sure which option to select")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+        @b3.checkbox(counsellingForm("faceToFace"), '_text -> "I'm interested in face-to-face counselling")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
+        @b3.checkbox(counsellingForm("therapy"), '_text -> "I'm interested in group therapy")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
+        @b3.checkbox(counsellingForm("online"), '_text -> "I'm interested in email counselling")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
+        @b3.checkbox(counsellingForm("other"), '_text -> "I’m interested in counselling but I’m not sure which option to select")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
       }
     }
 
     @panel(Teams.Disability, "Support with disabilities such as dyslexia, mental health and autism spectrum", disabilityForm, controllers.enquiries.routes.EnquiryController.submitDisability()) { implicit vfc =>
       @b3.free('_label -> "Subject:") {
         <span class="form-control-static">Disability query</span>
-      }(b3.inline.fieldConstructorSpecific, messagesProvider)
+      }(b3.inline.fieldConstructorSpecific(), messagesProvider)
 
       @b3.free('_label -> "Select any of the following that apply (or leave them all unticked if not)", '_class -> "checkboxGroup") {
-        @b3.checkbox(disabilityForm("reasonableAdjustments"), '_text -> "I'm looking for advice on reasonable adjustments (including special exam arrangements)")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
-        @b3.checkbox(disabilityForm("specialistMentoring"), '_text -> "I'm looking for specialist mentoring and advice on study skills")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
-        @b3.checkbox(disabilityForm("disabilityScreening"), '_text -> "I'm looking for screening for Specific Learning Difficulties (SpLDs) such as dyslexia")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
-        @b3.checkbox(disabilityForm("generalAdvice"), '_text -> "I'm looking for general advice and support on disability")(b3.clear.fieldConstructorSpecific, messagesProvider.messages)
+        @b3.checkbox(disabilityForm("reasonableAdjustments"), '_text -> "I'm looking for advice on reasonable adjustments (including special exam arrangements)")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
+        @b3.checkbox(disabilityForm("specialistMentoring"), '_text -> "I'm looking for specialist mentoring and advice on study skills")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
+        @b3.checkbox(disabilityForm("disabilityScreening"), '_text -> "I'm looking for screening for Specific Learning Difficulties (SpLDs) such as dyslexia")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
+        @b3.checkbox(disabilityForm("generalAdvice"), '_text -> "I'm looking for general advice and support on disability")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
       }
 
       @b3.free('_label -> "Do you have any documents you can upload that might help us understand your situation?", '_class -> disabilityForm.error("file").map(_ => "has-error")) {
@@ -140,7 +140,7 @@
 
       @b3.free('_label -> "Subject:") {
         <span class="form-control-static">Wellbeing query</span>
-      }(b3.inline.fieldConstructorSpecific, messagesProvider)
+      }(b3.inline.fieldConstructorSpecific(), messagesProvider)
 
       @b3.textarea(wellbeingForm("text"),
         '_label -> "Message",

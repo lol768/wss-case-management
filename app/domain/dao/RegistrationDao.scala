@@ -10,7 +10,6 @@ import javax.inject.Singleton
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{JsValue, Json}
 import services.AuditLogContext
-import slick.jdbc.JdbcProfile
 import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
 
@@ -107,7 +106,7 @@ trait RegistrationDao {
 class RegistrationDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit executionContext: ExecutionContext)
-  extends RegistrationDao with HasDatabaseConfigProvider[JdbcProfile] {
+  extends RegistrationDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
 
   import dbConfig.profile.api._
 

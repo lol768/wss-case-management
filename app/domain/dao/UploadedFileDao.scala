@@ -13,7 +13,6 @@ import domain.dao.UploadedFileDao._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
-import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.core.helpers.JavaTime
 import warwick.fileuploads.{UploadedFile, UploadedFileOwner}
@@ -31,7 +30,7 @@ trait UploadedFileDao {
 @Singleton
 class UploadedFileDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
-)(implicit ec: ExecutionContext) extends UploadedFileDao with HasDatabaseConfigProvider[JdbcProfile] {
+)(implicit ec: ExecutionContext) extends UploadedFileDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
 
   override def find(id: UUID): DBIO[StoredUploadedFile] =
     uploadedFiles.table.filter(_.id === id).result.head

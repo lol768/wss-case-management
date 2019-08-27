@@ -17,7 +17,7 @@ import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.{AuditLogContext, TeamMetrics}
-import slick.jdbc.{GetResult, JdbcProfile}
+import slick.jdbc.GetResult
 import slick.lifted.ProvenShape
 import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
@@ -49,7 +49,7 @@ class EnquiryDaoImpl @Inject() (
   protected val dbConfigProvider: DatabaseConfigProvider,
   messageDao: MessageDao
 )(implicit ec: ExecutionContext)
-  extends EnquiryDao with HasDatabaseConfigProvider[JdbcProfile] {
+  extends EnquiryDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
 
   override def insert(enquiry: StoredEnquiry)(implicit ac: AuditLogContext): DBIO[StoredEnquiry] =
     enquiries += enquiry

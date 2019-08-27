@@ -23,7 +23,7 @@
   }) { label: String =>
     @b3.free('_label -> label, '_class -> messageForm("text").error.map(_ => "has-error").getOrElse("")) {
       <div class="flex">
-        @b3.textarea(messageForm("text"), 'rows -> 1, 'id -> s"${issue.id.toString}-${client.universityID.string}-text", Symbol("aria-label") -> label)(b3.clear.fieldConstructorSpecific, messagesProvider)
+        @b3.textarea(messageForm("text"), 'rows -> 1, 'id -> s"${issue.id.toString}-${client.universityID.string}-text", Symbol("aria-label") -> label)(b3.clear.fieldConstructorSpecific(), messagesProvider)
         @tags.messages.sendButton(confirm = sender match {
           case MessageSender.Client => None
           case MessageSender.Team => Some(s"Are you sure you want to send this message to ${client.safeFullName}?")

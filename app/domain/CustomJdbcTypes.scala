@@ -8,10 +8,10 @@ import enumeratum.SlickEnumSupport
 import play.api.libs.json.{JsValue, Json}
 import slick.jdbc.{JdbcProfile, JdbcType}
 import warwick.fileuploads.UploadedFileOwner
-import warwick.slick.jdbctypes.JdbcDateTypesUtc
+import warwick.slick.jdbctypes.JdbcDateTypesUtcColumnImplicits
 import warwick.sso.{GroupName, UniversityID, Usercode}
 
-object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
+object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtcColumnImplicits {
   override val profile: JdbcProfile = ExtendedPostgresProfile
   import profile._
 
@@ -49,6 +49,12 @@ object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
   implicit val localDateColumnType: JdbcType[LocalDate] = MappedColumnType.base[LocalDate, Date](
     ld => Date.valueOf(ld),
     d => d.toLocalDate
+  )
+
+  // Don't know why this is necessary but it is
+  implicit val optionLocalDateColumnType: JdbcType[Option[LocalDate]] = MappedColumnType.base[Option[LocalDate], Date](
+    ldo => ldo.map { ld => Date.valueOf(ld) }.orNull,
+    d => Option(d).map(_.toLocalDate)
   )
 
   // Enum[] mappings

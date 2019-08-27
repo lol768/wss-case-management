@@ -19,7 +19,6 @@ import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
-import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.core.helpers.JavaTime
 import warwick.fileuploads.UploadedFile
@@ -76,7 +75,7 @@ trait CaseDao {
 @Singleton
 class CaseDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
-)(implicit ec: ExecutionContext) extends CaseDao with HasDatabaseConfigProvider[JdbcProfile] {
+)(implicit ec: ExecutionContext) extends CaseDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
 
   override def insert(c: StoredCase)(implicit ac: AuditLogContext): DBIO[StoredCase] =
     cases.insert(c)

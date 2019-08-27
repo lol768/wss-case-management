@@ -3,4 +3,4 @@
   args: (Symbol, Any)*
 )(implicit messages: Messages)
 
-@b3.radiosAsButtons(field, options = Seq("true" -> "Yes", "false" -> "No", "" -> "Not sure"), args: _*)(b3.inline.fieldConstructorSpecific, messages)
+@b3.radiosAsButtons(field, options = Seq("true" -> "Yes", "false" -> "No", "" -> "Not sure"), args: _*)(b3.inline.fieldConstructorSpecific(), messages)

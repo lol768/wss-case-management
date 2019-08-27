@@ -19,7 +19,6 @@ import helpers.StringUtils._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
-import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
@@ -63,7 +62,7 @@ trait AppointmentDao {
 @Singleton
 class AppointmentDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
-)(implicit ec: ExecutionContext) extends AppointmentDao with HasDatabaseConfigProvider[JdbcProfile] {
+)(implicit ec: ExecutionContext) extends AppointmentDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
 
   override def insert(appointment: StoredAppointment)(implicit ac: AuditLogContext): DBIO[StoredAppointment] =
     appointments.insert(appointment)

@@ -3,13 +3,12 @@ package domain.dao
 import java.util.UUID
 
 import com.google.inject.ImplementedBy
-import domain.AuditEvent
 import domain.AuditEvent.AuditEvents
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
+import domain.{AuditEvent, ExtendedPostgresProfile}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import slick.jdbc.JdbcProfile
-import domain.ExtendedPostgresProfile.api._
 import warwick.sso.Usercode
 
 import scala.concurrent.ExecutionContext
@@ -24,7 +23,7 @@ trait AuditDao {
 @Singleton
 class AuditDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
-)(implicit ec: ExecutionContext) extends AuditDao with HasDatabaseConfigProvider[JdbcProfile] {
+)(implicit ec: ExecutionContext) extends AuditDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
   import AuditEvent._
 
   override def insert(event: AuditEvent): DBIO[AuditEvent] =

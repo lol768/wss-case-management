@@ -3,7 +3,7 @@ name := """case-management"""
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.12.8"
+scalaVersion := "2.12.9"
 
 javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 
@@ -33,11 +33,12 @@ lazy val root = (project in file("."))
     javaOptions in Test += "-Dlogger.resource=test-logging.xml"
   )
 
-val playUtilsVersion = "1.36"
-val ssoClientVersion = "2.74"
-val warwickUtilsVersion = "20190503"
 val enumeratumVersion = "1.5.13"
-val enumeratumSlickVersion = "1.5.15"
+val enumeratumPlayVersion = "1.5.16"
+val enumeratumSlickVersion = "1.5.16"
+val playUtilsVersion = "1.40"
+val ssoClientVersion = "2.74"
+val warwickUtilsVersion = "20190725"
 
 val appDeps = Seq(
   guice,
@@ -45,29 +46,28 @@ val appDeps = Seq(
   cacheApi,
   filters,
 
-  // Don't upgrade to 4.x or you'll get Slick 3.3
-  "com.typesafe.play" %% "play-slick" % "3.0.3",
-  "com.typesafe.play" %% "play-slick-evolutions" % "3.0.3",
+  "com.typesafe.play" %% "play-slick" % "4.0.2",
+  "com.typesafe.play" %% "play-slick-evolutions" % "4.0.2",
 
-  // Intentionally Slick 3.2, not 3.3 - 3.3 has weird behaviour with our custom OffsetDateTime
-  "com.typesafe.slick" %% "slick" % "3.2.3",
-  "org.postgresql" % "postgresql" % "42.2.5",
-  "com.github.tminglei" %% "slick-pg" % "0.17.1", // Don't upgrade past 0.17.1 or you'll get Slick 3.3
+  "com.typesafe.slick" %% "slick" % "3.3.2",
+  "org.postgresql" % "postgresql" % "42.2.6",
+  "com.github.tminglei" %% "slick-pg" % "0.18.0",
 
-  "com.typesafe.play" %% "play-mailer" % "7.0.0",
-  "com.typesafe.play" %% "play-mailer-guice" % "7.0.0",
+  "com.typesafe.play" %% "play-mailer" % "7.0.1",
+  "com.typesafe.play" %% "play-mailer-guice" % "7.0.1",
 
   // in-memory JNDI context used by Play to pass DataSource to Quartz
   "tyrex" % "tyrex" % "1.0.1",
-  "org.quartz-scheduler" % "quartz" % "2.3.0" exclude("com.zaxxer", "HikariCP-java6"),
+  "org.quartz-scheduler" % "quartz" % "2.3.1" exclude("com.zaxxer", "HikariCP-java6"),
 
-  "net.codingwell" %% "scala-guice" % "4.2.1",
+  "net.codingwell" %% "scala-guice" % "4.2.6",
   "com.google.inject.extensions" % "guice-multibindings" % "4.2.2",
-  "com.adrianhurt" %% "play-bootstrap" % "1.2-P26-B3",
+  "com.adrianhurt" %% "play-bootstrap" % "1.5.1-P27-B3",
 
   "uk.ac.warwick.sso" %% "sso-client-play" % ssoClientVersion,
 
   "uk.ac.warwick.play-utils" %% "accesslog" % playUtilsVersion,
+  "ch.qos.logback" % "logback-access" % "1.2.3",
   "uk.ac.warwick.play-utils" %% "healthcheck" % playUtilsVersion,
   "uk.ac.warwick.play-utils" %% "objectstore" % playUtilsVersion,
   "uk.ac.warwick.play-utils" %% "office365" % playUtilsVersion,
@@ -76,34 +76,35 @@ val appDeps = Seq(
   "uk.ac.warwick.play-utils" %% "fileuploads" % playUtilsVersion,
 
   "uk.ac.warwick.util" % "warwickutils-core" % warwickUtilsVersion,
+  "net.logstash.logback" % "logstash-logback-encoder" % "5.3",
   "uk.ac.warwick.util" % "warwickutils-mywarwick" % warwickUtilsVersion exclude("uk.ac.warwick.sso", "sso-client"),
   "uk.ac.warwick.util" % "warwickutils-service" % warwickUtilsVersion,
   "uk.ac.warwick.util" % "warwickutils-virusscan" % warwickUtilsVersion,
 
-  "com.github.mumoshu" %% "play2-memcached-play27" % "0.10.0-RC3",
+  "com.github.mumoshu" %% "play2-memcached-play27" % "0.10.1",
 
   "com.beachape" %% "enumeratum" % enumeratumVersion,
   "com.beachape" %% "enumeratum-play" % enumeratumVersion,
   "com.beachape" %% "enumeratum-play-json" % enumeratumVersion,
   "com.beachape" %% "enumeratum-slick" % enumeratumSlickVersion,
 
-  "org.apache.jclouds.api" % "filesystem" % "2.1.1",
+  "org.apache.jclouds.api" % "filesystem" % "2.1.2",
 
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
   
   "com.github.tototoshi" %% "scala-csv" % "1.3.6",
 
-  "org.apache.tika" % "tika-core" % "1.20",
-  "org.apache.tika" % "tika-parsers" % "1.20",
+  "org.apache.tika" % "tika-core" % "1.22",
+  "org.apache.tika" % "tika-parsers" % "1.22",
 
-  "org.apache.poi" % "poi" % "4.0.1",
-  "org.apache.poi" % "poi-ooxml" % "4.0.1",
-  "org.apache.poi" % "poi-ooxml-schemas" % "4.0.1"
+  "org.apache.poi" % "poi" % "4.1.0",
+  "org.apache.poi" % "poi-ooxml" % "4.1.0",
+  "org.apache.poi" % "poi-ooxml-schemas" % "4.1.0"
 )
 
 val testDeps = Seq(
-  "org.scalatest" %% "scalatest" % "3.0.5",
-  "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.1",
+  "org.scalatest" %% "scalatest" % "3.0.8",
+  "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3",
   "uk.ac.warwick.sso" %% "sso-client-play-testing" % ssoClientVersion,
   "uk.ac.warwick.play-utils" %% "testing" % playUtilsVersion,
   "org.seleniumhq.selenium" % "selenium-java" % "3.141.59",
@@ -111,7 +112,7 @@ val testDeps = Seq(
   "com.opentable.components" % "otj-pg-embedded" % "0.13.1",
   "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.22",
   "org.dom4j" % "dom4j" % "2.1.1",
-  "jaxen" % "jaxen" % "1.1.6"
+  "jaxen" % "jaxen" % "1.2.0"
 ).map(_ % Test)
 
 libraryDependencies ++= (appDeps ++ testDeps).map(_.excludeAll(
@@ -160,11 +161,8 @@ lazy val bambooTest = taskKey[Unit]("Run tests for CI")
 
 bambooTest := {
   // Capture the test result
-  val testResult = (test in Test).result.dependsOn(dependencyCheck).value
+  val testResult = (test in Test).result.value
 }
-
-dependencyCheckFailBuildOnCVSS := 5
-dependencyCheckSuppressionFiles := Seq(baseDirectory.value / "dependency-check-suppressions.xml")
 
 // Webpack task
 
@@ -174,13 +172,9 @@ lazy val webpack = taskKey[Unit]("Run webpack when packaging the application")
 
 def runWebpack(file: File): Int = Process("npm run build", file).!
 
-lazy val npmAudit = taskKey[Unit]("Run npm audit and parse the results as JUnit XML")
-npmAudit := NodePackageAudit.audit(baseDirectory.value)
-
 webpack := {
   if (runWebpack(baseDirectory.value) != 0) throw new Exception("Something went wrong when running webpack.")
 }
-webpack := webpack.dependsOn(npmAudit).value
 
 // Generate a new AES key for object store encryption
 lazy val newEncryptionKey = taskKey[Unit]("Generate and print a new encryption key")

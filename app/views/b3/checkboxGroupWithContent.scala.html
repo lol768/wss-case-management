@@ -24,7 +24,7 @@
       'value -> item.id,
       '_text -> item.description,
       'checked -> isChecked(item)
-    )(b3.clear.fieldConstructorSpecific, messagesProvider).toString
+    )(b3.clear.fieldConstructorSpecific(), messagesProvider).toString
     // pass clear FC to the checkboxes so they aren't each wrapped in a form group
   ))
 
@@ -40,12 +40,12 @@
           'checked -> isChecked(withOther.get),
           Symbol("data-toggle") -> "optional-subform",
           Symbol("data-target") -> s"#$idPrefix-${withOther.get.id}-value"
-        )(b3.clear.fieldConstructorSpecific, messagesProvider).toString
+        )(b3.clear.fieldConstructorSpecific(), messagesProvider).toString
       ),
       Html(
         b3.text(form(s"$field.otherValue"),
           'id -> s"$idPrefix-${withOther.get.id}-value"
-        )(b3.clear.fieldConstructorSpecific, messagesProvider).toString
+        )(b3.clear.fieldConstructorSpecific(), messagesProvider).toString
       )
     ))
   }
