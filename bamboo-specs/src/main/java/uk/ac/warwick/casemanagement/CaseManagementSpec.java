@@ -61,7 +61,7 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
                     .interpreter(ScriptTaskProperties.Interpreter.BINSH_OR_CMDEXE)
                     .location(ScriptTaskProperties.Location.FILE)
                     .fileFromPath("sbt")
-                    .argument("clean test:compile test universal:packageZipTarball")
+                    .argument("clean test:compile bambooTest universal:packageZipTarball")
                     .environmentVariables("PATH=/usr/nodejs/8/bin"),
                   new NpmTask()
                     .description("JS Tests")
@@ -80,11 +80,7 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
                     .name("tar.gz")
                     .copyPattern("app.tar.gz")
                     .location("target/universal")
-                    .shared(true),
-                  new Artifact()
-                    .name("Dependency check results")
-                    .copyPattern("dependency-check-report.html")
-                    .location("target/scala-2.12")
+                    .shared(true)
                 )
                 .requirements(
                   new Requirement("Linux").matchValue("true").matchType(Requirement.MatchType.EQUALS)
