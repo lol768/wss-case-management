@@ -1,5 +1,6 @@
 package system
 
+import java.net.URLEncoder
 import java.time.{Duration, LocalDate, OffsetDateTime, ZoneId}
 
 import play.api.mvc.{PathBindable, QueryStringBindable}
@@ -19,23 +20,23 @@ object Binders {
       _.string
     )
 
-  implicit val localDateQueryStringBindable: QueryStringBindable[LocalDate] =
-    QueryStringBindable.bindableString.transform(
-      LocalDate.parse(_, JavaTime.localDateFormat),
-      _.format(JavaTime.localDateFormat)
-    )
+  implicit object localDateQueryStringBindable extends QueryStringBindable.Parsing[LocalDate](
+    LocalDate.parse(_, JavaTime.localDateFormat),
+    (d: LocalDate) => URLEncoder.encode(Option(d).map(_.format(JavaTime.localDateFormat)).getOrElse(""), "utf-8"),
+    (key: String, e: Exception) => "Cannot parse parameter %s as LocalDate: %s".format(key, e.getMessage)
+  )
 
-  implicit val offsetDateTimeQueryStringBindable: QueryStringBindable[OffsetDateTime] =
-    QueryStringBindable.bindableString.transform(
-      OffsetDateTime.parse(_, JavaTime.iSO8601DateFormat),
-      _.format(JavaTime.iSO8601DateFormat)
-    )
+  implicit object offsetDateTimeQueryStringBindable extends QueryStringBindable.Parsing[OffsetDateTime](
+    OffsetDateTime.parse(_, JavaTime.iSO8601DateFormat),
+    (d: OffsetDateTime) => URLEncoder.encode(Option(d).map(_.format(JavaTime.iSO8601DateFormat)).getOrElse(""), "utf-8"),
+    (key: String, e: Exception) => "Cannot parse parameter %s as OffsetDateTime: %s".format(key, e.getMessage)
+  )
 
-  implicit val zoneIdQueryStringBindable: QueryStringBindable[ZoneId] =
-    QueryStringBindable.bindableString.transform(
-      ZoneId.of,
-      _.getId
-    )
+  implicit object zoneIdQueryStringBindable extends QueryStringBindable.Parsing[ZoneId](
+    ZoneId.of,
+    (z: ZoneId) => URLEncoder.encode(Option(z).map(_.getId).getOrElse(""), "utf-8"),
+    (key: String, e: Exception) => "Cannot parse parameter %s as ZoneId: %s".format(key, e.getMessage)
+  )
 
   implicit val durationQueryStringBindable: QueryStringBindable[Duration] =
     QueryStringBindable.bindableLong.transform(

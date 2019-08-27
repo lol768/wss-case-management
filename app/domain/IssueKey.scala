@@ -1,5 +1,7 @@
 package domain
 
+import java.net.URLEncoder
+
 import enumeratum.{Enum, EnumEntry}
 import helpers.StringUtils._
 import play.api.data.format.Formats.parsing
@@ -21,24 +23,20 @@ object IssueKey {
     case _ => throw new IllegalArgumentException("Invalid IssueKey format")
   }
 
-  implicit val issueKeyPathBindable: PathBindable[IssueKey] = new PathBindable[IssueKey] {
-    override def bind(key: String, value: String): Either[String, IssueKey] =
-      Right(IssueKey(value))
+  implicit object issueKeyPathBindable extends PathBindable.Parsing[IssueKey](
+    IssueKey.apply,
+    _.string,
+    (key: String, e: Exception) => "Cannot parse parameter %s as IssueKey: %s".format(key, e.getMessage)
+  )
 
-    override def unbind(key: String, value: IssueKey): String =
-      value.string
-  }
-
-  implicit val issueKeyQueryStringBindable: QueryStringBindable[IssueKey] = new QueryStringBindable[IssueKey] {
-    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, IssueKey]] =
-      params.get(key).flatMap(_.headOption).map { p => Right(IssueKey(p)) }
-
-    override def unbind(key: String, value: IssueKey): String =
-      s"$key=${value.string}"
-  }
+  implicit object issueKeyQueryStringBindable extends QueryStringBindable.Parsing[IssueKey](
+    IssueKey.apply,
+    (k: IssueKey) => URLEncoder.encode(Option(k).map(_.string).getOrElse(""), "utf-8"),
+    (key: String, e: Exception) => "Cannot parse parameter %s as IssueKey: %s".format(key, e.getMessage)
+  )
 
   implicit val issueKeyFormatter: Formatter[IssueKey] = new Formatter[IssueKey] {
-    override val format = Some(("format.issueKey", Nil))
+    override val format: Option[(String, Seq[Any])] = Some(("format.issueKey", Nil))
 
     override def bind(key: String, data: Map[String, String]): Either[Seq[FormError], IssueKey] =
       parsing(IssueKey.apply, "error.issueKey", Nil)(key, data)
