@@ -1,5 +1,6 @@
 package views
 
+import helpers.CommonmarkRenderer
 import play.api.data.Form
 import play.twirl.api._
 
@@ -39,4 +40,6 @@ package object utils {
   def nl2br(text: String): Content = HtmlFormat.fill(text.trim.split("\n").flatMap { line =>
     Seq(HtmlFormat.escape(line), BR)
   }.toList)
+
+  def commonMark(text: String): Content = HtmlFormat.raw(CommonmarkRenderer.renderMarkdown(text))
 }

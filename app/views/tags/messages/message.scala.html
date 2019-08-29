@@ -14,7 +14,7 @@
 @renderMessage(author: String) = {
   <div class="date pull-right">@JavaTime.Relative(message.created)</div>
   <div class="message--author">@author</div>
-  @views.utils.nl2br(message.text)
+  @views.utils.commonMark(message.text)
   @if(files.nonEmpty) {
     <div class="message--attachment">
       <ul class="list-unstyled">
