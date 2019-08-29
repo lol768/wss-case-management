@@ -137,7 +137,6 @@ class EnquiryServiceImpl @Inject() (
     } yield (message, f)
 
   override def save(enquiry: EnquirySave, message: MessageSave, files: Seq[(ByteSource, UploadedFileSave)])(implicit ac: AuditLogContext): Future[ServiceResult[Enquiry]] = {
-    require(message.sender == MessageSender.Client, "Initial message must be from the Client")
     val id = UUID.randomUUID()
     auditService.audit(Operation.Enquiry.Save, id.toString, Target.Enquiry, Json.obj()) {
       clientService.getOrAddClients(Set(enquiry.universityID)).successFlatMapTo(clients =>
@@ -538,7 +537,7 @@ class EnquiryServiceImpl @Inject() (
             .last
 
         val message = MessageSave(
-          text = views.txt.enquiry.clientReminder(r, lastMessageFromTeam).toString().trim,
+          text = views.txt.enquiry.clientReminder(r, lastMessageFromTeam, isFinalReminder).toString().trim,
           sender = MessageSender.Team,
           teamMember = Some(SendEnquiryClientReminderJob.SendMessageAs)
         )

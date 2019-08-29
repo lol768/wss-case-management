@@ -1,13 +1,11 @@
-@import controllers.enquiries.EnquiryController.{CounsellingEnquiryFormData, DisabilityEnquiryFormData, MentalHealthEnquiryFormData}
+@import controllers.enquiries.EnquiryController.DisabilityEnquiryFormData
 @import domain.{Team, Teams}
 @import org.apache.tika.mime.MediaType
 @import views.html.b3.B3FieldConstructor
 
 @(
-  mentalHealthForm: Form[MentalHealthEnquiryFormData],
-  counsellingForm: Form[CounsellingEnquiryFormData],
+  consultationForm: Form[Boolean],
   disabilityForm: Form[DisabilityEnquiryFormData],
-  wellbeingForm: Form[String],
   supportedMimeTypes: Seq[MediaType],
   outsideOfficeHours: Boolean,
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
@@ -70,7 +68,7 @@
 }
 
 @main(s"Make an enquiry") {
-  @if(!mentalHealthForm.hasErrors && !counsellingForm.hasErrors && !disabilityForm.hasErrors && !wellbeingForm.hasErrors && outsideOfficeHours) {
+  @if(!consultationForm.hasErrors && !disabilityForm.hasErrors && outsideOfficeHours) {
     <div class="well outside-office-hours">
       <div class="media">
         <div class="media-left">
@@ -100,17 +98,17 @@
   </p>
 
   <div class="panel-group" id="enquiry-forms" role="tablist" aria-multiselectable="true">
-    @panel(Teams.Counselling, "Counselling for emotional or psychological issues", counsellingForm, controllers.enquiries.routes.EnquiryController.submitCounselling()) { implicit vfc =>
-      @b3.free('_label -> "Subject:") {
-        <span class="form-control-static">Counselling query</span>
-      }(b3.inline.fieldConstructorSpecific(), messagesProvider)
+    @panel(Teams.Consultation, "Start with a brief consultation", consultationForm, controllers.enquiries.routes.EnquiryController.submitConsultation()) { implicit vfc =>
+      <p>
+        Speak to us for a brief consultation to help you work out the next step in accessing support.
+        Select this option if you would like to access practical or emotional support/advice to help you better manage
+        your wellbeing, support with managing an emotional, psychological, mental health difficulty, or if you are
+        simply unsure about where to go.
+      </p>
 
-      @b3.free('_label -> "Select any of the following that apply (or leave them all unticked if not)", '_class -> "checkboxGroup") {
-        @b3.checkbox(counsellingForm("faceToFace"), '_text -> "I'm interested in face-to-face counselling")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
-        @b3.checkbox(counsellingForm("therapy"), '_text -> "I'm interested in group therapy")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
-        @b3.checkbox(counsellingForm("online"), '_text -> "I'm interested in email counselling")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
-        @b3.checkbox(counsellingForm("other"), '_text -> "I’m interested in counselling but I’m not sure which option to select")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
-      }
+      <p>
+        If you would like to access support with managing the impact of a disability on your academic studies, please see below.
+      </p>
     }
 
     @panel(Teams.Disability, "Support with disabilities such as dyslexia, mental health and autism spectrum", disabilityForm, controllers.enquiries.routes.EnquiryController.submitDisability()) { implicit vfc =>
@@ -120,7 +118,7 @@
 
       @b3.free('_label -> "Select any of the following that apply (or leave them all unticked if not)", '_class -> "checkboxGroup") {
         @b3.checkbox(disabilityForm("reasonableAdjustments"), '_text -> "I'm looking for advice on reasonable adjustments (including special exam arrangements)")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
-        @b3.checkbox(disabilityForm("specialistMentoring"), '_text -> "I'm looking for specialist mentoring and advice on study skills")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
+        @b3.checkbox(disabilityForm("specialistMentoring"), '_text -> "I'm looking for specialist mentoring or study skills")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
         @b3.checkbox(disabilityForm("disabilityScreening"), '_text -> "I'm looking for screening for Specific Learning Difficulties (SpLDs) such as dyslexia")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
         @b3.checkbox(disabilityForm("generalAdvice"), '_text -> "I'm looking for general advice and support on disability")(b3.clear.fieldConstructorSpecific(), messagesProvider.messages)
       }
@@ -131,26 +129,18 @@
       }
     }
 
-    @panel(Teams.WellbeingSupport, "Wellbeing Support (other issues)", wellbeingForm, controllers.enquiries.routes.EnquiryController.submitWellbeing()) { implicit vfc =>
-      <p>
-        If you’re looking for more general practical advice and support (e.g. issues such as
-        accommodation, safety, crime (including sexual violence), complaints or wellbeing),
-        briefly describe what help you need.
-      </p>
+    <br>
 
-      @b3.free('_label -> "Subject:") {
-        <span class="form-control-static">Wellbeing query</span>
-      }(b3.inline.fieldConstructorSpecific(), messagesProvider)
+    <p>
+      If you are not sure which option to choose, or whether Wellbeing Support Services is the right place to come, or just
+      want to speak to someone and make sure, please call us on <a href="tel:+442476522222">024 7652 2222</a>, or come along to Wellbeing Support Services
+      on the ground floor of Senate House.
+    </p>
 
-      @b3.textarea(wellbeingForm("text"),
-        '_label -> "Message",
-        'rows -> 10
-      )
-
-      @b3.free('_label -> "Do you have any documents you can upload that might help us understand your situation?", '_class -> wellbeingForm.error("file").map(_ => "has-error")) {
-        <input type="file" id="wellbeingForm_file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" aria-label="Attach a file">
-        @b3.errors(wellbeingForm("file"))
-      }
-    }
+    <p><strong>
+      Important information – if you feel you need urgent assistance, there are other services available to help you, both
+      on and off campus and we don’t suggest that you use the brief consultation sessions.  Please see <a href="https://warwick.ac.uk/services/counselling/emergency_contacts">this information</a>
+      or call Campus Security in an emergency on <a href="tel:+442476522083">024 7652 2083</a>.
+    </strong></p>
   </div>
 }
