@@ -31,16 +31,18 @@
         @tags.messages.attachButton(supportedMimeTypes, s"${issue.id.toString}-${client.universityID.string}-file")
       </div>
 
-      <div class="help-block">
-        @if(sender == MessageSender.Team) {
-          You can use Markdown <i class="fab fa-markdown"></i> syntax <a target="_blank" href="https://warwick.ac.uk/tabula/manual/cm2/markers/markdown/"><i class="fal fa-question-circle"></i></a>
-          to format the message.
+      @if(messageForm.hasErrors || sender == MessageSender.Team) {
+        <div class="help-block">
+          @if(sender == MessageSender.Team) {
+            You can use Markdown <i class="fab fa-markdown"></i> syntax <a target="_blank" href="https://warwick.ac.uk/tabula/manual/cm2/markers/markdown/"><i class="fal fa-question-circle"></i></a>
+            to format the message.
+          }
 
           @messageForm.errors.map { error =>
             @error.format
           }
-        }
-      </div>
+        </div>
+      }
     }
   }
 
