@@ -39,6 +39,7 @@ val enumeratumSlickVersion = "1.5.16"
 val playUtilsVersion = "1.40"
 val ssoClientVersion = "2.74"
 val warwickUtilsVersion = "20190725"
+val flexmarkVersion = "0.50.30"
 
 val appDeps = Seq(
   guice,
@@ -99,7 +100,10 @@ val appDeps = Seq(
 
   "org.apache.poi" % "poi" % "4.1.0",
   "org.apache.poi" % "poi-ooxml" % "4.1.0",
-  "org.apache.poi" % "poi-ooxml-schemas" % "4.1.0"
+  "org.apache.poi" % "poi-ooxml-schemas" % "4.1.0",
+
+  "com.vladsch.flexmark" % "flexmark" % flexmarkVersion,
+  "com.vladsch.flexmark" % "flexmark-ext-autolink" % flexmarkVersion
 )
 
 val testDeps = Seq(
