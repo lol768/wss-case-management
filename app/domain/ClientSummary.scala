@@ -2,18 +2,17 @@ package domain
 
 import java.time.{Instant, OffsetDateTime}
 
-import domain.History._
 import domain.ClientRiskStatus.{High, Medium}
+import domain.History._
 import domain.dao.ClientSummaryDao.{StoredClientSummary, StoredClientSummaryVersion}
 import enumeratum.{EnumEntry, PlayEnum}
-import warwick.core.helpers.ServiceResults.ServiceResult
-import play.api.libs.json.{Format, Json, Writes}
-import services.{AuditLogContext, ClientService}
+import play.api.libs.json.{Format, Json, OFormat, Writes}
 import warwick.core.helpers.JavaTime
+import warwick.core.helpers.ServiceResults.ServiceResult
 import warwick.sso.{User, UserLookupService, Usercode}
 
 import scala.collection.immutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 case class ClientSummary(
   client: Client,
@@ -23,15 +22,17 @@ case class ClientSummary(
   riskStatus: Option[ClientRiskStatus],
   reasonableAdjustments: Set[ReasonableAdjustment],
   reasonableAdjustmentsNotes: String,
+  initialConsultation: Option[InitialConsultation],
   updatedDate: OffsetDateTime
 ) {
-  def toSave = ClientSummarySave(
+  def toSave: ClientSummarySave = ClientSummarySave(
     notes = notes,
     alternativeContactNumber = alternativeContactNumber,
     alternativeEmailAddress = alternativeEmailAddress,
     riskStatus = riskStatus,
     reasonableAdjustments = reasonableAdjustments,
     reasonableAdjustmentsNotes = reasonableAdjustmentsNotes,
+    initialConsultation = initialConsultation,
   )
 }
 
@@ -42,6 +43,7 @@ case class ClientSummarySave(
   riskStatus: Option[ClientRiskStatus],
   reasonableAdjustments: Set[ReasonableAdjustment],
   reasonableAdjustmentsNotes: String,
+  initialConsultation: Option[InitialConsultation],
 )
 
 object ClientSummarySave {
@@ -110,3 +112,13 @@ object ClientSummaryHistory {
 case class ClientSummaryHistory(
   riskStatus: FieldHistory[Option[ClientRiskStatus]]
 )
+
+case class InitialConsultation(
+  reason: String,
+  suggestedResolution: String,
+  alreadyTried: String
+)
+
+object InitialConsultation {
+  implicit val formatter: OFormat[InitialConsultation] = Json.format[InitialConsultation]
+}

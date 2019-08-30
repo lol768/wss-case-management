@@ -50,6 +50,11 @@ class ClientController @Inject()(
       "risk-status" -> optional(ClientRiskStatus.formField),
       "reasonable-adjustments" -> set(ReasonableAdjustment.formField),
       "reasonable-adjustments-notes" -> text,
+      "initial-consultation" -> optional(mapping(
+        "reason" -> text,
+        "suggestedResolution" -> text,
+        "alreadyTried" -> text
+      )(InitialConsultation.apply)(InitialConsultation.unapply))
     )(ClientSummarySave.apply)(ClientSummarySave.unapply)
       .verifying(Constraint { summary: ClientSummarySave =>
         if (summary.reasonableAdjustments.isEmpty || summary.reasonableAdjustmentsNotes.hasText)

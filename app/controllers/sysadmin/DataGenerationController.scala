@@ -447,6 +447,7 @@ class DataGenerationJob @Inject()(
                 randomEnum(ReasonableAdjustment)
               }.toSet,
             reasonableAdjustmentsNotes = dummyWords(Random.nextInt(200)),
+            initialConsultation = None,
           )
 
           clientSummaries.get(client).serviceValue match {

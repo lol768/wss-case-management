@@ -49,6 +49,7 @@ class ClientSummaryServiceImpl @Inject()(
     alternativeEmailAddress = summary.alternativeEmailAddress,
     riskStatus = summary.riskStatus,
     reasonableAdjustmentsNotes = summary.reasonableAdjustmentsNotes,
+    initialConsultation = summary.initialConsultation,
   )
 
   private def toStored(universityID: UniversityID, reasonableAdjustment: ReasonableAdjustment): StoredReasonableAdjustment = StoredReasonableAdjustment(

@@ -24,6 +24,7 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
     alternativeEmailAddress = "nobody@example.com",
     riskStatus = Some(ClientRiskStatus.Medium),
     reasonableAdjustmentsNotes = "",
+    initialConsultation = None,
   )
 
   "ClientSummaryDao" should {
@@ -36,7 +37,7 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
           existsBefore <- dao.get(uniID)
           result <- dao.insert(summary)
           existsAfter <- dao.get(uniID)
-          _ <- DBIO.from(Future {
+          _ <- DBIO.successful {
             existsBefore.isEmpty mustBe true
 
             result.universityID mustBe uniID
@@ -46,10 +47,11 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
             result.alternativeEmailAddress mustBe summary.alternativeEmailAddress
             result.riskStatus mustBe summary.riskStatus
             result.reasonableAdjustmentsNotes mustBe summary.reasonableAdjustmentsNotes
+            result.initialConsultation mustBe summary.initialConsultation
 
             existsAfter.isEmpty mustBe false
             existsAfter.get._1 mustBe result
-          })
+          }
         } yield result
 
         exec(test)
@@ -63,22 +65,27 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
         alternativeEmailAddress = "other@something-else.com",
         riskStatus = Some(ClientRiskStatus.High),
         reasonableAdjustmentsNotes = "Some notes",
+        initialConsultation = Some(InitialConsultation(
+          reason = "My face hurts",
+          suggestedResolution = "Stroke my face gently",
+          alreadyTried = "Punching myself in the face"
+        ))
       )
 
       val earlier = ZonedDateTime.of(2018, 1, 1, 10, 0, 0, 0, JavaTime.timeZone).toInstant
       val now = ZonedDateTime.of(2018, 1, 1, 11, 0, 0, 0, JavaTime.timeZone).toInstant
 
       val test = for {
-        _ <- DBIO.from(Future {
+        _ <- DBIO.successful {
           DateTimeUtils.CLOCK_IMPLEMENTATION = Clock.fixed(earlier, JavaTime.timeZone)
-        })
+        }
         _ <- ClientDao.clients.table += StoredClient(summary.universityID, None, JavaTime.offsetDateTime)
         inserted <- dao.insert(summary)
-        _ <- DBIO.from(Future {
+        _ <- DBIO.successful {
           DateTimeUtils.CLOCK_IMPLEMENTATION = Clock.fixed(now, JavaTime.timeZone)
-        })
+        }
         updated <- dao.update(updatedSummary, inserted.version)
-        _ <- DBIO.from(Future {
+        _ <- DBIO.successful {
           updated.universityID mustBe uniID
           updated.version.toInstant.equals(now) mustBe true
           updated.notes mustBe updatedSummary.notes
@@ -86,7 +93,8 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
           updated.alternativeEmailAddress mustBe updatedSummary.alternativeEmailAddress
           updated.riskStatus mustBe updatedSummary.riskStatus
           updated.reasonableAdjustmentsNotes mustBe updatedSummary.reasonableAdjustmentsNotes
-        })
+          updated.initialConsultation mustBe updatedSummary.initialConsultation
+        }
       } yield updated
 
       exec(test)

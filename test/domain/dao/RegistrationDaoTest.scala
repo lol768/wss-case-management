@@ -22,12 +22,12 @@ class RegistrationDaoTest extends AbstractDaoTest {
 
         val test = for {
           result <- dao.invite(uniID)
-          _ <- DBIO.from(Future {
+          _ <- DBIO.successful {
             result.universityID mustBe uniID
             result.lastInvited.toInstant.equals(now) mustBe true
             result.parsed.data.isEmpty mustBe true
             result.version.toInstant.equals(now) mustBe true
-          })
+          }
         } yield result
 
         exec(test)
@@ -60,15 +60,15 @@ class RegistrationDaoTest extends AbstractDaoTest {
       val now = ZonedDateTime.of(2018, 1, 1, 11, 0, 0, 0, JavaTime.timeZone).toInstant
 
       val test = for {
-        _ <- DBIO.from(Future {
+        _ <- DBIO.successful {
           DateTimeUtils.CLOCK_IMPLEMENTATION = Clock.fixed(earlier, ZoneId.systemDefault)
-        })
+        }
         inserted <- dao.invite(uniID)
-        _ <- DBIO.from(Future {
+        _ <- DBIO.successful {
           DateTimeUtils.CLOCK_IMPLEMENTATION = Clock.fixed(now, ZoneId.systemDefault)
-        })
+        }
         updated <- dao.update(uniID, Some(updatedData), inserted.lastInvited, inserted.version)
-        _ <- DBIO.from(Future {
+        _ <- DBIO.successful {
           updated.universityID mustBe uniID
           updated.lastInvited.equals(inserted.lastInvited) mustBe true
           updated.version.toInstant.equals(now) mustBe true
@@ -78,7 +78,7 @@ class RegistrationDaoTest extends AbstractDaoTest {
           updated.parsed.data.get.medications mustBe updatedData.medications
           updated.parsed.data.get.appointmentAdjustments mustBe updatedData.appointmentAdjustments
           updated.parsed.data.get.referrals mustBe updatedData.referrals
-        })
+        }
       } yield updated
 
       exec(test)
