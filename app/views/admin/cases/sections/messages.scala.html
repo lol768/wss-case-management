@@ -18,7 +18,7 @@
         <div class="panel-heading" role="tab" id="thread-heading-@client.universityID.string">
           <h4 class="panel-title">
           @if(clients.size > 1){
-            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#enquiries-accordion" href="#collapse-thread-@client.universityID.string" aria-expanded="true" aria-controls="collapse-thread-@client.universityID.string" data-always-update="true">
+            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#messages-accordion" href="#collapse-thread-@client.universityID.string" aria-expanded="true" aria-controls="collapse-thread-@client.universityID.string" data-always-update="true">
               <div class="pull-right lastMessageRelative">
                 @messages.lastOption.map { m =>
                   @JavaTime.Relative(m.message.created)

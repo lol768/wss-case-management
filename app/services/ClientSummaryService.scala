@@ -10,13 +10,13 @@ import domain.dao.ClientDao.StoredClient
 import domain.dao.ClientSummaryDao.StoredClientSummary
 import domain.dao.ClientSummaryDao.StoredClientSummary.StoredReasonableAdjustment
 import domain.dao.{ClientSummaryDao, DaoRunner}
-import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.{JavaTime, ServiceResults}
 import warwick.core.helpers.ServiceResults.Implicits._
 import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import warwick.core.timing.TimingContext
-import warwick.sso.{UniversityID, UserLookupService}
+import warwick.sso.{UniversityID, UserLookupService, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -24,7 +24,9 @@ import scala.concurrent.{ExecutionContext, Future}
 trait ClientSummaryService {
   def save(universityID: UniversityID, summary: ClientSummarySave)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]]
   def update(universityID: UniversityID, summary: ClientSummarySave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]]
+  def recordInitialConsultation(universityID: UniversityID, consultation: InitialConsultationSave, teamMember: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]]
   def get(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]]
+  def getAll(universityIDs: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[ClientSummary]]]]
   def getByAlternativeEmailAddress(email: String)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]]
   def getHistory(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[ClientSummaryHistory]]
   def findAtRisk(includeMentalHealth: Boolean)(implicit t: TimingContext): Future[ServiceResult[Set[AtRiskClient]]]
@@ -42,15 +44,6 @@ class ClientSummaryServiceImpl @Inject()(
   daoRunner: DaoRunner
 )(implicit executionContext: ExecutionContext) extends ClientSummaryService {
 
-  private def toStored(universityID: UniversityID, summary: ClientSummarySave): StoredClientSummary = StoredClientSummary(
-    universityID = universityID,
-    notes = summary.notes,
-    alternativeContactNumber = summary.alternativeContactNumber,
-    alternativeEmailAddress = summary.alternativeEmailAddress,
-    riskStatus = summary.riskStatus,
-    reasonableAdjustmentsNotes = summary.reasonableAdjustmentsNotes,
-  )
-
   private def toStored(universityID: UniversityID, reasonableAdjustment: ReasonableAdjustment): StoredReasonableAdjustment = StoredReasonableAdjustment(
     universityID = universityID,
     reasonableAdjustment = reasonableAdjustment
@@ -65,7 +58,15 @@ class ClientSummaryServiceImpl @Inject()(
     ) {
       clientService.getOrAddClients(Set(universityID)).successFlatMapTo(clients =>
         daoRunner.run(for {
-          inserted <- dao.insert(toStored(universityID, summary))
+          inserted <- dao.insert(StoredClientSummary(
+            universityID = universityID,
+            notes = summary.notes,
+            alternativeContactNumber = summary.alternativeContactNumber,
+            alternativeEmailAddress = summary.alternativeEmailAddress,
+            riskStatus = summary.riskStatus,
+            reasonableAdjustmentsNotes = summary.reasonableAdjustmentsNotes,
+            initialConsultation = None,
+          ))
           reasonableAdjustments <- dao.insertReasonableAdjustments(summary.reasonableAdjustments.map(r => toStored(universityID, r)))
         } yield (inserted, reasonableAdjustments)).map { case (inserted, reasonableAdjustments) =>
           Right(inserted.asClientSummary(clients.head, reasonableAdjustments.map(_.reasonableAdjustment).toSet))
@@ -82,7 +83,16 @@ class ClientSummaryServiceImpl @Inject()(
     ) {
       clientService.getOrAddClients(Set(universityID)).successFlatMapTo(clients =>
         daoRunner.run(for {
-          updated <- dao.update(toStored(universityID, summary), version)
+          existing <- dao.get(universityID).map(_.head._1)
+          updated <- dao.update(StoredClientSummary(
+            universityID = universityID,
+            notes = summary.notes,
+            alternativeContactNumber = summary.alternativeContactNumber,
+            alternativeEmailAddress = summary.alternativeEmailAddress,
+            riskStatus = summary.riskStatus,
+            reasonableAdjustmentsNotes = summary.reasonableAdjustmentsNotes,
+            initialConsultation = existing.initialConsultation,
+          ), version)
           _ <- updateDifferencesDBIO[StoredReasonableAdjustment, ReasonableAdjustment](
             summary.reasonableAdjustments,
             dao.getReasonableAdjustmentsQuery(universityID),
@@ -98,8 +108,69 @@ class ClientSummaryServiceImpl @Inject()(
       )
     }
 
+  override def recordInitialConsultation(universityID: UniversityID, consultation: InitialConsultationSave, teamMember: Usercode)(implicit ac: AuditLogContext): Future[ServiceResult[ClientSummary]] =
+    auditService.audit(
+      Operation.ClientSummary.RecordInitialConsultation,
+      universityID.string,
+      Target.ClientSummary,
+      Json.toJson(consultation)(InitialConsultationSave.formatter)
+    ) {
+      clientService.getOrAddClients(Set(universityID)).successFlatMapTo(clients =>
+        daoRunner.run(for {
+          existingRow <- dao.get(universityID)
+          stored <- existingRow match {
+            case Some((existing, _)) =>
+              dao.update(StoredClientSummary(
+                universityID = universityID,
+                notes = existing.notes,
+                alternativeContactNumber = existing.alternativeContactNumber,
+                alternativeEmailAddress = existing.alternativeEmailAddress,
+                riskStatus = existing.riskStatus,
+                reasonableAdjustmentsNotes = existing.reasonableAdjustmentsNotes,
+                initialConsultation = Some(InitialConsultation(
+                  reason = consultation.reason,
+                  suggestedResolution = consultation.suggestedResolution,
+                  alreadyTried = consultation.alreadyTried,
+                  createdDate = existing.initialConsultation.map(_.createdDate).getOrElse(JavaTime.offsetDateTime),
+                  updatedDate = JavaTime.offsetDateTime,
+                  updatedBy = teamMember
+                )),
+              ), existing.version)
+
+            case _ =>
+              dao.insert(StoredClientSummary(
+                universityID = universityID,
+                notes = "",
+                alternativeContactNumber = "",
+                alternativeEmailAddress = "",
+                riskStatus = None,
+                reasonableAdjustmentsNotes = "",
+                initialConsultation = Some(InitialConsultation(
+                  reason = consultation.reason,
+                  suggestedResolution = consultation.suggestedResolution,
+                  alreadyTried = consultation.alreadyTried,
+                  createdDate = JavaTime.offsetDateTime,
+                  updatedDate = JavaTime.offsetDateTime,
+                  updatedBy = teamMember
+                )),
+              ))
+          }
+          adjustments <- dao.getReasonableAdjustmentsQuery(universityID).result
+        } yield {
+          Right(stored.asClientSummary(clients.head, adjustments.map(_.reasonableAdjustment).toSet))
+        })
+      )
+    }
+
   override def get(universityID: UniversityID)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]] =
     withReasonableAdjustments(dao.get(universityID)).map(Right.apply)
+
+  override def getAll(universityIDs: Set[UniversityID])(implicit t: TimingContext): Future[ServiceResult[Map[UniversityID, Option[ClientSummary]]]] =
+    withReasonableAdjustmentsSeq(dao.getAll(universityIDs)).map { summaries =>
+      ServiceResults.success(universityIDs.map { universityID =>
+        universityID -> summaries.find(_.client.universityID == universityID)
+      }.toMap)
+    }
 
   override def getByAlternativeEmailAddress(email: String)(implicit t: TimingContext): Future[ServiceResult[Option[ClientSummary]]] =
     withReasonableAdjustments(dao.getByAlternativeEmailAddress(email)).map(Right.apply)

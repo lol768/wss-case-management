@@ -27,6 +27,7 @@ trait ClientSummaryDao {
   def insertReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Seq[StoredReasonableAdjustment]]
   def deleteReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Done]
   def get(universityID: UniversityID): DBIO[Option[(StoredClientSummary, StoredClient)]]
+  def getAll(universityIDs: Set[UniversityID]): DBIO[Seq[(StoredClientSummary, StoredClient)]]
   def getByAlternativeEmailAddress(email: String): DBIO[Option[(StoredClientSummary, StoredClient)]]
   def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq]
   def getHistory(universityID: UniversityID): DBIO[Seq[StoredClientSummaryVersion]]
@@ -42,6 +43,7 @@ object ClientSummaryDao {
     alternativeEmailAddress: String,
     riskStatus: Option[ClientRiskStatus],
     reasonableAdjustmentsNotes: String,
+    initialConsultation: Option[InitialConsultation],
     version: OffsetDateTime = JavaTime.offsetDateTime
   ) extends Versioned[StoredClientSummary] {
     override def atVersion(at: OffsetDateTime): StoredClientSummary = copy(version = at)
@@ -54,13 +56,14 @@ object ClientSummaryDao {
         alternativeEmailAddress,
         riskStatus,
         reasonableAdjustmentsNotes,
+        initialConsultation,
         version,
         operation,
         timestamp,
         ac.usercode
       ).asInstanceOf[B]
 
-    def asClientSummary(client: Client, reasonableAdjustments: Set[ReasonableAdjustment]) = ClientSummary(
+    def asClientSummary(client: Client, reasonableAdjustments: Set[ReasonableAdjustment]): ClientSummary = ClientSummary(
       client = client,
       notes = notes,
       alternativeContactNumber = alternativeContactNumber,
@@ -68,6 +71,7 @@ object ClientSummaryDao {
       riskStatus = riskStatus,
       reasonableAdjustments = reasonableAdjustments,
       reasonableAdjustmentsNotes = reasonableAdjustmentsNotes,
+      initialConsultation = initialConsultation,
       updatedDate = version
     )
   }
@@ -79,6 +83,7 @@ object ClientSummaryDao {
     alternativeEmailAddress: String,
     riskStatus: Option[ClientRiskStatus],
     reasonableAdjustmentsNotes: String,
+    initialConsultation: Option[InitialConsultation],
     version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
@@ -86,7 +91,7 @@ object ClientSummaryDao {
   ) extends StoredVersion[StoredClientSummary]
 
   object StoredClientSummary extends Versioning {
-    def tupled: ((UniversityID, String, String, String, Option[ClientRiskStatus], String, OffsetDateTime)) => StoredClientSummary = (StoredClientSummary.apply _).tupled
+    def tupled: ((UniversityID, String, String, String, Option[ClientRiskStatus], String, Option[InitialConsultation], OffsetDateTime)) => StoredClientSummary = (StoredClientSummary.apply _).tupled
 
     sealed trait CommonClientSummaryProperties { self: Table[_] =>
       def notes: Rep[String] = column[String]("notes")
@@ -94,6 +99,7 @@ object ClientSummaryDao {
       def alternativeEmailAddress: Rep[String] = column[String]("alt_email")
       def riskStatus: Rep[Option[ClientRiskStatus]] = column[Option[ClientRiskStatus]]("risk_status")
       def reasonableAdjustmentsNotes: Rep[String] = column[String]("reasonable_adjustments_notes")
+      def initialConsultation: Rep[Option[InitialConsultation]] = column[Option[InitialConsultation]]("initial_consultation")
       def version: Rep[OffsetDateTime] = column[OffsetDateTime]("version_utc")
     }
 
@@ -102,7 +108,7 @@ object ClientSummaryDao {
 
       def universityID: Rep[UniversityID] = column[UniversityID]("university_id", O.PrimaryKey)
 
-      def * : ProvenShape[StoredClientSummary] = (universityID, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, reasonableAdjustmentsNotes, version).mapTo[StoredClientSummary]
+      def * : ProvenShape[StoredClientSummary] = (universityID, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, reasonableAdjustmentsNotes, initialConsultation, version).mapTo[StoredClientSummary]
     }
 
     class ClientSummaryVersions(tag: Tag) extends Table[StoredClientSummaryVersion](tag, "client_summary_version") with StoredVersionTable[StoredClientSummary] with CommonClientSummaryProperties {
@@ -111,7 +117,7 @@ object ClientSummaryDao {
       def timestamp: Rep[OffsetDateTime] = column[OffsetDateTime]("version_timestamp_utc")
       def auditUser = column[Option[Usercode]]("version_user")
 
-      def * : ProvenShape[StoredClientSummaryVersion] = (universityID, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, reasonableAdjustmentsNotes, version, operation, timestamp, auditUser).mapTo[StoredClientSummaryVersion]
+      def * : ProvenShape[StoredClientSummaryVersion] = (universityID, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, reasonableAdjustmentsNotes, initialConsultation, version, operation, timestamp, auditUser).mapTo[StoredClientSummaryVersion]
       def pk: PrimaryKey = primaryKey("pk_client_summary_version", (universityID, timestamp))
       def idx: Index = index("idx_client_summary_version", (universityID, version))
     }
@@ -210,6 +216,9 @@ class ClientSummaryDaoImpl @Inject()(
 
   override def get(universityID: UniversityID): DBIO[Option[(StoredClientSummary, StoredClient)]] =
     clientSummaries.table.filter(_.universityID === universityID).withClient.take(1).result.headOption
+
+  override def getAll(universityIDs: Set[UniversityID]): DBIO[Seq[(StoredClientSummary, StoredClient)]] =
+    clientSummaries.table.filter(_.universityID.inSet(universityIDs)).withClient.result
 
   override def getByAlternativeEmailAddress(email: String): DBIO[Option[(StoredClientSummary, StoredClient)]] =
     clientSummaries.table.filter(_.alternativeEmailAddress === email).withClient.take(1).result.headOption

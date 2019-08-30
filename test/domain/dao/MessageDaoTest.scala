@@ -27,13 +27,13 @@ class MessageDaoTest extends AbstractDaoTest {
         _ <- dao.insert(message)
         client1Messages <- filterMessage(client1).result
         client3Messages <- filterMessage(client3).result
-        _ <- DBIO.from(Future {
+        _ <- DBIO.successful {
           client1Messages.length mustBe 1
           client1Messages.head.id mustBe message.id
           client1Messages.head.text mustBe "Hello"
 
           client3Messages.length mustBe 0
-        })
+        }
       } yield Nil)
     }
   }

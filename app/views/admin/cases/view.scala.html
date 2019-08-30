@@ -340,6 +340,8 @@
 
     @tags.sectioned.sectionAsync("case", "Case notes", isCollapsible = true, url = controllers.admin.routes.CaseController.notes(c.key), showCount = true)
 
+    @tags.sectioned.sectionAsync("case", "Consultation", isCollapsible = true, url = controllers.admin.routes.CaseController.consultations(c.key))
+
     @tags.sectioned.sectionAsync("case", "Messages", isCollapsible = profiles.size == 1, url = controllers.admin.routes.CaseController.messages(c.key), showCount = true)
 
   </div>

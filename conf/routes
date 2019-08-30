@@ -92,6 +92,8 @@ POST        /team/client/:universityID                          @controllers.adm
 POST        /team/client/:universityID/invite                   @controllers.admin.ClientController.invite(universityID: warwick.sso.UniversityID)
 GET         /team/client/:universityID/registration-history     @controllers.admin.ClientController.registrationHistory(universityID: warwick.sso.UniversityID)
 GET         /team/client/:universityID/cases                    @controllers.admin.ClientController.cases(universityID: warwick.sso.UniversityID)
+GET         /team/client/:universityID/consultation             @controllers.admin.ClientConsultationController.formForCase(caseKey: domain.IssueKey, universityID: warwick.sso.UniversityID)
+POST        /team/client/:universityID/consultation             @controllers.admin.ClientConsultationController.saveForCase(caseKey: domain.IssueKey, universityID: warwick.sso.UniversityID)
 
 GET         /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.messages(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.addMessage(enquiryKey: domain.IssueKey)
@@ -125,6 +127,7 @@ GET         /team/case/:caseKey/note/:id            @controllers.admin.CaseContr
 POST        /team/case/:caseKey/note/:id            @controllers.admin.CaseController.editNote(caseKey: domain.IssueKey, id: java.util.UUID)
 POST        /team/case/:caseKey/note/:id/delete     @controllers.admin.CaseController.deleteNote(caseKey: domain.IssueKey, id: java.util.UUID)
 DELETE      /team/case/:caseKey/note/:id            @controllers.admin.CaseController.deleteNote(caseKey: domain.IssueKey, id: java.util.UUID)
+GET         /team/case/:caseKey/consultations       @controllers.admin.CaseController.consultations(caseKey: domain.IssueKey)
 GET         /team/case/:caseKey/close               @controllers.admin.CaseController.closeForm(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/close               @controllers.admin.CaseController.close(caseKey: domain.IssueKey)
 POST        /team/case/:caseKey/reopen              @controllers.admin.CaseController.reopen(caseKey: domain.IssueKey)

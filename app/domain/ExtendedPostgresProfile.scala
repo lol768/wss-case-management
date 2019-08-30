@@ -10,9 +10,12 @@ trait ExtendedPostgresProfile
   extends ExPostgresProfile
     with ExtendedPgSearchSupport
     with PgArraySupport
+    with PgJsonSupport
     with CustomStringJdbcTypeSupport
     with CustomJdbcDateTypesSupport
     with FixedPgLocalDateTypeSupport {
+
+  override val pgjson = "jsonb"
 
   // Add back `capabilities.insertOrUpdate` to enable native `upsert` support; for postgres 9.5+
   override protected def computeCapabilities: Set[Capability] =
@@ -32,6 +35,7 @@ trait ExtendedPostgresProfile
       with SearchImplicits
       with ExtendedSearchAssistants
       with ArrayImplicits
+      with JsonImplicits
 }
 
 object ExtendedPostgresProfile extends ExtendedPostgresProfile

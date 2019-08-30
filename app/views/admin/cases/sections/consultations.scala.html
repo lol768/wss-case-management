@@ -1,0 +1,59 @@
+@import domain.{Case, Client, InitialConsultation, InitialConsultationSave}
+@import warwick.core.helpers.JavaTime
+@import warwick.sso.UniversityID
+@import domain.Member
+@import warwick.sso.Usercode
+
+@(
+  c: Case,
+  clients: Set[Client],
+  consultations: Map[UniversityID, (Option[InitialConsultation], Form[InitialConsultationSave])],
+  teamMemberLookup: Map[Usercode, Member]
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+<div class="panel-group consultations" id="consultations-accordion" role="tablist" aria-multiselectable="true" data-count="@consultations.values.count(_._1.nonEmpty)">
+  @clients.toSeq.sorted.map { client =>
+    @defining(consultations(client.universityID)) { case (consultation: Option[InitialConsultation], form: Form[InitialConsultationSave]) =>
+      <div class="consultations__consultation panel panel-default">
+        @b3.vertical.formCSRF(controllers.admin.routes.ClientConsultationController.saveForCase(c.key, client.universityID)) { implicit ifc =>
+          <div class="panel-heading" role="tab" id="consultation-heading-@client.universityID.string">
+            <h4 class="panel-title">
+              @if(clients.size > 1){
+                <a class="collapsed" role="button" data-toggle="collapse" data-parent="#consultations-accordion" href="#collapse-consultation-@client.universityID.string" aria-expanded="true" aria-controls="collapse-consultation-@client.universityID.string">
+                  <div class="pull-right consultations__consultation__updatedDate">
+                    @consultation.map { c =>
+                      @JavaTime.Relative(c.updatedDate)
+                      (recorded by @{teamMemberLookup.get(c.updatedBy).map(_.safeFullName).getOrElse(c.updatedBy.string)})
+                    }
+                    <i class="fas fa-fw fa-angle-down"></i>
+                    <i class="fas fa-fw fa-angle-up"></i>
+                  </div>
+                  @client.safeFullName
+                  @if(consultation.isEmpty){(<span class="consultations__consultation__title">No consultation</span>)}
+                </a>
+              } else {
+                <div class="pull-right consultations__consultation__updatedDate">
+                  @consultation.map { c =>
+                    @JavaTime.Relative(c.updatedDate)
+                    (recorded by @{teamMemberLookup.get(c.updatedBy).map(_.safeFullName).getOrElse(c.updatedBy.string)})
+                  }
+                </div>
+                <span class="consultations__consultation__title">
+                  Consultation with @client.safeFullName
+                </span>
+              }
+            </h4>
+          </div>
+          <div id="collapse-consultation-@client.universityID.string" class="panel-collapse @if(clients.size > 1){ collapse }" role="tabpanel" aria-labelledby="consultation-heading-@client.universityID.string">
+            <div class="panel-body">
+              @views.html.admin.client.consultationFormFields(form)
+            </div>
+            <div class="panel-footer">
+              <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

@@ -9,7 +9,6 @@ import domain._
 import domain.dao.UserPreferencesDao._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import play.api.libs.json.JsValue
 import services.AuditLogContext
 import slick.lifted.ProvenShape
 import warwick.sso.Usercode
@@ -56,12 +55,9 @@ object UserPreferencesDao {
 
   case class StoredUserPreferences(
     usercode: Usercode,
-    preferences: JsValue,
+    preferences: domain.UserPreferences,
     version: OffsetDateTime,
   ) extends Versioned[StoredUserPreferences] {
-    def parsed: domain.UserPreferences =
-      preferences.validate[domain.UserPreferences](domain.UserPreferences.formatter).get
-
     override def atVersion(at: OffsetDateTime): StoredUserPreferences = copy(version = at)
 
     override def storedVersion[B <: StoredVersion[StoredUserPreferences]](operation: DatabaseOperation, timestamp: OffsetDateTime)(implicit ac: AuditLogContext): B =
@@ -77,7 +73,7 @@ object UserPreferencesDao {
 
   case class StoredUserPreferencesVersion(
     usercode: Usercode,
-    preferences: JsValue,
+    preferences: domain.UserPreferences,
     version: OffsetDateTime,
 
     operation: DatabaseOperation,
@@ -86,7 +82,7 @@ object UserPreferencesDao {
   ) extends StoredVersion[StoredUserPreferences]
 
   trait CommonProperties { self: Table[_] =>
-    def preferences = column[JsValue]("preferences")
+    def preferences = column[domain.UserPreferences]("preferences")
     def version = column[OffsetDateTime]("version_utc")
   }
 

@@ -3,13 +3,16 @@ package domain
 import java.sql.Date
 import java.time.{Duration, LocalDate}
 
+import com.github.tminglei.slickpg.JsonString
 import domain.ExtendedPostgresProfile.api._
 import enumeratum.SlickEnumSupport
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{Format, JsValue, Json}
 import slick.jdbc.{JdbcProfile, JdbcType}
 import warwick.fileuploads.UploadedFileOwner
 import warwick.slick.jdbctypes.JdbcDateTypesUtcColumnImplicits
 import warwick.sso.{GroupName, UniversityID, Usercode}
+
+import scala.reflect.ClassTag
 
 object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtcColumnImplicits {
   override val profile: JdbcProfile = ExtendedPostgresProfile
@@ -40,7 +43,17 @@ object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtcColumnImpli
     s => IssueKey(s)
   )
 
-  implicit val jsonTypeMapper: JdbcType[JsValue] = MappedColumnType.base[JsValue, String](Json.stringify(_).replace("\\u0000", ""), Json.parse)
+  /** Maps a column to a generic JsValue type */
+  implicit val jsValueMapper: JdbcType[JsValue] = MappedColumnType.base[JsValue, JsonString](
+    (value: JsValue) =>  JsonString(Json.stringify(value).replace("\\u0000", "")),
+    (js: JsonString) => Json.parse(js.value)
+  )
+
+  /** Maps a column to a specific class via its implicit JSON conversions */
+  private def jsonTypeMapper[T : ClassTag](implicit ev: Format[T]): JdbcType[T] = MappedColumnType.base[T, JsValue](
+    Json.toJson(_),
+    _.as[T]
+  )
 
   implicit val symbolTypeMapper: JdbcType[Symbol] = MappedColumnType.base[Symbol, String](_.name, Symbol.apply)
 
@@ -50,6 +63,10 @@ object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtcColumnImpli
     ld => Date.valueOf(ld),
     d => d.toLocalDate
   )
+
+  // Json mappings
+  implicit val userPreferencesMapper: JdbcType[UserPreferences] = jsonTypeMapper[UserPreferences]
+  implicit val initialConsultationMapper: JdbcType[InitialConsultation] = jsonTypeMapper[InitialConsultation]
 
   // Enum[] mappings
   implicit lazy val databaseOperationTypeMapper: JdbcType[DatabaseOperation] = mappedColumnTypeForEnum(DatabaseOperation)

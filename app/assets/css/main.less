@@ -297,6 +297,31 @@ section.indent {
   background-color: transparent !important;
 }
 
+.panel.consultations__consultation {
+  h4 {
+    font-size: @font-size-h5;
+    .fa-angle-down {
+      display: none;
+    }
+    .collapsed {
+      .fa-angle-down {
+        display: inline-block;
+      }
+      .fa-angle-up {
+        display: none;
+      }
+    }
+    a {
+      display: block;
+      text-decoration: none;
+      color: #333333;
+      &:hover {
+        color: #666666;
+      }
+    }
+  }
+}
+
 .inline-form { // *twitch*
   display: inline-block;
 }
