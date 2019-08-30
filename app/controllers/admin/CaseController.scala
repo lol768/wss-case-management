@@ -157,6 +157,8 @@ class CaseController @Inject()(
   userLookupService: UserLookupService,
   permissions: PermissionService,
   clientService: ClientService,
+  clientSummaryService: ClientSummaryService,
+  memberService: MemberService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   canViewCaseActionRefiner: CanViewCaseActionRefiner,
@@ -257,6 +259,24 @@ class CaseController @Inject()(
         caseNoteFormPrefilled(caseRequest.`case`.lastUpdated)
       ))
     )
+  }
+
+  def consultations(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
+    cases.getClients(caseRequest.`case`.id).successFlatMap { clients =>
+      clientSummaryService.getAll(clients.map(_.universityID)).successFlatMap { summaries =>
+        memberService.findMembersIfExists(summaries.values.flatMap(_.flatMap(_.initialConsultation)).map(_.updatedBy).toSet).successMap { members =>
+          Ok(views.html.admin.cases.sections.consultations(
+            caseRequest.`case`,
+            clients,
+            summaries.mapValues { s =>
+              val consultation = s.flatMap(_.initialConsultation)
+              (consultation, ClientConsultationController.createOrUpdateForm(consultation))
+            },
+            members.map { m => m.usercode -> m }.toMap
+          ))
+        }
+      }
+    }
   }
 
   def messages(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>

@@ -27,6 +27,7 @@ trait ClientSummaryDao {
   def insertReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Seq[StoredReasonableAdjustment]]
   def deleteReasonableAdjustments(reasonableAdjustments: Set[StoredReasonableAdjustment])(implicit ac: AuditLogContext): DBIO[Done]
   def get(universityID: UniversityID): DBIO[Option[(StoredClientSummary, StoredClient)]]
+  def getAll(universityIDs: Set[UniversityID]): DBIO[Seq[(StoredClientSummary, StoredClient)]]
   def getByAlternativeEmailAddress(email: String): DBIO[Option[(StoredClientSummary, StoredClient)]]
   def getReasonableAdjustmentsQuery(universityID: UniversityID): Query[ReasonableAdjustments, StoredReasonableAdjustment, Seq]
   def getHistory(universityID: UniversityID): DBIO[Seq[StoredClientSummaryVersion]]
@@ -215,6 +216,9 @@ class ClientSummaryDaoImpl @Inject()(
 
   override def get(universityID: UniversityID): DBIO[Option[(StoredClientSummary, StoredClient)]] =
     clientSummaries.table.filter(_.universityID === universityID).withClient.take(1).result.headOption
+
+  override def getAll(universityIDs: Set[UniversityID]): DBIO[Seq[(StoredClientSummary, StoredClient)]] =
+    clientSummaries.table.filter(_.universityID.inSet(universityIDs)).withClient.result
 
   override def getByAlternativeEmailAddress(email: String): DBIO[Option[(StoredClientSummary, StoredClient)]] =
     clientSummaries.table.filter(_.alternativeEmailAddress === email).withClient.take(1).result.headOption

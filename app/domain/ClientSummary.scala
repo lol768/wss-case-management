@@ -32,7 +32,6 @@ case class ClientSummary(
     riskStatus = riskStatus,
     reasonableAdjustments = reasonableAdjustments,
     reasonableAdjustmentsNotes = reasonableAdjustmentsNotes,
-    initialConsultation = initialConsultation,
   )
 }
 
@@ -43,7 +42,6 @@ case class ClientSummarySave(
   riskStatus: Option[ClientRiskStatus],
   reasonableAdjustments: Set[ReasonableAdjustment],
   reasonableAdjustmentsNotes: String,
-  initialConsultation: Option[InitialConsultation],
 )
 
 object ClientSummarySave {
@@ -116,9 +114,27 @@ case class ClientSummaryHistory(
 case class InitialConsultation(
   reason: String,
   suggestedResolution: String,
-  alreadyTried: String
-)
+  alreadyTried: String,
+  createdDate: OffsetDateTime,
+  updatedDate: OffsetDateTime,
+  updatedBy: Usercode
+) {
+  lazy val nonEmpty: Boolean = reason.nonEmpty || suggestedResolution.nonEmpty || alreadyTried.nonEmpty
+  lazy val isEmpty: Boolean = !nonEmpty
+}
 
 object InitialConsultation {
+  implicit val usercodeFormat: Format[Usercode] = Json.format[Usercode]
   implicit val formatter: OFormat[InitialConsultation] = Json.format[InitialConsultation]
+}
+
+case class InitialConsultationSave(
+  reason: String,
+  suggestedResolution: String,
+  alreadyTried: String,
+  version: Option[OffsetDateTime],
+)
+
+object InitialConsultationSave {
+  implicit val formatter: OFormat[InitialConsultationSave] = Json.format[InitialConsultationSave]
 }

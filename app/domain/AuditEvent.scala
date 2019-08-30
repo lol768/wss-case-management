@@ -59,6 +59,7 @@ object AuditEvent {
     object ClientSummary {
       val Save = Symbol("SaveClientSummary")
       val Update = Symbol("UpdateClientSummary")
+      val RecordInitialConsultation = Symbol("RecordInitialConsultation")
     }
 
     object Registration {

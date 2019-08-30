@@ -1,0 +1,40 @@
+@import domain.InitialConsultationSave
+@import views.html.b3.B3FieldConstructor
+@import play.twirl.api._
+
+@(
+  form: Form[InitialConsultationSave]
+)(implicit req: RequestHeader, messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
+
+@b3.validatedHidden(form, "version")
+
+@b3.textarea(
+  form("reason"),
+  '_label -> "In brief, what has brought you here today?  What is your issue?",
+  '_help -> html"""<ul>
+    <li>How long have you been struggling with this issue?</li>
+    <li>Have there been any previous occurrences?  If so, how often/when</li>
+    <li>What impact is this having on your life/your studies?<ul>
+      <li>Life:  mild/moderate/significant impact</li>
+      <li>Study:  mild/moderate/significant impact</li>
+    </ul></li>
+  </ul>""",
+  'helpOnTop -> true,
+  'rows -> 5,
+)
+
+@b3.textarea(
+  form("suggestedResolution"),
+  '_label -> "What is it that you believe you need? (if necessary)",
+  'rows -> 5,
+)
+
+@b3.textarea(
+  form("alreadyTried"),
+  '_label -> "What have you already tried in order to manage this issue?",
+  '_help -> html"""<ul>
+    <li>What worked/didn’t work so well?</li>
+  </ul>""",
+  'helpOnTop -> true,
+  'rows -> 5,
+)

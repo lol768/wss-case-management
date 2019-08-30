@@ -8,9 +8,7 @@ import domain.dao.ClientDao.StoredClient
 import domain.dao.ClientSummaryDao.StoredClientSummary
 import uk.ac.warwick.util.core.DateTimeUtils
 import warwick.core.helpers.JavaTime
-import warwick.sso.UniversityID
-
-import scala.concurrent.Future
+import warwick.sso.{UniversityID, Usercode}
 
 class ClientSummaryDaoTest extends AbstractDaoTest {
 
@@ -68,7 +66,10 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
         initialConsultation = Some(InitialConsultation(
           reason = "My face hurts",
           suggestedResolution = "Stroke my face gently",
-          alreadyTried = "Punching myself in the face"
+          alreadyTried = "Punching myself in the face",
+          createdDate = JavaTime.offsetDateTime,
+          updatedDate = JavaTime.offsetDateTime,
+          updatedBy = Usercode("system")
         ))
       )
 

@@ -74,3 +74,4 @@ flash.cases.imported={0} cases have been imported
 flash.import.scheduled=The import job is scheduled and will be starting momentarily
 flash.import.alreadyRunning=An import is already running!
 flash.pushToOutlook.done=Created scheduled jobs to push appointments to Outlook
+flash.consultation.updated=The consultation has been recorded
