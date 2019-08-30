@@ -16,38 +16,12 @@ import uk.ac.warwick.util.workingdays.{WorkingDaysHelper, WorkingDaysHelperImpl}
 import warwick.core.helpers.JavaTime
 import warwick.fileuploads.UploadedFileControllerHelper
 import warwick.fileuploads.UploadedFileControllerHelper.TemporaryUploadedFile
-import warwick.sso.AuthenticatedRequest
+import warwick.sso.{AuthenticatedRequest, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object EnquiryController {
-  case class MentalHealthEnquiryFormData(
-    reasonableAdjustments: Boolean,
-    studySkills: Boolean,
-    generalAdvice: Boolean,
-  ) {
-    def enquiryText: String = views.txt.enquiry.mentalHealthQuery(this).toString.trim
-  }
-  val mentalHealthForm: Form[MentalHealthEnquiryFormData] = Form(mapping(
-    "reasonableAdjustments" -> boolean,
-    "studySkills" -> boolean,
-    "generalAdvice" -> boolean,
-  )(MentalHealthEnquiryFormData.apply)(MentalHealthEnquiryFormData.unapply))
-
-  case class CounsellingEnquiryFormData(
-    faceToFace: Boolean,
-    therapy: Boolean,
-    online: Boolean,
-    other: Boolean,
-  ) {
-    def enquiryText: String = views.txt.enquiry.counsellingQuery(this).toString.trim
-  }
-  val counsellingForm: Form[CounsellingEnquiryFormData] = Form(mapping(
-    "faceToFace" -> boolean,
-    "therapy" -> boolean,
-    "online" -> boolean,
-    "other" -> boolean,
-  )(CounsellingEnquiryFormData.apply)(CounsellingEnquiryFormData.unapply))
+  val consultationForm: Form[Boolean] = Form(single("submitted" -> default(boolean, true)))
 
   case class DisabilityEnquiryFormData(
     reasonableAdjustments: Boolean,
@@ -63,8 +37,6 @@ object EnquiryController {
     "disabilityScreening" -> boolean,
     "generalAdvice" -> boolean,
   )(DisabilityEnquiryFormData.apply)(DisabilityEnquiryFormData.unapply))
-
-  val wellbeingForm: Form[String] = Form(single("text" -> nonEmptyText))
 
   val workingDaysHelper: WorkingDaysHelper = new WorkingDaysHelperImpl
   def outsideOfficeHours: Boolean = {
@@ -99,16 +71,12 @@ class EnquiryController @Inject()(
   import validUniversityIDActionFilter._
 
   private def render(
-    mentalHealth: Option[Form[MentalHealthEnquiryFormData]] = None,
-    counselling: Option[Form[CounsellingEnquiryFormData]] = None,
+    consultation: Option[Form[Boolean]] = None,
     disability: Option[Form[DisabilityEnquiryFormData]] = None,
-    wellbeing: Option[Form[String]] = None,
   )(implicit req: RequestHeader): Result =
     Ok(views.html.enquiry.form(
-      mentalHealth.getOrElse(mentalHealthForm),
-      counselling.getOrElse(counsellingForm),
+      consultation.getOrElse(consultationForm),
       disability.getOrElse(disabilityForm),
-      wellbeing.getOrElse(wellbeingForm),
       uploadedFileControllerHelper.supportedMimeTypes,
       outsideOfficeHours
     ))
@@ -117,19 +85,15 @@ class EnquiryController @Inject()(
     render()
   }
 
-  def submitMentalHealth(): Action[MultipartFormData[TemporaryUploadedFile]] = SigninRequiredAction.andThen(ValidUniversityIDRequiredCurrentUser)(uploadedFileControllerHelper.bodyParser).async { implicit request =>
-    mentalHealthForm.bindFromRequest().fold(
-      formWithErrors => Future.successful(render(mentalHealth = Some(formWithErrors))),
-      formData =>
-        submitEnquiry(Teams.MentalHealth, clientSubject = "Mental health query", enquiryText = formData.enquiryText)
-    )
-  }
-
-  def submitCounselling(): Action[MultipartFormData[TemporaryUploadedFile]] = SigninRequiredAction.andThen(ValidUniversityIDRequiredCurrentUser)(uploadedFileControllerHelper.bodyParser).async { implicit request =>
-    counsellingForm.bindFromRequest().fold(
-      formWithErrors => Future.successful(render(counselling = Some(formWithErrors))),
-      formData =>
-        submitEnquiry(Teams.Counselling, clientSubject = "Counselling query", enquiryText = formData.enquiryText)
+  def submitConsultation(): Action[MultipartFormData[TemporaryUploadedFile]] = SigninRequiredAction.andThen(ValidUniversityIDRequiredCurrentUser)(uploadedFileControllerHelper.bodyParser).async { implicit request =>
+    consultationForm.bindFromRequest().fold(
+      formWithErrors => Future.successful(render(consultation = Some(formWithErrors))),
+      _ =>
+        submitEnquiry(Teams.Consultation, clientSubject = "Brief consultation", message = domain.MessageSave(
+          text = views.txt.enquiry.consultationAutoResponse().toString.trim,
+          sender = MessageSender.Team,
+          teamMember = Some(Usercode("system"))
+        ))
     )
   }
 
@@ -137,30 +101,20 @@ class EnquiryController @Inject()(
     disabilityForm.bindFromRequest().fold(
       formWithErrors => Future.successful(render(disability = Some(formWithErrors))),
       formData =>
-        submitEnquiry(Teams.Disability, clientSubject = "Disability query", enquiryText = formData.enquiryText)
+        submitEnquiry(Teams.Disability, clientSubject = "Disability query", message = domain.MessageSave(
+          text = formData.enquiryText,
+          sender = MessageSender.Client,
+          teamMember = None
+        ))
     )
   }
 
-  def submitWellbeing(): Action[MultipartFormData[TemporaryUploadedFile]] = SigninRequiredAction.andThen(ValidUniversityIDRequiredCurrentUser)(uploadedFileControllerHelper.bodyParser).async { implicit request =>
-    wellbeingForm.bindFromRequest().fold(
-      formWithErrors => Future.successful(render(wellbeing = Some(formWithErrors))),
-      enquiryText =>
-        submitEnquiry(Teams.WellbeingSupport, clientSubject = "Wellbeing query", enquiryText = enquiryText)
-    )
-  }
-
-  private def submitEnquiry(assigningTeam: Team, clientSubject: String, enquiryText: String)(implicit request: AuthenticatedRequest[MultipartFormData[TemporaryUploadedFile]]): Future[Result] = {
+  private def submitEnquiry(assigningTeam: Team, clientSubject: String, message: domain.MessageSave)(implicit request: AuthenticatedRequest[MultipartFormData[TemporaryUploadedFile]]): Future[Result] = {
     val enquiry = EnquirySave(
       universityID = currentUser().universityId.get,
       subject = clientSubject,
       team = assigningTeam,
       state = IssueState.Open
-    )
-
-    val message = domain.MessageSave(
-      text = enquiryText,
-      sender = MessageSender.Client,
-      teamMember = None
     )
 
     val files = request.body.files.map(_.ref)

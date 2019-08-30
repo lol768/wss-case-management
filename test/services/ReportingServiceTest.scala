@@ -211,10 +211,10 @@ class ReportingServiceTest extends AbstractDaoTest {
         val start = enqs.minBy(_.created).created
         val end = start.plusDays(6).plusHours(6)
         
-        reportingService.countClosedEnquiries(start, end, None).futureValue mustBe 28 // seven days, four teams
+        reportingService.countClosedEnquiries(start, end, None).futureValue mustBe 35 // seven days, five teams
         reportingService.countClosedEnquiries(start, end, Some(Teams.WellbeingSupport)).futureValue mustBe 7
 
-        reportingService.countOpenedEnquiries(start, end, None).futureValue mustBe 56 // seven days, four teams, two users
+        reportingService.countOpenedEnquiries(start, end, None).futureValue mustBe 70 // seven days, five teams, two users
         reportingService.countOpenedEnquiries(start, end, Some(Teams.WellbeingSupport)).futureValue mustBe 14
 
         val outofScopeStart = start.minusHours(1)

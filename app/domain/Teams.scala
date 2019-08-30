@@ -15,8 +15,9 @@ object Teams {
   case object Disability extends Team("disability", "Disability Services")
   case object MentalHealth extends Team("mentalhealth", "Mental Health Team")
   case object WellbeingSupport extends Team("wellbeing", "Wellbeing Support")
+  case object Consultation extends Team("consultation", "Consultation Team")
 
-  val all: Seq[Team] = Seq(Counselling, Disability, MentalHealth, WellbeingSupport)
+  val all: Seq[Team] = Seq(Counselling, Disability, MentalHealth, WellbeingSupport, Consultation)
   val none: Seq[Team] = Seq.empty
 
   def fromId(id: String): Team =
