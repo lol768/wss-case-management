@@ -1,10 +1,6 @@
-@import domain.Enquiry
+@import domain.{Client, Issue, MessageSender, MessageSnippet}
 @import org.apache.tika.mime.MediaType
-@import domain.Client
-@import java.util.UUID
-@import warwick.sso.UniversityID
-@import domain.Issue
-@import domain.MessageSender
+
 @(
   action: Call,
   messageForm: Form[_],
@@ -12,6 +8,7 @@
   issue: Issue,
   client: Client,
   sender: MessageSender,
+  messageSnippets: Seq[MessageSnippet],
 )(implicit messagesProvider: MessagesProvider, requestHeader: RequestHeader)
 
 @b3.vertical.formCSRF(action, 'enctype -> "multipart/form-data", 'class -> "no-double-submit-protection") { implicit ifc =>
@@ -24,11 +21,14 @@
     @b3.free('_label -> label, '_class -> messageForm("text").error.map(_ => "has-error").getOrElse("")) {
       <div class="flex">
         @b3.textarea(messageForm("text"), 'rows -> 1, 'id -> s"${issue.id.toString}-${client.universityID.string}-text", Symbol("aria-label") -> label)(b3.clear.fieldConstructorSpecific(), messagesProvider)
+        @if(sender == MessageSender.Team && messageSnippets.nonEmpty) {
+          @tags.messages.snippetsButton(messageSnippets, s"${issue.id.toString}-${client.universityID.string}-snippets")
+        }
+        @tags.messages.attachButton(supportedMimeTypes, s"${issue.id.toString}-${client.universityID.string}-file")
         @tags.messages.sendButton(confirm = sender match {
           case MessageSender.Client => None
           case MessageSender.Team => Some(s"Are you sure you want to send this message to ${client.safeFullName}?")
         })
-        @tags.messages.attachButton(supportedMimeTypes, s"${issue.id.toString}-${client.universityID.string}-file")
       </div>
 
       @if(messageForm.hasErrors || sender == MessageSender.Team) {

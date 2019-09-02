@@ -159,6 +159,7 @@ class CaseController @Inject()(
   clientService: ClientService,
   clientSummaryService: ClientSummaryService,
   memberService: MemberService,
+  messageSnippets: MessageSnippetService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
   canViewTeamActionRefiner: CanViewTeamActionRefiner,
   canViewCaseActionRefiner: CanViewCaseActionRefiner,
@@ -283,14 +284,16 @@ class CaseController @Inject()(
     cases.getClients(caseRequest.`case`.id).successFlatMap(caseClients =>
       ServiceResults.zip(
         cases.getCaseMessages(caseRequest.`case`.id),
-        cases.getLastUpdatedMessageDates(caseKey)
-      ).successMap { case (messages, lastMessageDates) =>
+        cases.getLastUpdatedMessageDates(caseKey),
+        messageSnippets.list()
+      ).successMap { case (messages, lastMessageDates, snippets) =>
         Ok(views.html.admin.cases.sections.messages(
           caseRequest.`case`,
           messages,
           caseClients,
           caseClients.map(c => c -> MessagesController.messageForm(lastMessageDates.get(c.universityID)).fill(MessageFormData("", lastMessageDates.get(c.universityID)))).toMap,
-          uploadedFileControllerHelper.supportedMimeTypes
+          uploadedFileControllerHelper.supportedMimeTypes,
+          snippets
         ))
       }
     )

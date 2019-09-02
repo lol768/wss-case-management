@@ -1,5 +1,5 @@
 @import controllers.MessagesController.MessageFormData
-@import domain.{Case, CaseMessages, Client, IssueState, MessageRender, MessageSender}
+@import domain.{Case, CaseMessages, Client, IssueState, MessageRender, MessageSender, MessageSnippet}
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
 
@@ -8,7 +8,8 @@
   messages: CaseMessages,
   clients: Set[Client],
   messageForms: Map[Client, Form[MessageFormData]],
-  supportedMimeTypes: Seq[MediaType]
+  supportedMimeTypes: Seq[MediaType],
+  messageSnippets: Seq[MessageSnippet],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 <div class="panel-group message-threads" id="messages-accordion" role="tablist" aria-multiselectable="true" data-count="@messages.length">
@@ -65,7 +66,7 @@
           </div>
           <div class="panel-footer">
           @if(c.state != IssueState.Closed) {
-            @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.key, client.universityID), messageForms(client), supportedMimeTypes, c, client, MessageSender.Team)
+            @tags.messages.messageForm(controllers.admin.routes.CaseMessageController.addMessage(c.key, client.universityID), messageForms(client), supportedMimeTypes, c, client, MessageSender.Team, messageSnippets)
           }
           </div>
         </div>

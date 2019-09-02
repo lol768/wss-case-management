@@ -17,7 +17,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.tabula.ProfileService
-import services.{CaseService, EnquiryService, PermissionService}
+import services.{CaseService, EnquiryService, MessageSnippetService, PermissionService}
 import warwick.core.helpers.JavaTime
 import warwick.fileuploads.UploadedFileControllerHelper
 import warwick.fileuploads.UploadedFileControllerHelper.TemporaryUploadedFile
@@ -55,6 +55,7 @@ class TeamEnquiryController @Inject()(
   profiles: ProfileService,
   permissionService: PermissionService,
   caseService: CaseService,
+  messageSnippets: MessageSnippetService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
@@ -94,7 +95,8 @@ class TeamEnquiryController @Inject()(
                 caseService.findFromOriginalEnquiry(enquiry.id),
                 service.getEnquiryHistory(enquiry.id),
                 Future.successful(service.nextClientReminder(request.enquiry.id)),
-              ).successMap { case (ownersMap, canViewTeam, linkedCases, enquiryHistory, nextClientReminder) =>
+                messageSnippets.list()
+              ).successMap { case (ownersMap, canViewTeam, linkedCases, enquiryHistory, nextClientReminder, snippets) =>
                 Ok(views.html.admin.enquiry.messages(
                   enquiryRender.enquiry,
                   profile,
@@ -108,7 +110,8 @@ class TeamEnquiryController @Inject()(
                   canViewTeam,
                   linkedCases,
                   enquiryHistory,
-                  uploadedFileControllerHelper.supportedMimeTypes
+                  uploadedFileControllerHelper.supportedMimeTypes,
+                  snippets,
                 ))
               }
           }

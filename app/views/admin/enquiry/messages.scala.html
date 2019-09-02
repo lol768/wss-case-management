@@ -1,9 +1,10 @@
 @import java.time.OffsetDateTime
 
 @import controllers.MessagesController.MessageFormData
-@import domain.{Case, Enquiry, EnquiryHistoryRender, EnquiryNote, EnquiryNoteType, IssueState, Member, MessageRender, MessageSender, SitsProfile}
+@import domain.{Case, Enquiry, EnquiryHistoryRender, EnquiryNote, EnquiryNoteType, IssueState, Member, MessageRender, MessageSender, MessageSnippet, SitsProfile}
 @import org.apache.tika.mime.MediaType
 @import warwick.core.helpers.JavaTime
+
 @(
   enquiry: Enquiry,
   profile: Option[SitsProfile],
@@ -17,7 +18,8 @@
   canViewEnquiryTeam: Boolean,
   linkedCases: Seq[Case],
   enquiryHistory: Seq[EnquiryHistoryRender],
-  supportedMimeTypes: Seq[MediaType]
+  supportedMimeTypes: Seq[MediaType],
+  messageSnippets: Seq[MessageSnippet],
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
 @main(
@@ -235,7 +237,7 @@
         </div>
         @if(enquiry.state != IssueState.Closed) {
           <div class="panel-footer">
-            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key), messageForm, supportedMimeTypes, enquiry, enquiry.client, MessageSender.Team)
+            @tags.messages.messageForm(controllers.admin.routes.TeamEnquiryController.addMessage(enquiry.key), messageForm, supportedMimeTypes, enquiry, enquiry.client, MessageSender.Team, messageSnippets)
           </div>
         }
       </div>

@@ -113,6 +113,32 @@ export default function MessageThreads(container) {
   $container.on('keyup', checkAndUpdateSendButton);
   checkAndUpdateSendButton();
 
+  $container.on('click', '.panel-footer .modal dt a', (e) => {
+    const $thread = $(e.target).closest('.thread');
+    const $textarea = $thread.find('.panel-footer textarea');
+    const $modal = $thread.find('.modal');
+    const $templateName = $(e.target).closest('dt');
+    const templateText = $templateName.data('body');
+
+    // Insert at the caret
+    const textarea = $textarea[0];
+
+    let caretPosition = textarea.selectionStart;
+    const before = textarea.value.substring(0, caretPosition);
+    const after = textarea.value.substring(textarea.selectionEnd, textarea.value.length);
+    textarea.value = before + templateText + after;
+
+    // Move the caret to after the inserted text
+    caretPosition += templateText.length;
+    textarea.selectionStart = caretPosition;
+    textarea.selectionEnd = caretPosition;
+    textarea.focus();
+
+    $modal.modal('toggle');
+    $textarea.height($textarea.get(0).scrollHeight);
+    checkAndUpdateSendButton();
+  });
+
   $container.on('submit', (e) => {
     e.preventDefault();
     const $form = $(e.target);
