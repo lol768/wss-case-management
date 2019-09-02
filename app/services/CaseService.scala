@@ -18,7 +18,7 @@ import domain.dao.MemberDao.StoredMember
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao._
 import domain.{Page, _}
-import warwick.fileuploads.{UploadedFile, UploadedFileOwner, UploadedFileSave}
+import warwick.fileuploads.{UploadedFile, UploadedFileSave}
 import warwick.core.helpers.ServiceResults
 import warwick.core.helpers.ServiceResults.Implicits._
 import warwick.slick.helpers.SlickServiceResults.Implicits._

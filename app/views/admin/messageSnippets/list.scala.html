@@ -1,0 +1,54 @@
+@import domain.MessageSnippet
+
+@(
+  snippets: Seq[MessageSnippet],
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@main("Message snippets") {
+  <p>
+    <a class="btn btn-default" href="@controllers.admin.routes.MessageSnippetsController.createForm()">Create snippet</a>
+  </p>
+
+  <table class="table table-default">
+    <thead>
+      <tr>
+        <th class="col-sm-2">Title</th>
+        <th class="col-sm-4">Body</th>
+        <th class="col-sm-3">Attachments</th>
+        <th class="col-sm-3">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      @snippets.map { snippet =>
+        <tr>
+          <td>@snippet.title</td>
+          <td>@views.utils.commonMark(snippet.body)</td>
+          <td>
+            <ul class="list-unstyled">
+              @snippet.files.map { file =>
+                <li>
+                  <i class="fal fa-paperclip"></i>
+                  <a href="@controllers.admin.routes.MessageSnippetsController.downloadFile(snippet.id, file.id)">@file.fileName</a>
+                </li>
+              }
+            </ul>
+          </td>
+          <td>
+            <a class="btn btn-default btn-xs" href="@controllers.admin.routes.MessageSnippetsController.editForm(snippet.id)">Edit</a>
+            <a class="btn btn-danger btn-xs" href="@controllers.admin.routes.MessageSnippetsController.deleteForm(snippet.id)">Delete</a>
+            @if(snippet != snippets.head) {
+              @b3.inline.formCSRF(controllers.admin.routes.MessageSnippetsController.reorderUp(snippet.id), 'class -> "inline-form") { implicit ifc =>
+                <button type="submit" class="btn btn-default btn-xs"><i class="fal fa-arrow-up"></i><span class="sr-only">Re-order up</span></button>
+              }
+            }
+            @if(snippet != snippets.last) {
+              @b3.inline.formCSRF(controllers.admin.routes.MessageSnippetsController.reorderDown(snippet.id), 'class -> "inline-form") { implicit ifc =>
+                <button type="submit" class="btn btn-default btn-xs"><i class="fal fa-arrow-down"></i><span class="sr-only">Re-order down</span></button>
+              }
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}

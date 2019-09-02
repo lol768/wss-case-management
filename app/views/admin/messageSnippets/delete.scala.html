@@ -1,0 +1,22 @@
+@import java.time.OffsetDateTime
+
+@import domain.MessageSnippet
+
+@(
+  snippet: MessageSnippet,
+  form: Form[OffsetDateTime],
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@main("Delete message snippet") {
+  @b3.vertical.formCSRF(controllers.admin.routes.MessageSnippetsController.delete(snippet.id), 'class -> "no-double-submit-protection") { implicit ifc =>
+    @b3.validatedHidden(form, "version")
+
+    <p>Are you sure you want to delete this message snippet?</p>
+
+    <div class="well">
+      @views.utils.commonMark(snippet.body)
+    </div>
+
+    @tags.submitOrCancel("Delete", controllers.admin.routes.MessageSnippetsController.list())
+  }
+}

@@ -15,7 +15,7 @@ import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
 import slick.lifted.ProvenShape
 import warwick.core.helpers.JavaTime
-import warwick.fileuploads.{UploadedFile, UploadedFileOwner}
+import warwick.fileuploads.UploadedFile
 import warwick.sso.Usercode
 
 import scala.concurrent.ExecutionContext

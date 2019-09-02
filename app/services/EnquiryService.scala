@@ -29,7 +29,7 @@ import warwick.core.helpers.ServiceResults.Implicits._
 import warwick.core.helpers.ServiceResults.{ServiceError, ServiceResult}
 import warwick.core.helpers.{JavaTime, ServiceResults}
 import warwick.core.timing.TimingContext
-import warwick.fileuploads.{UploadedFile, UploadedFileOwner, UploadedFileSave}
+import warwick.fileuploads.{UploadedFile, UploadedFileSave}
 import warwick.slick.helpers.SlickServiceResults.Implicits._
 import warwick.sso.{UniversityID, Usercode}
 

@@ -53,6 +53,7 @@ object AuditEvent {
     val Building = Symbol("Building")
     val Room = Symbol("Room")
     val OutgoingEmail = Symbol("OutgoingEmail")
+    val MessageSnippet = Symbol("MessageSnippet")
   }
 
   object Operation {
@@ -144,6 +145,13 @@ object AuditEvent {
 
     object OutgoingEmail {
       val Send = Symbol("SendEmail")
+    }
+
+    object MessageSnippet {
+      val Save = Symbol("MessageSnippetSave")
+      val Update = Symbol("MessageSnippetUpdate")
+      val Delete = Symbol("MessageSnippetDelete")
+      val Reorder = Symbol("MessageSnippetReorder")
     }
   }
 }
