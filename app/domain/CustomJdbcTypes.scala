@@ -8,7 +8,6 @@ import domain.ExtendedPostgresProfile.api._
 import enumeratum.SlickEnumSupport
 import play.api.libs.json.{Format, JsValue, Json}
 import slick.jdbc.{JdbcProfile, JdbcType}
-import warwick.fileuploads.UploadedFileOwner
 import warwick.slick.jdbctypes.JdbcDateTypesUtcColumnImplicits
 import warwick.sso.{GroupName, UniversityID, Usercode}
 

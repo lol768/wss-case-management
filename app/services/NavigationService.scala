@@ -66,7 +66,8 @@ class NavigationServiceImpl @Inject() (
   private lazy val admin =
     NavigationDropdown("Admin", Call("GET", "/admin"), Seq(
       reportingAdmin,
-      NavigationPage("Locations", controllers.locations.routes.LocationsController.list())
+      NavigationPage("Locations", controllers.locations.routes.LocationsController.list()),
+      NavigationPage("Message snippets", controllers.admin.routes.MessageSnippetsController.list())
     ))
 
   private lazy val sysadmin =

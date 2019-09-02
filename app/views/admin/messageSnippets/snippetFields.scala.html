@@ -1,0 +1,27 @@
+@import controllers.admin.MessageSnippetsController.MessageSnippetData
+@import play.twirl.api._
+@import views.html.b3.B3FieldConstructor
+@import org.apache.tika.mime.MediaType
+
+@(
+  form: Form[MessageSnippetData],
+  supportedMimeTypes: Seq[MediaType],
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
+
+@b3.validatedHidden(form, "version")
+
+@b3.text(form("snippet.title"),
+  '_label -> "Title",
+  'autocomplete -> "off",
+)
+
+@b3.textarea(form("snippet.body"),
+  '_label -> "Message",
+  'rows -> 5,
+  '_help -> html"""You can use Markdown <i class="fab fa-markdown"></i> syntax <a target="_blank" href="https://warwick.ac.uk/tabula/manual/cm2/markers/markdown/"><i class="fal fa-question-circle"></i></a> to format the message."""
+)
+
+@b3.free('_label -> "Attachment(s)", '_class -> form.error("file").map(_ => "has-error")) {
+  <input type="file" id="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" class="form-control" aria-label="Attach a file">
+  @b3.errors(form("file"))
+}

@@ -177,6 +177,18 @@ POST        /admin/locations/room/create            @controllers.locations.Locat
 GET         /admin/locations/room/:id               @controllers.locations.LocationsController.editRoomForm(id: java.util.UUID)
 POST        /admin/locations/room/:id               @controllers.locations.LocationsController.editRoom(id: java.util.UUID)
 
+GET         /admin/snippets                         @controllers.admin.MessageSnippetsController.list
+GET         /admin/snippets/create                  @controllers.admin.MessageSnippetsController.createForm
+POST        /admin/snippets                         @controllers.admin.MessageSnippetsController.create
+GET         /admin/snippets/:id                     @controllers.admin.MessageSnippetsController.editForm(id: java.util.UUID)
+POST        /admin/snippets/:id                     @controllers.admin.MessageSnippetsController.edit(id: java.util.UUID)
+GET         /admin/snippets/:id/delete              @controllers.admin.MessageSnippetsController.deleteForm(id: java.util.UUID)
+POST        /admin/snippets/:id/delete              @controllers.admin.MessageSnippetsController.delete(id: java.util.UUID)
+POST        /admin/snippets/:id/up                  @controllers.admin.MessageSnippetsController.reorderUp(id: java.util.UUID)
+POST        /admin/snippets/:id/down                @controllers.admin.MessageSnippetsController.reorderDown(id: java.util.UUID)
+GET         /admin/snippets/:snippetID/:fileID           @controllers.admin.MessageSnippetsController.downloadFile(snippetID: java.util.UUID, fileID: java.util.UUID)
+POST        /admin/snippets/:snippetID/:fileID/delete    @controllers.admin.MessageSnippetsController.deleteFile(snippetID: java.util.UUID, fileID: java.util.UUID)
+
 GET         /admin/reports                                         @controllers.reports.ReportsController.reportForm
 POST        /admin/reports                                         @controllers.reports.ReportsController.report
 

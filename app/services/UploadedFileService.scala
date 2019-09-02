@@ -7,14 +7,15 @@ import com.google.common.io.ByteSource
 import com.google.inject.ImplementedBy
 import domain.AuditEvent._
 import domain.ExtendedPostgresProfile.api._
+import domain.UploadedFileOwner
 import domain.dao.UploadedFileDao.StoredUploadedFile
 import domain.dao.{DaoRunner, UploadedFileDao}
-import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Named, Singleton}
 import play.api.libs.json.Json
 import warwick.core.helpers.JavaTime
+import warwick.core.helpers.ServiceResults.ServiceResult
 import warwick.core.timing.{TimingCategories, TimingService}
-import warwick.fileuploads.{UploadedFile, UploadedFileOwner, UploadedFileSave}
+import warwick.fileuploads.{UploadedFile, UploadedFileSave}
 import warwick.objectstore.ObjectStorageService
 import warwick.sso.Usercode
 

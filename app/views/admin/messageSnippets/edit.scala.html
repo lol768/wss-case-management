@@ -1,0 +1,40 @@
+@import controllers.admin.MessageSnippetsController.MessageSnippetData
+@import domain.MessageSnippet
+@import org.apache.tika.mime.MediaType
+
+@(
+  snippet: MessageSnippet,
+  form: Form[MessageSnippetData],
+  supportedMimeTypes: Seq[MediaType],
+)(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
+
+@main("Edit message snippet") {
+  @b3.vertical.formCSRF(controllers.admin.routes.MessageSnippetsController.edit(snippet.id), 'enctype -> "multipart/form-data", 'class -> "no-double-submit-protection") { implicit ifc =>
+    @snippetFields(form, supportedMimeTypes)
+
+    @tags.submitOrCancel("Update", controllers.admin.routes.MessageSnippetsController.list())
+  }
+
+  @if(snippet.files.nonEmpty) {
+    <h2>Existing attachments</h2>
+
+    <table class="table table-default">
+      <tbody>
+        @snippet.files.map { file =>
+          <tr>
+            <th scope="row">
+              <i class="fal fa-paperclip"></i>
+              <a href="@controllers.admin.routes.MessageSnippetsController.downloadFile(snippet.id, file.id)">@file.fileName</a>
+            </th>
+            <td>
+              @b3.inline.formCSRF(controllers.admin.routes.MessageSnippetsController.deleteFile(snippet.id, file.id), 'class -> "inline-form") { implicit ifc =>
+                @b3.validatedHidden(form, "version")
+                <button type="submit" class="btn btn-danger btn-xs">Delete</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+}
