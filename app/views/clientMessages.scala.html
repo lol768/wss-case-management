@@ -42,7 +42,7 @@
       </div>
       <div class="panel-footer">
         @if(issueRender.issue.state != IssueState.Closed) {
-          @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), f, supportedMimeTypes, issueRender.issue, client, MessageSender.Client)
+          @tags.messages.messageForm(controllers.routes.ClientMessagesController.addMessage(issueRender.issue.id), f, supportedMimeTypes, issueRender.issue, client, MessageSender.Client, Nil)
         } else {
           <p>
             We think this enquiry is now resolved, so we've marked it as closed.

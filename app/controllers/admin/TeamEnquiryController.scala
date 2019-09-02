@@ -1,15 +1,15 @@
 package controllers.admin
 
+import java.io.InputStream
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import com.google.common.io.ByteSource
 import controllers.MessagesController.MessageFormData
 import controllers.admin.TeamEnquiryController._
 import controllers.refiners._
 import controllers.{API, BaseController, MessagesController}
 import domain._
-import warwick.core.helpers.ServiceResults
-import warwick.core.helpers.ServiceResults.ServiceResult
 import javax.inject.{Inject, Singleton}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -17,10 +17,12 @@ import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import services.tabula.ProfileService
-import services.{CaseService, EnquiryService, PermissionService}
-import warwick.core.helpers.JavaTime
-import warwick.fileuploads.UploadedFileControllerHelper
+import services.{CaseService, EnquiryService, MessageSnippetService, PermissionService}
+import warwick.core.helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.{JavaTime, ServiceResults}
 import warwick.fileuploads.UploadedFileControllerHelper.TemporaryUploadedFile
+import warwick.fileuploads.{UploadedFileControllerHelper, UploadedFileSave}
+import warwick.objectstore.ObjectStorageService
 import warwick.sso.UserLookupService
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -55,6 +57,8 @@ class TeamEnquiryController @Inject()(
   profiles: ProfileService,
   permissionService: PermissionService,
   caseService: CaseService,
+  messageSnippets: MessageSnippetService,
+  objectStorageService: ObjectStorageService,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
@@ -94,7 +98,8 @@ class TeamEnquiryController @Inject()(
                 caseService.findFromOriginalEnquiry(enquiry.id),
                 service.getEnquiryHistory(enquiry.id),
                 Future.successful(service.nextClientReminder(request.enquiry.id)),
-              ).successMap { case (ownersMap, canViewTeam, linkedCases, enquiryHistory, nextClientReminder) =>
+                messageSnippets.list()
+              ).successMap { case (ownersMap, canViewTeam, linkedCases, enquiryHistory, nextClientReminder, snippets) =>
                 Ok(views.html.admin.enquiry.messages(
                   enquiryRender.enquiry,
                   profile,
@@ -108,7 +113,8 @@ class TeamEnquiryController @Inject()(
                   canViewTeam,
                   linkedCases,
                   enquiryHistory,
-                  uploadedFileControllerHelper.supportedMimeTypes
+                  uploadedFileControllerHelper.supportedMimeTypes,
+                  snippets,
                 ))
               }
           }
@@ -121,7 +127,7 @@ class TeamEnquiryController @Inject()(
     renderMessages(
       request.enquiry,
       stateChangeForm(request.enquiry).fill(request.enquiry.lastUpdated),
-      MessagesController.messageForm(Some(request.lastEnquiryMessageDate)).fill(MessageFormData("", Some(request.lastEnquiryMessageDate)))
+      MessagesController.messageForm(Some(request.lastEnquiryMessageDate)).fill(MessageFormData("", Set.empty, Some(request.lastEnquiryMessageDate)))
     )
 
   def messages(enquiryKey: IssueKey): Action[AnyContent] = CanViewEnquiryAction(enquiryKey).async { implicit request =>
@@ -147,18 +153,33 @@ class TeamEnquiryController @Inject()(
         val files = request.body.files.map(_.ref)
         val enquiry = request.enquiry
 
-        service.addMessage(enquiry, message, files.map { f => (f.in, f.metadata) }).successMap { case (m, f) =>
-          val messageData = MessageData(m.text, m.sender, enquiry.client.universityID, m.created, m.teamMember, m.team)
-          render {
-            case Accepts.Json() =>
-              val clientName = "Client"
-              val teamName = message.teamMember.flatMap(usercode => userLookupService.getUser(usercode).toOption.filter(_.isFound).flatMap(_.name.full)).getOrElse(request.enquiry.team.name)
+        // Files from message snippets
+        val fetchFilesToCopy: Future[ServiceResult[Seq[(ByteSource, UploadedFileSave)]]] =
+          if (messageFormData.filesToCopy.isEmpty) Future.successful(ServiceResults.success(Nil))
+          else messageSnippets.list().successMapTo { snippets =>
+            snippets.flatMap(_.files).filter(f => messageFormData.filesToCopy.contains(f.id)).map { file =>
+              val source = new ByteSource {
+                override def openStream(): InputStream = objectStorageService.fetch(file.id.toString).orNull
+              }
 
-              Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
-                "message" -> views.html.tags.messages.message(messageData, f, clientName, teamName, f => routes.TeamEnquiryController.download(enquiryKey, f.id)).toString()
-              ))))
-            case _ =>
-              Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
+              (source, UploadedFileSave(file.fileName, file.contentLength, file.contentType))
+            }
+          }
+
+        fetchFilesToCopy.successFlatMap { copiedFiles =>
+          service.addMessage(enquiry, message, files.map { f => (f.in, f.metadata) } ++ copiedFiles).successMap { case (m, f) =>
+            val messageData = MessageData(m.text, m.sender, enquiry.client.universityID, m.created, m.teamMember, m.team)
+            render {
+              case Accepts.Json() =>
+                val clientName = "Client"
+                val teamName = message.teamMember.flatMap(usercode => userLookupService.getUser(usercode).toOption.filter(_.isFound).flatMap(_.name.full)).getOrElse(request.enquiry.team.name)
+
+                Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
+                  "message" -> views.html.tags.messages.message(messageData, f, clientName, teamName, f => routes.TeamEnquiryController.download(enquiryKey, f.id)).toString()
+                ))))
+              case _ =>
+                Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiryKey))
+            }
           }
         }
       }

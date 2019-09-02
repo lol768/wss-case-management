@@ -113,6 +113,54 @@ export default function MessageThreads(container) {
   $container.on('keyup', checkAndUpdateSendButton);
   checkAndUpdateSendButton();
 
+  $container.on('click', '.panel-footer .modal dt a', (e) => {
+    const $thread = $(e.target).closest('.thread');
+    const $textarea = $thread.find('.panel-footer textarea');
+    const $modal = $thread.find('.modal');
+    const $templateName = $(e.target).closest('dt');
+    const templateText = $templateName.data('body');
+
+    // Insert at the caret
+    const textarea = $textarea[0];
+
+    let caretPosition = textarea.selectionStart;
+    const before = textarea.value.substring(0, caretPosition);
+    const after = textarea.value.substring(textarea.selectionEnd, textarea.value.length);
+    textarea.value = before + templateText + after;
+
+    // Add attachments
+    const $files = $templateName.next('dd').find('.list-unstyled li[data-id]');
+    if ($files.length > 0) {
+      $files.each((i, el) => {
+        const id = $(el).data('id');
+        $textarea.before($('<input />').attr({
+          type: 'hidden',
+          name: 'filesToCopy[]',
+          value: id,
+        }));
+      });
+
+      const $fileInput = $thread.find('.panel-footer .wellbeing-message-file-attach');
+      const $fileLabel = $fileInput.closest('label');
+      const $fileTooltip = $fileLabel.find('.icon-tooltip');
+
+      const fileCount = ($fileInput.prop('files') && $fileInput.prop('files').length >= 1) ? $fileInput.prop('files').length + $files.length : $files.length;
+      const newText = `${fileCount} files selected`;
+      $fileTooltip.attr('data-original-title', newText);
+      $fileLabel.append($('<span/>').addClass('badge').text(fileCount));
+    }
+
+    // Move the caret to after the inserted text
+    caretPosition += templateText.length;
+    textarea.selectionStart = caretPosition;
+    textarea.selectionEnd = caretPosition;
+    textarea.focus();
+
+    $modal.modal('toggle');
+    $textarea.height($textarea.get(0).scrollHeight);
+    checkAndUpdateSendButton();
+  });
+
   $container.on('submit', (e) => {
     e.preventDefault();
     const $form = $(e.target);
@@ -128,8 +176,10 @@ export default function MessageThreads(container) {
           $form.closest('.panel').find('.panel-body').append(response.data.message);
           $('.collapse.in .panel-body').scrollTop(Number.MAX_SAFE_INTEGER);
           $form.trigger('reset');
+          $form.find('input[name="filesToCopy[]"]').remove();
           $form.find('textarea').prop('rows', 1);
           $form.find('input[name="lastMessage"]').val(response.data.lastMessage);
+          $form.find('.wellbeing-message-file-attach').trigger('change');
           updateAwaitingIcon($form, false);
           if (typeof response.data.lastMessageRelative !== 'undefined') {
             $thread.find('.lastMessageRelative').html(response.data.lastMessageRelative);

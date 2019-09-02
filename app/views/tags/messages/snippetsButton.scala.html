@@ -1,0 +1,42 @@
+@import domain.MessageSnippet
+
+@(
+  messageSnippets: Seq[MessageSnippet],
+  id: String
+)
+
+<label class="btn btn-primary">
+  <i tabindex="0" class="fal fa-fw fa-paste fa-lg use-tooltip" data-container="body" data-toggle="modal" data-target="#@id" title="Message snippets" aria-label="Message snippets"></i>
+</label>
+
+<div aria-hidden="true" id="@id" aria-labelledby="@id-header" tabindex="-1" class="modal fade">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true" title="Close">&times;</button>
+        <h4 class="modal-title">Message snippets</h4>
+      </div>
+
+      <div class="modal-body">
+        <dl>
+          @messageSnippets.map { snippet =>
+            <dt data-body="@snippet.body"><a role="button">@snippet.title</a></dt>
+            <dd>
+              @views.utils.commonMark(snippet.body)
+              @if(snippet.files.nonEmpty) {
+                <ul class="list-unstyled">
+                  @snippet.files.map { file =>
+                    <li data-id="@file.id.toString">
+                      <i class="fal fa-paperclip"></i>
+                      <a href="@controllers.admin.routes.MessageSnippetsController.downloadFile(snippet.id, file.id)">@file.fileName</a>
+                    </li>
+                  }
+                </ul>
+              }
+            </dd>
+          }
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>

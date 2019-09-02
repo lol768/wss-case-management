@@ -259,7 +259,7 @@ section.indent {
       }
 
       button, label.btn {
-        margin-left: @grid-gutter-width;
+        margin-left: (@grid-gutter-width / 2);
         @diameter: 36px;
         padding: 0;
         width: @diameter;
@@ -271,7 +271,10 @@ section.indent {
           line-height: @diameter;
           width: @diameter;
           height: @diameter;
-          margin-left: -2px; // get the airplane points equal distances from the circle edges :awyeah:
+
+          &.fa-paper-plane {
+            margin-left: -2px; // get the airplane points equal distances from the circle edges :awyeah:
+          }
         }
 
         position: relative;
@@ -287,6 +290,11 @@ section.indent {
 
     p:last-child {
       margin-bottom: 0;
+    }
+
+    dt + dd {
+      font-weight: normal;
+      margin-bottom: 15px;
     }
   }
 }
