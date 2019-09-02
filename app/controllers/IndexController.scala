@@ -264,10 +264,10 @@ class IndexController @Inject()(
         val caseIssues = clientCases.map(_.toIssue)
 
         val messageForms: Map[IssueRender, Form[MessageFormData]] =
-          enquiryIssues.map(issue => issue -> MessagesController.messageForm(enquiryLastMessageMap.get(issue.issue.id)).fill(MessageFormData("", enquiryLastMessageMap.get(issue.issue.id)))).toMap ++
+          enquiryIssues.map(issue => issue -> MessagesController.messageForm(enquiryLastMessageMap.get(issue.issue.id)).fill(MessageFormData("", Set.empty, enquiryLastMessageMap.get(issue.issue.id)))).toMap ++
           caseIssues.map { issue =>
             val lastMessageDate = caseLastMessageMap.getOrElse(issue.issue.id, Map()).get(universityID)
-            issue -> MessagesController.messageForm(lastMessageDate).fill(MessageFormData("", lastMessageDate))
+            issue -> MessagesController.messageForm(lastMessageDate).fill(MessageFormData("", Set.empty, lastMessageDate))
           }
 
         val allIssues = (enquiryIssues ++ caseIssues).sortBy(_.lastUpdatedDate)(JavaTime.dateTimeOrdering).reverse

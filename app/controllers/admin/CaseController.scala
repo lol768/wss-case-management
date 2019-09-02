@@ -291,7 +291,7 @@ class CaseController @Inject()(
           caseRequest.`case`,
           messages,
           caseClients,
-          caseClients.map(c => c -> MessagesController.messageForm(lastMessageDates.get(c.universityID)).fill(MessageFormData("", lastMessageDates.get(c.universityID)))).toMap,
+          caseClients.map(c => c -> MessagesController.messageForm(lastMessageDates.get(c.universityID)).fill(MessageFormData("", Set.empty, lastMessageDates.get(c.universityID)))).toMap,
           uploadedFileControllerHelper.supportedMimeTypes,
           snippets
         ))

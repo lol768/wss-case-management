@@ -21,7 +21,19 @@
         <dl>
           @messageSnippets.map { snippet =>
             <dt data-body="@snippet.body"><a role="button">@snippet.title</a></dt>
-            <dd>@views.utils.commonMark(snippet.body)</dd>
+            <dd>
+              @views.utils.commonMark(snippet.body)
+              @if(snippet.files.nonEmpty) {
+                <ul class="list-unstyled">
+                  @snippet.files.map { file =>
+                    <li data-id="@file.id.toString">
+                      <i class="fal fa-paperclip"></i>
+                      <a href="@controllers.admin.routes.MessageSnippetsController.downloadFile(snippet.id, file.id)">@file.fileName</a>
+                    </li>
+                  }
+                </ul>
+              }
+            </dd>
           }
         </dl>
       </div>

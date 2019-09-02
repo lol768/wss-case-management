@@ -25,11 +25,13 @@ import scala.concurrent.{ExecutionContext, Future}
 object MessagesController {
   case class MessageFormData(
     text: String,
+    filesToCopy: Set[UUID],
     lastMessage: Option[OffsetDateTime]
   )
 
   def messageForm(lastMessageDate: Option[OffsetDateTime]) = Form(mapping(
     "text" -> nonEmptyText,
+    "filesToCopy" -> set(uuid),
     "lastMessage" -> ignored[Option[OffsetDateTime]](None),
   )(MessageFormData.apply)(MessageFormData.unapply))
 }
@@ -81,7 +83,7 @@ class ClientMessagesController @Inject()(
     }
 
   def messages(id: java.util.UUID): Action[AnyContent] = CanClientViewIssueAction(id).async { implicit request =>
-    renderMessages(request.issue, MessagesController.messageForm(request.lastMessageDate).fill(MessageFormData("", request.lastMessageDate)))
+    renderMessages(request.issue, MessagesController.messageForm(request.lastMessageDate).fill(MessageFormData("", Set.empty, request.lastMessageDate)))
   }
 
   def addMessage(id: java.util.UUID): Action[MultipartFormData[TemporaryUploadedFile]] = CanAddClientMessageToIssueAction(id)(uploadedFileControllerHelper.bodyParser).async { implicit request =>

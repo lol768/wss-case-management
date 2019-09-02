@@ -128,6 +128,28 @@ export default function MessageThreads(container) {
     const after = textarea.value.substring(textarea.selectionEnd, textarea.value.length);
     textarea.value = before + templateText + after;
 
+    // Add attachments
+    const $files = $templateName.next('dd').find('.list-unstyled li[data-id]');
+    if ($files.length > 0) {
+      $files.each((i, el) => {
+        const id = $(el).data('id');
+        $textarea.before($('<input />').attr({
+          type: 'hidden',
+          name: 'filesToCopy[]',
+          value: id,
+        }));
+      });
+
+      const $fileInput = $thread.find('.panel-footer .wellbeing-message-file-attach');
+      const $fileLabel = $fileInput.closest('label');
+      const $fileTooltip = $fileLabel.find('.icon-tooltip');
+
+      const fileCount = ($fileInput.prop('files') && $fileInput.prop('files').length >= 1) ? $fileInput.prop('files').length + $files.length : $files.length;
+      const newText = `${fileCount} files selected`;
+      $fileTooltip.attr('data-original-title', newText);
+      $fileLabel.append($('<span/>').addClass('badge').text(fileCount));
+    }
+
     // Move the caret to after the inserted text
     caretPosition += templateText.length;
     textarea.selectionStart = caretPosition;
@@ -154,8 +176,10 @@ export default function MessageThreads(container) {
           $form.closest('.panel').find('.panel-body').append(response.data.message);
           $('.collapse.in .panel-body').scrollTop(Number.MAX_SAFE_INTEGER);
           $form.trigger('reset');
+          $form.find('input[name="filesToCopy[]"]').remove();
           $form.find('textarea').prop('rows', 1);
           $form.find('input[name="lastMessage"]').val(response.data.lastMessage);
+          $form.find('.wellbeing-message-file-attach').trigger('change');
           updateAwaitingIcon($form, false);
           if (typeof response.data.lastMessageRelative !== 'undefined') {
             $thread.find('.lastMessageRelative').html(response.data.lastMessageRelative);

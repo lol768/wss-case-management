@@ -1,20 +1,24 @@
 package controllers.admin
 
+import java.io.InputStream
 import java.util.UUID
 
+import com.google.common.io.ByteSource
 import controllers.refiners.{CanViewCaseActionRefiner, CaseMessageActionFilters}
 import controllers.{API, BaseController, MessagesController}
-import domain._
 import domain.AuditEvent._
+import domain._
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
-import services.{AuditService, CaseService}
-import warwick.core.helpers.JavaTime
-import warwick.sso.{UniversityID, UserLookupService, Usercode}
-import JavaTime.offsetDateTimeISOWrites
-import warwick.fileuploads.UploadedFileControllerHelper
+import services.{AuditService, CaseService, MessageSnippetService}
+import warwick.core.helpers.JavaTime.offsetDateTimeISOWrites
+import warwick.core.helpers.ServiceResults.ServiceResult
+import warwick.core.helpers.{JavaTime, ServiceResults}
 import warwick.fileuploads.UploadedFileControllerHelper.TemporaryUploadedFile
+import warwick.fileuploads.{UploadedFileControllerHelper, UploadedFileSave}
+import warwick.objectstore.ObjectStorageService
+import warwick.sso.{UniversityID, UserLookupService, Usercode}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -23,12 +27,13 @@ class CaseMessageController @Inject() (
   actions: CaseMessageActionFilters,
   canViewCase: CanViewCaseActionRefiner,
   uploadedFileControllerHelper: UploadedFileControllerHelper,
-  caseController: CaseController
+  userLookupService: UserLookupService,
+  auditService: AuditService,
+  messageSnippets: MessageSnippetService,
+  objectStorageService: ObjectStorageService,
 ) (implicit
   executionContext: ExecutionContext,
   caseService: CaseService,
-  userLookupService: UserLookupService,
-  auditService: AuditService
 ) extends BaseController {
 
   import actions._
@@ -77,29 +82,44 @@ class CaseMessageController @Inject() (
           val message = messageSave(messageFormData.text, currentUser().usercode)
           val files = request.body.files.map(_.ref)
 
-          caseService.addMessage(request.`case`, universityID, message, files.map(f => (f.in, f.metadata))).successFlatMap { case (m, f) =>
-            val messageData = MessageData(m.text, m.sender, universityID, m.created, m.teamMember, m.team)
-            render.async {
-              case Accepts.Json() =>
-                caseService.getCaseMessages(request.`case`.id).successMap { messages =>
-                  val teamName = messageData.teamMember.map { member => s"${member.safeFullName}, ${messageData.team.getOrElse(request.`case`.team).name}" }
-                    .getOrElse(messageData.team.getOrElse(request.`case`.team).name)
-
-                  Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
-                    "lastMessage" -> messageData.created,
-                    "lastMessageRelative" -> JavaTime.Relative(messageData.created),
-                    "threadTitle" -> (if (messages.byClient(universityID).isEmpty) "No messages" else views.html.tags.p(messages.byClient(universityID).length, "message")()),
-                    "message" -> views.html.tags.messages.message(
-                      messageData,
-                      f,
-                      "Client",
-                      teamName,
-                      f => routes.CaseMessageController.download(caseKey, f.id)
-                    ).toString()
-                  ))))
+          // Files from message snippets
+          val fetchFilesToCopy: Future[ServiceResult[Seq[(ByteSource, UploadedFileSave)]]] =
+            if (messageFormData.filesToCopy.isEmpty) Future.successful(ServiceResults.success(Nil))
+            else messageSnippets.list().successMapTo { snippets =>
+              snippets.flatMap(_.files).filter(f => messageFormData.filesToCopy.contains(f.id)).map { file =>
+                val source = new ByteSource {
+                  override def openStream(): InputStream = objectStorageService.fetch(file.id.toString).orNull
                 }
-              case _ =>
-                Future.successful(Redirect(controllers.admin.routes.CaseController.view(request.`case`.key).withFragment(s"thread-heading-${universityID.string}")))
+
+                (source, UploadedFileSave(file.fileName, file.contentLength, file.contentType))
+              }
+            }
+
+          fetchFilesToCopy.successFlatMap { copiedFiles =>
+            caseService.addMessage(request.`case`, universityID, message, files.map(f => (f.in, f.metadata)) ++ copiedFiles).successFlatMap { case (m, f) =>
+              val messageData = MessageData(m.text, m.sender, universityID, m.created, m.teamMember, m.team)
+              render.async {
+                case Accepts.Json() =>
+                  caseService.getCaseMessages(request.`case`.id).successMap { messages =>
+                    val teamName = messageData.teamMember.map { member => s"${member.safeFullName}, ${messageData.team.getOrElse(request.`case`.team).name}" }
+                      .getOrElse(messageData.team.getOrElse(request.`case`.team).name)
+
+                    Ok(Json.toJson(API.Success[JsObject](data = Json.obj(
+                      "lastMessage" -> messageData.created,
+                      "lastMessageRelative" -> JavaTime.Relative(messageData.created),
+                      "threadTitle" -> (if (messages.byClient(universityID).isEmpty) "No messages" else views.html.tags.p(messages.byClient(universityID).length, "message")()),
+                      "message" -> views.html.tags.messages.message(
+                        messageData,
+                        f,
+                        "Client",
+                        teamName,
+                        f => routes.CaseMessageController.download(caseKey, f.id)
+                      ).toString()
+                    ))))
+                  }
+                case _ =>
+                  Future.successful(Redirect(controllers.admin.routes.CaseController.view(request.`case`.key).withFragment(s"thread-heading-${universityID.string}")))
+              }
             }
           }
         }
