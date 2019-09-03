@@ -22,6 +22,8 @@ object ClientConsultationController {
     "reason" -> nonEmptyText, // Only the first question is mandatory
     "suggestedResolution" -> text,
     "alreadyTried" -> text,
+    "sessionFeedback" -> text,
+    "administratorOutcomes" -> text,
     "version" -> optional(JavaTime.offsetDateTimeFormField).verifying("error.optimisticLocking", _ == existingVersion)
   )(InitialConsultationSave.apply)(InitialConsultationSave.unapply))
 
@@ -33,6 +35,8 @@ object ClientConsultationController {
             reason = existing.reason,
             suggestedResolution = existing.suggestedResolution,
             alreadyTried = existing.alreadyTried,
+            sessionFeedback = existing.sessionFeedback,
+            administratorOutcomes = existing.administratorOutcomes,
             version = Some(existing.updatedDate)
           ))
 

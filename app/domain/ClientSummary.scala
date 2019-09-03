@@ -115,11 +115,13 @@ case class InitialConsultation(
   reason: String,
   suggestedResolution: String,
   alreadyTried: String,
+  sessionFeedback: String,
+  administratorOutcomes: String,
   createdDate: OffsetDateTime,
   updatedDate: OffsetDateTime,
   updatedBy: Usercode
 ) {
-  lazy val nonEmpty: Boolean = reason.nonEmpty || suggestedResolution.nonEmpty || alreadyTried.nonEmpty
+  lazy val nonEmpty: Boolean = reason.nonEmpty || suggestedResolution.nonEmpty || alreadyTried.nonEmpty || sessionFeedback.nonEmpty || administratorOutcomes.nonEmpty
   lazy val isEmpty: Boolean = !nonEmpty
 }
 
@@ -132,6 +134,8 @@ case class InitialConsultationSave(
   reason: String,
   suggestedResolution: String,
   alreadyTried: String,
+  sessionFeedback: String,
+  administratorOutcomes: String,
   version: Option[OffsetDateTime],
 )
 

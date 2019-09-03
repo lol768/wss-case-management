@@ -67,6 +67,8 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
           reason = "My face hurts",
           suggestedResolution = "Stroke my face gently",
           alreadyTried = "Punching myself in the face",
+          sessionFeedback = "It hurt a bit",
+          administratorOutcomes = "Apply salve",
           createdDate = JavaTime.offsetDateTime,
           updatedDate = JavaTime.offsetDateTime,
           updatedBy = Usercode("system")

@@ -131,6 +131,8 @@ class ClientSummaryServiceImpl @Inject()(
                   reason = consultation.reason,
                   suggestedResolution = consultation.suggestedResolution,
                   alreadyTried = consultation.alreadyTried,
+                  sessionFeedback = consultation.sessionFeedback,
+                  administratorOutcomes = consultation.administratorOutcomes,
                   createdDate = existing.initialConsultation.map(_.createdDate).getOrElse(JavaTime.offsetDateTime),
                   updatedDate = JavaTime.offsetDateTime,
                   updatedBy = teamMember
@@ -149,6 +151,8 @@ class ClientSummaryServiceImpl @Inject()(
                   reason = consultation.reason,
                   suggestedResolution = consultation.suggestedResolution,
                   alreadyTried = consultation.alreadyTried,
+                  sessionFeedback = consultation.sessionFeedback,
+                  administratorOutcomes = consultation.administratorOutcomes,
                   createdDate = JavaTime.offsetDateTime,
                   updatedDate = JavaTime.offsetDateTime,
                   updatedBy = teamMember

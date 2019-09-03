@@ -8,20 +8,21 @@
 
 @b3.validatedHidden(form, "version")
 
-@b3.textarea(
-  form("reason"),
+@b3.free(
   '_label -> "In brief, what has brought you here today?  What is your issue?",
-  '_help -> html"""<ul>
+  '_class -> form("reason").error.map(_ => "has-error").getOrElse("")
+) {
+  <ul>
     <li>How long have you been struggling with this issue?</li>
     <li>Have there been any previous occurrences?  If so, how often/when</li>
     <li>What impact is this having on your life/your studies?<ul>
       <li>Life:  mild/moderate/significant impact</li>
       <li>Study:  mild/moderate/significant impact</li>
     </ul></li>
-  </ul>""",
-  'helpOnTop -> true,
-  'rows -> 5,
-)
+  </ul>
+
+  @b3.textarea(form("reason"), 'rows -> 5)(b3.clear.fieldConstructorSpecific(), messagesProvider)
+}
 
 @b3.textarea(
   form("suggestedResolution"),
@@ -29,12 +30,25 @@
   'rows -> 5,
 )
 
-@b3.textarea(
-  form("alreadyTried"),
-  '_label -> "What have you already tried in order to manage this issue?",
-  '_help -> html"""<ul>
+@b3.free(
+  '_label -> "InWhat have you already tried in order to manage this issue?",
+  '_class -> form("alreadyTried").error.map(_ => "has-error").getOrElse("")
+) {
+  <ul>
     <li>What worked/didn’t work so well?</li>
-  </ul>""",
-  'helpOnTop -> true,
+  </ul>
+
+  @b3.textarea(form("alreadyTried"), 'rows -> 5)(b3.clear.fieldConstructorSpecific(), messagesProvider)
+}
+
+@b3.textarea(
+  form("sessionFeedback"),
+  '_label -> "Did you find this session helpful?",
+  'rows -> 5,
+)
+
+@b3.textarea(
+  form("administratorOutcomes"),
+  '_label -> "Outcomes for Administrators",
   'rows -> 5,
 )

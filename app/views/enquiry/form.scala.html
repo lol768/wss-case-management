@@ -10,14 +10,14 @@
   outsideOfficeHours: Boolean,
 )(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
 
-@panel(team: Team, title: String, form: Form[_], route: Call)(body: B3FieldConstructor => Html) = {
+@panel(team: Team, title: String, form: Form[_], route: Call, open: Boolean = false)(body: B3FieldConstructor => Html) = {
   <div class="panel panel-@if(form.hasErrors) {danger} else {default}">
     <div class="panel-heading" role="tab" id="@{team.id}-form-heading">
       <a role="button" data-toggle="collapse" data-parent="#enquiry-forms" href="#@{team.id}-form" aria-expanded="true" aria-controls="@{team.id}-form">
-        <i class="fal fa-fw fa-chevron-@if(form.data.nonEmpty || form.hasErrors) {down} else {right}"></i>@title
+        <i class="fal fa-fw fa-chevron-@if(open || form.data.nonEmpty || form.hasErrors) {down} else {right}"></i>@title
       </a>
     </div>
-    <div id="@{team.id}-form" class="panel-collapse collapse @if(form.data.nonEmpty || form.hasErrors) {in}" role="tabpanel" aria-labelledby="@{team.id}-form-heading">
+    <div id="@{team.id}-form" class="panel-collapse collapse @if(open || form.data.nonEmpty || form.hasErrors) {in}" role="tabpanel" aria-labelledby="@{team.id}-form-heading">
       @b3.vertical.formCSRF(route, 'enctype -> "multipart/form-data", 'class -> "no-dirty-check") { implicit vfc =>
         <div class="panel-body">
           @body(vfc)
@@ -98,7 +98,7 @@
   </p>
 
   <div class="panel-group" id="enquiry-forms" role="tablist" aria-multiselectable="true">
-    @panel(Teams.Consultation, "Start with a brief consultation", consultationForm, controllers.enquiries.routes.EnquiryController.submitConsultation()) { implicit vfc =>
+    @panel(Teams.Consultation, "Start with a brief consultation", consultationForm, controllers.enquiries.routes.EnquiryController.submitConsultation(), open = disabilityForm.data.isEmpty && !disabilityForm.hasErrors) { implicit vfc =>
       <p>
         Speak to us for a brief consultation to help you work out the next step in accessing support.
         Select this option if you would like to access practical or emotional support/advice to help you better manage
