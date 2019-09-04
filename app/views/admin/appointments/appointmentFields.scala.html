@@ -75,9 +75,11 @@
         @b3.hidden(form(k))
       }
       @b3.static("Team members") {
-        @existing.map { a =>
+        @existing.zipWithIndex.map { case (a, i) =>
           @a.teamMembers.map(_.member.safeFullName).mkString(", ")
+          @b3.errors(form(s"teamMembers[$i]"))
         }
+        @b3.errors(form("teamMembers"))
       }
     }
   </div>
