@@ -64,12 +64,12 @@
                       idPrefix = "usercode",
                       columns = 2,
                       inModal = false
-                    )(b3.vertical.fieldConstructor, messages)
+                    )(b3.vertical.fieldConstructor(), messages)
 
                     @b3.free('_class -> "spaced-buttons") {
                       <button type="submit" class="btn btn-primary"><i class="fal fa-filter"></i> Filter enquiries</button>
                       <button type="reset" class="btn btn-default">Clear filters</button>
-                    }(b3.vertical.fieldConstructor, messages)
+                    }(b3.vertical.fieldConstructor(), messages)
                   }
                 </div>
               }
@@ -86,16 +86,16 @@
               @defining(issueListFilterForm.getOrElse(IssueListFilter.form.fill(IssueListFilter(lastUpdatedBefore = Some(JavaTime.offsetDateTime))))) { form: Form[IssueListFilter] =>
                 @b3.datePicker(form("lastUpdatedAfter"),
                   '_label -> "Last updated after"
-                )(b3.vertical.fieldConstructor, messages.messages)
+                )(b3.vertical.fieldConstructor(), messages.messages)
 
                 @b3.datePicker(form("lastUpdatedBefore"),
                   '_label -> "Last updated before"
-                )(b3.vertical.fieldConstructor, messages.messages)
+                )(b3.vertical.fieldConstructor(), messages.messages)
 
                 @b3.free('_class -> "spaced-buttons") {
                   <button type="submit" class="btn btn-primary"><i class="fal fa-filter"></i> Filter enquiries</button>
                   <button type="reset" class="btn btn-default">Clear filters</button>
-                }(b3.vertical.fieldConstructor, messages)
+                }(b3.vertical.fieldConstructor(), messages)
               }
           </th>
         </tr>

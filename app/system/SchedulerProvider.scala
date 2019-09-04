@@ -1,6 +1,7 @@
 package system
 
 import com.google.inject.{Inject, Provider, Singleton}
+import domain.ExtendedPostgresProfile
 import javax.sql.DataSource
 import org.quartz._
 import org.quartz.impl.StdSchedulerFactory
@@ -8,7 +9,6 @@ import play.api.db.slick.DatabaseConfigProvider
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.JNDI
 import play.db.NamedDatabase
-import slick.jdbc.JdbcProfile
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -21,7 +21,7 @@ object DataSourceExtractor {
   type HasDataSource = { def ds: javax.sql.DataSource }
 
   def extract(db: DatabaseConfigProvider): DataSource =
-    db.get[JdbcProfile].db.source.asInstanceOf[HasDataSource].ds
+    db.get[ExtendedPostgresProfile].db.source.asInstanceOf[HasDataSource].ds
 }
 
 @Singleton

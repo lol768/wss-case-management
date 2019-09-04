@@ -6,7 +6,7 @@ import java.time.{LocalDate, LocalTime, Month}
 import java.util.Base64
 
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import services.FreeBusyService.{FreeBusyPeriod, FreeBusyStatus}
 import warwick.core.helpers.JavaTime

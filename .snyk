@@ -1,0 +1,15 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.13.5
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  SNYK-JAVA-COMBEUST-174815:
+    - '*':
+        reason: 'Not bothered about this vulnerability, doesn''t affect us'
+        expires: 2099-12-31T00:00:00.000Z
+  SNYK-JAVA-COMDREWNOAKES-455419:
+    - '*':
+        reason: >-
+          Waiting for a new version of com.drewnoakes:metadata-extractor to be
+          released that fixes this
+        expires: 2019-09-01T13:43:38.051Z
+patch: {}

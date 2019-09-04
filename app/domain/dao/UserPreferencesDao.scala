@@ -11,7 +11,6 @@ import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.JsValue
 import services.AuditLogContext
-import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.Usercode
 
@@ -28,7 +27,7 @@ trait UserPreferencesDao {
 @Singleton
 class UserPreferencesDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
-)(implicit ec: ExecutionContext) extends UserPreferencesDao with HasDatabaseConfigProvider[JdbcProfile] {
+)(implicit ec: ExecutionContext) extends UserPreferencesDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
 
   override def find(usercode: Usercode): DBIO[Option[StoredUserPreferences]] =
     userPreferences.table.filter(_.usercode === usercode).take(1).result.headOption

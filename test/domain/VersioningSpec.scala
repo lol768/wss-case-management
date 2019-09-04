@@ -91,7 +91,7 @@ object VersioningSpec {
 
   class SlickAccountDao (
     protected val dbConfigProvider: DatabaseConfigProvider
-  )(implicit ec: ExecutionContext) extends HasDatabaseConfigProvider[JdbcProfile] {
+  )(implicit ec: ExecutionContext) extends HasDatabaseConfigProvider[ExtendedPostgresProfile] {
     import Account._
 
     // TODO refactor as action/query generator

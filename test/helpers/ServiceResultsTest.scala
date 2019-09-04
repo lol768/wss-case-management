@@ -1,10 +1,10 @@
 package helpers
 
-import warwick.core.helpers.ServiceResults.ServiceError
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import warwick.core.helpers.ServiceResults
+import warwick.core.helpers.ServiceResults.ServiceError
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

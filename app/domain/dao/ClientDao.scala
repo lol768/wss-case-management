@@ -13,7 +13,6 @@ import domain.dao.ClientDao.StoredClient.{ClientVersions, Clients, VersionedTabl
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
-import slick.jdbc.JdbcProfile
 import slick.lifted.{Index, PrimaryKey, ProvenShape}
 import warwick.core.helpers.JavaTime
 import warwick.sso.{UniversityID, Usercode}
@@ -103,7 +102,7 @@ object ClientDao {
 
 class ClientDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
-)(implicit executionContext: ExecutionContext) extends ClientDao with HasDatabaseConfigProvider[JdbcProfile] {
+)(implicit executionContext: ExecutionContext) extends ClientDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
   import dbConfig.profile.api._
   import domain.dao.ClientDao._
 

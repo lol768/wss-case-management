@@ -11,7 +11,6 @@ import domain.dao.LocationDao._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
-import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import warwick.sso.Usercode
 
@@ -32,7 +31,7 @@ trait LocationDao {
 @Singleton
 class LocationDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
-)(implicit ec: ExecutionContext) extends LocationDao with HasDatabaseConfigProvider[JdbcProfile] {
+)(implicit ec: ExecutionContext) extends LocationDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
 
   override def insert(building: StoredBuilding)(implicit ac: AuditLogContext): DBIO[StoredBuilding] =
     buildings.insert(building)

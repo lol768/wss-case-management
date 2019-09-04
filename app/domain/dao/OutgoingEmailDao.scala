@@ -13,7 +13,6 @@ import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.mailer.Email
 import services.AuditLogContext
-import slick.jdbc.JdbcProfile
 import warwick.core.helpers.JavaTime
 import warwick.sso.Usercode
 
@@ -140,7 +139,7 @@ object OutgoingEmailDao {
 @Singleton
 class OutgoingEmailDaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
-)(implicit executionContext: ExecutionContext) extends OutgoingEmailDao with HasDatabaseConfigProvider[JdbcProfile] {
+)(implicit executionContext: ExecutionContext) extends OutgoingEmailDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
 
   import PersistedOutgoingEmail._
   import dbConfig.profile.api._

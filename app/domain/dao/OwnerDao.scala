@@ -6,11 +6,10 @@ import java.util.UUID
 import akka.Done
 import com.google.inject.ImplementedBy
 import domain.CustomJdbcTypes._
+import domain.ExtendedPostgresProfile.api._
 import domain._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import slick.jdbc.JdbcProfile
-import ExtendedPostgresProfile.api._
 import services.AuditLogContext
 
 import scala.concurrent.ExecutionContext
@@ -31,7 +30,7 @@ trait OwnerDao {
 class OwnerDaoImpl @Inject() (
   protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext)
-  extends OwnerDao with HasDatabaseConfigProvider[JdbcProfile] {
+  extends OwnerDao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
 
   override def insert(owners: Set[Owner])(implicit ac: AuditLogContext): DBIO[Seq[Owner]] =
     Owner.owners ++= owners.toSeq

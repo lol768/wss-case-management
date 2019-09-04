@@ -1,8 +1,9 @@
 package domain.dao
 
+import domain.ExtendedPostgresProfile
 import helpers._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.db.slick.DatabaseConfigProvider
 import services.AuditLogContext
@@ -30,7 +31,7 @@ abstract class AbstractDaoTest
   private lazy val runner = get[DaoRunner]
 
   protected lazy val dbConfigProvider: DatabaseConfigProvider = get[DatabaseConfigProvider]
-  protected lazy val dbConfig: DatabaseConfig[JdbcProfile] = dbConfigProvider.get[JdbcProfile]
+  protected lazy val dbConfig: DatabaseConfig[ExtendedPostgresProfile] = dbConfigProvider.get[ExtendedPostgresProfile]
   protected lazy val profile: JdbcProfile = dbConfig.profile
   protected def db: JdbcBackend#DatabaseDef = dbConfig.db
 

@@ -4,9 +4,9 @@ import helpers.OneServerPerSuite
 import org.openqa.selenium.WebDriver
 import org.openqa.selenium.chrome.ChromeDriver
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.selenium.WebBrowser
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.selenium.WebBrowser
 
 /**
   * Base class to run against a real browser.

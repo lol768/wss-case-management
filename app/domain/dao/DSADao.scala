@@ -5,19 +5,14 @@ import java.util.UUID
 
 import akka.Done
 import com.google.inject.ImplementedBy
-import domain.CustomJdbcTypes._
 import domain.ExtendedPostgresProfile.api._
-
 import domain._
 import domain.dao.CaseDao._
-
 import domain.dao.DSADao._
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import services.AuditLogContext
-import slick.jdbc.JdbcProfile
-import slick.lifted.{Index, PrimaryKey}
-import slick.lifted.ProvenShape
+import slick.lifted.{Index, PrimaryKey, ProvenShape}
 import warwick.core.helpers.JavaTime
 import warwick.sso.Usercode
 
@@ -40,7 +35,7 @@ trait DSADao {
 @Singleton
 class DSADaoImpl @Inject()(
   protected val dbConfigProvider: DatabaseConfigProvider
-)(implicit ec: ExecutionContext) extends DSADao with HasDatabaseConfigProvider[JdbcProfile] {
+)(implicit ec: ExecutionContext) extends DSADao with HasDatabaseConfigProvider[ExtendedPostgresProfile] {
 
   override def insert(dsaApplication: StoredDSAApplication)(implicit ac: AuditLogContext): DBIO[StoredDSAApplication] = {
     dsaApplications.insert(dsaApplication)
@@ -80,6 +75,8 @@ class DSADaoImpl @Inject()(
 }
 
 object DSADao {
+
+  import CustomJdbcTypes._
 
   val dsaApplications: VersionedTableQuery[StoredDSAApplication, StoredDSAApplicationVersion, DSAApplications, DSAApplicationVersions] =
     VersionedTableQuery(TableQuery[DSAApplications], TableQuery[DSAApplicationVersions])

@@ -11,7 +11,7 @@
   @b3.vertical.formCSRF(controllers.admin.routes.AppointmentOutcomesController.outcomes(a.appointment.key), 'class -> "appointment-outcomes") { implicit fc =>
     @b3.validatedHidden(form, "version")
 
-    @defining(b3.inline.fieldConstructorSpecific) { implicit ifc: b3.B3FieldConstructor =>
+    @defining(b3.inline.fieldConstructorSpecific()) { implicit ifc: b3.B3FieldConstructor =>
       <table class="table table-default">
         <caption>Attendance</caption>
         <thead>

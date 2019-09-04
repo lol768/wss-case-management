@@ -7,18 +7,18 @@ import java.util.UUID
 import domain.Owner.EntityType
 import domain.Teams.WellbeingSupport
 import domain._
-import warwick.core.helpers.ServiceResults
 import org.mockito.ArgumentMatchers.{eq => isEqual, _}
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.quartz._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.Configuration
 import play.api.libs.json.{JsNull, JsObject, Json}
 import services.job.UpdateAppointmentInOffice365Job
+import warwick.core.helpers.ServiceResults
 import warwick.office365.O365Service
 import warwick.sso.{UniversityID, Usercode}
 

@@ -8,10 +8,10 @@ import enumeratum.SlickEnumSupport
 import play.api.libs.json.{JsValue, Json}
 import slick.jdbc.{JdbcProfile, JdbcType}
 import warwick.fileuploads.UploadedFileOwner
-import warwick.slick.jdbctypes.JdbcDateTypesUtc
+import warwick.slick.jdbctypes.JdbcDateTypesUtcColumnImplicits
 import warwick.sso.{GroupName, UniversityID, Usercode}
 
-object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtc {
+object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtcColumnImplicits {
   override val profile: JdbcProfile = ExtendedPostgresProfile
   import profile._
 
