@@ -73,6 +73,7 @@ class IndexController @Inject()(
         None,
         Pagination(awaitingClientCount, 0, controllers.routes.IndexController.enquiriesAwaitingClient()),
         closedEnquiries,
+        controllers.admin.routes.TeamEnquiryController.createSelectTeam(),
         routes.IndexController.closedEnquiries(),
         None,
         "member",

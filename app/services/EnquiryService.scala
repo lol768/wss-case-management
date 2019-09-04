@@ -145,7 +145,12 @@ class EnquiryServiceImpl @Inject() (
           e <- enquiryDao.insert(createStoredEnquiry(id, IssueKey(IssueKeyType.Enquiry, nextId), enquiry))
           _ <- addMessageDBIO(e.universityID, e.team, id, message, files)
           _ <- notificationService.newEnquiry(e.asEnquiry(clients.head).key, enquiry.team).toDBIO
-          _ <- DBIO.from(Future.successful {
+          _ <-
+            if (message.sender == MessageSender.Team)
+              notificationService.enquiryMessage(e.asEnquiry(clients.head), message.sender).toDBIO
+            else
+              DBIO.successful(Done)
+          _ <- DBIO.successful {
             val enquiry = e.asEnquiry(clients.head)
             // For if we ever allow creating an enquiry by the team
             message.sender match {
@@ -155,7 +160,7 @@ class EnquiryServiceImpl @Inject() (
               case MessageSender.Client =>
                 cancelClientReminder(enquiry)
             }
-          })
+          }
         } yield e.asEnquiry(clients.head))
       )
     }
@@ -167,7 +172,7 @@ class EnquiryServiceImpl @Inject() (
         daoRunner.runWithServiceResult(for {
           (m, f) <- addMessageDBIO(enquiry.client.universityID, enquiry.team, enquiry.id, message, files)
           _ <- notificationService.enquiryMessage(enquiry, m.sender).toDBIO
-          _ <- DBIO.from(Future.successful {
+          _ <- DBIO.successful {
             if (sendClientReminder) {
               message.sender match {
                 case MessageSender.Team =>
@@ -177,7 +182,7 @@ class EnquiryServiceImpl @Inject() (
                   cancelClientReminder(enquiry)
               }
             } else cancelClientReminder(enquiry)
-          })
+          }
         } yield (m, f)).map(_.map { case (m, f) => (m.asMessageData(member), f) })
       )
     }
@@ -191,10 +196,10 @@ class EnquiryServiceImpl @Inject() (
           stored <- enquiryDao.update(existing.copy(team = team), version)
           _ <- addNoteDBIO(stored.id, EnquiryNoteType.Referral, note)
           _ <- notificationService.enquiryReassign(stored.asEnquiry(client.asClient)).toDBIO
-          _ <- DBIO.from(Future.successful {
+          _ <- DBIO.successful {
             val enquiry = stored.asEnquiry(client.asClient)
             cancelClientReminder(enquiry)
-          })
+          }
         } yield stored.asEnquiry(client.asClient))
       )
     }
@@ -236,12 +241,12 @@ class EnquiryServiceImpl @Inject() (
           enquiryDao.update(existing.copy(state = targetState), version)
         )
         _ <- notificationService.enquiryMessage(stored.asEnquiry(client.asClient), message.sender).toDBIO
-        _ <- DBIO.from(Future.successful {
+        _ <- DBIO.successful {
           val enquiry = stored.asEnquiry(client.asClient)
 
           // Whatever the transition here, cancel any reminder
           cancelClientReminder(enquiry)
-        })
+        }
       } yield stored.asEnquiry(client.asClient))
     }
   }

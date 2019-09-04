@@ -95,6 +95,9 @@ GET         /team/client/:universityID/cases                    @controllers.adm
 GET         /team/client/:universityID/consultation             @controllers.admin.ClientConsultationController.formForCase(caseKey: domain.IssueKey, universityID: warwick.sso.UniversityID)
 POST        /team/client/:universityID/consultation             @controllers.admin.ClientConsultationController.saveForCase(caseKey: domain.IssueKey, universityID: warwick.sso.UniversityID)
 
+GET         /team/enquiry/create                                @controllers.admin.TeamEnquiryController.createSelectTeam(client: Option[warwick.sso.UniversityID] ?= None)
+GET         /team/enquiry/create/:teamId                        @controllers.admin.TeamEnquiryController.createForm(teamId: String, client: Option[warwick.sso.UniversityID] ?= None)
+POST        /team/enquiry/create/:teamId                        @controllers.admin.TeamEnquiryController.create(teamId: String)
 GET         /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.messages(enquiryKey: domain.IssueKey)
 POST        /team/enquiry/:enquiryKey                           @controllers.admin.TeamEnquiryController.addMessage(enquiryKey: domain.IssueKey)
 GET         /team/enquiry/:enquiryKey/close                     @controllers.admin.TeamEnquiryController.redirectToMessages(enquiryKey: domain.IssueKey)

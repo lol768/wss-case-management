@@ -10,6 +10,7 @@
   awaitingClientOwners: Option[Map[UUID, Set[Member]]],
   awaitingClientPagination: Pagination,
   closedEnquiries: Int,
+  createRoute: Call,
   closedEnquiriesRoute: Call,
   allOpenCaseOwners: Option[Seq[Member]],
   searchScope: String,
@@ -27,6 +28,8 @@
     <input type="text" class="form-control input-lg" placeholder="Search enquiries@placeholderSuffix" aria-label="Search enquiries@placeholderSuffix" />
   }
 }
+
+<p><a href="@createRoute" class="btn btn-default">Create a new enquiry</a></p>
 
 @views.html.admin.enquiryTable(Some("Enquiries requiring action"), requiringAction, requiringActionOwners, allOpenCaseOwners, None, None, requiringActionPagination)
 @views.html.admin.enquiryTable(Some("Enquiries waiting for reply from client"), awaitingClient, awaitingClientOwners, allOpenCaseOwners, None, None, awaitingClientPagination)

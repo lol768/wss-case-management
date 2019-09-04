@@ -1,0 +1,38 @@
+@import controllers.admin.TeamEnquiryController.EnquiryFormData
+@import domain.Team
+@import org.apache.tika.mime.MediaType
+@import play.twirl.api._
+
+@(
+  team: Team,
+  form: Form[EnquiryFormData],
+  supportedMimeTypes: Seq[MediaType],
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"Create a ${team.name} enquiry") {
+  @b3.vertical.formCSRF(controllers.admin.routes.TeamEnquiryController.create(team.id), 'enctype -> "multipart/form-data") { implicit ifc =>
+    @b3.free('_label -> "Client", '_class -> form.error("universityID").map(_ => "has-error")) {
+      @tags.flexipicker(values = form.data.get("universityID").toSeq, name = "universityID", placeholder = "Search for a client", universityId = true, potentialClientsOnly = true, selectOnBlur = false)
+      @b3.errors(form("universityID"))
+    }
+
+    @b3.text(form("subject"),
+      '_label -> "Subject",
+      '_help -> "(visible to client)",
+      'autocomplete -> "off",
+    )
+
+    @b3.textarea(form("text"),
+      '_label -> "Message",
+      '_help -> html"""Sent to client. You can use Markdown <i class="fab fa-markdown"></i> syntax <a target="_blank" href="https://warwick.ac.uk/tabula/manual/cm2/markers/markdown/"><i class="fal fa-question-circle"></i></a> to format the message.""",
+      'rows -> 5,
+    )
+
+    @b3.free('_label -> "Attachment(s)", '_class -> form.error("file").map(_ => "has-error")) {
+      <input type="file" id="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" class="form-control" aria-label="Attach a file">
+      @b3.errors(form("file"))
+    }
+
+    @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id).withFragment("enquiries"))
+  }
+}

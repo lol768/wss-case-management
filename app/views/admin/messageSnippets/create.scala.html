@@ -7,7 +7,7 @@
 )(implicit request: RequestHeader, messagesProvider: MessagesProvider, context: RequestContext)
 
 @main("Create message snippet") {
-  @b3.vertical.formCSRF(controllers.admin.routes.MessageSnippetsController.create(), 'enctype -> "multipart/form-data", 'class -> "no-double-submit-protection") { implicit ifc =>
+  @b3.vertical.formCSRF(controllers.admin.routes.MessageSnippetsController.create(), 'enctype -> "multipart/form-data") { implicit ifc =>
     @snippetFields(form, supportedMimeTypes)
 
     @tags.submitOrCancel("Create", controllers.admin.routes.MessageSnippetsController.list())

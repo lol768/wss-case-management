@@ -1,0 +1,18 @@
+@import domain.Team
+@import domain.IssueKey
+@import warwick.sso.UniversityID
+
+@(
+  teams: Seq[Team],
+  client: Option[UniversityID]
+)(implicit context: RequestContext)
+
+@main("Create an enquiry - select team") {
+  <p>Select a team to assign the enquiry to:</p>
+
+  <ul>
+    @teams.map { team =>
+      <li><a href="@controllers.admin.routes.TeamEnquiryController.createForm(team.id, client)">@team.name</a></li>
+    }
+  </ul>
+}
