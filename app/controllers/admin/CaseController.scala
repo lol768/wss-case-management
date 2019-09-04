@@ -112,20 +112,22 @@ object CaseController {
     )(CaseLinkFormData.apply)(CaseLinkFormData.unapply))
   }
 
-  val generalNoteTypes: Seq[CaseNoteType] = Seq(GeneralNote, CaseClosed, CaseReopened, AppointmentNote)
+  val generalNoteTypes: Seq[CaseNoteType] = Seq(GeneralNote, SensitiveGeneralNote, CaseClosed, CaseReopened, AppointmentNote)
 
   case class CaseNoteFormData(
     text: String,
+    ownersOnly: Boolean,
     version: OffsetDateTime
   )
 
   def caseNoteForm(version: OffsetDateTime): Form[CaseNoteFormData] = Form(mapping(
     "text" -> nonEmptyText,
+    "ownersOnly" -> default(boolean, false),
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
   )(CaseNoteFormData.apply)(CaseNoteFormData.unapply))
 
   def caseNoteFormPrefilled(version: OffsetDateTime): Form[CaseNoteFormData] =
-    caseNoteForm(version).fill(CaseNoteFormData("", version))
+    caseNoteForm(version).fill(CaseNoteFormData("", ownersOnly = false, version))
 
   def deleteForm(version: OffsetDateTime): Form[OffsetDateTime] = Form(single(
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == version)
@@ -138,7 +140,7 @@ object CaseController {
     message: String
   )
 
-  def caseReassignForm(clientCase: Case) = Form(
+  def caseReassignForm(clientCase: Case): Form[ReassignCaseData] = Form(
     mapping(
       "team" -> Teams.formField,
       "caseType" -> optional(CaseType.formField),
@@ -253,13 +255,20 @@ class CaseController @Inject()(
   }
 
   def notes(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
-    cases.getNotes(caseRequest.`case`.id).successMap(notes =>
+    ServiceResults.zip(
+      cases.getNotes(caseRequest.`case`.id),
+      permissions.canViewSensitiveCaseNotes(currentUser().usercode, caseRequest.`case`.id)
+    ).successMap { case (notes, canViewSensitiveNotes) =>
       Ok(views.html.admin.cases.sections.notes(
         caseRequest.`case`,
-        notes.filter(note => generalNoteTypes.contains(note.note.noteType)),
+        notes.filter(note => generalNoteTypes.contains(note.note.noteType)).map { note =>
+          if (note.note.noteType == CaseNoteType.SensitiveGeneralNote && !canViewSensitiveNotes) {
+            note.copy(note = note.note.copy(text = "_This note contains sensitive information and is only visible to case owners_"))
+          } else note
+        },
         caseNoteFormPrefilled(caseRequest.`case`.lastUpdated)
       ))
-    )
+    }
   }
 
   def consultations(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
@@ -496,7 +505,7 @@ class CaseController @Inject()(
       formWithErrors => Future.successful(BadRequest(formWithErrors.errors.mkString(", "))),
       data =>
         // We don't do anything with data.version here, it's validated but we don't lock the case when adding a general note
-        cases.addGeneralNote(caseRequest.`case`.id, CaseNoteSave(data.text, caseRequest.context.user.get.usercode, None)).successMap { _ =>
+        cases.addGeneralNote(caseRequest.`case`.id, CaseNoteSave(data.text, caseRequest.context.user.get.usercode, None), data.ownersOnly).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.noteAdded"))
         }
@@ -504,7 +513,7 @@ class CaseController @Inject()(
   }
 
   def closeForm(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey) { implicit caseRequest =>
-    Ok(views.html.admin.cases.close(caseRequest.`case`, caseNoteForm(caseRequest.`case`.lastUpdated).fill(CaseNoteFormData("", caseRequest.`case`.lastUpdated))))
+    Ok(views.html.admin.cases.close(caseRequest.`case`, caseNoteForm(caseRequest.`case`.lastUpdated).fill(CaseNoteFormData("", ownersOnly = false, caseRequest.`case`.lastUpdated))))
   }
 
   def close(caseKey: IssueKey): Action[AnyContent] = CanEditCaseAction(caseKey).async { implicit caseRequest =>
@@ -544,7 +553,7 @@ class CaseController @Inject()(
         views.html.admin.cases.editNote(
           caseKey,
           note,
-          caseNoteForm(note.lastUpdated).fill(CaseNoteFormData(note.text, note.lastUpdated))
+          caseNoteForm(note.lastUpdated).fill(CaseNoteFormData(note.text, ownersOnly = note.noteType == CaseNoteType.SensitiveGeneralNote, note.lastUpdated))
         )
       )
     )
@@ -561,11 +570,19 @@ class CaseController @Inject()(
           )
         )
       ),
-      data =>
-        cases.updateNote(noteRequest.`case`.id, noteRequest.note.id, CaseNoteSave(data.text, noteRequest.context.user.get.usercode, None), data.version).successMap { _ =>
+      data => {
+        // Swap the note type if we make a general note sensitive or vice-versa
+        val noteType = noteRequest.note.noteType match {
+          case CaseNoteType.GeneralNote if data.ownersOnly => CaseNoteType.SensitiveGeneralNote
+          case CaseNoteType.SensitiveGeneralNote if !data.ownersOnly => CaseNoteType.GeneralNote
+          case _ => noteRequest.note.noteType
+        }
+
+        cases.updateNote(noteRequest.`case`.id, noteRequest.note.id, CaseNoteSave(data.text, noteRequest.context.user.get.usercode, None), noteType, data.version).successMap { _ =>
           Redirect(controllers.admin.routes.CaseController.view(caseKey))
             .flashing("success" -> Messages("flash.case.noteUpdated"))
         }
+      }
     )
   }
 

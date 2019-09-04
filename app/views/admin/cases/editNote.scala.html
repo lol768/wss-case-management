@@ -12,6 +12,10 @@
   @b3.vertical.formCSRF(controllers.admin.routes.CaseController.editNote(caseKey, note.id)) { implicit ifc =>
     @b3.validatedHidden(form, "version")
     @b3.textarea(form("text"), 'rows -> 5)
+    @b3.checkbox(form("ownersOnly"),
+      '_text -> "Restrict this note to case owners only",
+      '_help -> "Use this for very sensitive information that only a case owner should see"
+    )
 
     @tags.submitOrCancel("Update", controllers.admin.routes.CaseController.view(caseKey))
   }
