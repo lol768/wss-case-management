@@ -80,3 +80,4 @@ flash.messageSnippet.updated=The message snippet has been updated
 flash.messageSnippet.deleted=The message snippet has been deleted
 flash.messageSnippet.attachment.deleted=The attachment has been removed
 flash.messageSnippet.reordered=The message snippets have been re-ordered
+flash.enquiry.created=The enquiry has been opened ({0})

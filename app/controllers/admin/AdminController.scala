@@ -72,6 +72,7 @@ class AdminController @Inject()(
           Some(awaitingClientOwners),
           Pagination(awaitingClientCount, 0, controllers.admin.routes.AdminController.enquiriesAwaitingClient(teamRequest.team.id)),
           closedEnquiries,
+          controllers.admin.routes.TeamEnquiryController.createForm(teamId),
           controllers.admin.routes.AdminController.closedEnquiries(teamId),
           Some(allOpenOwners),
           "team",

@@ -20,12 +20,15 @@ import services.tabula.ProfileService
 import services.{CaseService, EnquiryService, MessageSnippetService, PermissionService}
 import warwick.core.helpers.ServiceResults.ServiceResult
 import warwick.core.helpers.{JavaTime, ServiceResults}
+import warwick.core.timing.TimingContext
 import warwick.fileuploads.UploadedFileControllerHelper.TemporaryUploadedFile
 import warwick.fileuploads.{UploadedFileControllerHelper, UploadedFileSave}
 import warwick.objectstore.ObjectStorageService
-import warwick.sso.UserLookupService
+import warwick.sso.{UniversityID, UserLookupService}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.Try
 
 object TeamEnquiryController {
   case class ReassignEnquiryData(
@@ -45,6 +48,28 @@ object TeamEnquiryController {
   def stateChangeForm(enquiry: Enquiry): Form[OffsetDateTime] = Form(single(
     "version" -> JavaTime.offsetDateTimeFormField.verifying("error.optimisticLocking", _ == enquiry.lastUpdated)
   ))
+
+  case class EnquiryFormData(
+    universityID: UniversityID,
+    subject: String,
+    text: String
+  )
+
+  def form(
+    team: Team,
+    profileService: ProfileService
+  )(implicit t: TimingContext, executionContext: ExecutionContext): Form[EnquiryFormData] = {
+    def isValid(u: UniversityID): Boolean =
+      Try(Await.result(profileService.getProfile(u).map(_.value), 5.seconds))
+        .toOption.exists(_.exists(_.nonEmpty))
+
+    Form(mapping(
+      "universityID" -> nonEmptyText.transform[UniversityID](UniversityID.apply, _.string)
+        .verifying("error.client.invalid", u => isValid(u)),
+      "subject" -> nonEmptyText,
+      "text" -> nonEmptyText
+    )(EnquiryFormData.apply)(EnquiryFormData.unapply))
+  }
 }
 
 @Singleton
@@ -52,6 +77,8 @@ class TeamEnquiryController @Inject()(
   canAddTeamMessageToEnquiryActionRefiner: CanAddTeamMessageToEnquiryActionRefiner,
   canEditEnquiryActionRefiner: CanEditEnquiryActionRefiner,
   canViewEnquiryActionRefiner: CanViewEnquiryActionRefiner,
+  canViewTeamActionRefiner: CanViewTeamActionRefiner,
+  anyTeamActionRefiner: AnyTeamActionRefiner,
   service: EnquiryService,
   userLookupService: UserLookupService,
   profiles: ProfileService,
@@ -62,9 +89,11 @@ class TeamEnquiryController @Inject()(
   uploadedFileControllerHelper: UploadedFileControllerHelper,
 )(implicit executionContext: ExecutionContext) extends BaseController {
 
+  import anyTeamActionRefiner._
   import canAddTeamMessageToEnquiryActionRefiner._
   import canEditEnquiryActionRefiner._
   import canViewEnquiryActionRefiner._
+  import canViewTeamActionRefiner._
 
   private def renderMessages(enquiry: Enquiry, stateChangeForm: Form[OffsetDateTime], messageForm: Form[MessageFormData])(implicit request: EnquirySpecificRequest[_]): Future[Result] = {
     service.getForRender(enquiry.id).successFlatMap(enquiryRender =>
@@ -149,7 +178,7 @@ class TeamEnquiryController @Inject()(
         }
       },
       messageFormData => {
-        val message = messageData(messageFormData.text, request)
+        val message = messageData(messageFormData.text)
         val files = request.body.files.map(_.ref)
         val enquiry = request.enquiry
 
@@ -217,11 +246,11 @@ class TeamEnquiryController @Inject()(
     )
   }
 
-  private def messageData(text: String, request: EnquirySpecificRequest[_]): MessageSave =
+  private def messageData(text: String)(implicit request: EnquirySpecificRequest[_]): MessageSave =
     MessageSave(
       text = text,
       sender = MessageSender.Team,
-      teamMember = request.context.user.map(_.usercode)
+      teamMember = Some(currentUser().usercode)
     )
 
   def reassignForm(enquiryKey: IssueKey): Action[AnyContent] = CanEditEnquiryAction(enquiryKey) { implicit request =>
@@ -264,6 +293,77 @@ class TeamEnquiryController @Inject()(
         service.cancelClientReminder(request.enquiry)
         Redirect(controllers.admin.routes.TeamEnquiryController.messages(request.enquiry.key))
           .flashing("success" -> Messages("flash.enquiry.clientReminderCancelled"))
+      }
+    )
+  }
+
+  def createSelectTeam(client: Option[UniversityID]): Action[AnyContent] = AnyTeamMemberRequiredAction { implicit request =>
+    permissionService.teams(currentUser().usercode).fold(showErrors, teams => {
+      if (teams.size == 1)
+        Redirect(controllers.admin.routes.TeamEnquiryController.createForm(teams.head.id, client))
+      else
+        Ok(views.html.admin.enquiry.createSelectTeam(teams, client))
+    })
+  }
+
+  def createForm(teamId: String, client: Option[UniversityID]): Action[AnyContent] = CanViewTeamAction(teamId) { implicit teamRequest =>
+    val baseForm = form(teamRequest.team, profiles)
+
+    client match {
+      case Some(universityID) =>
+        Ok(views.html.admin.enquiry.create(
+          teamRequest.team,
+          baseForm.bind(Map(
+            "universityID" -> universityID.string,
+            "subject" -> s"${teamRequest.team.name} enquiry"
+          )).discardingErrors,
+          uploadedFileControllerHelper.supportedMimeTypes,
+        ))
+
+      case _ =>
+        Ok(views.html.admin.enquiry.create(
+          teamRequest.team,
+          baseForm.bind(Map(
+            "subject" -> s"${teamRequest.team.name} enquiry"
+          )).discardingErrors,
+          uploadedFileControllerHelper.supportedMimeTypes,
+        ))
+    }
+  }
+
+  def create(teamId: String): Action[MultipartFormData[TemporaryUploadedFile]] = CanViewTeamAction(teamId)(uploadedFileControllerHelper.bodyParser).async { implicit teamRequest =>
+    form(teamRequest.team, profiles).bindFromRequest().fold(
+      formWithErrors => Future.successful(
+        Ok(views.html.admin.enquiry.create(
+          teamRequest.team,
+          formWithErrors,
+          uploadedFileControllerHelper.supportedMimeTypes,
+        ))
+      ),
+      data => {
+        val enquiry = EnquirySave(
+          universityID = data.universityID,
+          subject = data.subject,
+          team = teamRequest.team,
+          state = IssueState.Open
+        )
+
+        val message = MessageSave(
+          text = data.text,
+          sender = MessageSender.Team,
+          teamMember = Some(currentUser().usercode)
+        )
+
+        val files = teamRequest.body.files.map(_.ref)
+
+        service.save(enquiry, message, files.map { f => (f.in, f.metadata) })
+          .successFlatMap { enquiry =>
+            service.setOwners(enquiry.id, Set(currentUser().usercode))
+              .successMap { _ =>
+                Redirect(controllers.admin.routes.TeamEnquiryController.messages(enquiry.key))
+                  .flashing("success" -> Messages("flash.enquiry.created", enquiry.key.string))
+              }
+          }
       }
     )
   }
