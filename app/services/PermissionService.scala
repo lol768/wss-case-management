@@ -39,6 +39,7 @@ trait PermissionService {
   def canAddTeamMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canClientViewCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canAddClientMessageToCase(user: User, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
+  def canViewSensitiveCaseNotes(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
 
   def canViewAppointment(user: Usercode)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
   def canEditAppointment(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]]
@@ -190,6 +191,12 @@ class PermissionServiceImpl @Inject() (
     forAll(
       isCaseClient(user, id),
       caseHasMessages(user, id)
+    )
+
+  override def canViewSensitiveCaseNotes(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =
+    oneOf(
+      isAdmin(user),
+      isCaseOwner(user, id)
     )
 
   private def isCaseTeam(user: Usercode, id: UUID)(implicit t: TimingContext): Future[ServiceResult[Boolean]] =

@@ -368,7 +368,7 @@ class DataImportJob @Inject()(
           caseService.setOwners(c.id, owner.usercodes.toSet, None).serviceValue
         }
 
-        futureSequence(notes.map { n => caseService.addGeneralNote(c.id, n) }).serviceValue
+        futureSequence(notes.map { n => caseService.addGeneralNote(c.id, n, ownersOnly = false) }).serviceValue
       }
 
       logger.info(s"Imported ${jobData.size} cases")

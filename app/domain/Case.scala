@@ -231,6 +231,7 @@ object CaseNoteType extends PlayEnum[CaseNoteType] {
   case object CaseClosed extends CaseNoteType("Case closed")
   case object CaseReopened extends CaseNoteType("Case reopened")
   case object GeneralNote extends CaseNoteType("General note")
+  case object SensitiveGeneralNote extends CaseNoteType("Case owner note")
   case object OwnerNote extends CaseNoteType("Owner added")
   case object Referral extends CaseNoteType("Referral")
 

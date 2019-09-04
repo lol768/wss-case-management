@@ -144,13 +144,15 @@ class CaseServiceTest extends AbstractDaoTest {
         text = "I just called to say I love you",
         teamMember = Usercode("cuscav"),
         None,
-      )).serviceValue
+      ), ownersOnly = false).serviceValue
+      n1.noteType mustBe CaseNoteType.GeneralNote
 
       val n2 = service.addGeneralNote(c.id, CaseNoteSave(
         text = "Jim came in to tell me that Peter needed a chat",
         teamMember = Usercode("cusebr"),
         None,
-      )).serviceValue
+      ), ownersOnly = true).serviceValue
+      n2.noteType mustBe CaseNoteType.SensitiveGeneralNote
 
       service.getNotes(c.id).serviceValue.map(_.note) mustBe Seq(n2, n1) // Newest first
 
@@ -158,7 +160,8 @@ class CaseServiceTest extends AbstractDaoTest {
         text = "Jim's not really bothered",
         teamMember = Usercode("cusebr"),
         None,
-      ), n1.lastUpdated).serviceValue
+      ), CaseNoteType.SensitiveGeneralNote, n1.lastUpdated).serviceValue
+      n1Updated.noteType mustBe CaseNoteType.SensitiveGeneralNote
 
       service.getNotes(c.id).serviceValue.map(_.note) mustBe Seq(n2, n1Updated)
 
@@ -265,7 +268,7 @@ class CaseServiceTest extends AbstractDaoTest {
       service.listCases(filter, IssueListFilter.empty, Pagination.firstPage()).serviceValue mustBe Seq(CaseListRender(c, c.lastUpdated, None, None))
 
       // Add a new case note
-      val note = service.addGeneralNote(c.id, CaseNoteSave("Last updated date should now be the note's date", Usercode("cuscav"), None)).serviceValue
+      val note = service.addGeneralNote(c.id, CaseNoteSave("Last updated date should now be the note's date", Usercode("cuscav"), None), ownersOnly = false).serviceValue
 
       service.listCases(filter, IssueListFilter.empty, Pagination.firstPage()).serviceValue mustBe Seq(CaseListRender(c, note.lastUpdated, None, None))
 
@@ -276,7 +279,7 @@ class CaseServiceTest extends AbstractDaoTest {
       service.listCases(filter, IssueListFilter.empty, Pagination.firstPage()).serviceValue mustBe Seq(CaseListRender(c, message2.created, None, None))
 
       // Update the note
-      val updatedNote = service.updateNote(c.id, note.id, CaseNoteSave("Last updated should change when note updated", Usercode("cuscav"), None), note.lastUpdated).serviceValue
+      val updatedNote = service.updateNote(c.id, note.id, CaseNoteSave("Last updated should change when note updated", Usercode("cuscav"), None), note.noteType, note.lastUpdated).serviceValue
 
       service.listCases(filter, IssueListFilter.empty, Pagination.firstPage()).serviceValue mustBe Seq(CaseListRender(c, updatedNote.lastUpdated, None, None))
 

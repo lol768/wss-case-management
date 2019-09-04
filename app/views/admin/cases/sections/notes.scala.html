@@ -17,6 +17,10 @@
       <div class="panel-body">
         @b3.validatedHidden(noteForm, "version")
         @b3.textarea(noteForm("text"), 'rows -> 5, Symbol("aria-label") -> "Add a case note")
+        @b3.checkbox(noteForm("ownersOnly"),
+        '_text -> "Restrict this note to case owners only",
+        '_help -> "Use this for very sensitive information that only a case owner should see"
+        )
       </div>
     </div>
   }

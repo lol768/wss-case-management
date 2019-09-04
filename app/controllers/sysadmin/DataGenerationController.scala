@@ -711,7 +711,7 @@ class DataGenerationJob @Inject()(
 
             val note = CaseNoteSave(dummyWords(Random.nextInt(50)), teamMember, None)
 
-            cases.addGeneralNote(c.id, note).serviceValue
+            cases.addGeneralNote(c.id, note, ownersOnly = false).serviceValue
           }
         }
       }

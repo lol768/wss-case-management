@@ -62,11 +62,11 @@ trait CaseService {
   def getLinks(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[(Seq[CaseLink], Seq[CaseLink])]]
   def deleteLink(caseID: UUID, linkID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
-  def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
+  def addGeneralNote(caseID: UUID, note: CaseNoteSave, ownersOnly: Boolean)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def addNoteDBIO(caseID: UUID, noteType: CaseNoteType, note: CaseNoteSave)(implicit ac: AuditLogContext): DBIO[StoredCaseNote]
   def getNote(id: UUID)(implicit t: TimingContext): Future[ServiceResult[NoteAndCase]]
   def getNotes(caseID: UUID)(implicit t: TimingContext): Future[ServiceResult[Seq[CaseNoteRender]]]
-  def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
+  def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, noteType: CaseNoteType, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]]
   def deleteNote(caseID: UUID, noteID: UUID, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[Done]]
 
   def listCases(filter: CaseFilter, listFilter: IssueListFilter, page: Page)(implicit ac: AuditLogContext): Future[ServiceResult[Seq[CaseListRender]]]
@@ -476,10 +476,10 @@ class CaseServiceImpl @Inject() (
       )
     )
 
-  override def addGeneralNote(caseID: UUID, note: CaseNoteSave)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]] =
-    auditService.audit(Operation.Case.AddGeneralNote, caseID.toString, Target.Case, Json.obj()) {
+  override def addGeneralNote(caseID: UUID, note: CaseNoteSave, ownersOnly: Boolean)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]] =
+    auditService.audit(Operation.Case.AddGeneralNote, caseID.toString, Target.Case, Json.obj("ownersOnly" -> ownersOnly)) {
       memberService.getOrAddMember(note.teamMember).successFlatMapTo(member =>
-        daoRunner.run(addNoteDBIO(caseID, CaseNoteType.GeneralNote, note))
+        daoRunner.run(addNoteDBIO(caseID, if (ownersOnly) CaseNoteType.SensitiveGeneralNote else CaseNoteType.GeneralNote, note))
           .map { n => Right(n.asCaseNote(member)) }
       )
     }
@@ -505,12 +505,12 @@ class CaseServiceImpl @Inject() (
       }
     }
 
-  override def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]] =
+  override def updateNote(caseID: UUID, noteID: UUID, note: CaseNoteSave, noteType: CaseNoteType, version: OffsetDateTime)(implicit ac: AuditLogContext): Future[ServiceResult[CaseNote]] =
     auditService.audit(Operation.Case.UpdateNote, caseID.toString, Target.Case, Json.obj("noteID" -> noteID.toString)) {
       memberService.getOrAddMember(note.teamMember).successFlatMapTo(member =>
         daoRunner.run(for {
           existing <- dao.findNotesQuery(caseID).filter(_.id === noteID).result.head
-          updated <- dao.updateNote(existing.copy(text = note.text, teamMember = note.teamMember), version)
+          updated <- dao.updateNote(existing.copy(text = note.text, noteType = noteType, teamMember = note.teamMember), version)
         } yield updated).map { n => Right(n.asCaseNote(member)) }
       )
     }
