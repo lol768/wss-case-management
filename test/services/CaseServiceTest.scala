@@ -161,7 +161,7 @@ class CaseServiceTest extends AbstractDaoTest {
         teamMember = Usercode("cusebr"),
         None,
       ), CaseNoteType.SensitiveGeneralNote, n1.lastUpdated).serviceValue
-      n1.noteType mustBe CaseNoteType.SensitiveGeneralNote
+      n1Updated.noteType mustBe CaseNoteType.SensitiveGeneralNote
 
       service.getNotes(c.id).serviceValue.map(_.note) mustBe Seq(n2, n1Updated)
 
