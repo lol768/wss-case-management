@@ -35,6 +35,9 @@
     }
     *@
 
-    @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id).withFragment("enquiries"))
+    @b3.free('_class -> "spaced-buttons") {
+      <button type="submit" class="btn btn-primary" data-toggle="confirm-submit" data-message="Are you sure you want to send this message to the client?">@tags.icons.messageSend() Send message</button>
+      <a href="@controllers.admin.routes.AdminController.teamHome(team.id).withFragment("enquiries")" class="btn btn-default">Cancel</a>
+    }
   }
 }
