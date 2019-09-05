@@ -11,5 +11,5 @@ ignore:
         reason: >-
           Waiting for a new version of com.drewnoakes:metadata-extractor to be
           released that fixes this
-        expires: 2019-09-01T13:43:38.051Z
+        expires: 2019-10-01T00:00:00.000Z
 patch: {}

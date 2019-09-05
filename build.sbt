@@ -102,6 +102,10 @@ val appDeps = Seq(
   "org.apache.poi" % "poi-ooxml" % "4.1.0",
   "org.apache.poi" % "poi-ooxml-schemas" % "4.1.0",
 
+  // Upgrade transitive dependency org.apache.poi:poi-ooxml@4.1.0 > org.apache.commons:commons-compress@1.18
+  // https://snyk.io/vuln/SNYK-JAVA-ORGAPACHECOMMONS-460507
+  "org.apache.commons" % "commons-compress" % "1.19",
+
   "com.vladsch.flexmark" % "flexmark" % flexmarkVersion,
   "com.vladsch.flexmark" % "flexmark-ext-autolink" % flexmarkVersion
 )
