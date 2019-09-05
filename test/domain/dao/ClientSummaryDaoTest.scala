@@ -63,7 +63,7 @@ class ClientSummaryDaoTest extends AbstractDaoTest {
         alternativeEmailAddress = "other@something-else.com",
         riskStatus = Some(ClientRiskStatus.High),
         reasonableAdjustmentsNotes = "Some notes",
-        initialConsultation = Some(InitialConsultation(
+        initialConsultation = Some(ClientConsultation(
           reason = "My face hurts",
           suggestedResolution = "Stroke my face gently",
           alreadyTried = "Punching myself in the face",

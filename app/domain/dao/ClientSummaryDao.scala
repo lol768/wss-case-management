@@ -43,7 +43,6 @@ object ClientSummaryDao {
     alternativeEmailAddress: String,
     riskStatus: Option[ClientRiskStatus],
     reasonableAdjustmentsNotes: String,
-    initialConsultation: Option[InitialConsultation],
     version: OffsetDateTime = JavaTime.offsetDateTime
   ) extends Versioned[StoredClientSummary] {
     override def atVersion(at: OffsetDateTime): StoredClientSummary = copy(version = at)
@@ -56,7 +55,6 @@ object ClientSummaryDao {
         alternativeEmailAddress,
         riskStatus,
         reasonableAdjustmentsNotes,
-        initialConsultation,
         version,
         operation,
         timestamp,
@@ -71,7 +69,6 @@ object ClientSummaryDao {
       riskStatus = riskStatus,
       reasonableAdjustments = reasonableAdjustments,
       reasonableAdjustmentsNotes = reasonableAdjustmentsNotes,
-      initialConsultation = initialConsultation,
       updatedDate = version
     )
   }
@@ -83,7 +80,6 @@ object ClientSummaryDao {
     alternativeEmailAddress: String,
     riskStatus: Option[ClientRiskStatus],
     reasonableAdjustmentsNotes: String,
-    initialConsultation: Option[InitialConsultation],
     version: OffsetDateTime = JavaTime.offsetDateTime,
     operation: DatabaseOperation,
     timestamp: OffsetDateTime,
@@ -91,7 +87,7 @@ object ClientSummaryDao {
   ) extends StoredVersion[StoredClientSummary]
 
   object StoredClientSummary extends Versioning {
-    def tupled: ((UniversityID, String, String, String, Option[ClientRiskStatus], String, Option[InitialConsultation], OffsetDateTime)) => StoredClientSummary = (StoredClientSummary.apply _).tupled
+    def tupled: ((UniversityID, String, String, String, Option[ClientRiskStatus], String, OffsetDateTime)) => StoredClientSummary = (StoredClientSummary.apply _).tupled
 
     sealed trait CommonClientSummaryProperties { self: Table[_] =>
       def notes: Rep[String] = column[String]("notes")
@@ -99,7 +95,6 @@ object ClientSummaryDao {
       def alternativeEmailAddress: Rep[String] = column[String]("alt_email")
       def riskStatus: Rep[Option[ClientRiskStatus]] = column[Option[ClientRiskStatus]]("risk_status")
       def reasonableAdjustmentsNotes: Rep[String] = column[String]("reasonable_adjustments_notes")
-      def initialConsultation: Rep[Option[InitialConsultation]] = column[Option[InitialConsultation]]("initial_consultation")
       def version: Rep[OffsetDateTime] = column[OffsetDateTime]("version_utc")
     }
 
@@ -108,7 +103,7 @@ object ClientSummaryDao {
 
       def universityID: Rep[UniversityID] = column[UniversityID]("university_id", O.PrimaryKey)
 
-      def * : ProvenShape[StoredClientSummary] = (universityID, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, reasonableAdjustmentsNotes, initialConsultation, version).mapTo[StoredClientSummary]
+      def * : ProvenShape[StoredClientSummary] = (universityID, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, reasonableAdjustmentsNotes, version).mapTo[StoredClientSummary]
     }
 
     class ClientSummaryVersions(tag: Tag) extends Table[StoredClientSummaryVersion](tag, "client_summary_version") with StoredVersionTable[StoredClientSummary] with CommonClientSummaryProperties {
@@ -117,7 +112,7 @@ object ClientSummaryDao {
       def timestamp: Rep[OffsetDateTime] = column[OffsetDateTime]("version_timestamp_utc")
       def auditUser = column[Option[Usercode]]("version_user")
 
-      def * : ProvenShape[StoredClientSummaryVersion] = (universityID, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, reasonableAdjustmentsNotes, initialConsultation, version, operation, timestamp, auditUser).mapTo[StoredClientSummaryVersion]
+      def * : ProvenShape[StoredClientSummaryVersion] = (universityID, notes, alternativeContactNumber, alternativeEmailAddress, riskStatus, reasonableAdjustmentsNotes, version, operation, timestamp, auditUser).mapTo[StoredClientSummaryVersion]
       def pk: PrimaryKey = primaryKey("pk_client_summary_version", (universityID, timestamp))
       def idx: Index = index("idx_client_summary_version", (universityID, version))
     }

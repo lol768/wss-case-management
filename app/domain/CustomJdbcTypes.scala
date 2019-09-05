@@ -65,7 +65,7 @@ object CustomJdbcTypes extends SlickEnumSupport with JdbcDateTypesUtcColumnImpli
 
   // Json mappings
   implicit val userPreferencesMapper: JdbcType[UserPreferences] = jsonTypeMapper[UserPreferences]
-  implicit val initialConsultationMapper: JdbcType[InitialConsultation] = jsonTypeMapper[InitialConsultation]
+  implicit val initialConsultationMapper: JdbcType[ClientConsultation] = jsonTypeMapper[ClientConsultation]
 
   // Enum[] mappings
   implicit lazy val databaseOperationTypeMapper: JdbcType[DatabaseOperation] = mappedColumnTypeForEnum(DatabaseOperation)

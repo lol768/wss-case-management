@@ -92,8 +92,10 @@ POST        /team/client/:universityID                          @controllers.adm
 POST        /team/client/:universityID/invite                   @controllers.admin.ClientController.invite(universityID: warwick.sso.UniversityID)
 GET         /team/client/:universityID/registration-history     @controllers.admin.ClientController.registrationHistory(universityID: warwick.sso.UniversityID)
 GET         /team/client/:universityID/cases                    @controllers.admin.ClientController.cases(universityID: warwick.sso.UniversityID)
-GET         /team/client/:universityID/consultation             @controllers.admin.ClientConsultationController.formForCase(caseKey: domain.IssueKey, universityID: warwick.sso.UniversityID)
-POST        /team/client/:universityID/consultation             @controllers.admin.ClientConsultationController.saveForCase(caseKey: domain.IssueKey, universityID: warwick.sso.UniversityID)
+GET         /team/client/:universityID/consultation             @controllers.admin.ClientConsultationController.createFormForCase(caseKey: domain.IssueKey, universityID: warwick.sso.UniversityID)
+POST        /team/client/:universityID/consultation             @controllers.admin.ClientConsultationController.createForCase(caseKey: domain.IssueKey, universityID: warwick.sso.UniversityID)
+GET         /team/client/:universityID/consultation/:id         @controllers.admin.ClientConsultationController.editFormForCase(caseKey: domain.IssueKey, universityID: warwick.sso.UniversityID, id: java.util.UUID)
+POST        /team/client/:universityID/consultation/:id         @controllers.admin.ClientConsultationController.editForCase(caseKey: domain.IssueKey, universityID: warwick.sso.UniversityID, id: java.util.UUID)
 
 GET         /team/enquiry/create                                @controllers.admin.TeamEnquiryController.createSelectTeam(client: Option[warwick.sso.UniversityID] ?= None)
 GET         /team/enquiry/create/:teamId                        @controllers.admin.TeamEnquiryController.createForm(teamId: String, client: Option[warwick.sso.UniversityID] ?= None)

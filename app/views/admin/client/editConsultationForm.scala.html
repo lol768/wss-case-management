@@ -1,0 +1,16 @@
+@import domain.{Case, Client, ClientConsultation, ClientConsultationSave}
+
+@(
+  consultation: ClientConsultation,
+  c: Case,
+  client: Client,
+  form: Form[ClientConsultationSave],
+)(implicit context: RequestContext, req: RequestHeader, messagesProvider: MessagesProvider)
+
+@main(s"Record consultation for ${client.safeFullName}") {
+  @b3.vertical.formCSRF(controllers.admin.routes.ClientConsultationController.editForCase(c.key, client.universityID, consultation.id)) { implicit ifc =>
+    @consultationFormFields(form)
+
+    @tags.submitOrCancel("Save", controllers.admin.routes.CaseController.view(c.key))
+  }
+}

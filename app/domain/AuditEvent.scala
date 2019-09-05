@@ -54,13 +54,13 @@ object AuditEvent {
     val Room = Symbol("Room")
     val OutgoingEmail = Symbol("OutgoingEmail")
     val MessageSnippet = Symbol("MessageSnippet")
+    val ClientConsultation = Symbol("ClientConsultation")
   }
 
   object Operation {
     object ClientSummary {
       val Save = Symbol("SaveClientSummary")
       val Update = Symbol("UpdateClientSummary")
-      val RecordInitialConsultation = Symbol("RecordInitialConsultation")
     }
 
     object Registration {
@@ -152,6 +152,11 @@ object AuditEvent {
       val Update = Symbol("MessageSnippetUpdate")
       val Delete = Symbol("MessageSnippetDelete")
       val Reorder = Symbol("MessageSnippetReorder")
+    }
+
+    object ClientConsultation {
+      val Save = Symbol("ClientConsultationSave")
+      val Update = Symbol("ClientConsultationUpdate")
     }
   }
 }

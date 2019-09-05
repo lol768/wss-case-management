@@ -1,9 +1,9 @@
-@import domain.InitialConsultationSave
+@import domain.ClientConsultationSave
 @import views.html.b3.B3FieldConstructor
 @import play.twirl.api._
 
 @(
-  form: Form[InitialConsultationSave]
+  form: Form[ClientConsultationSave]
 )(implicit req: RequestHeader, messagesProvider: MessagesProvider, fieldConstructor: B3FieldConstructor)
 
 @b3.validatedHidden(form, "version")

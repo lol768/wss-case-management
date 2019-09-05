@@ -160,6 +160,7 @@ class CaseController @Inject()(
   permissions: PermissionService,
   clientService: ClientService,
   clientSummaryService: ClientSummaryService,
+  clientConsultationService: ClientConsultationService,
   memberService: MemberService,
   messageSnippets: MessageSnippetService,
   anyTeamActionRefiner: AnyTeamActionRefiner,
@@ -273,14 +274,15 @@ class CaseController @Inject()(
 
   def consultations(caseKey: IssueKey): Action[AnyContent] = CanViewCaseAction(caseKey).async { implicit caseRequest =>
     cases.getClients(caseRequest.`case`.id).successFlatMap { clients =>
-      clientSummaryService.getAll(clients.map(_.universityID)).successFlatMap { summaries =>
-        memberService.findMembersIfExists(summaries.values.flatMap(_.flatMap(_.initialConsultation)).map(_.updatedBy).toSet).successMap { members =>
+      clientConsultationService.getAll(clients.map(_.universityID)).successFlatMap { allConsultations =>
+        memberService.findMembersIfExists(allConsultations.values.flatten.map(_.updatedBy).toSet).successMap { members =>
           Ok(views.html.admin.cases.sections.consultations(
             caseRequest.`case`,
             clients,
-            summaries.mapValues { s =>
-              val consultation = s.flatMap(_.initialConsultation)
-              (consultation, ClientConsultationController.createOrUpdateForm(consultation))
+            allConsultations.mapValues { consultations =>
+              (consultations.map { consultation =>
+                (consultation, ClientConsultationController.createOrUpdateForm(Some(consultation)))
+              }, ClientConsultationController.createOrUpdateForm(None))
             },
             members.map { m => m.usercode -> m }.toMap
           ))

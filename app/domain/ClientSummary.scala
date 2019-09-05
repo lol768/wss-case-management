@@ -6,7 +6,7 @@ import domain.ClientRiskStatus.{High, Medium}
 import domain.History._
 import domain.dao.ClientSummaryDao.{StoredClientSummary, StoredClientSummaryVersion}
 import enumeratum.{EnumEntry, PlayEnum}
-import play.api.libs.json.{Format, Json, OFormat, Writes}
+import play.api.libs.json.{Format, Json, Writes}
 import warwick.core.helpers.JavaTime
 import warwick.core.helpers.ServiceResults.ServiceResult
 import warwick.sso.{User, UserLookupService, Usercode}
@@ -22,7 +22,6 @@ case class ClientSummary(
   riskStatus: Option[ClientRiskStatus],
   reasonableAdjustments: Set[ReasonableAdjustment],
   reasonableAdjustmentsNotes: String,
-  initialConsultation: Option[InitialConsultation],
   updatedDate: OffsetDateTime
 ) {
   def toSave: ClientSummarySave = ClientSummarySave(
@@ -64,7 +63,7 @@ case class AtRiskClient(
 ) extends Ordered[AtRiskClient] {
   override def compare(that: AtRiskClient): Int = {
     if (this.summary.riskStatus.contains(High) && !that.summary.riskStatus.contains(High)) {
-      -1      
+      -1
     } else if (!this.summary.riskStatus.contains(High) && that.summary.riskStatus.contains(High)) {
       1
     } else if (this.summary.riskStatus.contains(Medium) && !that.summary.riskStatus.contains(Medium)) {
@@ -110,35 +109,3 @@ object ClientSummaryHistory {
 case class ClientSummaryHistory(
   riskStatus: FieldHistory[Option[ClientRiskStatus]]
 )
-
-case class InitialConsultation(
-  reason: String,
-  suggestedResolution: String,
-  alreadyTried: String,
-  sessionFeedback: String,
-  administratorOutcomes: String,
-  createdDate: OffsetDateTime,
-  updatedDate: OffsetDateTime,
-  updatedBy: Usercode
-) {
-  lazy val nonEmpty: Boolean = reason.nonEmpty || suggestedResolution.nonEmpty || alreadyTried.nonEmpty || sessionFeedback.nonEmpty || administratorOutcomes.nonEmpty
-  lazy val isEmpty: Boolean = !nonEmpty
-}
-
-object InitialConsultation {
-  implicit val usercodeFormat: Format[Usercode] = Json.format[Usercode]
-  implicit val formatter: OFormat[InitialConsultation] = Json.format[InitialConsultation]
-}
-
-case class InitialConsultationSave(
-  reason: String,
-  suggestedResolution: String,
-  alreadyTried: String,
-  sessionFeedback: String,
-  administratorOutcomes: String,
-  version: Option[OffsetDateTime],
-)
-
-object InitialConsultationSave {
-  implicit val formatter: OFormat[InitialConsultationSave] = Json.format[InitialConsultationSave]
-}
