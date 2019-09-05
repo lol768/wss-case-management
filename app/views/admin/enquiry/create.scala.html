@@ -25,13 +25,15 @@
     @b3.textarea(form("text"),
       '_label -> "Message",
       '_help -> html"""Sent to client. You can use Markdown <i class="fab fa-markdown"></i> syntax <a target="_blank" href="https://warwick.ac.uk/tabula/manual/cm2/markers/markdown/"><i class="fal fa-question-circle"></i></a> to format the message.""",
-      'rows -> 5,
+      'rows -> 10,
     )
 
+    @* File uploads removed at the request of Jill Grant 05/09/19 - just needs uncommenting to add back later
     @b3.free('_label -> "Attachment(s)", '_class -> form.error("file").map(_ => "has-error")) {
       <input type="file" id="file" name="file" accept="@{supportedMimeTypes.map(_.getBaseType.toString).mkString(",")}" class="form-control" aria-label="Attach a file">
       @b3.errors(form("file"))
     }
+    *@
 
     @tags.submitOrCancel("Create", controllers.admin.routes.AdminController.teamHome(team.id).withFragment("enquiries"))
   }

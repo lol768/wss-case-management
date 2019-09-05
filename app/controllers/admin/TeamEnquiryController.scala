@@ -307,28 +307,24 @@ class TeamEnquiryController @Inject()(
   }
 
   def createForm(teamId: String, client: Option[UniversityID]): Action[AnyContent] = CanViewTeamAction(teamId) { implicit teamRequest =>
-    val baseForm = form(teamRequest.team, profiles)
+    val formWithDefaults = form(teamRequest.team, profiles).fill(EnquiryFormData(
+      universityID = client.getOrElse(UniversityID("")),
+      subject = teamRequest.team match {
+        case Teams.Disability => "Disability query"
+        case Teams.Consultation => "Brief consultation"
+        case t => s"${t.name} enquiry"
+      },
+      text = teamRequest.team match {
+        case Teams.Consultation => views.txt.enquiry.consultationAutoResponse(includePrivacyNotice = true).toString.trim
+        case _ => ""
+      }
+    )).discardingErrors
 
-    client match {
-      case Some(universityID) =>
-        Ok(views.html.admin.enquiry.create(
-          teamRequest.team,
-          baseForm.bind(Map(
-            "universityID" -> universityID.string,
-            "subject" -> s"${teamRequest.team.name} enquiry"
-          )).discardingErrors,
-          uploadedFileControllerHelper.supportedMimeTypes,
-        ))
-
-      case _ =>
-        Ok(views.html.admin.enquiry.create(
-          teamRequest.team,
-          baseForm.bind(Map(
-            "subject" -> s"${teamRequest.team.name} enquiry"
-          )).discardingErrors,
-          uploadedFileControllerHelper.supportedMimeTypes,
-        ))
-    }
+    Ok(views.html.admin.enquiry.create(
+      teamRequest.team,
+      formWithDefaults,
+      uploadedFileControllerHelper.supportedMimeTypes,
+    ))
   }
 
   def create(teamId: String): Action[MultipartFormData[TemporaryUploadedFile]] = CanViewTeamAction(teamId)(uploadedFileControllerHelper.bodyParser).async { implicit teamRequest =>

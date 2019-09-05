@@ -1,4 +1,4 @@
-@()
+@(includePrivacyNotice: Boolean)
 
 If you feel that you would benefit from some additional support/advice from Wellbeing Support Services, you might like to first come along to one of our brief consultation sessions.  During this session a Wellbeing professional will ask you a few questions to help us work out what are the best next steps for you going forwards.
 
@@ -14,3 +14,15 @@ We will see you as soon as we are able - it may be helpful to note that at times
 If you are not on campus during these times, or would prefer to arrange a brief consultation by telephone, that’s not a problem.  Please call on [024 7657 5570](tel:+442476575570).
 
 **Important information - If you feel you need urgent assistance, there are other services available to help you, both on and off-campus, and we don’t suggest you use the brief consultation sessions.  Please see this information or call Campus Security in an emergency on [024 7652 2083](tel:+442476522083).**
+@if(includePrivacyNotice) {
+Privacy Statement
+-----------------
+
+The University of Warwick will process personal data that you provide to Wellbeing Support Services, which could include disability and medical related information for the purpose(s) of offering you appropriate support that is suitable for your needs and ensuring the wellbeing of the University community.
+
+The legal basis for processing this personal data is consent, complying with a legal obligation, vital interests, legitimate interest of ensuring the efficient running of the University and the performance of a contract.
+
+Your personal data will not be shared or disclosed to any third parties external to the University of Warwick without your consent, except with statutory services who will process your personal data for the purpose(s) of wellbeing and safety in the case of emergencies when there is a risk to self/others.
+
+Except in the above situation, your personal data will not be transferred outside of the EEA, will be kept securely by the University of Warwick and will be retained in accordance with Wellbeing Support Services retention policy.
+}

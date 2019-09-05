@@ -9,7 +9,7 @@ Hi @{r.enquiry.client.safeFirstName},
 
 @if(isFinalReminder) {We’ve noticed that you made an enquiry about accessing support from Wellbeing Support Services.  This is a reminder that we are here to offer support. If you don’t come along to one of our consultation sessions in the next 5 days, we will close your enquiry for now, but don’t worry, you can make another enquiry at any point – that’s not a problem.} else {We’ve noticed that you made an initial enquiry to Wellbeing Support Services, but haven’t yet come along to one of our brief consultation sessions. Please remember that advice and support is available.}
 
-@consultationAutoResponse()
+@consultationAutoResponse(includePrivacyNotice = false)
 } else {
 Hi @{r.enquiry.client.safeFirstName},
 

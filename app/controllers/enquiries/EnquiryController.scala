@@ -90,7 +90,7 @@ class EnquiryController @Inject()(
       formWithErrors => Future.successful(render(consultation = Some(formWithErrors))),
       _ =>
         submitEnquiry(Teams.Consultation, clientSubject = "Brief consultation", message = domain.MessageSave(
-          text = views.txt.enquiry.consultationAutoResponse().toString.trim,
+          text = views.txt.enquiry.consultationAutoResponse(includePrivacyNotice = false).toString.trim,
           sender = MessageSender.Team,
           teamMember = Some(Usercode("system"))
         ))
