@@ -95,7 +95,7 @@ public class CaseManagementSpec extends AbstractWarwickBuildSpec {
   @Override
   protected Collection<Deployment> deployments() {
     return Collections.singleton(
-      deployment(PROJECT, "APP", "WSS Case Management")
+      deployment(PROJECT, "APP", "Case Management")
         .autoPlayEnvironment("Development", "wellbeing-dev.warwick.ac.uk", "wellbeing", "dev", SLACK_CHANNEL)
         .autoPlayEnvironment("Test", "wellbeing-test.warwick.ac.uk", "wellbeing", "test", SLACK_CHANNEL)
         .autoPlayEnvironment("Sandbox", "wellbeing-sandbox.warwick.ac.uk", "wellbeing", "sandbox", SLACK_CHANNEL)
